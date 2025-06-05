@@ -6,16 +6,7 @@ settings:
 
 catalogs:
   default:
-    '@tanstack/react-query':
-      specifier: ^5.0.0
-      version: 5.80.5
-    '@trpc/client':
-      specifier: ^11.0.0
-      version: 11.3.0
     '@trpc/server':
-      specifier: ^11.0.0
-      version: 11.3.0
-    '@trpc/tanstack-react-query':
       specifier: ^11.0.0
       version: 11.3.0
     eslint:
@@ -64,99 +55,14 @@ importers:
         specifier: 'catalog:'
         version: 5.8.3
 
-  apps/nextjs:
-    dependencies:
-      '@omnii/api':
-        specifier: workspace:*
-        version: link:../../packages/api
-      '@omnii/auth':
-        specifier: workspace:*
-        version: link:../../packages/auth
-      '@omnii/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@omnii/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@omnii/validators':
-        specifier: workspace:*
-        version: link:../../packages/validators
-      '@t3-oss/env-nextjs':
-        specifier: ^0.13.6
-        version: 0.13.6(typescript@5.8.3)(zod@3.25.51)
-      '@tanstack/react-query':
-        specifier: 'catalog:'
-        version: 5.80.5(react@19.0.0)
-      '@trpc/client':
-        specifier: 'catalog:'
-        version: 11.3.0(@trpc/server@11.3.0(typescript@5.8.3))(typescript@5.8.3)
-      '@trpc/server':
-        specifier: 'catalog:'
-        version: 11.3.0(typescript@5.8.3)
-      '@trpc/tanstack-react-query':
-        specifier: 'catalog:'
-        version: 11.3.0(@tanstack/react-query@5.80.5(react@19.0.0))(@trpc/client@11.3.0(@trpc/server@11.3.0(typescript@5.8.3))(typescript@5.8.3))(@trpc/server@11.3.0(typescript@5.8.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3)
-      next:
-        specifier: ^15.3.3
-        version: 15.3.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      react:
-        specifier: catalog:react19
-        version: 19.0.0
-      react-dom:
-        specifier: catalog:react19
-        version: 19.0.0(react@19.0.0)
-      superjson:
-        specifier: 2.2.2
-        version: 2.2.2
-      zod:
-        specifier: 'catalog:'
-        version: 3.25.51
-    devDependencies:
-      '@omnii/eslint-config':
-        specifier: workspace:*
-        version: link:../../tooling/eslint
-      '@omnii/prettier-config':
-        specifier: workspace:*
-        version: link:../../tooling/prettier
-      '@omnii/tailwind-config':
-        specifier: workspace:*
-        version: link:../../tooling/tailwind
-      '@omnii/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/typescript
-      '@types/node':
-        specifier: ^22.15.29
-        version: 22.15.29
-      '@types/react':
-        specifier: catalog:react19
-        version: 19.1.6
-      '@types/react-dom':
-        specifier: catalog:react19
-        version: 19.1.6(@types/react@19.1.6)
-      dotenv-cli:
-        specifier: ^8.0.0
-        version: 8.0.0
-      eslint:
-        specifier: 'catalog:'
-        version: 9.28.0(jiti@2.4.2)
-      jiti:
-        specifier: ^2.4.2
-        version: 2.4.2
-      prettier:
-        specifier: 'catalog:'
-        version: 3.5.3
-      tailwindcss:
-        specifier: 'catalog:'
-        version: 3.4.17(ts-node@10.9.2(@types/node@22.15.29)(typescript@5.8.3))
-      typescript:
-        specifier: ~5.8.3
-        version: 5.8.3
-
   apps/omnii-mobile:
     dependencies:
       '@expo/vector-icons':
         specifier: ^14.1.0
         version: 14.1.0(expo-font@13.3.1(expo@53.0.10(@babel/core@7.27.4)(@expo/metro-runtime@5.0.4(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.0.14)(bufferutil@4.0.9)(react@19.0.0)))(bufferutil@4.0.9)(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.0.14)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0))(react@19.0.0))(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.0.14)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)
+      '@omnii/tailwind-config':
+        specifier: workspace:^
+        version: link:../../tooling/tailwind
       '@react-native-async-storage/async-storage':
         specifier: 2.1.2
         version: 2.1.2(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.0.14)(bufferutil@4.0.9)(react@19.0.0))
@@ -293,9 +199,6 @@ importers:
       '@babel/core':
         specifier: ^7.27.4
         version: 7.27.4
-      '@omnii/tailwind-config':
-        specifier: workspace:^
-        version: link:../../tooling/tailwind
       '@types/react':
         specifier: ^19.0.14
         version: 19.0.14
@@ -3330,39 +3233,15 @@ packages:
       zod:
         optional: true
 
-  '@tanstack/query-core@5.80.5':
-    resolution: {integrity: sha512-kFWXdQOUcjL/Ugk3GrI9eMuG3DsKBGaLIgyOLekR2UOrRrJgkLgPUNzZ10i8FCkfi4SgLABhOtQhx1HjoB9EZQ==}
-
-  '@tanstack/react-query@5.80.5':
-    resolution: {integrity: sha512-C0d+pvIahk6fJK5bXxyf36r9Ft6R9O0mwl781CjBrYGRJc76XRJcKhkVpxIo68cjMy3i47gd4O1EGooAke/OCQ==}
-    peerDependencies:
-      react: ^18 || ^19
-
   '@tokenizer/token@0.3.0':
     resolution: {integrity: sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A==}
 
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
 
-  '@trpc/client@11.3.0':
-    resolution: {integrity: sha512-O8fih4Tj+mGqN7bPM1inXJ7/3SFYI3/0D/AKYDc/G6Bq7GNNX+1st0YMMdtFk+Vv3e8K95h6233ZOwRX0qiwOg==}
-    peerDependencies:
-      '@trpc/server': 11.3.0
-      typescript: '>=5.7.2'
-
   '@trpc/server@11.3.0':
     resolution: {integrity: sha512-E5y94QLxgYr+T5FOWiMqNrCW0d2CJfhxNB7bS9xQzPfPMQeo4dpX8/s3nAxITJ9ARrORhK3Efpqs3/bPI9UOTQ==}
     peerDependencies:
-      typescript: '>=5.7.2'
-
-  '@trpc/tanstack-react-query@11.3.0':
-    resolution: {integrity: sha512-mFS28ZTEkaisnG4gl4PrkbBurWzGHBxJTwPtfHNd0AIc/Gb+VRhpi5NioZY1pOGuqHMP/2lZQCSAX/AfeNtFjQ==}
-    peerDependencies:
-      '@tanstack/react-query': ^5.80.3
-      '@trpc/client': 11.3.0
-      '@trpc/server': 11.3.0
-      react: '>=18.2.0'
-      react-dom: '>=18.2.0'
       typescript: '>=5.7.2'
 
   '@tsconfig/node10@1.0.11':
@@ -12000,33 +11879,12 @@ snapshots:
       typescript: 5.8.3
       zod: 3.25.51
 
-  '@tanstack/query-core@5.80.5': {}
-
-  '@tanstack/react-query@5.80.5(react@19.0.0)':
-    dependencies:
-      '@tanstack/query-core': 5.80.5
-      react: 19.0.0
-
   '@tokenizer/token@0.3.0': {}
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
-  '@trpc/client@11.3.0(@trpc/server@11.3.0(typescript@5.8.3))(typescript@5.8.3)':
-    dependencies:
-      '@trpc/server': 11.3.0(typescript@5.8.3)
-      typescript: 5.8.3
-
   '@trpc/server@11.3.0(typescript@5.8.3)':
     dependencies:
-      typescript: 5.8.3
-
-  '@trpc/tanstack-react-query@11.3.0(@tanstack/react-query@5.80.5(react@19.0.0))(@trpc/client@11.3.0(@trpc/server@11.3.0(typescript@5.8.3))(typescript@5.8.3))(@trpc/server@11.3.0(typescript@5.8.3))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.8.3)':
-    dependencies:
-      '@tanstack/react-query': 5.80.5(react@19.0.0)
-      '@trpc/client': 11.3.0(@trpc/server@11.3.0(typescript@5.8.3))(typescript@5.8.3)
-      '@trpc/server': 11.3.0(typescript@5.8.3)
-      react: 19.0.0
-      react-dom: 19.0.0(react@19.0.0)
       typescript: 5.8.3
 
   '@tsconfig/node10@1.0.11': {}
@@ -12209,6 +12067,7 @@ snapshots:
   '@types/react-dom@19.1.6(@types/react@19.1.6)':
     dependencies:
       '@types/react': 19.1.6
+    optional: true
 
   '@types/react@19.0.14':
     dependencies:
@@ -15651,7 +15510,8 @@ snapshots:
 
   jiti@1.21.7: {}
 
-  jiti@2.4.2: {}
+  jiti@2.4.2:
+    optional: true
 
   jose@5.10.0: {}
 
