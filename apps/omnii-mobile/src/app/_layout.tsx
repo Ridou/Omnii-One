@@ -1,5 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { Buffer } from 'buffer';
+import '../styles-minimal.css';
 
 // Make Buffer available globally
 global.Buffer = Buffer;
@@ -10,26 +11,11 @@ if (typeof global.process === 'undefined') {
   global.process = process;
 }
 
-// // Critical Hermes polyfills
-// import 'react-native-get-random-values';
-
-// // TextEncoder/TextDecoder polyfills for Hermes
-// if (typeof global.TextEncoder === 'undefined') {
-//   const { TextEncoder, TextDecoder } = require('text-encoding-polyfill');
-//   global.TextEncoder = TextEncoder;
-//   global.TextDecoder = TextDecoder;
-// }
-
-// // Crypto polyfill for Hermes  
-// if (typeof global.crypto === 'undefined') {
-//   const { polyfillWebCrypto } = require('expo-crypto');
-//   polyfillWebCrypto();
-// }
 
 import React, { useState, useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Platform, View } from 'react-native';
+import { Platform, View, Text } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '~/context/AuthContext';
 import { ProfileProvider } from '~/context/ProfileContext';
@@ -121,3 +107,7 @@ function ThemedStack() {
     </>
   );
 }
+
+<View className="bg-red-500 p-4">
+  <Text className="text-white">Test NativeWind</Text>
+</View>
