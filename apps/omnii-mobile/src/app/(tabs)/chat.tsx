@@ -25,7 +25,7 @@ import { BRAND_COLORS } from '~/lib/assets';
 import { cn } from '~/utils/cn';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { ChatTab, ChatTabConfig, ChatMessage as ChatMessageType } from '~/types/chat';
-import { UpArrowIcon, RightArrowIcon, CalendarIcon, GmailIcon, ContactsIcon, TasksIcon } from '~/components/icons/ChatIcons';
+import { UpArrowIcon, RightArrowIcon, CalendarIcon, GmailIcon, ContactsIcon, TasksIcon } from '~/icons/ChatIcons';
 
 import { trpc } from '~/utils/api';
 import { useQuery } from "@tanstack/react-query";

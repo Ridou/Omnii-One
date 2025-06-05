@@ -1,10 +1,10 @@
 import React from 'react';
 import { Text } from 'react-native';
 import type { TextProps } from 'react-native';
-import { cn } from '@/utils/cn';
-import { getTypographyClass, TYPOGRAPHY_VARIANT_MAPPING } from '@/utils/typography';
-import { useCustomFonts } from '@/hooks/useCustomFonts';
-import type { TypographyVariant } from '@/constants/Typography';
+import { cn } from '~/utils/cn';
+import { getTypographyClass, TYPOGRAPHY_VARIANT_MAPPING } from '~/utils/typography';
+import { useCustomFonts } from '~/hooks/useCustomFonts';
+import type { TypographyVariant } from '~/constants/Typography';
 
 interface TypographyProps extends TextProps {
   variant?: TypographyVariant;
@@ -142,4 +142,4 @@ export const ButtonText: React.FC<Omit<TypographyProps, 'variant'> & {
 };
 
 // Export our typography variant mapping for direct access
-export { TYPOGRAPHY_VARIANT_MAPPING } from '@/utils/typography'; 
+export { TYPOGRAPHY_VARIANT_MAPPING } from '~/utils/typography'; 

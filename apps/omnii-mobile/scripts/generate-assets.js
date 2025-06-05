@@ -13,7 +13,7 @@ import {
 import { logger } from './utils/logger.js';
 import colors from 'colors';
 
-const SOURCE_LOGO = '../assets/images/public/logos/omniiLogoPNG.png';
+const SOURCE_LOGO = '../src/assets/images/public/logos/omniiLogoPNG.png';
 
 async function main() {
   console.log(colors.blue.bold('\n🚀 OMNII Asset Generation System\n'));

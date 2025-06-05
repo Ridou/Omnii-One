@@ -10,6 +10,11 @@ const config = withTurborepoManagedCache(
   })
 );
 
+// With this (no NativeWind):  
+// const config = withTurborepoManagedCache(  
+//   getDefaultConfig(__dirname)  
+// );
+
 // Simplified configuration for development builds
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 

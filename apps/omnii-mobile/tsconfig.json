@@ -1,9 +1,10 @@
 {
-  "extends": ["@acme/tsconfig/base.json"],
+  "extends": ["expo/tsconfig.base", "../../tooling/typescript/base.json"],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@acme/*": ["../../packages/*/src"]
     },
     "jsx": "react-native",
     "checkJs": false,

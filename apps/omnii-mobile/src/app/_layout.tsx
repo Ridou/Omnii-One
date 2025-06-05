@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 // Make Buffer available globally
 global.Buffer = Buffer;
 
+
 // Add process polyfill globally
 import process from 'process';
 if (typeof global.process === 'undefined') {

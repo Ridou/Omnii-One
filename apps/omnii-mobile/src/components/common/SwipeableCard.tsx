@@ -3,8 +3,8 @@ import { View, Text } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import { cn } from '@/utils/cn';
-import { useSwipeGestures } from '@/hooks/useSwipeGestures';
+import { cn } from '~/utils/cn';
+import { useSwipeGestures } from '~/hooks/useSwipeGestures';
 
 interface SwipeableCardProps {
   children: React.ReactNode;
