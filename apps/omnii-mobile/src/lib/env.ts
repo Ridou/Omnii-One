@@ -42,7 +42,7 @@ export const ENV_GROUPS = {
  */
 const isWeb = () => {
   try {
-    return typeof window !== 'undefined';
+    return typeof globalThis !== 'undefined' && 'window' in globalThis;
   } catch {
     return false;
   }
@@ -215,8 +215,49 @@ export const getWebSocketUrl = () => {
   const baseUrl = env.app.backendBaseUrl;
   if (!baseUrl) return '';
   
-  // Convert HTTP(S) to WS(S)
-  return baseUrl.replace(/^https?:/, baseUrl.startsWith('https:') ? 'wss:' : 'ws:');
+  // Check if we're in React Native (not web)
+  const isReactNative = !isWeb();
+  
+  // For React Native development, replace localhost with accessible IP
+  if (isReactNative && baseUrl.includes('localhost')) {
+    console.log('🔧 [getWebSocketUrl] Detected React Native development mode');
+    console.log('🔧 [getWebSocketUrl] Original baseUrl:', baseUrl);
+    
+    // Try to get the Metro bundler host (where Expo is running from)
+    const hostUri = Constants.expoConfig?.hostUri;
+    
+    if (hostUri) {
+      // Extract the IP from the host URI
+      const ipMatch = hostUri.match(/([^:]+)/);
+      if (ipMatch) {
+        const expoIP = ipMatch[1];
+        // Extract port from original baseUrl
+        const portMatch = baseUrl.match(/:(\d+)/);
+        const port = portMatch ? portMatch[1] : '8000';
+        const wsUrl = `ws://${expoIP}:${port}/ws`;
+        console.log('🔧 [getWebSocketUrl] Using Expo host IP:', expoIP);
+        console.log('🔧 [getWebSocketUrl] WebSocket URL:', wsUrl);
+        return wsUrl;
+      }
+    }
+    
+    // Fallback: use the machine's IP we found
+    const localIP = '10.201.235.37';
+    const portMatch = baseUrl.match(/:(\d+)/);
+    const port = portMatch ? portMatch[1] : '8000';
+    const fallbackUrl = `ws://${localIP}:${port}/ws`;
+    console.log('🔧 [getWebSocketUrl] Using fallback IP:', localIP);
+    console.log('🔧 [getWebSocketUrl] Fallback WebSocket URL:', fallbackUrl);
+    return fallbackUrl;
+  }
+  
+  // For production or web, convert HTTP(S) to WS(S) and add /ws path
+  let wsUrl = baseUrl.replace(/^https?:/, baseUrl.startsWith('https:') ? 'wss:' : 'ws:');
+  if (!wsUrl.endsWith('/ws')) {
+    wsUrl += '/ws';
+  }
+  console.log('🔧 [getWebSocketUrl] Production/Web WebSocket URL:', wsUrl);
+  return wsUrl;
 };
 
 /**

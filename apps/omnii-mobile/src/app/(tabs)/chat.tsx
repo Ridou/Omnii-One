@@ -20,6 +20,7 @@ import { useChat } from '~/hooks/useChat';
 import { ChatMessage } from '~/components/chat/ChatMessage';
 import { PendingMessage } from '~/components/chat/PendingMessage';
 import { ConnectionError } from '~/components/chat/ConnectionError';
+import { WebSocketDebug } from '~/components/chat/WebSocketDebug';
 import { AppColors } from '~/constants/Colors';
 import { BRAND_COLORS } from '~/lib/assets';
 import { cn } from '~/utils/cn';
@@ -379,6 +380,9 @@ export default function ChatScreen() {
                         contentContainerStyle={{ paddingVertical: 20 }}
                         showsVerticalScrollIndicator={false}
                     >
+                        {/* WebSocket Debug Panel */}
+                        {__DEV__ && <WebSocketDebug />}
+
                         {/* Simple Debug List */}
                         {__DEV__ && (
                             <View className={cn(

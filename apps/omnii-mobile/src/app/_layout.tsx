@@ -30,11 +30,13 @@ import React, { useState, useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, View } from 'react-native';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '~/context/AuthContext';
 import { ProfileProvider } from '~/context/ProfileContext';
 import { OnboardingProvider } from '~/context/OnboardingContext';
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
 import { useFrameworkReady } from '~/hooks/useFrameworkReady';
+import { queryClient } from '~/utils/api';
 
 // Safe gesture provider that loads GestureProvider after hydration
 function SafeGestureProvider({ children }: { children: React.ReactNode }) {
@@ -64,27 +66,31 @@ export default function RootLayout() {
   // For static export (server-side rendering), render with minimal context
   if (Platform.OS === 'web') {
     return (
-      <SafeGestureProvider>
-        <ThemeProvider>
-          <ThemedStack />
-        </ThemeProvider>
-      </SafeGestureProvider>
+      <QueryClientProvider client={queryClient}>
+        <SafeGestureProvider>
+          <ThemeProvider>
+            <ThemedStack />
+          </ThemeProvider>
+        </SafeGestureProvider>
+      </QueryClientProvider>
     );
   }
 
   // For native platforms (iOS/Android), render with full context providers
   return (
-    <SafeGestureProvider>
-      <AuthProvider>
-        <ProfileProvider>
-          <ThemeProvider>
-            <OnboardingProvider>
-              <ThemedStack />
-            </OnboardingProvider>
-          </ThemeProvider>
-        </ProfileProvider>
-      </AuthProvider>
-    </SafeGestureProvider>
+    <QueryClientProvider client={queryClient}>
+      <SafeGestureProvider>
+        <AuthProvider>
+          <ProfileProvider>
+            <ThemeProvider>
+              <OnboardingProvider>
+                <ThemedStack />
+              </OnboardingProvider>
+            </ThemeProvider>
+          </ProfileProvider>
+        </AuthProvider>
+      </SafeGestureProvider>
+    </QueryClientProvider>
   );
 }
 

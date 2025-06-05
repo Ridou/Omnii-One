@@ -37,7 +37,7 @@ console.log("🚀 Creating Elysia app...");
 
 // Create Elysia app
 const app = new Elysia()
-  // Add CORS - THIS WAS THE ACTUAL FIX
+  // Add CORS - Support for WebSocket and React Native
   .use(
     cors({
       origin: process.env.NODE_ENV === 'production' 
@@ -46,9 +46,29 @@ const app = new Elysia()
             "http://localhost:3000",
             "http://localhost:4173",
             "http://localhost:8000",
+            "http://localhost:8081", // Expo Metro bundler
+            "exp://localhost:8081",  // Expo development
+            // Allow any localhost for React Native development
+            /^http:\/\/localhost:\d+$/,
+            /^http:\/\/192\.168\.\d+\.\d+:\d+$/, // Local network IPs
+            /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,  // Local network IPs
           ],
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       credentials: true,
+      // Add WebSocket specific headers
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "Sec-WebSocket-Protocol",
+        "Sec-WebSocket-Version",
+        "Sec-WebSocket-Key",
+        "Sec-WebSocket-Accept",
+        "Connection",
+        "Upgrade"
+      ],
     })
   )
   // Add security headers
@@ -130,6 +150,18 @@ app.get("/health", ({ request, set }) => {
   
   console.log("🏥 Health check responding with:", JSON.stringify(healthResponse, null, 2));
   return healthResponse;
+});
+
+// Add WebSocket OPTIONS handler for preflight
+app.options("/ws", ({ set }) => {
+  console.log("🔧 WebSocket OPTIONS preflight request received");
+  set.headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Sec-WebSocket-Protocol, Sec-WebSocket-Version, Sec-WebSocket-Key, Connection, Upgrade",
+    "Access-Control-Allow-Credentials": "true"
+  };
+  return "";
 });
 
 // Add root endpoint
@@ -444,6 +476,24 @@ try {
   console.log(`📡 WebSocket endpoint available at: ws://${host}:${port}/ws`);
   console.log(`🏥 Health check: http://${host}:${port}/health`);
   console.log(`📊 Swagger docs: http://${host}:${port}/swagger`);
+  
+  // Get local network IP for React Native connections
+  const os = require('os');
+  const networkInterfaces = os.networkInterfaces();
+  console.log(`🌐 *** REACT NATIVE CONNECTION INFO ***`);
+  console.log(`📱 For React Native/Expo development, use one of these URLs:`);
+  
+  Object.keys(networkInterfaces).forEach(interfaceName => {
+    const interfaces = networkInterfaces[interfaceName];
+    if (interfaces) {
+      interfaces.forEach((details: any) => {
+        if (details.family === 'IPv4' && !details.internal) {
+          console.log(`   - ws://${details.address}:${port}/ws`);
+        }
+      });
+    }
+  });
+  
   console.log(`🔧 Railway environment checks:`);
   console.log(`   - NODE_ENV: ${process.env.NODE_ENV}`);
   console.log(`   - PORT: ${process.env.PORT}`);
