@@ -1,6 +1,11 @@
 {
   "buildCommand": "npm run build:web:static && node scripts/generate-static-html.cjs",
   "outputDirectory": "dist-static",
+  "functions": {
+    "app/**": {
+      "runtime": "nodejs22.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/googleF7XC7eDi6hzXCdTRDmoDWeLiZwFKCS9WY2ZuUubxtqE.html",
