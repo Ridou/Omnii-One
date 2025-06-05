@@ -1,0 +1,376 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Neo4j API Endpoints Testing Guide
+
+This guide provides all available Neo4j API endpoints for testing the knowledge graph functionality.
+
+## 🚨 Current Status
+
+### ✅ Production (omniimcp-production.up.railway.app)
+**Status**: All endpoints working ✅  
+**Last Tested**: January 3, 2025  
+**Test Results**: 5/5 endpoints passing
+
+### ❓ Local Development (localhost:8000)
+**Status**: Server not currently running  
+**Note**: Start local server with `bun run dev` to test locally
+
+## Base Configuration
+
+### Production (Working)
+**Server URL**: `https://omniimcp-production.up.railway.app`
+**Neo4j API Base**: `https://omniimcp-production.up.railway.app/api/neo4j`
+**Test User ID**: `cd9bdc60-35af-4bb6-b87e-1932e96fb354` (UUID format required)
+
+### Local Development
+**Server URL**: `http://localhost:8000`
+**Neo4j API Base**: `http://localhost:8000/api/neo4j`
+**Test User ID**: `cd9bdc60-35af-4bb6-b87e-1932e96fb354` (UUID format required)
+
+## 🔍 Available Endpoints
+
+### 1. Health Check ✅
+**Purpose**: Check if the Neo4j service is running and accessible
+**Method**: `GET`
+**Endpoint**: `/api/neo4j/health`
+**Parameters**: None
+**Returns**: Service status
+
+### 2. List Concepts ✅
+**Purpose**: Retrieve a list of concept nodes from the knowledge graph
+**Method**: `GET`
+**Endpoint**: `/api/neo4j/concepts`
+**Parameters**:
+- `user_id` (required): UUID format user identifier
+- `limit` (optional): Number of concepts to return (default: 100)
+- `filter` (optional): Filter concepts by name or description
+**Returns**: Array of concept nodes with properties
+
+### 3. Search Concepts (Semantic Search) ✅
+**Purpose**: Perform semantic search across concept nodes using text similarity
+**Method**: `GET`
+**Endpoint**: `/api/neo4j/concepts/search`
+**Parameters**:
+- `user_id` (required): UUID format user identifier
+- `q` (required): Search query text
+- `limit` (optional): Number of results (default: 5)
+**Returns**: Array of matching concept nodes with similarity scores
+
+### 4. AI Context Retrieval ✅
+**Purpose**: Get relevant context for AI queries by finding related concepts and relationships
+**Method**: `GET`
+**Endpoint**: `/api/neo4j/context`
+**Parameters**:
+- `user_id` (required): UUID format user identifier
+- `query` (required): Context query text
+- `limit` (optional): Number of concepts in context (default: 3)
+**Returns**: Object with nodes and relationships arrays
+
+### 5. Get Node Context ✅
+**Purpose**: Retrieve a specific node and all its connected nodes and relationships
+**Method**: `GET`
+**Endpoint**: `/api/neo4j/nodes/{NODE_ID}/context`
+**Parameters**:
+- `NODE_ID` (required): Neo4j node ID (path parameter)
+- `user_id` (required): UUID format user identifier
+**Returns**: Object with the target node, connected nodes, and all relationships
+
+## 📋 Quick Reference - Production Endpoints
+
+### Copy-Paste Ready Commands (Production)
+
+```bash
+# 1. Health Check
+curl "https://omniimcp-production.up.railway.app/api/neo4j/health"
+
+# 2. List Concepts (5 items)
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&limit=5"
+
+# 3. Search Concepts (pizza)
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts/search?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&q=pizza&limit=3"
+
+# 4. AI Context Retrieval
+curl "https://omniimcp-production.up.railway.app/api/neo4j/context?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&query=pizza%20recipes&limit=3"
+
+# 5. Node Context (using node ID 48)
+curl "https://omniimcp-production.up.railway.app/api/neo4j/nodes/48/context?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354"
+```
+
+### Copy-Paste Ready Commands (Local)
+
+```bash
+# 1. Health Check
+curl "http://localhost:8000/api/neo4j/health"
+
+# 2. List Concepts (5 items)
+curl "http://localhost:8000/api/neo4j/concepts?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&limit=5"
+
+# 3. Search Concepts (pizza)
+curl "http://localhost:8000/api/neo4j/concepts/search?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&q=pizza&limit=3"
+
+# 4. AI Context Retrieval
+curl "http://localhost:8000/api/neo4j/context?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&query=pizza%20recipes&limit=3"
+
+# 5. Node Context (using node ID 48)
+curl "http://localhost:8000/api/neo4j/nodes/48/context?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354"
+```
+
+## 🧪 Verified Test Results (Production)
+
+### 1. Health Check ✅
+```bash
+curl "https://omniimcp-production.up.railway.app/api/neo4j/health"
+```
+**Response:**
+```json
+{
+  "status": "ok"
+}
+```
+
+### 2. List Concepts ✅
+```bash
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&limit=5"
+```
+**Response:** Returns 5 concept nodes including:
+- "System Status Overview" (Node ID: 43)
+- "Pepperoni Characteristics" (Node ID: 47)
+- "Pizza Types and Recipes" (Node ID: 48)
+- "Node Related to Multiple Agents" (Node ID: 52)
+- "Node Assigned to Multiple Tasks" (Node ID: 57)
+
+### 3. Search Concepts ✅
+```bash
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts/search?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&q=pizza&limit=3"
+```
+**Response:** Returns 2 matching concepts:
+- "pizza" (Node ID: 604) with similarity: 1.0
+- "pizzas" (Node ID: 773) with similarity: 0.56
+
+### 4. AI Context Retrieval ✅
+```bash
+curl "https://omniimcp-production.up.railway.app/api/neo4j/context?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&query=pizza%20recipes&limit=3"
+```
+**Response:** Returns empty nodes and relationships arrays (no matching context found)
+
+### 5. Node Context ✅
+```bash
+curl "https://omniimcp-production.up.railway.app/api/neo4j/nodes/48/context?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354"
+```
+**Response:** Returns comprehensive context for "Pizza Types and Recipes" node including:
+- 10 connected nodes (pizza-related concepts, notes, and documents)
+- 13 relationships (RELATED_TO, MENTIONS types)
+
+## 📊 Response Formats
+
+### Standard Node Format
+```json
+{
+  "id": "48",
+  "labels": ["Note", "Concept"],
+  "properties": {
+    "name": "Pizza Types and Recipes",
+    "description": "...",
+    "user_id": "cd9bdc60-35af-4bb6-b87e-1932e96fb354",
+    "created_at": "...",
+    "updated_at": "...",
+    "keywords": ["pizza", "recipes", "food"],
+    "importance": {"low": 14, "high": 0},
+    "content": "<p>pizza toppings</p>"
+  }
+}
+```
+
+### Context Response Format
+```json
+{
+  "data": {
+    "nodes": [/* array of node objects */],
+    "relationships": [
+      {
+        "type": "RELATED_TO",
+        "properties": {
+          "relationship_type": "RELATED_TO",
+          "weight": 0.1,
+          "source": "auto-sync"
+        },
+        "source": "48",
+        "target": "47"
+      }
+    ]
+  }
+}
+```
+
+### Search Response Format
+```json
+{
+  "data": [
+    {
+      "id": "604",
+      "labels": ["Note", "Concept"],
+      "properties": {
+        "name": "pizza",
+        "content": "pizza",
+        "similarity": 1
+      }
+    }
+  ]
+}
+```
+
+## 🔐 Authentication & Security
+
+- All endpoints require a valid `user_id` parameter in UUID format
+- User isolation is enforced - users can only access their own data
+- No additional authentication headers required for testing
+- Production deployment uses proper environment variables
+
+## 🔄 Integration Examples
+
+### JavaScript/Node.js Example
+```javascript
+const axios = require('axios');
+
+const BASE_URL = 'https://omniimcp-production.up.railway.app/api/neo4j';
+const USER_ID = 'cd9bdc60-35af-4bb6-b87e-1932e96fb354';
+
+async function testEndpoints() {
+  try {
+    // Health check
+    const health = await axios.get(`${BASE_URL}/health`);
+    console.log('Health:', health.data);
+    
+    // List concepts
+    const concepts = await axios.get(`${BASE_URL}/concepts?user_id=${USER_ID}&limit=5`);
+    console.log('Concepts:', concepts.data);
+    
+    // Search concepts
+    const search = await axios.get(`${BASE_URL}/concepts/search?user_id=${USER_ID}&q=pizza&limit=3`);
+    console.log('Search:', search.data);
+    
+    // Get context
+    const context = await axios.get(`${BASE_URL}/context?user_id=${USER_ID}&query=pizza%20recipes&limit=3`);
+    console.log('Context:', context.data);
+    
+    // Node context
+    const nodeContext = await axios.get(`${BASE_URL}/nodes/48/context?user_id=${USER_ID}`);
+    console.log('Node Context:', nodeContext.data);
+    
+  } catch (error) {
+    console.error('Error:', error.response?.data || error.message);
+  }
+}
+
+testEndpoints();
+```
+
+### Python Example
+```python
+import requests
+
+BASE_URL = 'https://omniimcp-production.up.railway.app/api/neo4j'
+USER_ID = 'cd9bdc60-35af-4bb6-b87e-1932e96fb354'
+
+def test_endpoints():
+    try:
+        # Health check
+        health = requests.get(f'{BASE_URL}/health')
+        print('Health:', health.json())
+        
+        # List concepts
+        concepts = requests.get(f'{BASE_URL}/concepts?user_id={USER_ID}&limit=5')
+        print('Concepts:', concepts.json())
+        
+        # Search concepts
+        search = requests.get(f'{BASE_URL}/concepts/search?user_id={USER_ID}&q=pizza&limit=3')
+        print('Search:', search.json())
+        
+        # Get context
+        context = requests.get(f'{BASE_URL}/context?user_id={USER_ID}&query=pizza%20recipes&limit=3')
+        print('Context:', context.json())
+        
+        # Node context
+        node_context = requests.get(f'{BASE_URL}/nodes/48/context?user_id={USER_ID}')
+        print('Node Context:', node_context.json())
+        
+    except Exception as error:
+        print('Error:', error)
+
+test_endpoints()
+```
+
+## 🚨 Error Handling
+
+### Common Error Responses
+```json
+{
+  "error": "user_id parameter is required"
+}
+```
+
+```json
+{
+  "error": "Node not found"
+}
+```
+
+```json
+{
+  "error": "Invalid user_id format"
+}
+```
+
+## 📈 Test Results Summary
+
+| Endpoint | Production Status | Local Status | Notes |
+|----|----|---|----|
+| Health Check | ✅ Working | ❓ Not tested | Basic connectivity test |
+| List Concepts | ✅ Working | ❓ Not tested | Returns concept nodes |
+| Search Concepts | ✅ Working | ❓ Not tested | Semantic search functionality |
+| AI Context Retrieval | ✅ Working | ❓ Not tested | Context for AI queries |
+| Node Context | ✅ Working | ❓ Not tested | Node relationships |
+
+**Status**: Production environment is fully operational and ready for use.
+
+## 🔧 Development Notes
+
+### Starting Local Server
+```bash
+# Start the development server
+bun run dev
+
+# Or with npm
+npm run dev
+```
+
+### Environment Variables Required
+```bash
+# Core Application
+NODE_ENV=production
+PORT=8000
+
+# Database Configuration
+SUPABASE_URL=https://aaxiawuatfajjpvwtjuz.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+NEO4J_URI=your_neo4j_bolt_uri_here
+NEO4J_USER=your_neo4j_username
+NEO4J_PASSWORD=your_neo4j_password
+NEO4J_DATABASE=neo4j
+
+# Security
+JWT_SECRET=your_jwt_secret_key_here
+OAUTH_ENCRYPTION_KEY=your_encryption_key_here
+
+# AI Integration
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+---
+
+**Last Updated**: January 3, 2025  
+**Production Status**: ✅ All endpoints operational  
+**Local Status**: ❓ Server not running (start with `bun run dev`)

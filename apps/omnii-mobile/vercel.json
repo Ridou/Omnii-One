@@ -1,0 +1,139 @@
+{
+  "buildCommand": "npm run build:web:static && node scripts/generate-static-html.cjs",
+  "outputDirectory": "dist-static",
+  "rewrites": [
+    {
+      "source": "/googleF7XC7eDi6hzXCdTRDmoDWeLiZwFKCS9WY2ZuUubxtqE.html",
+      "destination": "/googleF7XC7eDi6hzXCdTRDmoDWeLiZwFKCS9WY2ZuUubxtqE.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy.html"
+    },
+    {
+      "source": "/terms-of-service", 
+      "destination": "/terms-of-service.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
+      "source": "/support",
+      "destination": "/support.html"
+    },
+    {
+      "source": "/sms-consent",
+      "destination": "/sms-consent.html"
+    },
+    {
+      "source": "/(auth|tabs|request)/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/emergency-logout",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/",
+      "destination": "/landing.html",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(bot|crawler|spider|crawling|Googlebot|Bingbot|facebookexternalhit|twitterbot|whatsapp|telegram|slurp).*"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/privacy-policy.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/terms-of-service.html", 
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/about.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/support.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/sms-consent.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/googleF7XC7eDi6hzXCdTRDmoDWeLiZwFKCS9WY2ZuUubxtqE.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000"
+        }
+      ]
+    },
+    {
+      "source": "/landing.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ]
+} 

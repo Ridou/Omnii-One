@@ -1,0 +1,346 @@
+import { useEffect } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '~/context/AuthContext';
+import { supabase } from '~/lib/supabase';
+
+export default function CallbackScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    const handleCallback = async () => {
+      try {
+        // Safer web detection
+        const isWeb = Platform.OS === 'web' || (typeof window !== 'undefined');
+        
+        console.log('🔄 === OAuth Callback Debug Start ===');
+        console.log('🔄 OAuth callback received with params:', JSON.stringify(params, null, 2));
+        console.log('🔄 Platform:', Platform.OS);
+        console.log('🔄 Is Web:', isWeb);
+        console.log('🔄 User Agent:', isWeb ? navigator?.userAgent : 'N/A');
+        console.log('🔄 Window Location:', isWeb ? window?.location?.href : 'N/A');
+        
+        // Check if we have OAuth parameters in query params
+        const error = params.error as string;
+        const access_token = params.access_token as string;
+        const refresh_token = params.refresh_token as string;
+        const code = params.code as string;
+        const state = params.state as string;
+
+        // For web: Also check hash parameters (Supabase implicit flow)
+        let hashTokens = { access_token: '', refresh_token: '', expires_at: '', token_type: '' };
+        if (isWeb && typeof window !== 'undefined' && window.location.hash) {
+          console.log('🌐 Checking URL hash for tokens...');
+          const hash = window.location.hash.substring(1);
+          const hashParams = new URLSearchParams(hash);
+          
+          hashTokens = {
+            access_token: hashParams.get('access_token') || '',
+            refresh_token: hashParams.get('refresh_token') || '',
+            expires_at: hashParams.get('expires_at') || '',
+            token_type: hashParams.get('token_type') || ''
+          };
+          
+          console.log('🔑 Hash tokens found:', {
+            access_token: hashTokens.access_token ? '✅ present' : '❌ missing',
+            refresh_token: hashTokens.refresh_token ? '✅ present' : '❌ missing',
+            expires_at: hashTokens.expires_at ? '✅ present' : '❌ missing'
+          });
+        }
+
+        console.log('🔍 Parameter Analysis:');
+        console.log('  - error:', error || 'none');
+        console.log('  - access_token (params):', access_token ? '✅ present' : '❌ missing');
+        console.log('  - refresh_token (params):', refresh_token ? '✅ present' : '❌ missing');
+        console.log('  - code:', code ? '✅ present' : '❌ missing');
+        console.log('  - state:', state ? '✅ present' : '❌ missing');
+
+        if (error) {
+          console.error('❌ OAuth error detected:', error);
+          if (isWeb && typeof window !== 'undefined') {
+            console.log('🌐 Redirecting web user to login due to OAuth error');
+            window.location.href = `${window.location.origin}/(auth)/login?error=${encodeURIComponent(error)}`;
+          } else {
+            console.log('📱 Redirecting mobile user to login due to OAuth error');
+            router.replace('/(auth)/login');
+          }
+          return;
+        }
+
+        // Handle web OAuth callback - for web browsers only
+        if (isWeb && typeof window !== 'undefined') {
+          console.log('🌐 === Web OAuth Callback Handling ===');
+          
+          // Check if we have tokens in hash (Supabase implicit flow)
+          if (hashTokens.access_token) {
+            console.log('✅ Hash-based tokens detected - Supabase implicit flow');
+            
+            try {
+              // Set the session using the tokens from hash
+              const session = {
+                access_token: hashTokens.access_token,
+                refresh_token: hashTokens.refresh_token,
+                expires_at: parseInt(hashTokens.expires_at),
+                token_type: hashTokens.token_type,
+                user: null // Will be populated by Supabase
+              };
+              
+              console.log('🔄 Setting session with hash tokens...');
+              const { data, error: sessionError } = await supabase.auth.setSession(session);
+              
+              if (sessionError) {
+                console.error('❌ Session creation error:', sessionError);
+                window.location.href = `${window.location.origin}/(auth)/login?error=${encodeURIComponent(sessionError.message)}`;
+                return;
+              }
+              
+              if (data.session) {
+                console.log('✅ OAuth successful with hash tokens!');
+                console.log('👤 User email:', data.user?.email);
+                console.log(`🔐 Session ID: ${data.session.access_token?.substring(0, 20)}...`);
+                console.log('🎯 Redirecting to approvals page...');
+                // Immediate redirect - no delay needed
+                window.location.replace(`${window.location.origin}/#/(tabs)/approvals`);
+                return;
+              }
+              
+            } catch (tokenError) {
+              console.error('❌ Token processing failed:', tokenError);
+              window.location.href = `${window.location.origin}/(auth)/login?error=${encodeURIComponent('Token processing failed')}`;
+              return;
+            }
+          }
+          
+          // Handle authorization code flow
+          if (code) {
+            console.log('📝 Authorization code detected - server flow');
+            
+            try {
+              console.log('🔄 Attempting to exchange authorization code for session...');
+              console.log('🔑 Authorization code length:', code.length);
+              
+              const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+              
+              if (exchangeError) {
+                console.error('❌ Code exchange error:', exchangeError);
+                console.error('❌ Error details:', JSON.stringify(exchangeError, null, 2));
+                window.location.href = `${window.location.origin}/(auth)/login?error=${encodeURIComponent(exchangeError.message)}`;
+                return;
+              }
+              
+              if (data.session) {
+                console.log('✅ OAuth successful with authorization code!');
+                console.log('👤 User email:', data.user?.email);
+                console.log(`🔐 Session ID: ${data.session.access_token?.substring(0, 20)}...`);
+                console.log('🎯 Redirecting to approvals page...');
+                // Immediate redirect - no delay needed
+                window.location.replace(`${window.location.origin}/#/(tabs)/approvals`);
+                return;
+              }
+              
+              console.warn('⚠️ Code exchange succeeded but no session returned');
+              window.location.href = `${window.location.origin}/(auth)/login?error=${encodeURIComponent('No session created')}`;
+              return;
+              
+            } catch (webError) {
+              console.error('❌ OAuth failed:', webError);
+              console.error('❌ Error details:', JSON.stringify(webError, null, 2));
+              window.location.href = `${window.location.origin}/(auth)/login?error=${encodeURIComponent('Authentication failed')}`;
+              return;
+            }
+          }
+          
+          // No tokens or code found
+          console.warn('⚠️ No OAuth tokens or code found in web callback');
+          window.location.href = `${window.location.origin}/(auth)/login?error=${encodeURIComponent('No authentication data received')}`;
+          return;
+        }
+
+        // Handle mobile app callback
+        console.log('📱 === Mobile App Callback Handling ===');
+        
+        if (access_token || refresh_token) {
+          console.log('✅ Direct OAuth tokens received');
+          console.log('🔑 Access token:', access_token ? '✅ present' : '❌ missing');
+          console.log('🔄 Refresh token:', refresh_token ? '✅ present' : '❌ missing');
+          console.log('⏳ Waiting for auth state update from Supabase...');
+        } else if (code) {
+          console.log('📝 === Mobile Authorization Code Exchange ===');
+          console.log('📝 Authorization code received, attempting exchange...');
+          console.log('🔑 Code length:', code.length);
+          console.log('🔑 Code preview:', code.substring(0, 20) + '...');
+          
+          try {
+            console.log('🔄 Calling supabase.auth.exchangeCodeForSession...');
+            
+            // Note: For mobile deep links, we might need to handle PKCE differently
+            const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            
+            if (exchangeError) {
+              console.error('❌ Mobile code exchange error:', exchangeError);
+              console.error('❌ Error type:', exchangeError.name);
+              console.error('❌ Error message:', exchangeError.message);
+              console.error('❌ Full error:', JSON.stringify(exchangeError, null, 2));
+              
+              // Check if it's a PKCE-related error
+              if (exchangeError.message?.includes('code verifier')) {
+                console.error('🔒 PKCE Error detected - this might be due to web-first OAuth flow');
+                console.log('💡 Suggestion: The authorization code from web callback might not work with mobile PKCE');
+              }
+              
+              router.replace('/(auth)/login');
+              return;
+            }
+            
+            if (data.session) {
+              console.log('✅ Mobile code exchange successful!');
+              console.log('👤 User email:', data.user?.email);
+              console.log(`🔐 Session ID: ${data.session.access_token?.substring(0, 20)}...`);
+              console.log('🎉 Auth context will automatically update');
+              // Auth context will automatically update
+            } else {
+              console.error('❌ No session from code exchange');
+              console.log('🔍 Exchange data:', JSON.stringify(data, null, 2));
+              router.replace('/(auth)/login');
+              return;
+            }
+          } catch (codeError) {
+            console.error('❌ Code exchange failed with exception:', codeError);
+            console.error('❌ Exception details:', JSON.stringify(codeError, null, 2));
+            router.replace('/(auth)/login');
+            return;
+          }
+        } else {
+          console.log('⏳ No specific OAuth params, waiting for auth state update...');
+          console.log('📊 Current params summary:', Object.keys(params).join(', '));
+        }
+
+        // Wait for auth state to update (mobile only)
+        if (!isWeb) {
+          console.log('⏰ === Auth State Monitoring (Mobile) ===');
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          const checkAuthState = () => {
+            attempts++;
+            console.log(`🔍 Auth state check ${attempts}/${maxAttempts}`);
+            console.log('👤 Current user:', user ? `✅ ${user.email}` : '❌ No user');
+            console.log('🔐 User object:', user ? 'Present' : 'Null');
+            
+            if (user) {
+              console.log('✅ === Authentication Success! ===');
+              console.log('👤 Authenticated user:', user.email);
+              console.log('🎯 Redirecting to approvals screen...');
+              router.replace('/(tabs)/approvals');
+            } else if (attempts >= maxAttempts) {
+              console.log('⏰ === Auth Timeout ===');
+              console.log('❌ Auth check timeout after', maxAttempts * 0.3, 'seconds');
+              console.log('🔄 Redirecting to login...');
+              router.replace('/(auth)/login');
+            } else {
+              console.log(`⏳ Waiting... next check in 300ms`);
+              setTimeout(checkAuthState, 300);
+            }
+          };
+          
+          // Start checking after a short delay to allow Supabase to process
+          console.log('⏱️ Starting auth state monitoring in 500ms...');
+          setTimeout(checkAuthState, 500);
+        }
+        
+        console.log('🔄 === OAuth Callback Debug End ===');
+        
+      } catch (error) {
+        console.error('💥 === OAuth Callback Exception ===');
+        console.error('💥 OAuth callback error:', error);
+        
+        // Safely access error properties
+        const errorObj = error as Error;
+        console.error('💥 Error name:', errorObj?.name);
+        console.error('💥 Error message:', errorObj?.message);
+        console.error('💥 Error stack:', errorObj?.stack);
+        console.error('💥 Full error object:', JSON.stringify(error, null, 2));
+        
+        const isWeb = Platform.OS === 'web' || (typeof window !== 'undefined');
+        if (isWeb && typeof window !== 'undefined') {
+          console.log('🌐 Redirecting web user to login due to exception');
+          window.location.href = `${window.location.origin}/(auth)/login?error=${encodeURIComponent('Authentication failed')}`;
+        } else {
+          console.log('📱 Redirecting mobile user to login due to exception');
+          router.replace('/(auth)/login');
+        }
+      }
+    };
+
+    handleCallback();
+  }, [params, router, user]);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    content: {
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: '600',
+      color: '#000000',
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 16,
+      color: '#666666',
+      textAlign: 'center',
+      marginBottom: 32,
+    },
+    debugText: {
+      fontSize: 12,
+      color: '#999999',
+      textAlign: 'center',
+      marginTop: 16,
+    },
+    spinner: {
+      marginBottom: 16,
+    },
+  });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <ActivityIndicator 
+          size="large" 
+          color="#007AFF" 
+          style={styles.spinner}
+        />
+        <Text style={styles.title}>Completing Sign In</Text>
+        <Text style={styles.subtitle}>
+          Please wait while we finish setting up your account...
+        </Text>
+        {params.access_token && (
+          <Text style={styles.debugText}>
+            Processing OAuth tokens...
+          </Text>
+        )}
+        {params.code && (
+          <Text style={styles.debugText}>
+            Processing authorization code...
+          </Text>
+        )}
+        {user && (
+          <Text style={styles.debugText}>
+            Welcome {user.email}! Redirecting...
+          </Text>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+} 

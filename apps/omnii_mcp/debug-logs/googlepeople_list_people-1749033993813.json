@@ -1,0 +1,283 @@
+{
+  "timestamp": "2025-06-04T10:46:33.813Z",
+  "userId": "ad75381f-4145-465d-9790-d25c96ae9a0d",
+  "actionName": "GOOGLEPEOPLE_LIST_PEOPLE",
+  "inputParams": {
+    "userId": "ad75381f-4145-465d-9790-d25c96ae9a0d"
+  },
+  "response": {
+    "successful": true,
+    "actionName": "GOOGLEPEOPLE_LIST_PEOPLE",
+    "data": {
+      "contacts": [
+        {
+          "name": "Racheal",
+          "firstName": "Racheal ",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+16477188016",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu-z7KC6WWT1lwBdJnNRQnhOuoKqo509nCGhpK6GshoChNPz1mfEGBSxp3JcqIjHBbUY9g=s100",
+          "contactId": "people/c1521207088442340386"
+        },
+        {
+          "name": "Mama",
+          "firstName": "Mama",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+14169297050",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu-nHC1itpQKDdww_tY1qZpbdCtObpmuvkd1M8fYi4_4uHKf-8HWFE9cUuXpoPoKXfmR0Q=s100",
+          "contactId": "people/c1967280542826723944"
+        },
+        {
+          "name": "Aidan Hung",
+          "firstName": "Aidan Hung",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+16478650418",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu9cjKDJUc23rRkEisCHc9hzw2mPZfUl1LN7YzKVxfxlUZ7wxjYN5IsMO834pW9yOom79g=s100",
+          "contactId": "people/c2068667888830285603"
+        },
+        {
+          "name": "Gillian",
+          "firstName": "Gillian",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+16475281092",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu__CQatS7T9aYXbs4nfu_HFsxFIlxgnR_Rj1E1mGI4fXOVMwTwDBCMXMnLBTBE50JnjlA=s100",
+          "contactId": "people/c2269222610717011807"
+        },
+        {
+          "name": "Harieshan",
+          "firstName": "Harieshan",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+16477718328",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu_erGO4mnYn7PyHfnSnCvJoPtzGa6HSTZWfS-xB8_aZ2KWKauEbkn_b9aTOqbMr1epj7w=s100",
+          "contactId": "people/c4177047674109105490"
+        },
+        {
+          "name": "Sah Ay Gu Jie",
+          "firstName": "Sah Ay Gu Jie",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+16473432858",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu8pb7nfuFszdulm6X9QGp5qWjhioHjgm7letXXZPd3cTGXIN9NB0m6KQvKR6GtEB0y6mQ=s100",
+          "contactId": "people/c4643585941121072730"
+        },
+        {
+          "name": "Tao",
+          "firstName": "Tao",
+          "emails": [],
+          "phones": [
+            {
+              "number": "6478665430",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu_O8AjkBqk8puZH7QsDm5H9IlRAECdZOG_nq8MqefGgtLh5-qL_EseuJKGC2r6PF_U9xA=s100",
+          "contactId": "people/c6079068456495336028"
+        },
+        {
+          "name": "Kenson",
+          "firstName": "Kenson",
+          "emails": [],
+          "phones": [
+            {
+              "number": "4373444465",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu9ZqBCPxlUwe0PstrBwmt4hJkQ68tXUj7bVsHcgY04pmQzxgXjp6KOYlWwQTU_90WG27A=s100",
+          "contactId": "people/c7090733337859438643"
+        },
+        {
+          "name": "Michael Cao",
+          "firstName": "Michael Cao",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+14169033828",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu_U-jACLawjTWu3T1h16_V3wiVcp5K5HqJcrPfr95-ZdqkRjpXtBOs96CUM-dVe586I7g=s100",
+          "contactId": "people/c7243011463477300991"
+        },
+        {
+          "name": "PohPoh",
+          "firstName": "PohPoh",
+          "emails": [],
+          "phones": [
+            {
+              "number": "6477608338",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu8vkWMIkrI_3o--yjDvQBxXQyBXKdR43P4Ul90Ttvjm-dwrRtQqzhdACKH92qHRyx08DQ=s100",
+          "contactId": "people/c8557717172769366986"
+        },
+        {
+          "name": "Nick Xie",
+          "firstName": "Nick Xie",
+          "emails": [],
+          "phones": [
+            {
+              "number": "15198315490",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu--qCL-H7fVDZW5jF5OwFSCyktbyheFdy_uZOTIMGEFPRfjGZ_TY70DNY8Do2qt8GtUQg=s100",
+          "contactId": "people/c1392680610990278698"
+        },
+        {
+          "name": "Cynthia Sun",
+          "firstName": "Cynthia Sun",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+16475456806",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu-URFUWLoMzMkYVcxGPcnupy37t-_AeQaWTtfOZpHe_NLwW8s5aW_MKbVDBiTdSrjMAkA=s100",
+          "contactId": "people/c2665708507242863082"
+        },
+        {
+          "name": "Karen Lee",
+          "firstName": "Karen Lee",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+16476439467",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu-8ygLYt9Nsxyv1sjN1wVDlDf6DSntqyGCQrQnHNwxjACpulHcElAl0hjGxDakA5O4Kzg=s100",
+          "contactId": "people/c3631226323048510773"
+        },
+        {
+          "name": "Mary",
+          "firstName": "Mary",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+1 647-928-6102",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu-juCpVR6JIoZ0a2WDgZg4Vxo-DqN4EdVJ_hDyfUB960ktwLr-St5NOKqXX6gyF3ejF0A=s100",
+          "contactId": "people/c1244085647382146070"
+        },
+        {
+          "name": "Jason Sang",
+          "firstName": "Jason",
+          "lastName": "Sang",
+          "emails": [],
+          "phones": [
+            {
+              "number": "(647) 719-2000",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu-Gm9TI_gAOm0Eg_7Spq6QtcMMGbcYNk9o4oH9Tg2G5QmY2KIVCNkWYVSBL1f3FPq3SXQ=s100",
+          "contactId": "people/c7454575337737679474"
+        },
+        {
+          "name": "Michael L L",
+          "firstName": "Michael L",
+          "lastName": "L",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+1 519-729-4162",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu-juCpVR6JIoZ0a2WDgZg4Vxo-DqN4EdVJ_hDyfUB960ktwLr-St5NOKqXX6gyF3ejF0A=s100",
+          "contactId": "people/c215428457992396141"
+        },
+        {
+          "name": "Eric Huang",
+          "firstName": "Eric",
+          "lastName": "Huang",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+1 613-220-1025",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu-1Epy7NA5aqcsCts0iPNOZKbOaO396Ks7n2SsHZ7QZAX9cwG8t9_bmsQ0s1LvuQ1TwrQ=s100",
+          "contactId": "people/c2871993372801195253"
+        },
+        {
+          "name": "Naman",
+          "firstName": "Naman",
+          "emails": [],
+          "phones": [
+            {
+              "number": "1 (226) 505-0773",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu_xOhW4njo-LcM4AA51si7AqOLbXUxiR3lwNHtPGvX5-roQrd3fRzJhZjb2ydr_TAapKQ=s100",
+          "contactId": "people/c6775229756251163314"
+        },
+        {
+          "name": "Matthew Ho",
+          "firstName": "Matthew Ho",
+          "emails": [],
+          "phones": [
+            {
+              "number": "(647) 572-3168",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu_R-Z3HXnuAFiBH5XOoJWW66H7lRXjTrS2saNRcH_6SwereXxxQraHCzREULb4o1r0xuw=s100",
+          "contactId": "people/c2752460395647369494"
+        },
+        {
+          "name": "Juthika",
+          "firstName": "Juthika",
+          "emails": [],
+          "phones": [
+            {
+              "number": "+1 905-391-2760",
+              "type": "mobile"
+            }
+          ],
+          "photoUrl": "https://lh3.googleusercontent.com/cm/AGPWSu8mWKTEWKwSj99ZGbnplrUtKkkwmJYoePKC-JZzlng8AZyWxAvbvTt806EzuBZeH2OwHQ=s100",
+          "contactId": "people/c2979502481535674459"
+        }
+      ],
+      "totalCount": 20,
+      "nextPageToken": "GiIKHggUagwIiMiAwgYQkNbR6QJyDAj_x4DCBhDA_bbeAhAC"
+    }
+  },
+  "success": true,
+  "formattedTimestamp": "6/4/2025, 7:46:33 PM"
+}

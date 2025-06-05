@@ -43,7 +43,7 @@
     "jiti": "^2.4.2",
     "prettier": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "~5.8.3"
   },
   "prettier": "@acme/prettier-config"
 }

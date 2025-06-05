@@ -1,0 +1,299 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* OMNII Custom Component Classes */
+@layer components {
+  /* Card Components */
+  .omnii-card {
+    @apply bg-omnii-card rounded-2xl p-5 shadow-omnii-card border border-omnii-border;
+  }
+  
+  .omnii-card-elevated {
+    @apply omnii-card shadow-omnii-elevated;
+  }
+  
+  /* Button Components */
+  .omnii-btn-primary {
+    @apply bg-ai-start px-6 py-4 rounded-xl min-h-[44px] min-w-[44px] items-center justify-center;
+  }
+  
+  .omnii-btn-secondary {
+    @apply bg-omnii-background border-2 border-omnii-border px-6 py-4 rounded-xl min-h-[44px] min-w-[44px] items-center justify-center;
+  }
+  
+  /* CRITICAL: Typography Components with Font Integration */
+  .omnii-heading {
+    @apply text-omnii-text-primary font-semibold leading-tight;
+    font-family: 'Tiempos-Semibold', system-ui, serif;
+  }
+  
+  .omnii-body {
+    @apply text-omnii-text-primary leading-relaxed;
+    font-family: 'Tiempos-Regular', system-ui, serif;
+  }
+  
+  .omnii-caption {
+    @apply text-omnii-text-secondary text-sm leading-relaxed;
+    font-family: 'Tiempos-Regular', system-ui, serif;
+  }
+  
+  /* Brand Typography (Styrene) */
+  .omnii-brand {
+    font-family: 'Styrene-Regular', system-ui, sans-serif;
+    @apply leading-tight;
+  }
+  
+  .omnii-brand-bold {
+    font-family: 'Styrene-Bold', system-ui, sans-serif;
+    @apply leading-tight;
+  }
+  
+  .omnii-brand-black {
+    font-family: 'Styrene-Black', system-ui, sans-serif;
+    @apply leading-tight;
+  }
+  
+  /* Font-Specific Typography Classes */
+  .text-styrene {
+    font-family: 'Styrene-Regular', system-ui, sans-serif;
+  }
+  
+  .text-styrene-light {
+    font-family: 'Styrene-Light', system-ui, sans-serif;
+  }
+  
+  .text-styrene-medium {
+    font-family: 'Styrene-Medium', system-ui, sans-serif;
+  }
+  
+  .text-styrene-bold {
+    font-family: 'Styrene-Bold', system-ui, sans-serif;
+  }
+  
+  .text-styrene-black {
+    font-family: 'Styrene-Black', system-ui, sans-serif;
+  }
+  
+  .text-tiempos {
+    font-family: 'Tiempos-Regular', system-ui, serif;
+  }
+  
+  .text-tiempos-medium {
+    font-family: 'Tiempos-Medium', system-ui, serif;
+  }
+  
+  .text-tiempos-semibold {
+    font-family: 'Tiempos-Semibold', system-ui, serif;
+  }
+  
+  .text-tiempos-bold {
+    font-family: 'Tiempos-Bold', system-ui, serif;
+  }
+  
+  /* Priority Indicators */
+  .priority-high {
+    @apply border-l-4 border-priority-high;
+  }
+  
+  .priority-medium {
+    @apply border-l-4 border-priority-medium;
+  }
+  
+  .priority-low {
+    @apply border-l-4 border-priority-low;
+  }
+  
+  /* Gamification Elements */
+  .mascot-glow {
+    @apply shadow-omnii-glow;
+  }
+  
+  .achievement-pulse {
+    @apply animate-pulse-slow;
+  }
+  
+  /* Enhanced Animation Classes (React Native compatible) */
+  .anim-pulse-omnii {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .anim-shimmer {
+    animation: shimmer 3s ease-in-out infinite;
+  }
+  
+  .anim-fade-glow {
+    animation: fade-glow 1.5s ease-in-out infinite;
+  }
+  
+  .anim-spin-slow {
+    animation: spin 8s linear infinite;
+  }
+  
+  /* Mascot Evolution Stages */
+  .mascot-seed {
+    @apply bg-gradient-to-br from-green-400 to-green-600;
+  }
+  
+  .mascot-flower {
+    @apply bg-gradient-to-br from-pink-400 to-purple-600;
+  }
+  
+  .mascot-tree {
+    @apply bg-gradient-to-br from-green-600 to-blue-600;
+  }
+  
+  /* XP and Level Indicators */
+  .xp-bar {
+    @apply bg-gradient-to-r from-ai-start to-ai-end rounded-full h-2;
+  }
+  
+  .level-badge {
+    @apply bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full px-3 py-1;
+  }
+  
+  /* Achievement Celebration */
+  .achievement-glow {
+    @apply shadow-omnii-glow animate-pulse-slow;
+  }
+  
+  .achievement-bounce {
+    @apply animate-bounce-soft;
+  }
+  
+  /* Scale transformations (React Native compatible) */
+  .scale-pressed {
+    transform: scale(0.98);
+  }
+  
+  .scale-enlarged {
+    transform: scale(1.02);
+  }
+  
+  /* Accessibility Enhancements */
+  .accessible-touch {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  .high-contrast {
+    @apply contrast-125 brightness-110;
+  }
+  
+  /* Platform-specific card shadows */
+  .omnii-card-shadow {
+    @apply shadow-omnii-card;
+  }
+  
+  /* Font loading states */
+  .font-loading {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  
+  .font-loaded-styrene {
+    font-family: 'Styrene-Regular', system-ui, sans-serif;
+  }
+  
+  .font-loaded-tiempos {
+    font-family: 'Tiempos-Regular', system-ui, serif;
+  }
+}
+
+/* Platform-specific fixes */
+@layer utilities {
+  .text-rendering-optimized {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* React Native Web specific fixes */
+  .rn-text-fix {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  
+  /* Platform-specific shadow utilities */
+  .shadow-ios {
+    shadow-color: #000000;
+    shadow-offset: 0px 2px;
+    shadow-opacity: 0.04;
+    shadow-radius: 12px;
+  }
+  
+  .shadow-android {
+    elevation: 2;
+  }
+}
+
+/* React Native compatible keyframes (removed box-shadow) */
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes fade-glow {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media screen and (max-width: 768px) {
+  .mobile-text-wrap {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  
+  .mobile-touch {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  div[data-focusable="true"], 
+  span[data-focusable="true"],
+  [role="text"] {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+}
+
+@media screen and (max-width: 375px) {
+  body {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  div[data-focusable="true"], 
+  span[data-focusable="true"],
+  [role="text"] {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  .dark-mode-text {
+    color: #ffffff;
+  }
+  
+  .dark-mode-bg {
+    background-color: #1a1a1a;
+  }
+}
+
+/* Basic font rendering for all platforms */
+body, html {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

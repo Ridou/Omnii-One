@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      .cls-1 { fill: #007AFF; }
+      .cls-2 { fill: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 36px; font-weight: 700; }
+    </style>
+  </defs>
+  <rect class="cls-1" width="100" height="100" rx="20"/>
+  <text class="cls-2" x="50" y="62" text-anchor="middle">O</text>
+</svg>

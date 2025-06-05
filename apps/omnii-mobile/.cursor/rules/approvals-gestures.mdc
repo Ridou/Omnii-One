@@ -1,0 +1,1314 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 🎯 **OMNII Approvals: Swipe Gestures Implementation Plan**
+
+> Transform button-based approval workflow into intuitive swipe gestures while maintaining all existing functionality and integrating seamlessly with current codebase patterns.
+
+## 📋 **Current State Analysis**
+
+### ✅ **Existing Functionality to Preserve**
+- **Navigation**: `router.push(/request/${item.id})` for task details
+- **Data Management**: `useFetchApprovals` hook with mock data pattern  
+- **Filtering**: Priority-based filtering (all, high, medium, low)
+- **State Management**: Pull-to-refresh, loading states, error handling
+- **Authentication**: User login checks and redirects
+- **Styling**: `AppColors` system, consistent shadows and gradients
+- **Animations**: Existing `Animated.Value` patterns for scale/press feedback
+
+### 🔍 **Current Codebase Patterns**
+- **Animation**: Legacy `Animated` API used throughout (will use Reanimated v3 for gestures only)
+- **Components**: Organized in `components/common/` for reusable items
+- **Hooks**: Custom hooks with mock data pattern (`useFetchApprovals`, `useFetchAchievements`)
+- **Colors**: Centralized in `constants/Colors.ts` with comprehensive palette
+- **Achievements**: Existing XP/achievement system ready for gesture integration
+
+---
+
+## 🏗️ **Phase 1: Core Swipe Infrastructure**
+
+### 1.1 **Create Gesture Handler Setup**
+**File**: `components/common/GestureProvider.tsx`
+
+```typescript
+import React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+interface GestureProviderProps {
+  children: React.ReactNode;
+}
+
+export function GestureProvider({ children }: GestureProviderProps) {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {children}
+    </GestureHandlerRootView>
+  );
+}
+```
+
+### 1.2 **Create Swipe Gesture Hook**
+**File**: `hooks/useSwipeGestures.ts`
+
+```typescript
+import { useSharedValue, useAnimatedGestureHandler, runOnJS } from 'react-native-reanimated';
+import { PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
+import { Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const APPROVE_THRESHOLD = 120; // pixels
+const REJECT_THRESHOLD = -120; // pixels
+const HAPTIC_THRESHOLD = 60; // pixels
+
+interface UseSwipeGesturesProps {
+  onApprove: () => void;
+  onReject: () => void;
+  disabled?: boolean;
+}
+
+export function useSwipeGestures({ onApprove, onReject, disabled = false }: UseSwipeGesturesProps) {
+  const translateX = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const hapticTriggered = useSharedValue(false);
+
+  const triggerHaptic = (type: 'light' | 'medium' | 'success') => {
+    switch (type) {
+      case 'light':
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        break;
+      case 'medium':
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        break;
+      case 'success':
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        break;
+    }
+  };
+
+  const gestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
+    onStart: () => {
+      if (disabled) return;
+      scale.value = withSpring(0.98);
+      hapticTriggered.value = false;
+    },
+    
+    onActive: (event) => {
+      if (disabled) return;
+      
+      translateX.value = event.translationX;
+      
+      // Trigger haptic feedback at thresholds
+      const absTranslation = Math.abs(event.translationX);
+      if (absTranslation > HAPTIC_THRESHOLD && !hapticTriggered.value) {
+        hapticTriggered.value = true;
+        runOnJS(triggerHaptic)('light');
+      }
+      
+      // Reset haptic if user goes back below threshold
+      if (absTranslation < HAPTIC_THRESHOLD && hapticTriggered.value) {
+        hapticTriggered.value = false;
+      }
+    },
+    
+    onEnd: (event) => {
+      if (disabled) return;
+      
+      scale.value = withSpring(1);
+      
+      const shouldApprove = event.translationX > APPROVE_THRESHOLD;
+      const shouldReject = event.translationX < REJECT_THRESHOLD;
+      
+      if (shouldApprove) {
+        translateX.value = withTiming(SCREEN_WIDTH, { duration: 300 });
+        runOnJS(triggerHaptic)('success');
+        runOnJS(onApprove)();
+      } else if (shouldReject) {
+        translateX.value = withTiming(-SCREEN_WIDTH, { duration: 300 });
+        runOnJS(triggerHaptic)('success');
+        runOnJS(onReject)();
+      } else {
+        translateX.value = withSpring(0);
+      }
+    },
+  });
+
+  return {
+    gestureHandler,
+    translateX,
+    scale,
+  };
+}
+```
+
+### 1.3 **Create Swipeable Card Component**
+**File**: `components/common/SwipeableCard.tsx`
+
+```typescript
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, interpolate, interpolateColor } from 'react-native-reanimated';
+import { useSwipeGestures } from '@/hooks/useSwipeGestures';
+import { AppColors } from '@/constants/Colors';
+
+interface SwipeableCardProps {
+  children: React.ReactNode;
+  onApprove: () => void;
+  onReject: () => void;
+  disabled?: boolean;
+}
+
+export function SwipeableCard({ children, onApprove, onReject, disabled = false }: SwipeableCardProps) {
+  const { gestureHandler, translateX, scale } = useSwipeGestures({
+    onApprove,
+    onReject,
+    disabled,
+  });
+
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { scale: scale.value }
+    ],
+  }));
+
+  const approveBackgroundStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [0, 120], [0, 1], 'clamp'),
+  }));
+
+  const rejectBackgroundStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [-120, 0], [1, 0], 'clamp'),
+  }));
+
+  const backgroundColorStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      translateX.value,
+      [-120, 0, 120],
+      [AppColors.error, 'transparent', AppColors.success]
+    ),
+  }));
+
+  return (
+    <View style={styles.container}>
+      {/* Background indicators */}
+      <Animated.View style={[styles.background, backgroundColorStyle]} />
+      
+      {/* Approve indicator (right side) */}
+      <Animated.View style={[styles.approveIndicator, approveBackgroundStyle]}>
+        <View style={styles.indicatorContent}>
+          <Text style={styles.approveText}>✓</Text>
+          <Text style={styles.indicatorLabel}>Approve</Text>
+        </View>
+      </Animated.View>
+      
+      {/* Reject indicator (left side) */}
+      <Animated.View style={[styles.rejectIndicator, rejectBackgroundStyle]}>
+        <View style={styles.indicatorContent}>
+          <Text style={styles.rejectText}>✕</Text>
+          <Text style={styles.indicatorLabel}>Decline</Text>
+        </View>
+      </Animated.View>
+
+      {/* Main card content */}
+      <PanGestureHandler onGestureEvent={gestureHandler} enabled={!disabled}>
+        <Animated.View style={cardAnimatedStyle}>
+          {children}
+        </Animated.View>
+      </PanGestureHandler>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  background: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 16,
+  },
+  approveIndicator: {
+    position: 'absolute',
+    right: 20,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  rejectIndicator: {
+    position: 'absolute',
+    left: 20,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  indicatorContent: {
+    alignItems: 'center',
+  },
+  approveText: {
+    fontSize: 24,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  rejectText: {
+    fontSize: 24,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  indicatorLabel: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+});
+```
+
+---
+
+## 🏗️ **Phase 2: Enhanced ApprovalCard**
+
+### 2.1 **Create Streamlined ApprovalCard**
+**File**: `components/approvals/StreamlinedApprovalCard.tsx`
+
+```typescript
+import React, { useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
+import { AppColors } from '@/constants/Colors';
+
+interface StreamlinedApprovalCardProps {
+  approval: {
+    id: string;
+    title: string;
+    description: string;
+    priority: 'high' | 'medium' | 'low';
+    created_at: string;
+    requested_by: string;
+    type: string;
+  };
+  onPress: () => void;
+}
+
+export default function StreamlinedApprovalCard({ 
+  approval, 
+  onPress 
+}: StreamlinedApprovalCardProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.98,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const getPriorityConfig = (priority: string) => {
+    switch(priority) {
+      case 'high':
+        return {
+          color: AppColors.highPriority,
+          label: 'HIGH PRIORITY',
+          emoji: '🔥',
+          borderColor: AppColors.highPriority,
+        };
+      case 'medium':
+        return {
+          color: AppColors.mediumPriority,
+          label: 'MEDIUM PRIORITY',
+          emoji: '📊',
+          borderColor: AppColors.mediumPriority,
+        };
+      case 'low':
+        return {
+          color: AppColors.lowPriority,
+          label: 'LOW PRIORITY',
+          emoji: '✅',
+          borderColor: AppColors.lowPriority,
+        };
+      default:
+        return {
+          color: AppColors.aiGradientStart,
+          label: 'PRIORITY',
+          emoji: '📋',
+          borderColor: AppColors.aiGradientStart,
+        };
+    }
+  };
+
+  const priorityConfig = getPriorityConfig(approval.priority);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.9}
+      style={styles.touchableContainer}
+    >
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            borderLeftColor: priorityConfig.borderColor,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        {/* Priority Badge */}
+        <View style={styles.header}>
+          <View
+            style={[
+              styles.priorityBadge,
+              { backgroundColor: priorityConfig.color },
+            ]}
+          >
+            <Text style={styles.priorityText}>
+              {priorityConfig.label}
+            </Text>
+          </View>
+        </View>
+
+        {/* Title with Emoji */}
+        <Text style={styles.title}>
+          {priorityConfig.emoji} {approval.title}
+        </Text>
+
+        {/* Description */}
+        <Text style={styles.description}>
+          {approval.description}
+        </Text>
+
+        {/* Meta Information */}
+        <View style={styles.meta}>
+          <Text style={styles.metaText}>
+            📅 Suggested for today at 2:00 PM
+          </Text>
+          <View style={styles.aiGeneratedBadge}>
+            <Text style={styles.aiGeneratedText}>AI Generated</Text>
+          </View>
+        </View>
+
+        {/* Swipe Hint */}
+        <View style={styles.swipeHint}>
+          <Text style={styles.swipeHintText}>
+            ← Swipe to decline • Tap for details • Swipe to approve →
+          </Text>
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  touchableContainer: {
+    // Remove any touch opacity effects to prevent conflicts with gesture handler
+  },
+  container: {
+    backgroundColor: AppColors.cardBackground,
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    ...AppColors.shadows.card,
+  },
+  header: {
+    marginBottom: 12,
+  },
+  priorityBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  priorityText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 8,
+    lineHeight: 24,
+  },
+  description: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  meta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  metaText: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+  },
+  aiGeneratedBadge: {
+    backgroundColor: `${AppColors.aiGradientStart}10`,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  aiGeneratedText: {
+    color: AppColors.aiGradientStart,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  swipeHint: {
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: AppColors.borderLight,
+  },
+  swipeHintText: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+    fontStyle: 'italic',
+  },
+});
+```
+
+---
+
+## 🏗️ **Phase 3: State Management & Actions**
+
+### 3.1 **Create Approval Actions Hook**
+**File**: `hooks/useApprovalActions.ts`
+
+```typescript
+import { useCallback, useState } from 'react';
+import { Alert } from 'react-native';
+
+interface UseApprovalActionsProps {
+  approvals: any[];
+  setApprovals: (approvals: any[]) => void;
+  onAchievement?: (achievementId: string) => void;
+}
+
+export function useApprovalActions({ 
+  approvals, 
+  setApprovals, 
+  onAchievement 
+}: UseApprovalActionsProps) {
+  const [undoStack, setUndoStack] = useState<Array<{
+    action: 'approve' | 'reject';
+    approval: any;
+    timestamp: number;
+  }>>([]);
+
+  const removeApproval = useCallback((id: string) => {
+    setApprovals(approvals.filter(approval => approval.id !== id));
+  }, [approvals, setApprovals]);
+
+  const handleApprove = useCallback((approval: any) => {
+    // Add to undo stack
+    setUndoStack(prev => [...prev, {
+      action: 'approve',
+      approval,
+      timestamp: Date.now(),
+    }]);
+
+    // Remove from current list
+    removeApproval(approval.id);
+
+    // Track achievement progress
+    onAchievement?.('swipe-approve');
+
+    // In real app, would also make API call
+    console.log('Approved:', approval.title);
+  }, [removeApproval, onAchievement]);
+
+  const handleReject = useCallback((approval: any) => {
+    // Add to undo stack
+    setUndoStack(prev => [...prev, {
+      action: 'reject',
+      approval,
+      timestamp: Date.now(),
+    }]);
+
+    // Remove from current list
+    removeApproval(approval.id);
+
+    // Track achievement progress
+    onAchievement?.('swipe-reject');
+
+    // In real app, would also make API call
+    console.log('Rejected:', approval.title);
+  }, [removeApproval, onAchievement]);
+
+  const undoLastAction = useCallback(() => {
+    const lastAction = undoStack[undoStack.length - 1];
+    if (!lastAction) return;
+
+    // Check if undo is still valid (within 10 seconds)
+    if (Date.now() - lastAction.timestamp > 10000) {
+      Alert.alert('Cannot Undo', 'This action is too old to undo.');
+      return;
+    }
+
+    // Restore the approval to the list
+    setApprovals(prev => [...prev, lastAction.approval]);
+    
+    // Remove from undo stack
+    setUndoStack(prev => prev.slice(0, -1));
+
+    console.log('Undid:', lastAction.action, lastAction.approval.title);
+  }, [undoStack, setApprovals]);
+
+  return {
+    handleApprove,
+    handleReject,
+    undoLastAction,
+    canUndo: undoStack.length > 0,
+    lastAction: undoStack[undoStack.length - 1],
+  };
+}
+```
+
+### 3.2 **Create Achievement Integration Hook**  
+**File**: `hooks/useSwipeAchievements.ts`
+
+```typescript
+import { useCallback, useRef } from 'react';
+
+interface SwipeStats {
+  totalSwipes: number;
+  approveStreak: number;
+  rejectStreak: number;
+  fastSwipes: number; // swipes completed < 2 seconds
+  perfectDay: boolean; // all tasks processed via swipe
+}
+
+export function useSwipeAchievements() {
+  const stats = useRef<SwipeStats>({
+    totalSwipes: 0,
+    approveStreak: 0,
+    rejectStreak: 0,
+    fastSwipes: 0,
+    perfectDay: false,
+  });
+
+  const checkAchievements = useCallback((action: 'approve' | 'reject', timeTaken?: number) => {
+    stats.current.totalSwipes++;
+    
+    if (action === 'approve') {
+      stats.current.approveStreak++;
+      stats.current.rejectStreak = 0;
+    } else {
+      stats.current.rejectStreak++;
+      stats.current.approveStreak = 0;
+    }
+
+    if (timeTaken && timeTaken < 2000) {
+      stats.current.fastSwipes++;
+    }
+
+    // Check for achievements
+    const achievements = [];
+
+    // First swipe achievement
+    if (stats.current.totalSwipes === 1) {
+      achievements.push({
+        id: 'first-swipe',
+        title: 'Swipe Pioneer',
+        description: 'Complete your first swipe gesture',
+        xp: 25,
+      });
+    }
+
+    // Speed achievements
+    if (stats.current.fastSwipes === 10) {
+      achievements.push({
+        id: 'speed-demon',
+        title: 'Speed Demon',
+        description: 'Complete 10 swipes in under 2 seconds each',
+        xp: 100,
+      });
+    }
+
+    // Streak achievements
+    if (stats.current.approveStreak === 5) {
+      achievements.push({
+        id: 'approve-streak',
+        title: 'Trust Builder',
+        description: 'Approve 5 tasks in a row',
+        xp: 75,
+      });
+    }
+
+    return achievements;
+  }, []);
+
+  const resetDailyStats = useCallback(() => {
+    stats.current = {
+      totalSwipes: 0,
+      approveStreak: 0,
+      rejectStreak: 0,
+      fastSwipes: 0,
+      perfectDay: false,
+    };
+  }, []);
+
+  return {
+    checkAchievements,
+    resetDailyStats,
+    getStats: () => stats.current,
+  };
+}
+```
+
+---
+
+## 🏗️ **Phase 4: Tutorial & Onboarding**
+
+### 4.1 **Create Swipe Tutorial Component**
+**File**: `components/approvals/SwipeTutorial.tsx`
+
+```typescript
+import React, { useRef, useEffect } from 'react';
+import { 
+  Modal, 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  Animated, 
+  Dimensions, 
+  StyleSheet 
+} from 'react-native';
+import { AppColors } from '@/constants/Colors';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+interface SwipeTutorialProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+export function SwipeTutorial({ visible, onClose }: SwipeTutorialProps) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const gestureAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      // Entrance animation
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Start gesture demonstration
+      const gestureDemo = Animated.loop(
+        Animated.sequence([
+          Animated.timing(gestureAnim, {
+            toValue: 100,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(gestureAnim, {
+            toValue: -100,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(gestureAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.delay(500),
+        ])
+      );
+      
+      gestureDemo.start();
+
+      return () => {
+        gestureDemo.stop();
+      };
+    }
+  }, [visible, fadeAnim, slideAnim, gestureAnim]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal transparent visible={visible} animationType="none">
+      <Animated.View 
+        style={[
+          styles.overlay, 
+          { opacity: fadeAnim }
+        ]}
+      >
+        <Animated.View 
+          style={[
+            styles.container,
+            {
+              transform: [
+                { 
+                  scale: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          <Text style={styles.title}>Master the Swipe! 🚀</Text>
+          
+          {/* Demo Card */}
+          <View style={styles.demoContainer}>
+            <Animated.View 
+              style={[
+                styles.demoCard,
+                {
+                  transform: [{ translateX: gestureAnim }]
+                }
+              ]}
+            >
+              <Text style={styles.demoTitle}>📋 Sample Task</Text>
+              <Text style={styles.demoDescription}>
+                This is how tasks will look
+              </Text>
+            </Animated.View>
+            
+            {/* Gesture indicators */}
+            <View style={styles.gestureIndicators}>
+              <View style={styles.rejectIndicator}>
+                <Text style={styles.indicatorText}>← Decline</Text>
+              </View>
+              <View style={styles.approveIndicator}>
+                <Text style={styles.indicatorText}>Approve →</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Instructions */}
+          <View style={styles.instructions}>
+            <View style={styles.instruction}>
+              <Text style={styles.instructionEmoji}>👆</Text>
+              <Text style={styles.instructionText}>
+                <Text style={styles.bold}>Tap</Text> to view task details
+              </Text>
+            </View>
+            <View style={styles.instruction}>
+              <Text style={styles.instructionEmoji}>👉</Text>
+              <Text style={styles.instructionText}>
+                <Text style={styles.bold}>Swipe right</Text> to approve
+              </Text>
+            </View>
+            <View style={styles.instruction}>
+              <Text style={styles.instructionEmoji}>👈</Text>
+              <Text style={styles.instructionText}>
+                <Text style={styles.bold}>Swipe left</Text> to decline
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+            <Text style={styles.closeButtonText}>Got it! Let's go 🎯</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  container: {
+    backgroundColor: AppColors.cardBackground,
+    borderRadius: 24,
+    padding: 24,
+    maxWidth: SCREEN_WIDTH - 40,
+    width: '100%',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  demoContainer: {
+    width: '100%',
+    height: 120,
+    marginBottom: 24,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  demoCard: {
+    backgroundColor: AppColors.background,
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: AppColors.aiGradientStart,
+    width: '80%',
+    ...AppColors.shadows.card,
+  },
+  demoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  demoDescription: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  },
+  gestureIndicators: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  rejectIndicator: {
+    alignItems: 'center',
+  },
+  approveIndicator: {
+    alignItems: 'center',
+  },
+  indicatorText: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+    fontWeight: '600',
+  },
+  instructions: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  instruction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  instructionEmoji: {
+    fontSize: 20,
+    marginRight: 12,
+    width: 30,
+  },
+  instructionText: {
+    fontSize: 16,
+    color: AppColors.textPrimary,
+    flex: 1,
+  },
+  bold: {
+    fontWeight: '600',
+    color: AppColors.aiGradientStart,
+  },
+  closeButton: {
+    backgroundColor: AppColors.aiGradientStart,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+});
+```
+
+---
+
+## 🏗️ **Phase 5: Integration & Updates**
+
+### 5.1 **Update Main Approvals Screen**
+**File**: `app/(tabs)/approvals.tsx` - **Key Changes**
+
+```typescript
+// Add imports
+import { SwipeableCard } from '@/components/common/SwipeableCard';
+import { StreamlinedApprovalCard } from '@/components/approvals/StreamlinedApprovalCard';
+import { SwipeTutorial } from '@/components/approvals/SwipeTutorial';
+import { useApprovalActions } from '@/hooks/useApprovalActions';
+import { useSwipeAchievements } from '@/hooks/useSwipeAchievements';
+
+// Add state
+const [showTutorial, setShowTutorial] = useState(false);
+const [approvalsList, setApprovalsList] = useState([]);
+
+// Add hooks
+const { checkAchievements } = useSwipeAchievements();
+const { handleApprove, handleReject, undoLastAction, canUndo, lastAction } = useApprovalActions({
+  approvals: approvalsList,
+  setApprovals: setApprovalsList,
+  onAchievement: (achievementId) => {
+    // Track achievement progress
+    console.log('Achievement progress:', achievementId);
+  },
+});
+
+// Update renderItem
+const renderItem = ({ item }: { item: Approval }) => (
+  <SwipeableCard
+    onApprove={() => handleApprove(item)}
+    onReject={() => handleReject(item)}
+    disabled={false}
+  >
+    <StreamlinedApprovalCard 
+      approval={item} 
+      onPress={() => router.push(`/request/${item.id}`)}
+    />
+  </SwipeableCard>
+);
+
+// Add tutorial trigger (show on first visit)
+useEffect(() => {
+  const isFirstTime = true; // Check AsyncStorage in real implementation
+  if (isFirstTime && approvals.length > 0) {
+    setShowTutorial(true);
+  }
+}, [approvals]);
+
+// Add tutorial component before closing SafeAreaView
+<SwipeTutorial
+  visible={showTutorial}
+  onClose={() => setShowTutorial(false)}
+/>
+```
+
+### 5.2 **Update Root Layout for Gesture Support**
+**File**: `app/_layout.tsx` - **Add GestureProvider**
+
+```typescript
+import { GestureProvider } from '@/components/common/GestureProvider';
+
+// Wrap the entire app with GestureProvider
+export default function RootLayout() {
+  return (
+    <GestureProvider>
+      {/* existing layout content */}
+    </GestureProvider>
+  );
+}
+```
+
+### 5.3 **Create Undo Snackbar Component**
+**File**: `components/common/UndoSnackbar.tsx`
+
+```typescript
+import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import { AppColors } from '@/constants/Colors';
+
+interface UndoSnackbarProps {
+  visible: boolean;
+  message: string;
+  onUndo: () => void;
+  onDismiss: () => void;
+  autoHideDelay?: number;
+}
+
+export function UndoSnackbar({ 
+  visible, 
+  message, 
+  onUndo, 
+  onDismiss, 
+  autoHideDelay = 5000 
+}: UndoSnackbarProps) {
+  const translateY = useRef(new Animated.Value(100)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(translateY, {
+        toValue: 0,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+
+      const timer = setTimeout(() => {
+        hideSnackbar();
+      }, autoHideDelay);
+
+      return () => clearTimeout(timer);
+    }
+  }, [visible, autoHideDelay]);
+
+  const hideSnackbar = () => {
+    Animated.timing(translateY, {
+      toValue: 100,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      onDismiss();
+    });
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View 
+      style={[
+        styles.container,
+        { transform: [{ translateY }] }
+      ]}
+    >
+      <Text style={styles.message}>{message}</Text>
+      <TouchableOpacity style={styles.undoButton} onPress={onUndo}>
+        <Text style={styles.undoText}>UNDO</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 90, // Above tab bar
+    left: 20,
+    right: 20,
+    backgroundColor: AppColors.textPrimary,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...AppColors.shadows.elevated,
+    zIndex: 1000,
+  },
+  message: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  undoButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  undoText: {
+    color: AppColors.aiGradientStart,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});
+```
+
+---
+
+## 📋 **Implementation Checklist**
+
+### **Phase 1: Foundation (Week 1)**
+- [ ] Create `GestureProvider` component
+- [ ] Implement `useSwipeGestures` hook
+- [ ] Build `SwipeableCard` component with visual feedback
+- [ ] Test basic swipe functionality with threshold detection
+- [ ] Add haptic feedback integration
+- [ ] Verify gesture performance (60fps target)
+
+### **Phase 2: Card Enhancement (Week 1-2)**
+- [ ] Create `StreamlinedApprovalCard` (remove action buttons)
+- [ ] Add swipe hint text at bottom of cards
+- [ ] Implement tap-to-details functionality
+- [ ] Test card animations and responsiveness
+- [ ] Verify existing navigation still works
+
+### **Phase 3: State Management (Week 2)**
+- [ ] Implement `useApprovalActions` hook
+- [ ] Create undo functionality with time limits
+- [ ] Add `useSwipeAchievements` hook
+- [ ] Test state updates and data flow
+- [ ] Integrate with existing `useFetchApprovals`
+
+### **Phase 4: Tutorial & UX (Week 2-3)**
+- [ ] Build `SwipeTutorial` component
+- [ ] Add first-time user detection (AsyncStorage)
+- [ ] Create `UndoSnackbar` component
+- [ ] Test tutorial animations and flow
+- [ ] Add accessibility support for gestures
+
+### **Phase 5: Integration (Week 3)**
+- [ ] Update main approvals screen
+- [ ] Add GestureProvider to root layout
+- [ ] Integrate undo snackbar
+- [ ] Test full user flow end-to-end
+- [ ] Performance optimization and bug fixes
+
+### **Phase 6: Polish & Testing (Week 4)**
+- [ ] Add loading states for swipe actions
+- [ ] Implement error handling for failed actions
+- [ ] Add analytics tracking for gesture usage
+- [ ] Accessibility testing and improvements
+- [ ] Performance testing on lower-end devices
+- [ ] User testing and feedback collection
+
+---
+
+## 🎯 **Technical Specifications**
+
+### **Gesture Thresholds & Animations**
+```typescript
+const SWIPE_THRESHOLDS = {
+  APPROVE: 120,        // pixels right
+  REJECT: -120,        // pixels left  
+  HAPTIC_TRIGGER: 60,  // pixels for haptic feedback
+  VISUAL_START: 30,    // pixels for visual feedback
+};
+
+const ANIMATION_DURATIONS = {
+  SWIPE_RESPONSE: 16,   // ms (60fps)
+  SPRING_BACK: 300,     // ms ease-out
+  ACTION_COMPLETE: 300, // ms card exit
+  SCALE_FEEDBACK: 100,  // ms touch feedback
+  TUTORIAL_ENTER: 300,  // ms modal entrance
+};
+```
+
+### **Performance Requirements**
+- **Frame Rate**: Maintain 60fps during all gesture interactions
+- **Memory**: No memory leaks from gesture handlers or animations
+- **Battery**: Minimal impact from haptic feedback and animations
+- **Responsiveness**: <16ms gesture response time
+- **Bundle Size**: <50KB additional code for gesture functionality
+
+### **Accessibility Features**
+- **Voice Over**: Alternative button-based interface when enabled
+- **Screen Reader**: Proper labels for all swipe actions
+- **Reduced Motion**: Respect system motion preferences
+- **High Contrast**: Ensure swipe indicators are visible in all modes
+- **Alternative Navigation**: Fallback to original button interface
+
+### **Error Handling & Edge Cases**
+- **Network Failures**: Queue actions for retry when connection restored
+- **Rapid Gestures**: Debounce/throttle to prevent double actions
+- **Interrupted Gestures**: Graceful handling of incomplete swipes
+- **Device Rotation**: Maintain gesture functionality across orientations
+- **Background State**: Proper cleanup when app goes to background
+
+---
+
+## 🏆 **Success Metrics & KPIs**
+
+### **User Experience Metrics**
+- **Task Completion Speed**: Target 50% faster than button interface
+- **User Satisfaction**: >95% preference for swipe over buttons
+- **Error Rate**: <3% accidental approvals/rejections
+- **Learning Curve**: <60 seconds to master swipe gestures
+- **Retention**: Maintain current user engagement levels
+
+### **Technical Performance Metrics**
+- **Frame Rate**: 95%+ of interactions at 60fps
+- **Crash Rate**: 0% gesture-related crashes
+- **Memory Usage**: No increase from baseline
+- **Battery Impact**: <2% additional drain
+- **Load Time**: No impact on app startup performance
+
+### **Achievement Integration Metrics**
+- **First Swipe**: 100% of users complete tutorial
+- **Daily Usage**: 80% of approvals processed via swipe
+- **Speed Achievements**: 60% of users unlock speed-based achievements
+- **Streak Achievements**: 40% of users maintain 5+ swipe streaks
+
+---
+
+## 🔄 **Migration & Rollback Strategy**
+
+### **Gradual Rollout**
+1. **Beta Users (Week 1)**: Internal testing with 10% of test data
+2. **Early Adopters (Week 2)**: 25% of users with feature flag
+3. **Staged Release (Week 3)**: 50% of users
+4. **Full Release (Week 4)**: 100% of users with fallback option
+
+### **Feature Flag Implementation**
+```typescript
+const FEATURE_FLAGS = {
+  SWIPE_GESTURES_ENABLED: true,
+  SHOW_BUTTON_FALLBACK: true,
+  TUTORIAL_ENABLED: true,
+  ACHIEVEMENTS_ENABLED: true,
+};
+```
+
+### **Rollback Plan**
+- **Immediate**: Feature flag to disable swipe gestures
+- **Graceful**: Show both swipe and button interfaces
+- **Emergency**: Revert to original `ApprovalCard` component
+- **Data Safety**: All user data preserved during rollback
+
+---
+
+## 📚 **Documentation & Training**
+
+### **Developer Documentation**
+- **API Reference**: Complete hook and component documentation
+- **Integration Guide**: Step-by-step implementation instructions
+- **Troubleshooting**: Common issues and solutions
+- **Performance Guide**: Optimization best practices
+
+### **User Documentation**
+- **In-App Tutorial**: Interactive swipe gesture training
+- **Help Section**: Quick reference for gesture controls
+- **Accessibility Guide**: Alternative interaction methods
+- **Tips & Tricks**: Advanced gesture techniques
+
+---
+
+*This comprehensive implementation plan ensures a flawless swipe gesture experience that enhances user productivity while maintaining all existing functionality and integrating seamlessly with OMNII's achievement and gamification systems.*

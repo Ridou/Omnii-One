@@ -1,0 +1,201 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# MCP Neo4j Integration Guide
+
+This guide explains how to connect to the Neo4j MCP server from various clients.
+
+## Endpoints
+
+The Neo4j MCP server exposes the following endpoints:
+
+- **Root**: `http://localhost:3000/api/mcp/neo4j`
+  - Returns available tools information
+  - Use this to discover tools and capabilities
+
+- **SSE Connection**: `http://localhost:3000/api/mcp/neo4j/sse`
+  - Server-to-client communication channel
+  - Connect here to establish an SSE stream
+
+- **Messages**: `http://localhost:3000/api/mcp/neo4j/messages`
+  - Client-to-server communication channel
+  - Send JSON-RPC requests here to call tools
+
+## Integration Methods
+
+### 1. Using the MCP SDK (JavaScript/TypeScript)
+
+```javascript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+
+// Initialize client
+const client = new Client({
+  name: "my-client",
+  version: "1.0.0"
+});
+
+// Connect to the SSE endpoint
+const transport = new SSEClientTransport(
+  new URL("http://localhost:3000/api/mcp/neo4j/sse")
+);
+await client.connect(transport);
+
+// List available tools
+const tools = await client.listTools();
+console.log(tools);
+
+// Call a tool
+const result = await client.callTool("listConcepts", {
+  userId: "your-user-id",
+  limit: 5
+});
+
+// Disconnect when done
+await client.disconnect();
+```
+
+### 2. Raw Protocol Implementation (Any Language)
+
+#### Step 1: Connect to SSE Endpoint
+
+Make an HTTP GET request to the SSE endpoint with the following headers:
+
+```
+GET /api/mcp/neo4j/sse HTTP/1.1
+Accept: text/event-stream
+Cache-Control: no-cache
+```
+
+Listen for events on this connection (format: `data: message\n\n`).
+
+#### Step 2: Call Tools via Messages Endpoint
+
+Send JSON-RPC requests to the messages endpoint:
+
+```
+POST /api/mcp/neo4j/messages HTTP/1.1
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "mcp.call_tool",
+  "params": {
+    "name": "listConcepts",
+    "arguments": {
+      "userId": "your-user-id",
+      "limit": 5
+    }
+  },
+  "id": "request-123"
+}
+```
+
+#### Step 3: Process Responses
+
+Tool responses will come in the following format:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "..."
+      }
+    ]
+  },
+  "id": "request-123"
+}
+```
+
+### 3. Python Example
+
+```python
+import requests
+import json
+import threading
+import sseclient  # pip install sseclient-py
+
+# Base URL
+base_url = "http://localhost:3000/api/mcp/neo4j"
+user_id = "your-user-id"
+
+# Connect to SSE stream
+def listen_for_events():
+    headers = {
+        'Accept': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+    }
+    response = requests.get(f"{base_url}/sse", headers=headers, stream=True)
+    client = sseclient.SSEClient(response)
+    for event in client.events():
+        print(f"Server event: {event.data}")
+
+# Start SSE listener in background
+threading.Thread(target=listen_for_events, daemon=True).start()
+
+# Call a tool
+def call_tool(tool_name, arguments):
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        "jsonrpc": "2.0",
+        "method": "mcp.call_tool",
+        "params": {
+            "name": tool_name,
+            "arguments": arguments
+        },
+        "id": "python-request-123"
+    }
+    response = requests.post(
+        f"{base_url}/messages",
+        headers=headers,
+        data=json.dumps(payload)
+    )
+    return response.json()
+
+# Example usage
+result = call_tool("listConcepts", {"userId": user_id, "limit": 5})
+print(json.dumps(result, indent=2))
+```
+
+## Available Tools
+
+The following tools are available:
+
+- `listConcepts` - Lists concept nodes from the knowledge graph
+- `getContextForNode` - Retrieves context information for a specific node by ID
+- `searchSimilarConcepts` - Searches for concept nodes similar to the provided text
+- `getConceptsForContext` - Retrieves concept nodes relevant to the provided query context
+- `listNodes` - Lists nodes of a specific type from the knowledge graph
+- `searchAllNodes` - Searches for nodes of any type similar to the provided text
+- `getContextForQuery` - Retrieves contextual information relevant to the provided query
+
+## Common Parameters
+
+Most tools accept the following parameters:
+
+- `userId` (required) - User ID for tracking and authorization
+- `limit` (optional) - Maximum number of results to return
+- `nodeId` (required for some) - ID of the node to get context for
+- `text` (required for search) - Text to search for similar concepts
+- `query` (required for context) - Query to generate context for
+
+## Testing Your Connection
+
+You can test your connection by running the provided SDK client:
+
+```
+bun sdk-client.js
+```
+
+Or use the manual client example for testing without the SDK:
+
+```
+bun mcp-client-example.js
+```
