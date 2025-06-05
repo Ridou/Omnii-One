@@ -1,5 +1,4 @@
 {
-  "installCommand": "npm install",
   "buildCommand": "npm run build:web:static && node scripts/generate-static-html.cjs",
   "outputDirectory": "dist-static",
   "rewrites": [
