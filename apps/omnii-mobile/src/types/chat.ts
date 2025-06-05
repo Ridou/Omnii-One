@@ -92,8 +92,8 @@ export interface VoiceCommand {
   metadata?: Record<string, string | number | boolean>;
 }
 
-// Tab configuration following EXACT TabConfig pattern
-export type ChatTab = 'conversation' | 'actions' | 'context' | 'progress';
+// Updated tab configuration following EXACT TabConfig pattern
+export type ChatTab = 'conversation' | 'actions' | 'references' | 'memory';
 
 export interface ChatTabConfig {
   key: ChatTab;
@@ -151,12 +151,12 @@ export interface EmailData {
   messageId?: string;   // Gmail message ID from raw.data.messages[].messageId
   messageTimestamp?: string; // Timestamp from raw.data.messages[].messageTimestamp
   labelIds?: string[];  // Gmail label IDs from raw.data.messages[].labelIds
-  attachments?: Array<{
+  attachments?: {
     name: string;
     type: string;
     size: number;
     downloadUrl?: string;
-  }>;
+  }[];
 }
 
 // NEW: Single email wrapper for consistency
@@ -170,11 +170,11 @@ export interface CalendarEventData {
   title: string;
   start: string; // ISO string
   end: string;   // ISO string
-  attendees: Array<{
+  attendees: {
     email: string;
     name?: string;
     status?: 'accepted' | 'declined' | 'pending';
-  }>;
+  }[];
   location?: string;
   description?: string;
   meetingLink?: string;
@@ -196,14 +196,14 @@ export interface ContactData {
   name: string;
   firstName?: string;
   lastName?: string;
-  emails: Array<{
+  emails: {
     address: string;
     type: 'work' | 'personal' | 'other';
-  }>;
-  phones: Array<{
+  }[];
+  phones: {
     number: string;
     type: 'work' | 'mobile' | 'home' | 'other';
-  }>;
+  }[];
   company?: string;
   title?: string;
   photoUrl?: string;
@@ -227,11 +227,11 @@ export interface GeneralData {
   content: string;
   summary?: string;
   suggestions?: string[];
-  references?: Array<{
+  references?: {
     title: string;
     url?: string;
     type: string;
-  }>;
+  }[];
 }
 
 // NEW: Component actions (aligned with server UnifiedAction)

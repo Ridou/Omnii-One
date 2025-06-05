@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Platform, TouchableOpacity } from 'react-native';
+import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
 import type { ChatMessage as ChatMessageType } from '~/types/chat';
 import { ResponseCategory } from '~/services/chat/ChatService';
@@ -23,6 +24,7 @@ interface ChatMessageProps {
 
 // Simple response card using processed display data from service
 function ResponseCard({ metadata }: { metadata?: any }) {
+  const { isDark } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!metadata?.display?.hasResponse) return null;
@@ -30,14 +32,23 @@ function ResponseCard({ metadata }: { metadata?: any }) {
   const { display } = metadata;
 
   return (
-    <View className="mt-3 p-3 bg-omnii-background rounded-lg border border-omnii-border-light">
+    <View className={cn(
+      "mt-3 p-3 rounded-lg border",
+      isDark ? "bg-slate-700 border-slate-600" : "bg-gray-50 border-gray-200"
+    )}>
       {/* Header with pre-processed category and result */}
       <View className="flex-row justify-between items-center mb-2">
-        <Text className="omnii-body text-xs font-semibold">
+        <Text className={cn(
+          "text-xs font-semibold",
+          isDark ? "text-slate-300" : "text-gray-700"
+        )}>
           {display.categoryIcon} {display.categoryName}
         </Text>
         {display.resultEmoji && (
-          <Text className="omnii-body text-xs">
+          <Text className={cn(
+            "text-xs",
+            isDark ? "text-slate-300" : "text-gray-700"
+          )}>
             {display.resultEmoji} {display.resultName}
           </Text>
         )}
@@ -48,18 +59,24 @@ function ResponseCard({ metadata }: { metadata?: any }) {
         onPress={() => setIsExpanded(!isExpanded)}
         className="py-1"
       >
-        <Text className="omnii-body text-xs text-ai-start font-medium">
+        <Text className="text-xs text-indigo-600 font-medium">
           {isExpanded ? '▼ Hide Details' : '▶ Show Details'}
         </Text>
       </TouchableOpacity>
 
       {isExpanded && (
         <ScrollView 
-          className="mt-2 max-h-[150px] bg-omnii-text-secondary bg-opacity-5 rounded p-2" 
+          className={cn(
+            "mt-2 max-h-[150px] rounded p-2",
+            isDark ? "bg-slate-800" : "bg-gray-100"
+          )}
           nestedScrollEnabled
         >
           <Text 
-            className="omnii-body text-xs text-omnii-text-secondary leading-4"
+            className={cn(
+              "text-xs leading-4",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}
             style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}
           >
             {JSON.stringify(metadata.rawResponse, null, 2)}
@@ -71,6 +88,7 @@ function ResponseCard({ metadata }: { metadata?: any }) {
 }
 
 export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAction, onCalendarAction }: ChatMessageProps) {
+  const { isDark } = useTheme();
   const isUser = message.sender === 'user';
   // ✅ PHASE 3: Fix type comparison - check metadata only to avoid type conflicts
   const isSystemOrAction = message.metadata?.category === 'system' || message.metadata?.category === 'action';
@@ -168,12 +186,21 @@ export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAct
   if (isSystemOrAction) {
     return (
       <View className="items-center my-2 mx-0">
-        <View className="omnii-card rounded-xl py-3.5 px-5 max-w-[95%] w-full items-center justify-center shadow-sm">
-          <Text className="omnii-body text-base text-center leading-6">
+        <View className={cn(
+          "rounded-xl py-3.5 px-5 max-w-[95%] w-full items-center justify-center shadow-sm border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}>
+          <Text className={cn(
+            "text-base text-center leading-6",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             {message.content}
           </Text>
         </View>
-        <Text className="omnii-caption text-xs mt-1 text-center">
+        <Text className={cn(
+          "text-xs mt-1 text-center",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>
           🕐 {new Date(message.timestamp).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'
@@ -191,12 +218,14 @@ export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAct
       <View className={cn(
         "max-w-[80%] p-3 rounded-2xl border shadow-sm",
         isUser 
-          ? "bg-ai-start rounded-br-sm border-ai-start border-opacity-30" 
-          : "omnii-card rounded-bl-sm border-omnii-border-light"
+          ? "bg-indigo-600 rounded-br-sm border-indigo-600 border-opacity-30" 
+          : isDark 
+            ? "bg-slate-800 border-slate-600 rounded-bl-sm"
+            : "bg-white border-gray-200 rounded-bl-sm"
       )}>
         <Text className={cn(
-          "omnii-body text-base leading-6",
-          isUser ? "text-white" : "text-omnii-text-primary"
+          "text-base leading-6",
+          isUser ? "text-white" : isDark ? "text-white" : "text-gray-900"
         )}>
           {message.content}
         </Text>
@@ -245,13 +274,19 @@ export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAct
         {/* Confidence indicator for AI messages */}
         {!isUser && message.confidence && (
           <View className="mt-2">
-            <View className="h-0.5 bg-omnii-border-light rounded-sm overflow-hidden mb-1">
+            <View className={cn(
+              "h-0.5 rounded-sm overflow-hidden mb-1",
+              isDark ? "bg-slate-600" : "bg-gray-200"
+            )}>
               <View
-                className="h-full bg-ai-start rounded-sm"
+                className="h-full bg-indigo-600 rounded-sm"
                 style={{ width: `${message.confidence}%` }}
               />
             </View>
-            <Text className="omnii-caption text-xs">
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>
               {message.confidence}% confident
             </Text>
           </View>
@@ -259,12 +294,21 @@ export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAct
 
         {/* Sources */}
         {message.sources && message.sources.length > 0 && (
-          <View className="mt-2 pt-2 border-t border-omnii-border-light">
-            <Text className="omnii-body text-xs font-semibold mb-1">
+          <View className={cn(
+            "mt-2 pt-2 border-t",
+            isDark ? "border-slate-600" : "border-gray-200"
+          )}>
+            <Text className={cn(
+              "text-xs font-semibold mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>
               Sources:
             </Text>
             {message.sources.map((source, index) => (
-              <Text key={source.id || index} className="omnii-body text-xs ml-2 leading-5">
+              <Text key={source.id || index} className={cn(
+                "text-xs ml-2 leading-5",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>
                 • {source.name}
               </Text>
             ))}
@@ -273,8 +317,8 @@ export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAct
 
         {/* XP Earned */}
         {message.xpEarned && (
-          <View className="self-end bg-ai-start bg-opacity-15 px-2 py-1 rounded-lg mt-2">
-            <Text className="omnii-body text-xs text-ai-start font-semibold">
+          <View className="self-end bg-indigo-600 bg-opacity-15 px-2 py-1 rounded-lg mt-2">
+            <Text className="text-xs text-indigo-600 font-semibold">
               +{message.xpEarned} XP
             </Text>
           </View>
@@ -284,7 +328,10 @@ export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAct
         <ResponseCard metadata={message.metadata} />
       </View>
 
-      <Text className="omnii-caption text-xs mt-1 mx-1">
+      <Text className={cn(
+        "text-xs mt-1 mx-1",
+        isDark ? "text-slate-400" : "text-gray-600"
+      )}>
         🕐 {new Date(message.timestamp).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit'

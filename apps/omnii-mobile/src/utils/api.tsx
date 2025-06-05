@@ -3,7 +3,7 @@ import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import superjson from "superjson";
 
-import type { AppRouter } from "@acme/api";
+import type { AppRouter } from "@omnii/api";
 
 import { authClient } from "./auth";
 import { getBaseUrl } from "./base-url";
@@ -48,4 +48,4 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
 });
 
 console.log('hello',trpc)
-export { type RouterInputs, type RouterOutputs } from "@acme/api";
+export { type RouterInputs, type RouterOutputs } from "@omnii/api";

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated } from 'react-native';
+import { useTheme } from '~/context/ThemeContext';
+import { cn } from '~/utils/cn';
 import { AppColors } from '~/constants/Colors';
 
 interface PendingMessageProps {
@@ -7,6 +9,7 @@ interface PendingMessageProps {
 }
 
 export function PendingMessage({ action }: PendingMessageProps) {
+  const { isDark } = useTheme();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const dotAnim1 = useRef(new Animated.Value(0)).current;
   const dotAnim2 = useRef(new Animated.Value(0)).current;
@@ -105,7 +108,10 @@ export function PendingMessage({ action }: PendingMessageProps) {
   return (
     <View className="my-1 mx-4 items-start">
       <Animated.View 
-        className="max-w-[80%] omnii-card rounded-2xl rounded-bl-sm p-4 shadow-sm"
+        className={cn(
+          "max-w-[80%] rounded-2xl rounded-bl-sm p-4 shadow-sm border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}
         style={{
           transform: [{ scale: pulseAnim }]
         }}
@@ -117,24 +123,27 @@ export function PendingMessage({ action }: PendingMessageProps) {
           >
             <Text className="text-base">⚡</Text>
           </View>
-          <Text className="omnii-body text-base font-semibold flex-1">
+          <Text className={cn(
+            "text-base font-semibold flex-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             {getActionDescription(action)}
           </Text>
           <View className="flex-row ml-2">
             <Animated.Text 
-              className="text-base text-ai-start mx-0.5"
+              className="text-base text-indigo-600 mx-0.5"
               style={{ opacity: dotAnim1 }}
             >
               •
             </Animated.Text>
             <Animated.Text 
-              className="text-base text-ai-start mx-0.5"
+              className="text-base text-indigo-600 mx-0.5"
               style={{ opacity: dotAnim2 }}
             >
               •
             </Animated.Text>
             <Animated.Text 
-              className="text-base text-ai-start mx-0.5"
+              className="text-base text-indigo-600 mx-0.5"
               style={{ opacity: dotAnim3 }}
             >
               •
@@ -142,19 +151,28 @@ export function PendingMessage({ action }: PendingMessageProps) {
           </View>
         </View>
         
-        <View className="h-0.5 bg-omnii-border-light rounded-sm overflow-hidden mb-2">
+        <View className={cn(
+          "h-0.5 rounded-sm overflow-hidden mb-2",
+          isDark ? "bg-slate-600" : "bg-gray-200"
+        )}>
           <Animated.View 
-            className="h-full bg-ai-start rounded-sm"
+            className="h-full bg-indigo-600 rounded-sm"
             style={{ width: '60%' }} // This could be dynamic based on actual progress
           />
         </View>
         
-        <Text className="omnii-body text-sm italic">
+        <Text className={cn(
+          "text-sm italic",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>
           Connecting to Google APIs...
         </Text>
       </Animated.View>
       
-      <Text className="omnii-caption text-xs mt-1 mx-1">
+      <Text className={cn(
+        "text-xs mt-1 mx-1",
+        isDark ? "text-slate-400" : "text-gray-600"
+      )}>
         {new Date().toLocaleTimeString([], { 
           hour: '2-digit', 
           minute: '2-digit' 

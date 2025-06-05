@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Animated, Platform, Text } from 'react-native';
-import { Heading2, Heading4, BodyText, CaptionText } from '~/components/common/Typography';
+import { H2, H4, BodyText, CaptionText } from '~/components/common/Typography';
 import { AppColors } from '~/constants/Colors';
 import { useResponsiveDesign } from '~/utils/responsive';
 import { MascotDisplay } from './MascotDisplay';
@@ -9,7 +9,7 @@ type FeatureTab = 'intelligence' | 'evolution' | 'insights' | 'chat';
 
 const showcaseTabs = [
   {
-    key: 'intelligence' as FeatureTab,
+    key: 'intelligence' as const,
     label: 'AI',
     icon: '🧠',
     gradient: [AppColors.aiGradientStart, AppColors.aiGradientEnd] as [string, string],
@@ -22,7 +22,7 @@ const showcaseTabs = [
     ]
   },
   {
-    key: 'evolution' as FeatureTab,
+    key: 'evolution' as const,
     label: 'Evolution',
     icon: '🌱',
     gradient: ['#00b894', '#55efc4'] as [string, string],
@@ -35,7 +35,7 @@ const showcaseTabs = [
     ]
   },
   {
-    key: 'insights' as FeatureTab,
+    key: 'insights' as const,
     label: 'Insights',
     icon: '📊',
     gradient: ['#667eea', '#764ba2'] as [string, string],
@@ -48,7 +48,7 @@ const showcaseTabs = [
     ]
   },
   {
-    key: 'chat' as FeatureTab,
+    key: 'chat' as const,
     label: 'Chat',
     icon: '💬',
     gradient: ['#FFB347', '#FFD700'] as [string, string],
@@ -60,166 +60,37 @@ const showcaseTabs = [
       'Action-oriented responses'
     ]
   }
-];
-
-// Simple web version to avoid CSS conflicts
-const SimpleWebFeatureShowcase: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<FeatureTab>('intelligence');
-  const responsive = useResponsiveDesign();
-  const activeTab = showcaseTabs.find(tab => tab.key === selectedTab)!;
-  
-  return (
-    <View style={webStyles.container}>
-      <View style={webStyles.header}>
-        {Platform.OS === 'web' ? (
-          <Text style={webStyles.webTitle}>
-            What makes OMNII different
-          </Text>
-        ) : (
-          <Heading2 color={AppColors.textPrimary} style={webStyles.title}>
-            What makes OMNII different
-          </Heading2>
-        )}
-        {Platform.OS === 'web' ? (
-          <Text style={webStyles.webSubtitle}>
-            Not just another productivity app. A true AI partnership.
-          </Text>
-        ) : (
-          <BodyText size={1} color={AppColors.textSecondary} style={webStyles.subtitle}>
-            Not just another productivity app. A true AI partnership.
-          </BodyText>
-        )}
-      </View>
-      
-      {/* Simple Tab System */}
-      <View style={webStyles.tabsContainer}>
-        <View style={webStyles.tabsWrapper}>
-          {showcaseTabs.map((tab) => {
-            const isActive = selectedTab === tab.key;
-            
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[
-                  webStyles.tab,
-                  isActive && [webStyles.activeTab, { backgroundColor: tab.gradient[0] }]
-                ]}
-                onPress={() => setSelectedTab(tab.key)}
-              >
-                <View style={webStyles.tabContent}>
-                  {Platform.OS === 'web' ? (
-                    <Text style={webStyles.webTabIcon}>{tab.icon}</Text>
-                  ) : (
-                    <BodyText size={2} style={webStyles.tabIcon}>{tab.icon}</BodyText>
-                  )}
-                  {Platform.OS === 'web' ? (
-                    <Text style={[
-                      webStyles.webTabLabel,
-                      { color: isActive ? '#FFFFFF' : AppColors.textSecondary }
-                    ]}>
-                      {tab.label}
-                    </Text>
-                  ) : (
-                    <CaptionText 
-                      color={isActive ? '#FFFFFF' : AppColors.textSecondary}
-                      style={webStyles.tabLabel}
-                      numberOfLines={2}
-                    >
-                      {tab.label}
-                    </CaptionText>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-      
-      {/* Content Section */}
-      <View style={webStyles.contentContainer}>
-        <View style={webStyles.textContent}>
-          {Platform.OS === 'web' ? (
-            <Text style={webStyles.webFeatureTitle}>
-              {activeTab.title}
-            </Text>
-          ) : (
-            <Heading4 color={AppColors.textPrimary} style={webStyles.featureTitle}>
-              {activeTab.title}
-            </Heading4>
-          )}
-          {Platform.OS === 'web' ? (
-            <Text style={webStyles.webFeatureDescription}>
-              {activeTab.description}
-            </Text>
-          ) : (
-            <BodyText size={2} color={AppColors.textSecondary} style={webStyles.featureDescription}>
-              {activeTab.description}
-            </BodyText>
-          )}
-          
-          {/* Static features list */}
-          <View style={webStyles.demoContainer}>
-            {activeTab.features.map((feature, index) => (
-              <View key={index} style={webStyles.demoItem}>
-                {Platform.OS === 'web' ? (
-                  <Text style={webStyles.webDemoText}>
-                    {feature}
-                  </Text>
-                ) : (
-                  <BodyText 
-                    size={2} 
-                    color={AppColors.textSecondary}
-                    style={webStyles.demoText}
-                  >
-                    {feature}
-                  </BodyText>
-                )}
-              </View>
-            ))}
-          </View>
-        </View>
-        
-        {/* Mascot Display */}
-        <View style={webStyles.mascotContainer}>
-          <MascotDisplay
-            stage={selectedTab === 'intelligence' ? 'seed' : selectedTab === 'evolution' ? 'flower' : 'tree'}
-            size={responsive.isMobileXS ? 'small' : responsive.isMobile ? 'medium' : 'large'}
-            showLevel={selectedTab === 'evolution'}
-            level={selectedTab === 'evolution' ? 15 : undefined}
-          />
-        </View>
-      </View>
-    </View>
-  );
-};
+] as const;
 
 export const FeatureShowcase: React.FC = () => {
-  // Use simple web version on web platforms
-  if (Platform.OS === 'web') {
-    return <SimpleWebFeatureShowcase />;
-  }
-
-  // Full mobile version with animations
-  const [selectedTab, setSelectedTab] = useState<FeatureTab>('intelligence');
+  // Always call hooks at the top level
+  const [selectedTab, setSelectedTab] = useState('intelligence');
   const [currentDemo, setCurrentDemo] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
+  const [isWebPlatform, setIsWebPlatform] = useState(false);
   const responsive = useResponsiveDesign();
   
-  // Simple scale animations only
   const scaleAnimations = useRef(
     showcaseTabs.reduce((acc, tab) => {
       acc[tab.key] = new Animated.Value(1);
       return acc;
-    }, {} as Record<FeatureTab, Animated.Value>)
+    }, {} as Record<string, Animated.Value>)
   ).current;
 
-  // Mount effect
+  // Platform detection in useEffect
+  useEffect(() => {
+    setIsWebPlatform(Platform.OS === 'web');
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
+
+  // Mount effect - always call even if web
   useEffect(() => {
     setIsMounted(true);
     return () => setIsMounted(false);
   }, []);
   
-  // Auto-cycling tabs (every 8 seconds)
+  // Auto-cycling tabs (every 8 seconds) - always call
   useEffect(() => {
     if (!isMounted) return;
 
@@ -228,7 +99,8 @@ export const FeatureShowcase: React.FC = () => {
       setSelectedTab(prev => {
         const currentIndex = showcaseTabs.findIndex(tab => tab.key === prev);
         const nextIndex = (currentIndex + 1) % showcaseTabs.length;
-        return showcaseTabs[nextIndex].key;
+        const nextTab = showcaseTabs[nextIndex];
+        return nextTab ? nextTab.key : 'intelligence';
       });
       setCurrentDemo(0); // Reset demo when tab changes
     }, 8000); // Change tab every 8 seconds
@@ -236,7 +108,7 @@ export const FeatureShowcase: React.FC = () => {
     return () => clearInterval(tabCycleInterval);
   }, [isMounted]);
   
-  // Auto-cycling demo features within each tab
+  // Auto-cycling demo features within each tab - always call
   useEffect(() => {
     if (!isMounted) return;
 
@@ -250,10 +122,11 @@ export const FeatureShowcase: React.FC = () => {
     
     return () => clearInterval(demoInterval);
   }, [selectedTab, isMounted]);
-  
+
   // Tab press handler with simple animation
   const handleTabPress = (tabKey: FeatureTab) => {
     const scaleAnim = scaleAnimations[tabKey];
+    if (!scaleAnim) return;
     
     Animated.sequence([
       Animated.timing(scaleAnim, {
@@ -271,16 +144,98 @@ export const FeatureShowcase: React.FC = () => {
     setSelectedTab(tabKey);
     setCurrentDemo(0);
   };
-  
+
+  // Use simple web version on web platforms
+  if (isWebPlatform) {
+    const activeTab = showcaseTabs.find(tab => tab.key === selectedTab)!;
+    
+    return (
+      <View style={webStyles.container}>
+        <View style={webStyles.header}>
+          <Text style={webStyles.webTitle}>
+            What makes OMNII different
+          </Text>
+          <Text style={webStyles.webSubtitle}>
+            Not just another productivity app. A true AI partnership.
+          </Text>
+        </View>
+        
+        {/* Simple Tab System */}
+        <View style={webStyles.tabsContainer}>
+          <View style={webStyles.tabsWrapper}>
+            {showcaseTabs.map((tab) => {
+              const isActive = selectedTab === tab.key;
+              
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    webStyles.tab,
+                    isActive && [webStyles.activeTab, { backgroundColor: tab.gradient[0] }]
+                  ]}
+                  onPress={() => setSelectedTab(tab.key)}
+                >
+                  <View style={webStyles.tabContent}>
+                    <Text style={webStyles.webTabIcon}>{tab.icon}</Text>
+                    <Text style={[
+                      webStyles.webTabLabel,
+                      { color: isActive ? '#FFFFFF' : AppColors.textSecondary }
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+        
+        {/* Content Section */}
+        <View style={webStyles.contentContainer}>
+          <View style={webStyles.textContent}>
+            <Text style={webStyles.webFeatureTitle}>
+              {activeTab.title}
+            </Text>
+            <Text style={webStyles.webFeatureDescription}>
+              {activeTab.description}
+            </Text>
+            
+            {/* Static features list */}
+            <View style={webStyles.demoContainer}>
+              {activeTab.features.map((feature, index) => (
+                <View key={index} style={webStyles.demoItem}>
+                  <Text style={webStyles.webDemoText}>
+                    {feature}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+          
+          {/* Mascot Display */}
+          <View style={webStyles.mascotContainer}>
+            <MascotDisplay
+              stage={selectedTab === 'intelligence' ? 'seed' : selectedTab === 'evolution' ? 'flower' : 'tree'}
+              size={responsive.isMobileXS ? 'small' : responsive.isMobile ? 'medium' : 'large'}
+              showLevel={selectedTab === 'evolution'}
+              level={selectedTab === 'evolution' ? 15 : undefined}
+            />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // Full mobile version with animations
   const activeTab = showcaseTabs.find(tab => tab.key === selectedTab)!;
   
   return (
     <View style={[styles.container, { paddingHorizontal: responsive.spacing.horizontal }]}>
       <View style={styles.header}>
-        <Heading2 color={AppColors.textPrimary} style={styles.title}>
+        <H2 className="text-omnii-heading text-center mb-3">
           What makes OMNII different
-        </Heading2>
-        <BodyText size={1} color={AppColors.textSecondary} style={styles.subtitle}>
+        </H2>
+        <BodyText size={1} className="text-omnii-body text-center max-w-150">
           Not just another productivity app. A true AI partnership.
         </BodyText>
       </View>
@@ -293,13 +248,14 @@ export const FeatureShowcase: React.FC = () => {
         ]}>
           {showcaseTabs.map((tab) => {
             const isActive = selectedTab === tab.key;
+            const scaleAnim = scaleAnimations[tab.key];
             
             return (
               <Animated.View
                 key={tab.key}
                 style={[
                   styles.tabWrapper,
-                  { transform: [{ scale: scaleAnimations[tab.key] }] }
+                  scaleAnim && { transform: [{ scale: scaleAnim }] }
                 ]}
               >
                 <TouchableOpacity
@@ -313,7 +269,7 @@ export const FeatureShowcase: React.FC = () => {
                   <View style={styles.tabContent}>
                     <BodyText size={2} style={styles.tabIcon}>{tab.icon}</BodyText>
                     <CaptionText 
-                      color={isActive ? '#FFFFFF' : AppColors.textSecondary}
+                      className={isActive ? "text-white" : "text-omnii-text-secondary"}
                       style={styles.tabLabel}
                       numberOfLines={2}
                     >
@@ -333,10 +289,10 @@ export const FeatureShowcase: React.FC = () => {
         responsive.isMobile ? styles.contentMobile : styles.contentDesktop
       ]}>
         <View style={styles.textContent}>
-          <Heading4 color={AppColors.textPrimary} style={styles.featureTitle}>
+          <H4 className="text-omnii-heading mb-3">
             {activeTab.title}
-          </Heading4>
-          <BodyText size={2} color={AppColors.textSecondary} style={styles.featureDescription}>
+          </H4>
+          <BodyText size={2} className="text-omnii-body mb-5 leading-6">
             {activeTab.description}
           </BodyText>
           
@@ -352,7 +308,7 @@ export const FeatureShowcase: React.FC = () => {
               >
                 <BodyText 
                   size={2} 
-                  color={index === currentDemo ? AppColors.aiGradientStart : AppColors.textSecondary}
+                  className={index === currentDemo ? "text-omnii-primary font-medium" : "text-omnii-text-secondary font-medium"}
                   style={styles.demoText}
                 >
                   {feature}

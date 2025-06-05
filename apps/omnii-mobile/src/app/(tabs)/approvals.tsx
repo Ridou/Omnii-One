@@ -378,18 +378,20 @@ export default function ApprovalsScreen() {
     // Scale animation on press
     const scaleAnim = scaleAnimations[tabKey];
     
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    if (scaleAnim) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
 
     setSelectedFilter(tabKey);
   };
@@ -434,7 +436,7 @@ export default function ApprovalsScreen() {
             <Animated.View
               className="flex-1 relative overflow-hidden rounded-xl"
               style={{
-                transform: [{ scale: scaleAnimations[tab.key] }],
+                transform: scaleAnimations[tab.key] ? [{ scale: scaleAnimations[tab.key]! }] : [{ scale: 1 }],
               }}
             >
               <Svg width="100%" height="100%" className="absolute inset-0">
@@ -497,7 +499,7 @@ export default function ApprovalsScreen() {
         onSwipeLeft={() => handleReject(item)}
         onSwipeRight={() => handleApprove(item)}
       >
-        <StreamlinedApprovalCard 
+        <StreamlinedApprovalCard
           approval={item.approval || {
             id: item.id,
             title: item.title,
@@ -516,37 +518,24 @@ export default function ApprovalsScreen() {
           }}
         />
       </SimpleSwipeCard>
-      
-      {/* Swipe hints */}
-      <View className="items-center py-2">
-        <Text className={cn(
-          "text-xs opacity-70",
-          isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
-        )}>
-          {item.type === 'onboarding_quote' 
-            ? '👈 Doesn\'t resonate • Resonates with me 👉'
-            : '👈 Decline • 👆 Details • Approve 👉'
-          }
-        </Text>
-      </View>
     </View>
   );
 
   if (!user) {
     return (
       <SafeAreaView className={cn(
-        "flex-1 bg-omnii-background",
-        isDark && "bg-omnii-dark-background"
+        "flex-1",
+        isDark ? "bg-slate-900" : "bg-white"
       )}>
         <View className="flex-1 justify-center items-center p-6">
           <Text className={cn(
-            "omnii-body text-base text-center mt-4",
-            isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+            "text-base text-center mt-4",
+            isDark ? "text-white" : "text-gray-900"
           )}>
             Please log in to view your approvals.
           </Text>
           <Link href="/(auth)/login" asChild>
-            <TouchableOpacity className="bg-ai-start mt-4 px-6 py-3 rounded-xl">
+            <TouchableOpacity className="bg-indigo-600 rounded-xl py-3 px-6 mt-4">
               <Text className="text-white text-base font-semibold">Login</Text>
             </TouchableOpacity>
           </Link>
@@ -557,187 +546,80 @@ export default function ApprovalsScreen() {
 
   return (
     <SafeAreaView className={cn(
-      "flex-1 bg-omnii-background",
-      isDark && "bg-omnii-dark-background"
+      "flex-1",
+      isDark ? "bg-slate-900" : "bg-white"
     )}>
-      {/* Contextual Nudge Component */}
-      <ContextualNudge />
-      
       {/* Header */}
       <View className={cn(
-        "bg-omnii-card p-6 pt-5 border-b border-omnii-border",
-        isDark && "bg-omnii-dark-card border-omnii-dark-border"
+        "px-5 py-4 border-b",
+        isDark ? "border-slate-600" : "border-gray-200"
       )}>
-        <View className="flex-row items-center justify-between">
-          <Text className={cn(
-            "omnii-heading text-2xl font-bold",
-            isDark && "text-omnii-dark-text-primary"
-          )}>
-            {isOnboardingComplete() ? 'Approvals' : 'Training Grounds'}
-          </Text>
-          {/* Debug Panel Access (Development Only) */}
-          {__DEV__ && (
-            <TouchableOpacity 
-              onPress={() => setShowDebugPanel(true)}
-              className={cn(
-                "p-2 rounded-lg bg-omnii-card ml-4",
-                isDark && "bg-omnii-dark-card"
-              )}
-            >
-              <Text className={cn(
-                "text-base font-semibold",
-                isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
-              )}>🔧</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        
-        {/* XP Progress Bar */}
-        <View className="mt-4 mb-3">
-          <View className="flex-row items-center justify-between">
-            <Text className={cn(
-              "omnii-heading text-base font-semibold",
-              isDark && "text-omnii-dark-text-primary"
-            )}>
-              Level {getCurrentLevel()}
-            </Text>
-            <Text className={cn(
-              "omnii-caption text-sm",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>
-              {onboardingState.onboardingData.total_xp + pendingXP} XP
-            </Text>
-          </View>
-          <View className="mt-2">
-            {/* Segmented Progress Bar */}
-            <View className={cn(
-              "flex-row items-center justify-between h-5 rounded-2xl bg-omnii-card overflow-hidden p-0.5",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              {Array.from({ length: 10 }).map((_, index) => {
-                // OPTIMISTIC PROGRESS: Include pending XP for instant feedback
-                const optimisticXPProgress = (() => {
-                  const currentXP = onboardingState.onboardingData.total_xp + pendingXP;
-                  const currentLevel = getCurrentLevel();
-                  const levelRequirements: Record<number, number> = {
-                    1: 0, 2: 100, 3: 200, 4: 320, 5: 450, 6: 750, 7: 1100, 8: 1500
-                  };
-                  const currentLevelXP = levelRequirements[currentLevel] || 0;
-                  const nextLevelXP = levelRequirements[currentLevel + 1] || 100;
-                  const xpInLevel = Math.max(0, currentXP - currentLevelXP);
-                  const xpNeededForLevel = nextLevelXP - currentLevelXP;
-                  
-                  if (currentLevel >= 5) return 100;
-                  return Math.min(100, Math.max(0, Math.round((xpInLevel / xpNeededForLevel) * 100)));
-                })();
-                
-                const segmentFilled = optimisticXPProgress > (index * 10);
-                
-                return (
-                  <React.Fragment key={index}>
-                    <View 
-                      className={cn(
-                        "flex-1 h-4 rounded-sm mx-0.5",
-                        segmentFilled 
-                          ? "bg-success" 
-                          : cn(
-                              "bg-omnii-border-light",
-                              isDark && "bg-omnii-dark-border-light"
-                            )
-                      )}
-                    />
-                    {index < 9 && <View className={cn(
-                      "w-px h-3/5 bg-omnii-background",
-                      isDark && "bg-omnii-dark-background"
-                    )} />}
-                  </React.Fragment>
-                );
-              })}
-            </View>
-            <Text className={cn(
-              "omnii-caption text-sm font-semibold mt-2",
-              isDark && "text-omnii-dark-text-primary"
-            )}>
-              {getCurrentLevel() >= 5
-                ? '✅ All features unlocked!' 
-                : (() => {
-                    // OPTIMISTIC TEXT: Include pending XP for instant feedback
-                    const currentXP = onboardingState.onboardingData.total_xp + pendingXP;
-                    const currentLevel = getCurrentLevel();
-                    const levelRequirements: Record<number, number> = {
-                      1: 0, 2: 100, 3: 200, 4: 320, 5: 450, 6: 750, 7: 1100, 8: 1500
-                    };
-                    const currentLevelXP = levelRequirements[currentLevel] || 0;
-                    const nextLevelXP = levelRequirements[currentLevel + 1] || 0;
-                    const xpInLevel = Math.max(0, currentXP - currentLevelXP);
-                    const xpNeededForLevel = nextLevelXP - currentLevelXP;
-                    
-                    return `${xpInLevel}/${xpNeededForLevel} XP`;
-                  })()
-              }
-            </Text>
-          </View>
-        </View>
-        
         <Text className={cn(
-          "omnii-body text-base text-omnii-text-secondary mt-1",
-          isDark && "text-omnii-dark-text-secondary"
-        )}>
-          {isOnboardingComplete() 
-            ? `${filteredTasks.length} tasks need your approval`
-            : 'Quotes that resonate with your values • Teaching your AI what motivates you'
-          }
-        </Text>
+          "text-3xl font-bold mb-1",
+          isDark ? "text-white" : "text-gray-900"
+        )}>⏳ Approvals</Text>
+        <Text className={cn(
+          "text-base",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>Review and approve tasks</Text>
       </View>
 
-      {/* Tabs with gradient design like achievements */}
+      {/* Filter Tabs */}
       <FilterTabs />
 
-      {/* Tasks List */}
-      <FlatList
-        data={filteredTasks}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={AppColors.aiGradientStart}
-          />
-        }
-        ListEmptyComponent={
-          <EmptyState
-            title={isOnboardingComplete() ? "Ready to be productive!" : "No tasks found"}
-            message={isOnboardingComplete() 
-              ? "Start by creating your first task or let AI suggest some for you" 
-              : "Swipe right if quotes resonate, left if they don't"
+      {/* Content */}
+      <View className="flex-1">
+        {filteredTasks.length === 0 ? (
+          <View className="flex-1 justify-center items-center px-5">
+            <View className={cn(
+              "rounded-xl p-8 items-center border max-w-sm",
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+            )}>
+              <Text className="text-4xl mb-3">✅</Text>
+              <Text className={cn(
+                "font-semibold text-lg mb-2 text-center",
+                isDark ? "text-white" : "text-gray-900"
+              )}>All Caught Up!</Text>
+              <Text className={cn(
+                "text-sm text-center",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>No pending approvals at the moment. Great work!</Text>
+            </View>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredTasks}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 20 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={isDark ? '#94a3b8' : '#6b7280'}
+              />
             }
-            icon="check-circle"
           />
-        }
-        className="flex-1 px-5 pb-5"
-      />
-
-      {/* Debug Panel */}
-      <DebugPanel 
-        visible={showDebugPanel}
-        onClose={() => setShowDebugPanel(false)}
-      />
+        )}
+      </View>
 
       {/* Level Celebration Modal */}
-      <LevelCelebration
-        visible={showCelebrationModal}
-        levelProgression={currentCelebration}
-        onComplete={handleCelebrationComplete}
-        onDiscordCTA={currentCelebration?.to_level === 5 ? async () => {
-          try {
-            await Linking.openURL('https://discord.gg/HPgAARkhkE');
-          } catch (error) {
-            console.error('Failed to open Discord link:', error);
-          }
-        } : undefined}
-      />
+      {showCelebrationModal && currentCelebration && (
+        <LevelCelebration
+          visible={showCelebrationModal}
+          levelProgression={currentCelebration}
+          onComplete={handleCelebrationComplete}
+        />
+      )}
+
+      {/* Debug Panel */}
+      {__DEV__ && showDebugPanel && (
+        <DebugPanel
+          visible={showDebugPanel}
+          onClose={() => setShowDebugPanel(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

@@ -145,36 +145,50 @@ export default function ApprovalCard({
     >
       <Animated.View
         className={cn(
-          "omnii-card border-l-4",
-          priorityConfig.borderClass
+          "card-omnii border-l-4",
+          priorityConfig.borderClass,
+          "opacity-100"
         )}
         style={{ transform: [{ scale: scaleAnim }] }}
         accessible={false} // Let parent handle accessibility
       >
         {/* Priority Badge */}
         <View 
-          className="mb-3"
+          className="flex-row justify-between items-center mb-3"
           accessible={false} // Part of main accessibility label
         >
-          <View
+          <Text 
+            className="text-xs text-omnii-text-secondary"
+            accessible={false} // Part of main accessibility label
+          >
+            {new Date(approval.created_at).toLocaleDateString()}
+          </Text>
+          <View 
             className={cn(
-              "self-start px-3 py-1.5 rounded-xl min-h-[28px]",
-              priorityConfig.badgeClass
+              "px-2 py-1 rounded-full",
+              priorityConfig.badgeClass,
+              "bg-opacity-10"
             )}
             accessible={false} // Part of main accessibility label
           >
             <Text 
-              className="text-white text-xs font-semibold leading-4"
+              className={cn(
+                "text-xs font-semibold capitalize",
+                priorityConfig.badgeClass === 'bg-priority-high' && "text-priority-high",
+                priorityConfig.badgeClass === 'bg-priority-medium' && "text-priority-medium",
+                priorityConfig.badgeClass === 'bg-priority-low' && "text-priority-low"
+              )}
               accessible={false} // Part of main accessibility label
             >
-              {priorityConfig.label}
+              {approval.priority} Priority
             </Text>
           </View>
         </View>
 
         {/* Title with Emoji */}
         <Text 
-          className="omnii-heading text-lg mb-2 leading-7"
+          className="text-omnii-heading text-lg mb-2 leading-7"
+          numberOfLines={2}
           accessible={false} // Part of main accessibility label
         >
           {priorityConfig.emoji} {approval.title}
@@ -182,7 +196,8 @@ export default function ApprovalCard({
 
         {/* Description */}
         <Text 
-          className="omnii-body text-sm mb-4 leading-6"
+          className="text-omnii-body text-sm mb-4 leading-6"
+          numberOfLines={3}
           accessible={false} // Part of main accessibility label
         >
           {approval.description}
@@ -190,36 +205,31 @@ export default function ApprovalCard({
 
         {/* Meta Information */}
         <View 
-          className="flex-row justify-between items-center mb-4 flex-wrap gap-2"
+          className="flex-row justify-between items-center mb-4"
           accessible={false} // Part of main accessibility label
         >
           <Text 
-            className="omnii-caption text-sm leading-5"
+            className="text-xs text-omnii-text-secondary"
             accessible={false} // Part of main accessibility label
           >
-            📅 Suggested for today at 2:00 PM
+            Requested by: {approval.requested_by}
           </Text>
-          <View 
-            className="bg-ai-start/10 px-2.5 py-1.5 rounded-lg min-h-[28px]"
+          <Text 
+            className="text-xs text-omnii-text-secondary"
             accessible={false} // Part of main accessibility label
           >
-            <Text 
-              className="text-ai-start text-xs font-semibold leading-4"
-              accessible={false} // Part of main accessibility label
-            >
-              AI Generated
-            </Text>
-          </View>
+            Type: {approval.type}
+          </Text>
         </View>
 
         {/* Action Buttons */}
         <View 
-          className="flex-row gap-3 flex-wrap"
+          className="flex-row gap-3"
           accessible={false} // Individual buttons handle their own accessibility
         >
           {onApprove && (
             <TouchableOpacity
-              className="omnii-btn-primary bg-success flex-1"
+              className="btn-omnii-primary bg-success flex-1"
               onPress={() => handleApprove(approval.id)}
               accessible={true}
               accessibilityRole="button"
@@ -235,7 +245,7 @@ export default function ApprovalCard({
           )}
 
           <TouchableOpacity
-            className="omnii-btn-primary bg-ai-start flex-1"
+            className="btn-omnii-primary bg-ai-start flex-1"
             onPress={onPress}
             accessible={true}
             accessibilityRole="button"
@@ -246,12 +256,12 @@ export default function ApprovalCard({
             }}
             style={[minimumTouchTarget]}
           >
-            <Text className="text-white text-sm font-semibold leading-5">Details</Text>
+            <Text className="text-white text-sm font-semibold leading-5">👁 Details</Text>
           </TouchableOpacity>
 
           {onDecline && (
             <TouchableOpacity
-              className="omnii-btn-secondary border-2 flex-1"
+              className="btn-omnii-secondary border-2 flex-1"
               onPress={() => handleDecline(approval.id)}
               accessible={true}
               accessibilityRole="button"
@@ -262,7 +272,7 @@ export default function ApprovalCard({
               }}
               style={[minimumTouchTarget]}
             >
-              <Text className="text-omnii-text-secondary text-sm font-semibold leading-5">✕ Skip</Text>
+              <Text className="text-omnii-text-primary text-sm font-semibold leading-5">✕ Decline</Text>
             </TouchableOpacity>
           )}
         </View>

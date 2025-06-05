@@ -7,9 +7,11 @@ interface FeatureCardProps {
   description: string;
   icon: string;
   className?: string;
+  badge?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
-export default function FeatureCard({ title, description, icon, className }: FeatureCardProps) {
+export default function FeatureCard({ title, description, icon, className, badge, children }: FeatureCardProps) {
   const renderIcon = () => {
     const iconColor = '#007AFF';
     const iconSize = 24;
@@ -29,14 +31,14 @@ export default function FeatureCard({ title, description, icon, className }: Fea
   };
 
   return (
-    <View className={cn("omnii-card mb-4", className)}>
-      <View className="flex-row items-center mb-3">
-        <View className="w-10 h-10 rounded-full bg-blue-50 justify-center items-center mr-3">
-          {renderIcon()}
-        </View>
-        <Text className="omnii-heading text-base flex-1">{title}</Text>
+    <View className={cn("card-omnii mb-4", className)}>
+      <View className="flex-row items-center justify-between">
+        {icon && <View className="mr-3">{renderIcon()}</View>}
+        <Text className="text-omnii-heading text-base flex-1">{title}</Text>
+        {badge && <View className="ml-2">{badge}</View>}
       </View>
-      <Text className="omnii-body text-sm leading-5">{description}</Text>
+      <Text className="text-omnii-body text-sm leading-5">{description}</Text>
+      {children && <View className="mt-3">{children}</View>}
     </View>
   );
 }

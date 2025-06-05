@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import * as Font from 'expo-font';
 import { FONT_CONFIG } from '../constants/Typography';
 
@@ -16,10 +16,16 @@ export const useCustomFonts = (): FontLoadingState => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    // Reset mounted ref on mount
+    mountedRef.current = true;
+    
     const loadFonts = async () => {
       try {
+        if (!mountedRef.current) return;
+        
         setIsLoading(true);
         setFontError(null);
 
@@ -48,17 +54,31 @@ export const useCustomFonts = (): FontLoadingState => {
           'Tiempos-BoldItalic': FONT_CONFIG.tiempos.boldItalic,
         });
 
-        setFontsLoaded(true);
+        // Only update state if component is still mounted
+        if (mountedRef.current) {
+          setFontsLoaded(true);
+        }
       } catch (error) {
-        setFontError(error instanceof Error ? error : new Error('Unknown font loading error'));
-        // Don't block the app if fonts fail to load
-        setFontsLoaded(true);
+        // Only update state if component is still mounted
+        if (mountedRef.current) {
+          setFontError(error instanceof Error ? error : new Error('Unknown font loading error'));
+          // Don't block the app if fonts fail to load
+          setFontsLoaded(true);
+        }
       } finally {
-        setIsLoading(false);
+        // Only update state if component is still mounted
+        if (mountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadFonts();
+
+    // Cleanup function to mark component as unmounted
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   return {

@@ -39,7 +39,7 @@ export const Typography: React.FC<TypographyProps> = ({
   );
 };
 
-// Specialized Typography Components using NativeWind classes
+// Specialized Typography Components using NativeWind V4 utilities
 
 /**
  * Brand text component - uses Styrene font for brand identity
@@ -58,34 +58,34 @@ export const BrandText: React.FC<Omit<TypographyProps, 'variant'> & {
 };
 
 /**
- * Heading components - uses Tiempos font for headlines
+ * Heading components - uses V4 text-omnii-heading utility
  */
-export const Heading1: React.FC<Omit<TypographyProps, 'variant'>> = ({ className, ...props }) => (
-  <Typography variant="h1" className={cn("omnii-heading", className)} {...props} />
+export const H1: React.FC<TypographyProps> = ({ className, ...props }) => (
+  <Typography variant="h1" className={cn("text-omnii-heading", className)} {...props} />
 );
 
-export const Heading2: React.FC<Omit<TypographyProps, 'variant'>> = ({ className, ...props }) => (
-  <Typography variant="h2" className={cn("omnii-heading", className)} {...props} />
+export const H2: React.FC<TypographyProps> = ({ className, ...props }) => (
+  <Typography variant="h2" className={cn("text-omnii-heading", className)} {...props} />
 );
 
-export const Heading3: React.FC<Omit<TypographyProps, 'variant'>> = ({ className, ...props }) => (
-  <Typography variant="h3" className={cn("omnii-heading", className)} {...props} />
+export const H3: React.FC<TypographyProps> = ({ className, ...props }) => (
+  <Typography variant="h3" className={cn("text-omnii-heading", className)} {...props} />
 );
 
-export const Heading4: React.FC<Omit<TypographyProps, 'variant'>> = ({ className, ...props }) => (
-  <Typography variant="h4" className={cn("omnii-heading", className)} {...props} />
+export const H4: React.FC<TypographyProps> = ({ className, ...props }) => (
+  <Typography variant="h4" className={cn("text-omnii-heading", className)} {...props} />
 );
 
-export const Heading5: React.FC<Omit<TypographyProps, 'variant'>> = ({ className, ...props }) => (
-  <Typography variant="h5" className={cn("omnii-heading", className)} {...props} />
+export const H5: React.FC<TypographyProps> = ({ className, ...props }) => (
+  <Typography variant="h5" className={cn("text-omnii-heading", className)} {...props} />
 );
 
-export const Heading6: React.FC<Omit<TypographyProps, 'variant'>> = ({ className, ...props }) => (
-  <Typography variant="h6" className={cn("omnii-heading", className)} {...props} />
+export const H6: React.FC<TypographyProps> = ({ className, ...props }) => (
+  <Typography variant="h6" className={cn("text-omnii-heading", className)} {...props} />
 );
 
 /**
- * Display text components - for large headlines
+ * Display text components - V4 updated with text-omnii-heading
  */
 export const DisplayText: React.FC<Omit<TypographyProps, 'variant'> & { 
   size?: 'small' | 'medium' | 'large';
@@ -97,32 +97,32 @@ export const DisplayText: React.FC<Omit<TypographyProps, 'variant'> & {
     large: 'displayLarge' as const,
   };
   
-  return <Typography variant={variantMap[size]} className={cn("omnii-heading", className)} {...props} />;
+  return <Typography variant={variantMap[size]} className={cn("text-omnii-heading", className)} {...props} />;
 };
 
 /**
- * Body text components - for content
+ * Body text components - V4 updated with text-omnii-body
  */
 export const BodyText: React.FC<Omit<TypographyProps, 'variant'> & { 
   size?: 1 | 2;
   className?: string;
 }> = ({ size = 1, className, ...props }) => {
   const variant = size === 1 ? 'body1' : 'body2';
-  return <Typography variant={variant} className={cn("omnii-body", className)} {...props} />;
+  return <Typography variant={variant} className={cn("text-omnii-body", className)} {...props} />;
 };
 
 /**
- * Caption text component - for small text
+ * Caption text component - V4 updated with text-omnii-caption
  */
 export const CaptionText: React.FC<Omit<TypographyProps, 'variant'>> = ({ className, ...props }) => (
-  <Typography variant="caption" className={cn("omnii-caption", className)} {...props} />
+  <Typography variant="caption" className={cn("text-omnii-caption", className)} {...props} />
 );
 
 /**
- * Overline text component - for labels and categories
+ * Overline text component - V4 updated with text-omnii-caption
  */
 export const OverlineText: React.FC<Omit<TypographyProps, 'variant'>> = ({ className, ...props }) => (
-  <Typography variant="overline" className={cn("omnii-caption uppercase", className)} {...props} />
+  <Typography variant="overline" className={cn("text-omnii-caption uppercase", className)} {...props} />
 );
 
 /**

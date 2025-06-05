@@ -1,15 +1,9 @@
 import 'react-native-url-polyfill/auto';
 import { Buffer } from 'buffer';
-import '../styles-minimal.css';
-
-// Make Buffer available globally
-global.Buffer = Buffer;
+import '../styles/global.css';
 
 // Add process polyfill globally
 import process from 'process';
-if (typeof global.process === 'undefined') {
-  global.process = process;
-}
 
 
 import React, { useState, useEffect } from 'react';
@@ -23,6 +17,12 @@ import { OnboardingProvider } from '~/context/OnboardingContext';
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
 import { useFrameworkReady } from '~/hooks/useFrameworkReady';
 import { queryClient } from '~/utils/api';
+
+// Make Buffer available globally
+global.Buffer = Buffer;
+if (typeof global.process === 'undefined') {
+  global.process = process;
+}
 
 // Safe gesture provider that loads GestureProvider after hydration
 function SafeGestureProvider({ children }: { children: React.ReactNode }) {
@@ -107,7 +107,3 @@ function ThemedStack() {
     </>
   );
 }
-
-<View className="bg-red-500 p-4">
-  <Text className="text-white">Test NativeWind</Text>
-</View>

@@ -22,11 +22,11 @@ export function useApprovalActions({
   setApprovals, 
   onAchievement 
 }: UseApprovalActionsProps) {
-  const [undoStack, setUndoStack] = useState<Array<{
+  const [undoStack, setUndoStack] = useState<{
     action: 'approve' | 'reject';
     approval: Approval;
     timestamp: number;
-  }>>([]);
+  }[]>([]);
 
   const removeApproval = useCallback((id: string) => {
     setApprovals(approvals.filter(approval => approval.id !== id));

@@ -4,7 +4,7 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
-      "@acme/*": ["../../packages/*/src"]
+      "@omnii/*": ["../../packages/*/src"]
     },
     "jsx": "react-native",
     "checkJs": false,

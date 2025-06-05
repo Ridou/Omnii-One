@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs , useRouter } from 'expo-router';
 import { CircleUser as UserCircle, Chrome as Home, TrendingUp, MessageCircle, Trophy } from 'lucide-react-native';
 import { AppColors } from '~/constants/Colors';
 import { useAuth } from '~/context/AuthContext';
@@ -8,7 +8,39 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { HeaderLogo } from '~/components/common/OmniiLogo';
 import ContextualNudge from '~/components/common/ContextualNudge';
 import { Animated, View } from 'react-native';
-import { useRouter } from 'expo-router';
+
+// V4 Color System - consistent with global.css
+const V4_COLORS = {
+  // Primary OMNII brand color (same as CSS --color-omnii-primary)
+  primary: '#667eea',
+  
+  // Text colors (same as CSS utilities)
+  text: {
+    primary: '#1a1b1f',
+    secondary: '#6c6e73',
+    tertiary: '#a8aaae',
+  },
+  
+  // Dark mode colors (same as CSS dark mode)
+  dark: {
+    background: '#1a1b1f',
+    card: '#2a2b2f',
+    border: '#38393e',
+    text: {
+      primary: '#ffffff',
+      secondary: '#a8aaae',
+      tertiary: '#6c6e73',
+    }
+  },
+  
+  // Light mode colors
+  light: {
+    background: '#ffffff',
+    card: '#ffffff',
+    border: '#e9ecef',
+    borderLight: '#f1f3f5',
+  }
+};
 
 // Breathing Animation Component for newly unlocked tabs
 const BreathingIcon = ({ children, isNewlyUnlocked }: { children: React.ReactNode, isNewlyUnlocked: boolean }) => {
@@ -137,13 +169,14 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: AppColors.aiGradientStart,
-        tabBarInactiveTintColor: isDark ? '#6c6e73' : AppColors.textSecondary,
+        // V4 Color System - consistent with global.css
+        tabBarActiveTintColor: V4_COLORS.primary,
+        tabBarInactiveTintColor: isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary,
         tabBarStyle: {
           height: 60,
           paddingBottom: 10,
-          backgroundColor: isDark ? '#1a1b1f' : '#ffffff',
-          borderTopColor: isDark ? '#38393e' : '#e9ecef',
+          backgroundColor: isDark ? V4_COLORS.dark.background : V4_COLORS.light.background,
+          borderTopColor: isDark ? V4_COLORS.dark.border : V4_COLORS.light.border,
           borderTopWidth: 1,
         },
         tabBarShowLabel: false, // Remove all text labels
@@ -157,7 +190,7 @@ export default function TabLayout() {
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('analytics') && isFeatureUnlocked('analytics')}>
               <TrendingUp 
                 size={size} 
-                color={isFeatureUnlocked('analytics') ? color : (isDark ? '#6c6e73' : AppColors.textSecondary)}
+                color={isFeatureUnlocked('analytics') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
               />
             </BreathingIcon>
           ),
@@ -182,7 +215,7 @@ export default function TabLayout() {
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('achievements') && isFeatureUnlocked('achievements')}>
               <Trophy 
                 size={size} 
-                color={isFeatureUnlocked('achievements') ? color : (isDark ? '#6c6e73' : AppColors.textSecondary)}
+                color={isFeatureUnlocked('achievements') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
               />
             </BreathingIcon>
           ),
@@ -205,7 +238,7 @@ export default function TabLayout() {
             <HeaderLogo 
               style={{ 
                 transform: [{ scale: 0.8 }],
-                opacity: color === AppColors.aiGradientStart ? 1 : 0.6 
+                opacity: color === V4_COLORS.primary ? 1 : 0.6 
               }} 
             />
           ),
@@ -219,7 +252,7 @@ export default function TabLayout() {
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('chat') && isFeatureUnlocked('chat')}>
               <MessageCircle 
                 size={size} 
-                color={isFeatureUnlocked('chat') ? color : (isDark ? '#6c6e73' : AppColors.textSecondary)}
+                color={isFeatureUnlocked('chat') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
               />
             </BreathingIcon>
           ),
@@ -242,7 +275,7 @@ export default function TabLayout() {
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('profile') && isFeatureUnlocked('profile')}>
               <UserCircle 
                 size={size} 
-                color={isFeatureUnlocked('profile') ? color : (isDark ? '#6c6e73' : AppColors.textSecondary)}
+                color={isFeatureUnlocked('profile') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
               />
             </BreathingIcon>
           ),

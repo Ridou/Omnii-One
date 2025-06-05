@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
 import { AppColors } from '~/constants/Colors';
+import { useTheme } from '~/context/ThemeContext';
+import { cn } from '~/utils/cn';
 import type { OnboardingQuote } from '~/types/onboarding';
 
 interface OnboardingQuoteCardProps {
@@ -12,6 +14,7 @@ export default function OnboardingQuoteCard({
   quote, 
   onPress 
 }: OnboardingQuoteCardProps) {
+  const { isDark } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [displayStartTime] = useState(Date.now());
 
@@ -118,7 +121,7 @@ export default function OnboardingQuoteCard({
       case 'advanced':
         return { color: '#FF6B47', label: 'ADVANCED' };
       default:
-        return { color: AppColors.textSecondary, label: difficulty.toUpperCase() };
+        return { color: isDark ? '#94a3b8' : '#6b7280', label: difficulty.toUpperCase() };
     }
   };
 
@@ -138,201 +141,115 @@ export default function OnboardingQuoteCard({
       activeOpacity={0.9}
     >
       <Animated.View
-        style={[
-          styles.container,
-          {
-            borderLeftColor: categoryConfig.borderColor,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
+        className={cn(
+          "rounded-2xl p-6 border-l-4 shadow-md min-h-70",
+          isDark ? "bg-slate-800" : "bg-white"
+        )}
+        style={{
+          borderLeftColor: categoryConfig.borderColor,
+          transform: [{ scale: scaleAnim }],
+        }}
       >
         {/* Header with Category and Difficulty */}
-        <View style={styles.header}>
+        <View className="flex-row justify-between items-center mb-5">
           <View
-            style={[
-              styles.categoryBadge,
-              { backgroundColor: categoryConfig.color },
-            ]}
+            className="flex-1 px-3 py-2 rounded-xl mr-3"
+            style={{ backgroundColor: categoryConfig.color }}
           >
-            <Text style={styles.categoryText}>
+            <Text className="text-white text-xs font-bold text-center tracking-wide">
               {categoryConfig.emoji} {categoryConfig.label}
             </Text>
           </View>
           
           <View
-            style={[
-              styles.difficultyBadge,
-              { backgroundColor: `${difficultyConfig.color}20`, borderColor: difficultyConfig.color },
-            ]}
+            className="px-3 py-1.5 rounded-lg border"
+            style={{ 
+              backgroundColor: `${difficultyConfig.color}20`, 
+              borderColor: difficultyConfig.color 
+            }}
           >
-            <Text style={[styles.difficultyText, { color: difficultyConfig.color }]}>
+            <Text 
+              className="text-xs font-semibold tracking-wide"
+              style={{ color: difficultyConfig.color }}
+            >
               {difficultyConfig.label}
             </Text>
           </View>
         </View>
 
         {/* Quote Text */}
-        <Text style={styles.quoteText}>
-          "{quote.text}"
+        <Text className={cn(
+          "text-xl font-medium leading-7 text-center mb-4 italic",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
+          &quot;{quote.text}&quot;
         </Text>
 
         {/* Author */}
-        <Text style={styles.author}>
+        <Text className={cn(
+          "text-base font-semibold text-center mb-5",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>
           — {quote.author}
         </Text>
 
         {/* Life Domain */}
-        <View style={styles.lifeDomainContainer}>
-          <Text style={styles.lifeDomainLabel}>Life Domain:</Text>
-          <Text style={styles.lifeDomainText}>
+        <View className="flex-row justify-center items-center mb-4 gap-2">
+          <Text className={cn(
+            "text-sm font-medium",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>
+            Life Domain:
+          </Text>
+          <Text className={cn(
+            "text-sm font-semibold",
+            isDark ? "text-indigo-400" : "text-indigo-600"
+          )}>
             {quote.life_domain.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
           </Text>
         </View>
 
         {/* Swipe Instructions */}
-        <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsText}>
+        <View className={cn(
+          "py-3 px-4 rounded-xl mb-4",
+          isDark ? "bg-indigo-900/20" : "bg-indigo-50"
+        )}>
+          <Text className={cn(
+            "text-xs text-center",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>
             👈 Swipe left to decline • Swipe right to approve 👉
           </Text>
         </View>
 
         {/* Resonance Indicator */}
-        <View style={styles.resonanceContainer}>
-          <Text style={styles.resonanceLabel}>Expected resonance:</Text>
-          <View style={styles.resonanceBar}>
+        <View className="flex-row items-center gap-2">
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>
+            Expected resonance:
+          </Text>
+          <View className={cn(
+            "flex-1 h-1.5 rounded-sm overflow-hidden",
+            isDark ? "bg-slate-600" : "bg-gray-200"
+          )}>
             <View 
-              style={[
-                styles.resonanceFill, 
-                { width: `${Math.round(quote.expected_resonance * 100)}%` }
-              ]} 
+              className="h-full rounded-sm"
+              style={{ 
+                width: `${Math.round(quote.expected_resonance * 100)}%`,
+                backgroundColor: AppColors.aiGradientStart
+              }} 
             />
           </View>
-          <Text style={styles.resonanceText}>
+          <Text 
+            className="text-xs font-semibold min-w-9 text-right"
+            style={{ color: AppColors.aiGradientStart }}
+          >
             {Math.round(quote.expected_resonance * 100)}%
           </Text>
         </View>
       </Animated.View>
     </TouchableOpacity>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 20,
-    padding: 24,
-    borderLeftWidth: 5,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
-    minHeight: 280,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  categoryBadge: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  categoryText: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-  difficultyBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  difficultyText: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  quoteText: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: AppColors.textPrimary,
-    lineHeight: 28,
-    textAlign: 'center',
-    marginBottom: 16,
-    fontStyle: 'italic',
-  },
-  author: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  lifeDomainContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 6,
-  },
-  lifeDomainLabel: {
-    fontSize: 13,
-    color: AppColors.textSecondary,
-    fontWeight: '500',
-  },
-  lifeDomainText: {
-    fontSize: 13,
-    color: AppColors.aiGradientStart,
-    fontWeight: '600',
-  },
-  instructionsContainer: {
-    backgroundColor: `${AppColors.aiGradientStart}10`,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  instructionsText: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-    opacity: 0.8,
-  },
-  resonanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  resonanceLabel: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    fontWeight: '500',
-  },
-  resonanceBar: {
-    flex: 1,
-    height: 6,
-    backgroundColor: AppColors.borderLight,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  resonanceFill: {
-    height: '100%',
-    backgroundColor: AppColors.aiGradientStart,
-    borderRadius: 3,
-  },
-  resonanceText: {
-    fontSize: 12,
-    color: AppColors.aiGradientStart,
-    fontWeight: '600',
-    minWidth: 35,
-    textAlign: 'right',
-  },
-}); 
+} 

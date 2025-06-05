@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { colorScheme } from 'nativewind';
 import { cn } from '~/utils/cn';
 import { useTheme, useThemeIntegration } from '~/context/ThemeContext';
 import type { ThemeSettings } from '~/types/profile';
@@ -11,6 +12,23 @@ interface ThemeSelectorProps {
 
 export default function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProps) {
   const { isDark, systemTheme } = useTheme();
+  
+  const handleThemeChange = (newTheme: ThemeSettings['colorScheme']) => {
+    // Update our custom profile context
+    onThemeChange(newTheme);
+    
+    // Also update NativeWind's colorScheme to trigger dark: classes
+    if (newTheme === 'dark') {
+      colorScheme.set('dark');
+    } else if (newTheme === 'light') {
+      colorScheme.set('light');
+    } else if (newTheme === 'auto') {
+      colorScheme.set('system');
+    } else if (newTheme === 'high_contrast') {
+      // High contrast maps to dark mode with special styling
+      colorScheme.set('dark');
+    }
+  };
   
   const themeOptions = [
     {
@@ -46,15 +64,13 @@ export default function ThemeSelector({ currentTheme, onThemeChange }: ThemeSele
           key={option.value}
           className={cn(
             "flex-row items-center p-4 rounded-xl border-2",
-            // FIXED: React Native compatible conditional classes
             currentTheme === option.value 
-              ? "border-ai-start bg-ai-start/10"
-              : "border-omnii-border bg-omnii-background",
-            // Dark theme variants
-            isDark && currentTheme === option.value && "bg-ai-start/20",
-            isDark && currentTheme !== option.value && "border-omnii-dark-border bg-omnii-dark-background"
+              ? "border-omnii-primary bg-omnii-primary/10"
+              : cn(
+                  isDark ? "border-slate-600 bg-slate-700" : "border-gray-200 bg-white"
+                )
           )}
-          onPress={() => onThemeChange(option.value)}
+          onPress={() => handleThemeChange(option.value)}
           accessible={true}
           accessibilityRole="radio"
           accessibilityState={{ checked: currentTheme === option.value }}
@@ -62,21 +78,15 @@ export default function ThemeSelector({ currentTheme, onThemeChange }: ThemeSele
         >
           <Text className="text-2xl mr-4">{option.icon}</Text>
           <View className="flex-1">
-            <Text className={cn(
-              "omnii-body font-semibold",
-              isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
-            )}>
+            <Text className={cn("font-semibold", isDark ? "text-white" : "text-gray-900")}>
               {option.label}
             </Text>
-            <Text className={cn(
-              "omnii-caption",
-              isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
-            )}>
+            <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
               {option.description}
             </Text>
           </View>
           {currentTheme === option.value && (
-            <View className="w-6 h-6 rounded-full bg-ai-start items-center justify-center">
+            <View className="w-6 h-6 rounded-full bg-omnii-primary items-center justify-center">
               <Text className="text-white text-xs">✓</Text>
             </View>
           )}

@@ -2,230 +2,353 @@
 @tailwind components;
 @tailwind utilities;
 
-/* OMNII Custom Component Classes */
+/* OMNII Theme Customizations - V4 Best Practice */
+@theme {
+  --font-omnii-sans: "Styrene A", "Inter", system-ui, sans-serif;
+  --font-omnii-serif: "Tiempos Text", "Georgia", serif;
+  --font-omnii-mono: "SF Mono", "Monaco", monospace;
+}
+
+/* OMNII Custom Utilities - V4 @utility Directive */
+@utility text-omnii-heading {
+  font-family: var(--font-omnii-serif);
+  font-weight: 600;
+  line-height: 1.25;
+  color: rgb(15 23 42);
+}
+
+@utility text-omnii-body {
+  font-family: var(--font-omnii-serif);
+  line-height: 1.625;
+  color: rgb(15 23 42);
+}
+
+@utility text-omnii-caption {
+  font-family: var(--font-omnii-serif);
+  font-size: 14px;
+  line-height: 1.625;
+  color: rgb(100 116 139);
+}
+
+@utility text-brand-omnii {
+  font-family: var(--font-omnii-sans);
+  line-height: 1.25;
+}
+
+@utility card-omnii {
+  background-color: rgb(255 255 255);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgb(226 232 240);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+@utility card-omnii-elevated {
+  background-color: rgb(255 255 255);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgb(226 232 240);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+@utility btn-omnii-primary {
+  background-color: rgb(99 102 241);
+  padding: 1rem 1.5rem;
+  border-radius: 0.75rem;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@utility btn-omnii-secondary {
+  background-color: rgb(248 250 252);
+  border: 2px solid rgb(226 232 240);
+  padding: 1rem 1.5rem;
+  border-radius: 0.75rem;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==== DARK MODE UTILITIES ==== */
+/* Dark Mode Backgrounds */
+@utility bg-omnii-dark-background {
+  background-color: rgb(26 27 31);
+}
+
+@utility bg-omnii-dark-card {
+  background-color: rgb(42 43 47);
+}
+
+/* Dark Mode Text Colors */
+@utility text-omnii-dark-text-primary {
+  color: rgb(255 255 255);
+}
+
+@utility text-omnii-dark-text-secondary {
+  color: rgb(168 170 174);
+}
+
+@utility text-omnii-dark-text-tertiary {
+  color: rgb(108 110 115);
+}
+
+/* Dark Mode Borders */
+@utility border-omnii-dark-border {
+  border-color: rgb(56 57 62);
+}
+
+@utility border-omnii-dark-border-light {
+  border-color: rgb(68 70 76);
+}
+
+/* Dark Mode Primary Colors */
+@utility text-omnii-dark-primary {
+  color: rgb(99 102 241);
+}
+
+@utility border-omnii-dark-primary {
+  border-color: rgb(99 102 241);
+}
+
+/* ==== LIGHT MODE UTILITIES ==== */
+/* Light Mode Backgrounds */
+@utility bg-omnii-background {
+  background-color: rgb(255 255 255);
+}
+
+/* Light Mode Text Colors */
+@utility text-omnii-text-primary {
+  color: rgb(26 27 31);
+}
+
+@utility text-omnii-text-secondary {
+  color: rgb(108 110 115);
+}
+
+@utility text-omnii-text-tertiary {
+  color: rgb(168 170 174);
+}
+
+/* Light Mode Borders */
+@utility border-omnii-border {
+  border-color: rgb(233 236 239);
+}
+
+@utility border-omnii-border-light {
+  border-color: rgb(241 243 245);
+}
+
+/* Light Mode Primary Colors */
+@utility text-omnii-primary {
+  color: rgb(99 102 241);
+}
+
+@utility bg-omnii-primary {
+  background-color: rgb(99 102 241);
+}
+
+@utility border-omnii-primary {
+  border-color: rgb(99 102 241);
+}
+
+/* Priority Card Variants */
+@utility card-priority-high {
+  background-color: rgb(255 255 255);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgb(226 232 240);
+  border-left: 4px solid rgb(239 68 68);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+@utility card-priority-medium {
+  background-color: rgb(255 255 255);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgb(226 232 240);
+  border-left: 4px solid rgb(251 191 36);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+@utility card-priority-low {
+  background-color: rgb(255 255 255);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgb(226 232 240);
+  border-left: 4px solid rgb(34 197 94);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Gamification Elements */
+@utility progress-xp-omnii {
+  background: linear-gradient(to right, rgb(99 102 241), rgb(147 51 234));
+  border-radius: 9999px;
+  height: 8px;
+}
+
+@utility badge-level-omnii {
+  background: linear-gradient(to right, rgb(251 191 36), rgb(239 68 68));
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+}
+
+@utility mascot-glow-omnii {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+/* Simplified Components Layer - No Complex @apply Chains */
 @layer components {
-  /* Card Components */
-  .omnii-card {
-    @apply bg-omnii-card rounded-2xl p-5 shadow-omnii-card border border-omnii-border;
+  /* Priority Indicators - Simple Utility Classes */
+  .indicator-priority-high {
+    border-left: 4px solid rgb(239 68 68);
   }
   
-  .omnii-card-elevated {
-    @apply omnii-card shadow-omnii-elevated;
+  .indicator-priority-medium {
+    border-left: 4px solid rgb(251 191 36);
   }
   
-  /* Button Components */
-  .omnii-btn-primary {
-    @apply bg-ai-start px-6 py-4 rounded-xl min-h-[44px] min-w-[44px] items-center justify-center;
+  .indicator-priority-low {
+    border-left: 4px solid rgb(34 197 94);
   }
   
-  .omnii-btn-secondary {
-    @apply bg-omnii-background border-2 border-omnii-border px-6 py-4 rounded-xl min-h-[44px] min-w-[44px] items-center justify-center;
+  /* Font Weight Variants */
+  .font-omnii-light {
+    font-family: "Styrene A Light", system-ui, sans-serif;
   }
   
-  /* CRITICAL: Typography Components with Font Integration */
-  .omnii-heading {
-    @apply text-omnii-text-primary font-semibold leading-tight;
-    font-family: 'Tiempos-Semibold', system-ui, serif;
+  .font-omnii-medium {
+    font-family: "Styrene A Medium", system-ui, sans-serif;
   }
   
-  .omnii-body {
-    @apply text-omnii-text-primary leading-relaxed;
-    font-family: 'Tiempos-Regular', system-ui, serif;
+  .font-omnii-bold {
+    font-family: "Styrene A Bold", system-ui, sans-serif;
   }
   
-  .omnii-caption {
-    @apply text-omnii-text-secondary text-sm leading-relaxed;
-    font-family: 'Tiempos-Regular', system-ui, serif;
+  .font-omnii-black {
+    font-family: "Styrene A Black", system-ui, sans-serif;
   }
   
-  /* Brand Typography (Styrene) */
-  .omnii-brand {
-    font-family: 'Styrene-Regular', system-ui, sans-serif;
-    @apply leading-tight;
+  .font-tiempos-medium {
+    font-family: "Tiempos Text Medium", serif;
   }
   
-  .omnii-brand-bold {
-    font-family: 'Styrene-Bold', system-ui, sans-serif;
-    @apply leading-tight;
+  .font-tiempos-semibold {
+    font-family: "Tiempos Text Semibold", serif;
   }
   
-  .omnii-brand-black {
-    font-family: 'Styrene-Black', system-ui, sans-serif;
-    @apply leading-tight;
+  .font-tiempos-bold {
+    font-family: "Tiempos Text Bold", serif;
+  }
+}
+
+/* Simple Animation Keyframes - React Native Compatible */
+@keyframes shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes fade-glow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Minimal Utility Layer */
+@layer utilities {
+  .anim-shimmer-omnii {
+    animation: shimmer 3s ease-in-out infinite;
   }
   
-  /* Font-Specific Typography Classes */
-  .text-styrene {
-    font-family: 'Styrene-Regular', system-ui, sans-serif;
+  .anim-fade-glow-omnii {
+    animation: fade-glow 1.5s ease-in-out infinite;
   }
   
-  .text-styrene-light {
-    font-family: 'Styrene-Light', system-ui, sans-serif;
-  }
-  
-  .text-styrene-medium {
-    font-family: 'Styrene-Medium', system-ui, sans-serif;
-  }
-  
-  .text-styrene-bold {
-    font-family: 'Styrene-Bold', system-ui, sans-serif;
-  }
-  
-  .text-styrene-black {
-    font-family: 'Styrene-Black', system-ui, sans-serif;
-  }
-  
-  .text-tiempos {
-    font-family: 'Tiempos-Regular', system-ui, serif;
-  }
-  
-  .text-tiempos-medium {
-    font-family: 'Tiempos-Medium', system-ui, serif;
-  }
-  
-  .text-tiempos-semibold {
-    font-family: 'Tiempos-Semibold', system-ui, serif;
-  }
-  
-  .text-tiempos-bold {
-    font-family: 'Tiempos-Bold', system-ui, serif;
-  }
-  
-  /* Priority Indicators */
-  .priority-high {
-    @apply border-l-4 border-priority-high;
-  }
-  
-  .priority-medium {
-    @apply border-l-4 border-priority-medium;
-  }
-  
-  .priority-low {
-    @apply border-l-4 border-priority-low;
-  }
-  
-  /* Gamification Elements */
-  .mascot-glow {
-    @apply shadow-omnii-glow;
-  }
-  
-  .achievement-pulse {
-    @apply animate-pulse-slow;
-  }
-  
-  /* Enhanced Animation Classes (React Native compatible) */
   .anim-pulse-omnii {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   
-  .anim-shimmer {
-    animation: shimmer 3s ease-in-out infinite;
-  }
-  
-  .anim-fade-glow {
-    animation: fade-glow 1.5s ease-in-out infinite;
-  }
-  
-  .anim-spin-slow {
-    animation: spin 8s linear infinite;
-  }
-  
-  /* Mascot Evolution Stages */
-  .mascot-seed {
-    @apply bg-gradient-to-br from-green-400 to-green-600;
-  }
-  
-  .mascot-flower {
-    @apply bg-gradient-to-br from-pink-400 to-purple-600;
-  }
-  
-  .mascot-tree {
-    @apply bg-gradient-to-br from-green-600 to-blue-600;
-  }
-  
-  /* XP and Level Indicators */
-  .xp-bar {
-    @apply bg-gradient-to-r from-ai-start to-ai-end rounded-full h-2;
-  }
-  
-  .level-badge {
-    @apply bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full px-3 py-1;
-  }
-  
-  /* Achievement Celebration */
-  .achievement-glow {
-    @apply shadow-omnii-glow animate-pulse-slow;
-  }
-  
-  .achievement-bounce {
-    @apply animate-bounce-soft;
-  }
-  
-  /* Scale transformations (React Native compatible) */
-  .scale-pressed {
+  .transform-pressed-omnii {
     transform: scale(0.98);
   }
   
-  .scale-enlarged {
+  .transform-enlarged-omnii {
     transform: scale(1.02);
   }
   
-  /* Accessibility Enhancements */
-  .accessible-touch {
-    @apply min-h-[44px] min-w-[44px];
-  }
-  
-  .high-contrast {
-    @apply contrast-125 brightness-110;
-  }
-  
-  /* Platform-specific card shadows */
-  .omnii-card-shadow {
-    @apply shadow-omnii-card;
-  }
-  
-  /* Font loading states */
-  .font-loading {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-  
-  .font-loaded-styrene {
-    font-family: 'Styrene-Regular', system-ui, sans-serif;
-  }
-  
-  .font-loaded-tiempos {
-    font-family: 'Tiempos-Regular', system-ui, serif;
+  .touch-accessible-omnii {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
-/* Platform-specific fixes */
-@layer utilities {
-  .text-rendering-optimized {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+/* NativeWind V4 Dark Mode Support - Using Proper @variant Directive */
+@layer components {
+  .text-omnii-heading {
+    @variant dark {
+      color: rgb(248 250 252);
+    }
   }
   
-  /* React Native Web specific fixes */
-  .rn-text-fix {
-    white-space: pre-wrap;
-    word-wrap: break-word;
+  .text-omnii-body {
+    @variant dark {
+      color: rgb(248 250 252);
+    }
   }
   
-  /* Platform-specific shadow utilities */
-  .shadow-ios {
-    shadow-color: #000000;
-    shadow-offset: 0px 2px;
-    shadow-opacity: 0.04;
-    shadow-radius: 12px;
+  .text-omnii-caption {
+    @variant dark {
+      color: rgb(148 163 184);
+    }
   }
   
-  .shadow-android {
-    elevation: 2;
+  .card-omnii {
+    @variant dark {
+      background-color: rgb(30 41 59);
+      border-color: rgb(51 65 85);
+    }
+  }
+  
+  .card-omnii-elevated {
+    @variant dark {
+      background-color: rgb(30 41 59);
+      border-color: rgb(51 65 85);
+    }
+  }
+  
+  .card-priority-high {
+    @variant dark {
+      background-color: rgb(30 41 59);
+      border-color: rgb(51 65 85);
+    }
+  }
+  
+  .card-priority-medium {
+    @variant dark {
+      background-color: rgb(30 41 59);
+      border-color: rgb(51 65 85);
+    }
+  }
+  
+  .card-priority-low {
+    @variant dark {
+      background-color: rgb(30 41 59);
+      border-color: rgb(51 65 85);
+    }
+  }
+  
+  .btn-omnii-secondary {
+    @variant dark {
+      background-color: rgb(30 41 59);
+      border-color: rgb(51 65 85);
+    }
   }
 }
 
-/* React Native compatible keyframes (removed box-shadow) */
+/* React Native compatible keyframes */
 @keyframes shimmer {
   0%, 100% {
     opacity: 1;
@@ -244,15 +367,43 @@
   }
 }
 
-/* Mobile-specific optimizations */
-@media screen and (max-width: 768px) {
-  .mobile-text-wrap {
+/* Utilities Layer - SAFE NAMING */
+@layer utilities {
+  /* Text Rendering - SAFE NAMING */
+  .text-render-optimized-omnii {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* React Native Web fixes - SAFE NAMING */
+  .text-wrap-omnii {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  
+  /* Mobile-specific optimizations - SAFE NAMING */
+  .mobile-text-wrap-omnii {
     white-space: normal !important;
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
   }
   
-  .mobile-touch {
+  .mobile-touch-omnii {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Mobile-specific responsive design */
+@media screen and (max-width: 768px) {
+  .mobile-text-wrap-omnii {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  
+  .mobile-touch-omnii {
     min-height: 44px;
     min-width: 44px;
   }
@@ -282,11 +433,11 @@
 
 /* Dark mode enhancements */
 @media (prefers-color-scheme: dark) {
-  .dark-mode-text {
+  .dark-mode-text-omnii {
     color: #ffffff;
   }
   
-  .dark-mode-bg {
+  .dark-mode-bg-omnii {
     background-color: #1a1a1a;
   }
 }
@@ -296,4 +447,4 @@ body, html {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
+} 

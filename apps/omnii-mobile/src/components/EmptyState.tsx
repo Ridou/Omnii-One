@@ -33,7 +33,7 @@ export default function EmptyState({ title, message, icon, className }: EmptySta
         {renderIcon()}
       </View>
       
-      <Text className="omnii-heading text-lg text-center mb-2 text-omnii-text-primary">
+      <Text className="text-omnii-heading text-lg text-center mb-2 text-omnii-text-primary">
         {title}
       </Text>
       

@@ -5,19 +5,18 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '~/context/AuthContext';
-import { signInWithGoogleImmediate } from '~/lib/auth/googleAuth';
+import { signInWithGoogleImmediate , testOAuthWithMinimalScopes } from '~/lib/auth/googleAuth';
 import { AppLogo } from '~/components/common/OmniiLogo';
 import { 
   BrandText, 
   DisplayText, 
-  Heading2,
+  H2,
   BodyText, 
   ButtonText,
   CaptionText
 } from '~/components/common/Typography';
 import { BRAND_COLORS } from '~/lib/assets';
 import { runOAuthDiagnostics, testEnvironmentDetection } from '~/lib/auth/debug';
-import { testOAuthWithMinimalScopes } from '~/lib/auth/googleAuth';
 import { getCurrentScopeInfo } from '~/lib/auth/scopes';
 
 // Official Google G SVG Icon
@@ -144,7 +143,7 @@ const GoogleLoginButton = ({
           ) : (
             <>
               <GoogleIcon size={20} />
-              <ButtonText color="#3C4043" style={{ marginLeft: 12 }}>
+              <ButtonText style={{ marginLeft: 12, color: "#3C4043" }}>
                 Continue with Google
               </ButtonText>
             </>
@@ -515,12 +514,12 @@ export default function LoginScreen() {
             <AppLogo />
           </View>
           <BrandText size="medium" style={{ marginTop: 12 }}>OMNII</BrandText>
-          <BodyText color="#666666" style={styles.subtitle}>Your AI-Powered Task Assistant</BodyText>
+          <BodyText style={{ ...styles.subtitle, color: "#666666" }}>Your AI-Powered Task Assistant</BodyText>
         </View>
 
         {/* Main call to action */}
-        <Heading2 style={styles.mainTitle}>Continue with Google</Heading2>
-        <BodyText color="#666666" style={styles.description}>
+        <H2 style={styles.mainTitle}>Continue with Google</H2>
+        <BodyText style={{ ...styles.description, color: "#666666" }}>
           Sign in to access your AI assistant and seamlessly integrate with your Google workspace.
         </BodyText>
 
@@ -530,8 +529,8 @@ export default function LoginScreen() {
             <Text style={styles.errorText}>{error}</Text>
             {(error.toLowerCase().includes('popup') || error.toLowerCase().includes('blocked')) && (
               <View style={styles.helpSection}>
-                <BodyText color="#E37400" style={styles.helpTitle}>💡 Quick fixes:</BodyText>
-                <CaptionText color="#E37400" style={styles.helpText}>
+                <BodyText style={{ ...styles.helpTitle, color: "#E37400" }}>💡 Quick fixes:</BodyText>
+                <CaptionText style={{ ...styles.helpText, color: "#E37400" }}>
                   • Tap the login button again{'\n'}
                   • Check if popups are enabled{'\n'}
                   • Try refreshing the page
@@ -555,7 +554,7 @@ export default function LoginScreen() {
             onPress={handleRetryImmediate}
             disabled={isLoading || isAttempting}
           >
-            <ButtonText color="#4285F4" style={styles.retryButtonText}>
+            <ButtonText style={{ ...styles.retryButtonText, color: "#4285F4" }}>
               🔄 Try Alternative Login Method
             </ButtonText>
           </TouchableOpacity>
@@ -569,7 +568,7 @@ export default function LoginScreen() {
             <View style={styles.checkmark}>
               <Text style={styles.checkmarkText}>✓</Text>
             </View>
-            <CaptionText color="#5F6368" style={styles.benefitText}>
+            <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
               Seamless integration with Gmail, Calendar & Drive
             </CaptionText>
           </View>
@@ -578,7 +577,7 @@ export default function LoginScreen() {
             <View style={styles.checkmark}>
               <Text style={styles.checkmarkText}>✓</Text>
             </View>
-            <CaptionText color="#5F6368" style={styles.benefitText}>
+            <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
               AI accesses your data securely with your permission
             </CaptionText>
           </View>
@@ -587,7 +586,7 @@ export default function LoginScreen() {
             <View style={styles.checkmark}>
               <Text style={styles.checkmarkText}>✓</Text>
             </View>
-            <CaptionText color="#5F6368" style={styles.benefitText}>
+            <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
               One login for all your productivity needs
             </CaptionText>
           </View>
@@ -596,7 +595,7 @@ export default function LoginScreen() {
             <View style={styles.checkmark}>
               <Text style={styles.checkmarkText}>✓</Text>
             </View>
-            <CaptionText color="#5F6368" style={styles.benefitText}>
+            <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
               Enhanced task automation across Google services
             </CaptionText>
           </View>
@@ -615,7 +614,7 @@ export default function LoginScreen() {
               {isDebugging ? (
                 <ActivityIndicator size="small" color="#666666" />
               ) : (
-                <CaptionText color="#666666">Run OAuth Diagnostics</CaptionText>
+                <CaptionText style={{ color: "#666666" }}>Run OAuth Diagnostics</CaptionText>
               )}
             </TouchableOpacity>
 
@@ -627,7 +626,7 @@ export default function LoginScreen() {
               {isDebugging ? (
                 <ActivityIndicator size="small" color="#666666" />
               ) : (
-                <CaptionText color="#666666">Test Minimal OAuth</CaptionText>
+                <CaptionText style={{ color: "#666666" }}>Test Minimal OAuth</CaptionText>
               )}
             </TouchableOpacity>
 
@@ -639,7 +638,7 @@ export default function LoginScreen() {
               {isDebugging ? (
                 <ActivityIndicator size="small" color="#666666" />
               ) : (
-                <CaptionText color="#666666">Test Environment Detection</CaptionText>
+                <CaptionText style={{ color: "#666666" }}>Test Environment Detection</CaptionText>
               )}
             </TouchableOpacity>
 
@@ -651,13 +650,13 @@ export default function LoginScreen() {
               {isDebugging ? (
                 <ActivityIndicator size="small" color="#666666" />
               ) : (
-                <CaptionText color="#666666">Test Scope Configuration</CaptionText>
+                <CaptionText style={{ color: "#666666" }}>Test Scope Configuration</CaptionText>
               )}
             </TouchableOpacity>
 
             {debugResults ? (
               <View style={styles.debugResults}>
-                <CaptionText color="#666666">{debugResults}</CaptionText>
+                <CaptionText style={{ color: "#666666" }}>{debugResults}</CaptionText>
               </View>
             ) : null}
           </View>

@@ -20,12 +20,12 @@ interface WorkStyleAssessmentProps {
 interface Question {
   id: keyof ProductivityDNA;
   question: string;
-  options: Array<{
+  options: {
     value: ProductivityDNA[keyof ProductivityDNA];
     label: string;
     emoji: string;
     description: string;
-  }>;
+  }[];
 }
 
 const ASSESSMENT_QUESTIONS: Question[] = [

@@ -158,20 +158,20 @@ export default function AnalyticsScreen() {
         {/* Time labels */}
         <View className="flex-row justify-between px-2.5 pt-2.5">
           <Text className={cn(
-            "omnii-caption text-xs",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>6 AM</Text>
           <Text className={cn(
-            "omnii-caption text-xs",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>12 PM</Text>
           <Text className={cn(
-            "omnii-caption text-xs",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>6 PM</Text>
           <Text className={cn(
-            "omnii-caption text-xs",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>12 AM</Text>
         </View>
       </View>
@@ -296,24 +296,23 @@ export default function AnalyticsScreen() {
 
       {/* Energy Curve Chart Card */}
       <View className={cn(
-        "mb-4 rounded-2xl p-5",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        "rounded-xl p-4 mb-4 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
       )}>
         <Text className={cn(
-          "omnii-heading text-lg mb-1",
-          isDark && "text-omnii-dark-text-primary"
+          "text-lg font-semibold mb-1",
+          isDark ? "text-white" : "text-gray-900"
         )}>📈 Energy Curve</Text>
         <Text className={cn(
-          "omnii-body text-sm mb-4",
-          isDark && "text-omnii-dark-text-secondary"
+          "text-sm mb-4",
+          isDark ? "text-slate-400" : "text-gray-600"
         )}>Real-time productivity levels throughout the day</Text>
         
         <EnergyCurveChart />
         
         <Text className={cn(
-          "omnii-caption text-xs text-center mt-2",
-          isDark && "text-omnii-dark-text-tertiary"
+          "text-xs text-center mt-2",
+          isDark ? "text-slate-500" : "text-gray-500"
         )}>
           Peak performance window: 9:00 AM - 11:30 AM
         </Text>
@@ -321,53 +320,52 @@ export default function AnalyticsScreen() {
 
       {/* Focus Streaks Card */}
       <View className={cn(
-        "border-l-4 border-success mb-4 rounded-2xl p-5",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        "border-l-4 border-green-500 rounded-xl p-4 mb-4 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
       )}>
         <Text className={cn(
-          "omnii-heading text-lg mb-4",
-          isDark && "text-omnii-dark-text-primary"
+          "text-lg font-semibold mb-4",
+          isDark ? "text-white" : "text-gray-900"
         )}>🔥 Focus Streaks</Text>
         <View className="flex-row items-center mb-4">
           <View className="flex-1 items-center">
             <Text className={cn(
-              "omnii-caption text-xs font-medium mb-1",
-              isDark && "text-omnii-dark-text-secondary"
+              "text-xs font-medium mb-1",
+              isDark ? "text-slate-400" : "text-gray-600"
             )}>Current</Text>
             <Text className={cn(
               "text-2xl font-bold",
-              isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+              isDark ? "text-white" : "text-gray-900"
             )}>{analytics?.todayMetrics.currentStreak ?? 0} min</Text>
           </View>
           <View className={cn(
             "w-px h-10 mx-5",
-            isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
+            isDark ? "bg-slate-600" : "bg-gray-200"
           )} />
           <View className="flex-1 items-center">
             <Text className={cn(
-              "omnii-caption text-xs font-medium mb-1",
-              isDark && "text-omnii-dark-text-secondary"
+              "text-xs font-medium mb-1",
+              isDark ? "text-slate-400" : "text-gray-600"
             )}>Best Today</Text>
             <Text className={cn(
               "text-2xl font-bold",
-              isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+              isDark ? "text-white" : "text-gray-900"
             )}>{analytics?.todayMetrics.bestStreak ?? 0} min</Text>
           </View>
         </View>
         <View className="mt-2">
           <View className={cn(
             "h-1.5 rounded-full overflow-hidden mb-2",
-            isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
+            isDark ? "bg-slate-600" : "bg-gray-200"
           )}>
             <View 
-              className="h-full bg-success rounded-full"
+              className="h-full bg-green-500 rounded-full"
               style={{ width: `${((analytics?.todayMetrics.currentStreak ?? 0) / 180) * 100}%` }}
             />
           </View>
           <Text className={cn(
-            "omnii-caption text-xs text-center",
-            isDark && "text-omnii-dark-text-tertiary"
+            "text-xs text-center",
+            isDark ? "text-slate-500" : "text-gray-500"
           )}>Goal: 3 hours focused work</Text>
         </View>
       </View>
@@ -394,17 +392,22 @@ export default function AnalyticsScreen() {
       {/* Empty state for insights */}
       {(!analytics?.aiInsights || analytics.aiInsights.length === 0) && (
         <View className="items-center py-10">
-          <Text className="text-5xl mb-4">🧠</Text>
-          <Text className={cn(
-            "omnii-heading text-lg mb-2",
-            isDark && "text-omnii-dark-text-primary"
-          )}>AI is learning your patterns</Text>
-          <Text className={cn(
-            "omnii-body text-sm text-center leading-5",
-            isDark && "text-omnii-dark-text-secondary"
+          <View className={cn(
+            "rounded-xl p-8 items-center border max-w-sm",
+            isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
           )}>
-            Continue using the app to get personalized productivity insights
-          </Text>
+            <Text className="text-5xl mb-4">🧠</Text>
+            <Text className={cn(
+              "text-lg font-semibold mb-2",
+              isDark ? "text-white" : "text-gray-900"
+            )}>AI is learning your patterns</Text>
+            <Text className={cn(
+              "text-sm text-center leading-5",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>
+              Continue using the app to get personalized productivity insights
+            </Text>
+          </View>
         </View>
       )}
     </ScrollView>
@@ -414,48 +417,44 @@ export default function AnalyticsScreen() {
     <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
       {/* Weekly Patterns Heatmap */}
       <View className={cn(
-        "mb-4 rounded-2xl p-5",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        "rounded-xl p-4 mb-4 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
       )}>
         <Text className={cn(
-          "omnii-heading text-lg mb-1",
-          isDark && "text-omnii-dark-text-primary"
+          "text-lg font-semibold mb-1",
+          isDark ? "text-white" : "text-gray-900"
         )}>📅 Weekly Productivity Heatmap</Text>
         <Text className={cn(
-          "omnii-body text-sm mb-4",
-          isDark && "text-omnii-dark-text-secondary"
+          "text-sm mb-4",
+          isDark ? "text-slate-400" : "text-gray-600"
         )}>Your productive vs. challenging times</Text>
         
         <View className={cn(
-          "bg-omnii-background rounded-xl p-4",
-          isDark && "bg-omnii-dark-background"
+          "rounded-xl p-4",
+          isDark ? "bg-slate-900" : "bg-gray-50"
         )}>
           <Text className={cn(
-            "omnii-heading text-base text-center mb-4",
-            isDark && "text-omnii-dark-text-primary"
+            "text-base text-center mb-4 font-medium",
+            isDark ? "text-white" : "text-gray-900"
           )}>Weekly Heatmap Chart</Text>
           {analytics?.weeklyPatterns.map((pattern) => (
             <View key={pattern.day} className="flex-row items-center mb-2">
               <Text className={cn(
-                "omnii-heading text-xs font-medium w-15",
-                isDark && "text-omnii-dark-text-primary"
+                "text-xs font-medium w-15",
+                isDark ? "text-white" : "text-gray-900"
               )}>{pattern.day}</Text>
               <View className={cn(
                 "flex-1 h-4 rounded-lg mx-3 overflow-hidden",
-                isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
+                isDark ? "bg-slate-600" : "bg-gray-200"
               )}>
                 <View 
-                  className="h-full rounded-lg"
-                  style={{ 
-                    width: `${pattern.productivity}%`, 
-                    backgroundColor: AppColors.success 
-                  }} 
+                  className="h-full rounded-lg bg-green-500"
+                  style={{ width: `${pattern.productivity}%` }} 
                 />
               </View>
               <Text className={cn(
-                "omnii-heading text-xs font-semibold w-10 text-right",
-                isDark && "text-omnii-dark-text-primary"
+                "text-xs font-semibold w-10 text-right",
+                isDark ? "text-white" : "text-gray-900"
               )}>{pattern.productivity}%</Text>
             </View>
           ))}
@@ -464,86 +463,71 @@ export default function AnalyticsScreen() {
 
       {/* Task Completion Velocity */}
       <View className={cn(
-        "mb-4 rounded-2xl p-5",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        "rounded-xl p-4 mb-4 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
       )}>
         <Text className={cn(
-          "omnii-heading text-lg mb-1",
-          isDark && "text-omnii-dark-text-primary"
+          "text-lg font-semibold mb-1",
+          isDark ? "text-white" : "text-gray-900"
         )}>⚡ Task Completion Velocity</Text>
         <Text className={cn(
-          "omnii-body text-sm mb-4",
-          isDark && "text-omnii-dark-text-secondary"
+          "text-sm mb-4",
+          isDark ? "text-slate-400" : "text-gray-600"
         )}>How quickly you finish different types of work</Text>
         
         <View className={cn(
-          "flex-row justify-around bg-omnii-background rounded-xl p-5",
-          isDark && "bg-omnii-dark-background"
+          "flex-row justify-around rounded-xl p-5",
+          isDark ? "bg-slate-900" : "bg-gray-50"
         )}>
           <View className="items-center">
             <Text className={cn(
-              "omnii-body text-sm mb-2",
-              isDark && "text-omnii-dark-text-secondary"
+              "text-sm mb-2 font-medium",
+              isDark ? "text-slate-400" : "text-gray-600"
             )}>Average</Text>
             <Text className={cn(
               "text-xl font-bold",
-              isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+              isDark ? "text-white" : "text-gray-900"
             )}>6.2 tasks/day</Text>
           </View>
           <View className="items-center">
             <Text className={cn(
-              "omnii-body text-sm mb-2",
-              isDark && "text-omnii-dark-text-secondary"
+              "text-sm mb-2 font-medium",
+              isDark ? "text-slate-400" : "text-gray-600"
             )}>Trend</Text>
-            <Text className="text-xl font-bold text-success">↗️ +15%</Text>
+            <Text className="text-xl font-bold text-green-600">↗️ +15%</Text>
           </View>
         </View>
       </View>
 
       {/* Time Saved Meter */}
       <View className={cn(
-        "border-l-4 border-ai-start mb-4 rounded-2xl p-5",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        "rounded-xl p-4 mb-4 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
       )}>
         <Text className={cn(
-          "omnii-heading text-lg mb-4",
-          isDark && "text-omnii-dark-text-primary"
-        )}>💎 AI Impact This Month</Text>
-        <View className="flex-row items-center gap-5">
+          "text-lg font-semibold mb-1",
+          isDark ? "text-white" : "text-gray-900"
+        )}>⏰ Time Saved This Week</Text>
+        <Text className={cn(
+          "text-sm mb-4",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>AI-powered automation impact</Text>
+        
+        <View className="items-center">
+          <Text className={cn(
+            "text-3xl font-bold mb-2",
+            isDark ? "text-white" : "text-gray-900"
+          )}>2.4 hours</Text>
           <View className={cn(
-            "w-20 h-20 rounded-full bg-omnii-background justify-center items-center",
-            isDark && "bg-omnii-dark-background"
+            "w-full h-2 rounded-full overflow-hidden mb-2",
+            isDark ? "bg-slate-600" : "bg-gray-200"
           )}>
-            <Text className="text-xl font-bold text-ai-start">12.5h</Text>
-            <Text className={cn(
-              "omnii-caption text-xs",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>saved</Text>
+            <View className="h-full bg-blue-500 rounded-full" style={{ width: '60%' }} />
           </View>
-          <View className="flex-1">
-            <Text className={cn(
-              "omnii-body text-sm mb-3 leading-5",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>
-              Through automated scheduling and smart suggestions
-            </Text>
-            <View className="gap-1">
-              <Text className={cn(
-                "omnii-caption text-xs",
-                isDark && "text-omnii-dark-text-tertiary"
-              )}>• 6.2h from smart scheduling</Text>
-              <Text className={cn(
-                "omnii-caption text-xs",
-                isDark && "text-omnii-dark-text-tertiary"
-              )}>• 4.1h from focus optimization</Text>
-              <Text className={cn(
-                "omnii-caption text-xs",
-                isDark && "text-omnii-dark-text-tertiary"
-              )}>• 2.2h from distraction reduction</Text>
-            </View>
-          </View>
+          <Text className={cn(
+            "text-xs text-center",
+            isDark ? "text-slate-500" : "text-gray-500"
+          )}>60% of weekly goal (4 hours)</Text>
         </View>
       </View>
     </ScrollView>
@@ -551,244 +535,119 @@ export default function AnalyticsScreen() {
 
   const ReportsContent = () => (
     <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-      {/* Shareable Reports */}
+      {/* Monthly Summary */}
       <View className={cn(
-        "mb-4 rounded-2xl p-5",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        "rounded-xl p-4 mb-4 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
       )}>
         <Text className={cn(
-          "omnii-heading text-lg mb-1",
-          isDark && "text-omnii-dark-text-primary"
-        )}>📊 Share Your Progress</Text>
-        <Text className={cn(
-          "omnii-body text-sm mb-4",
-          isDark && "text-omnii-dark-text-secondary"
-        )}>Show off your productivity wins</Text>
+          "text-lg font-semibold mb-4",
+          isDark ? "text-white" : "text-gray-900"
+        )}>📊 Monthly Summary</Text>
         
-        <TouchableOpacity className={cn(
-          "flex-row items-center bg-omnii-background rounded-xl p-4 mb-3",
-          isDark && "bg-omnii-dark-background"
-        )}>
-          <Text className="text-2xl mr-4">🏆</Text>
-          <View className="flex-1">
+        <View className="flex-row justify-between mb-4">
+          <View className="items-center">
             <Text className={cn(
-              "omnii-heading text-base mb-1",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Weekly Wins Summary</Text>
+              "text-2xl font-bold mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>127</Text>
             <Text className={cn(
-              "omnii-body text-sm",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>8 tasks • 87% efficiency • 5.2h focus</Text>
+              "text-xs font-medium",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Tasks Completed</Text>
           </View>
-          <Text className={cn(
-            "omnii-body text-sm",
-            isDark && "text-omnii-dark-text-secondary"
-          )}>Share →</Text>
-        </TouchableOpacity>
+          <View className="items-center">
+            <Text className={cn(
+              "text-2xl font-bold mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>89%</Text>
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Success Rate</Text>
+          </View>
+          <View className="items-center">
+            <Text className={cn(
+              "text-2xl font-bold mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>42h</Text>
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Focus Time</Text>
+          </View>
+        </View>
         
-        <TouchableOpacity className={cn(
-          "flex-row items-center bg-omnii-background rounded-xl p-4 mb-3",
-          isDark && "bg-omnii-dark-background"
+        <View className={cn(
+          "rounded-xl p-4 border-l-4 border-l-blue-500",
+          isDark ? "bg-slate-900" : "bg-blue-50"
         )}>
-          <Text className="text-2xl mr-4">📈</Text>
-          <View className="flex-1">
-            <Text className={cn(
-              "omnii-heading text-base mb-1",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Growth Journey</Text>
-            <Text className={cn(
-              "omnii-body text-sm",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>From Seed to Flower • +340 XP this week</Text>
-          </View>
           <Text className={cn(
-            "omnii-body text-sm",
-            isDark && "text-omnii-dark-text-secondary"
-          )}>Share →</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity className={cn(
-          "flex-row items-center bg-omnii-background rounded-xl p-4 mb-3",
-          isDark && "bg-omnii-dark-background"
-        )}>
-          <Text className="text-2xl mr-4">🔥</Text>
-          <View className="flex-1">
-            <Text className={cn(
-              "omnii-heading text-base mb-1",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Streak Achievement</Text>
-            <Text className={cn(
-              "omnii-body text-sm",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>120 minutes focused today • Personal best!</Text>
-          </View>
+            "text-sm font-medium mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🎯 Best Performing Day</Text>
           <Text className={cn(
-            "omnii-body text-sm",
-            isDark && "text-omnii-dark-text-secondary"
-          )}>Share →</Text>
-        </TouchableOpacity>
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>Tuesday - 12 tasks completed with 95% efficiency</Text>
+        </View>
       </View>
 
-      {/* Friends Leaderboard */}
+      {/* Export Options */}
       <View className={cn(
-        "mb-4 rounded-2xl p-5",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        "rounded-xl p-4 mb-4 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
       )}>
         <Text className={cn(
-          "omnii-heading text-lg mb-1",
-          isDark && "text-omnii-dark-text-primary"
-        )}>👥 Friends Leaderboard</Text>
-        <Text className={cn(
-          "omnii-body text-sm mb-4",
-          isDark && "text-omnii-dark-text-secondary"
-        )}>See how you compare this week</Text>
+          "text-lg font-semibold mb-4",
+          isDark ? "text-white" : "text-gray-900"
+        )}>📤 Export Data</Text>
         
-        <View className="flex-row items-center mb-3">
-          <Text className="text-2xl font-bold mr-3">🥇</Text>
+        <TouchableOpacity className={cn(
+          "flex-row items-center p-3 rounded-lg mb-3 border",
+          isDark ? "bg-slate-700 border-slate-600" : "bg-gray-50 border-gray-200"
+        )}>
+          <Text className="text-xl mr-3">📋</Text>
           <View className="flex-1">
             <Text className={cn(
-              "omnii-heading text-base",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Alex Chen</Text>
+              "font-medium",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Weekly Report</Text>
             <Text className={cn(
-              "omnii-body text-sm",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>1,240 XP • Flower Stage</Text>
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Export last 7 days as PDF</Text>
           </View>
-        </View>
-
-        <View className="flex-row items-center mb-3">
-          <Text className="text-2xl font-bold mr-3">🥈</Text>
-          <View className="flex-1">
-            <Text className={cn(
-              "omnii-heading text-base",
-              isDark && "text-omnii-dark-text-primary"
-            )}>You</Text>
-            <Text className={cn(
-              "omnii-body text-sm",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>1,180 XP • Flower Stage</Text>
-          </View>
-        </View>
-
-        <View className="flex-row items-center mb-4">
-          <Text className="text-2xl font-bold mr-3">🥉</Text>
-          <View className="flex-1">
-            <Text className={cn(
-              "omnii-heading text-base",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Sarah Kim</Text>
-            <Text className={cn(
-              "omnii-body text-sm",
-              isDark && "text-omnii-dark-text-secondary"
-            )}>1,120 XP • Flower Stage</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity className="bg-ai-start py-3 px-6 rounded-xl items-center">
-          <Text className="text-white text-base font-semibold">📧 Invite More Friends</Text>
+          <Text className={cn(
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>→</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* Analytics Milestones Progress */}
-      <View className={cn(
-        "mb-4 rounded-2xl p-5",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
-      )}>
-        <Text className={cn(
-          "omnii-heading text-lg mb-1",
-          isDark && "text-omnii-dark-text-primary"
-        )}>🏆 Analytics Milestones</Text>
-        <Text className={cn(
-          "omnii-body text-sm mb-4",
-          isDark && "text-omnii-dark-text-secondary"
-        )}>Track your analytics achievements</Text>
         
-        <View className="mb-5">
-          <View className="flex-row justify-between items-center mb-2">
+        <TouchableOpacity className={cn(
+          "flex-row items-center p-3 rounded-lg border",
+          isDark ? "bg-slate-700 border-slate-600" : "bg-gray-50 border-gray-200"
+        )}>
+          <Text className="text-xl mr-3">📊</Text>
+          <View className="flex-1">
             <Text className={cn(
-              "omnii-heading text-base",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Pattern Seeker</Text>
-            <Text className="omnii-heading text-sm text-ai-start">+75 XP</Text>
+              "font-medium",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Raw Data</Text>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Export all data as CSV</Text>
           </View>
           <Text className={cn(
-            "omnii-body text-sm mb-3 leading-5",
-            isDark && "text-omnii-dark-text-secondary"
-          )}>Review analytics for 7 consecutive days</Text>
-          <View className="flex-row items-center gap-3">
-            <View className={cn(
-              "flex-1 h-1.5 rounded-full overflow-hidden",
-              isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
-            )}>
-              <View className="h-full bg-ai-start rounded-full w-[71%]" />
-            </View>
-            <Text className={cn(
-              "omnii-caption text-xs",
-              isDark && "text-omnii-dark-text-tertiary"
-            )}>5/7 days</Text>
-          </View>
-        </View>
-
-        <View className="mb-5">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className={cn(
-              "omnii-heading text-base",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Data Detective</Text>
-            <Text className="omnii-heading text-sm text-ai-start">+200 XP</Text>
-          </View>
-          <Text className={cn(
-            "omnii-body text-sm mb-3 leading-5",
-            isDark && "text-omnii-dark-text-secondary"
-          )}>Discover and act on 3 personal productivity patterns</Text>
-          <View className="flex-row items-center gap-3">
-            <View className={cn(
-              "flex-1 h-1.5 rounded-full overflow-hidden",
-              isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
-            )}>
-              <View className="h-full bg-ai-start rounded-full w-[33%]" />
-            </View>
-            <Text className={cn(
-              "omnii-caption text-xs",
-              isDark && "text-omnii-dark-text-tertiary"
-            )}>1/3 patterns</Text>
-          </View>
-        </View>
-
-        <View className="mb-0">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className={cn(
-              "omnii-heading text-base",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Efficiency Engineer</Text>
-            <Text className="omnii-heading text-sm text-ai-start">+300 XP</Text>
-          </View>
-          <Text className={cn(
-            "omnii-body text-sm mb-3 leading-5",
-            isDark && "text-omnii-dark-text-secondary"
-          )}>Improve weekly productivity score by 25%</Text>
-          <View className="flex-row items-center gap-3">
-            <View className={cn(
-              "flex-1 h-1.5 rounded-full overflow-hidden",
-              isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
-            )}>
-              <View className="h-full bg-ai-start rounded-full w-[0%]" />
-            </View>
-            <Text className={cn(
-              "omnii-caption text-xs",
-              isDark && "text-omnii-dark-text-tertiary"
-            )}>0% improvement</Text>
-          </View>
-        </View>
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>→</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
 
-  // Tab content renderer
   const renderTabContent = () => {
     switch (selectedTab) {
       case 'dashboard':
@@ -800,7 +659,7 @@ export default function AnalyticsScreen() {
       case 'reports':
         return <ReportsContent />;
       default:
-        return null;
+        return <DashboardContent />;
     }
   };
 
@@ -808,22 +667,22 @@ export default function AnalyticsScreen() {
   if (!user) {
     return (
       <SafeAreaView className={cn(
-        "flex-1 bg-omnii-background",
-        isDark && "bg-omnii-dark-background"
+        "flex-1",
+        isDark ? "bg-slate-900" : "bg-white"
       )}>
         <View className="flex-1 justify-center items-center p-6">
-          <TrendingUp size={64} color={isDark ? '#a8aaae' : '#8E8E93'} />
+          <TrendingUp size={64} color={isDark ? '#94a3b8' : '#6b7280'} />
           <Text className={cn(
-            "omnii-heading text-3xl font-bold mt-4",
-            isDark && "text-omnii-dark-text-primary"
+            "text-3xl font-bold mt-4",
+            isDark ? "text-white" : "text-gray-900"
           )}>Analytics</Text>
           <Text className={cn(
-            "omnii-body text-base text-center mt-2",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-base text-center mt-2",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>Please log in to view your analytics</Text>
           
           <Link href="/(auth)/login" asChild>
-            <TouchableOpacity className="bg-ai-start py-3 px-6 rounded-xl mt-4">
+            <TouchableOpacity className="bg-indigo-600 py-3 px-6 rounded-xl mt-4">
               <Text className="text-white text-base font-semibold">Login</Text>
             </TouchableOpacity>
           </Link>
@@ -834,34 +693,28 @@ export default function AnalyticsScreen() {
 
   return (
     <SafeAreaView className={cn(
-      "flex-1 bg-omnii-background",
-      isDark && "bg-omnii-dark-background"
+      "flex-1",
+      isDark ? "bg-slate-900" : "bg-white"
     )}>
-      {/* Header Section using established pattern */}
+      {/* Header */}
       <View className={cn(
-        "bg-omnii-card p-6 pt-5 border-b border-omnii-border",
-        isDark && "bg-omnii-dark-card border-omnii-dark-border"
+        "px-5 py-4 border-b",
+        isDark ? "border-slate-600" : "border-gray-200"
       )}>
-        <View className="flex-row justify-between items-center mb-3 min-h-[40px]">
-          <View className="flex-row items-center gap-3 flex-1">
-            <Text className={cn(
-              "omnii-heading text-3xl font-bold",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Analytics</Text>
-          </View>
-        </View>
         <Text className={cn(
-          "omnii-body text-base mt-1",
-          isDark && "text-omnii-dark-text-secondary"
-        )}>
-          Your productivity scientist
-        </Text>
+          "text-3xl font-bold mb-1",
+          isDark ? "text-white" : "text-gray-900"
+        )}>📊 Analytics</Text>
+        <Text className={cn(
+          "text-base",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>Track your productivity patterns</Text>
       </View>
 
-      {/* Analytics Tabs using established pattern */}
+      {/* Tabs */}
       <AnalyticsTabs />
 
-      {/* Tab Content */}
+      {/* Content */}
       <View className="flex-1">
         {renderTabContent()}
       </View>

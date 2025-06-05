@@ -85,8 +85,7 @@ export default function StreamlinedApprovalCard({
       <Animated.View
         className={cn(
           "rounded-2xl p-5 border-l-4 shadow-md",
-          "bg-omnii-card",
-          isDark && "bg-omnii-dark-card"
+          isDark ? "bg-slate-800" : "bg-white"
         )}
         style={{
           borderLeftColor: priorityConfig.borderColor,
@@ -108,7 +107,7 @@ export default function StreamlinedApprovalCard({
         {/* Title with Emoji */}
         <Text className={cn(
           "text-lg font-semibold mb-2 leading-6",
-          isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+          isDark ? "text-white" : "text-gray-900"
         )}>
           {priorityConfig.emoji} {approval.title}
         </Text>
@@ -116,7 +115,7 @@ export default function StreamlinedApprovalCard({
         {/* Description */}
         <Text className={cn(
           "text-sm leading-5 mb-4",
-          isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+          isDark ? "text-slate-400" : "text-gray-600"
         )}>
           {approval.description}
         </Text>
@@ -125,7 +124,7 @@ export default function StreamlinedApprovalCard({
         <View className="flex-row justify-between items-center mb-4">
           <Text className={cn(
             "text-sm flex-1",
-            isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>
             📅 Suggested for today at 2:00 PM
           </Text>
@@ -146,13 +145,13 @@ export default function StreamlinedApprovalCard({
         <View className="flex-row items-center gap-2">
           <Text className={cn(
             "text-xs font-medium",
-            isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>
             AI Confidence:
           </Text>
           <View className={cn(
             "flex-1 h-1.5 rounded-sm overflow-hidden",
-            isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
+            isDark ? "bg-slate-600" : "bg-gray-200"
           )}>
             <View 
               className="h-full rounded-sm"

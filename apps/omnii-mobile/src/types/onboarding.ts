@@ -33,24 +33,24 @@ export interface OnboardingTask {
 
 export interface PreferenceTask {
   question: string;
-  options: Array<{
+  options: {
     id: string;
     label: string;
     description: string;
     psychological_markers: string[];
-  }>;
+  }[];
   allow_multiple: boolean;
 }
 
 export interface ScenarioTask {
   scenario: string;
   question: string;
-  options: Array<{
+  options: {
     id: string;
     choice: string;
     outcome: string;
     psychological_markers: string[];
-  }>;
+  }[];
 }
 
 export interface GoalSettingTask {
@@ -62,11 +62,11 @@ export interface GoalSettingTask {
 
 export interface TimeAuditTask {
   prompt: string;
-  time_blocks: Array<{
+  time_blocks: {
     id: string;
     label: string;
     hours: number;
-  }>;
+  }[];
   total_hours: number;
 }
 

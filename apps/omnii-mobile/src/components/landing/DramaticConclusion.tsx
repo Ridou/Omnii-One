@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated, Platform, Text } from 'react-native';
 import { Link } from 'expo-router';
-import { DisplayText, Heading4, BodyText, ButtonText } from '~/components/common/Typography';
+import { DisplayText, H4, BodyText, ButtonText } from '~/components/common/Typography';
 import { AppColors } from '~/constants/Colors';
 import { BRAND_COLORS } from '~/lib/assets';
 import { useResponsiveDesign } from '~/utils/responsive';
@@ -21,7 +21,7 @@ const SimpleWebVersion: React.FC = () => {
           showLevel
           level={30}
         />
-        <BodyText size={1} color={AppColors.textSecondary} style={webStyles.evolutionHint}>
+        <BodyText size={1} className="text-omnii-text-secondary" style={webStyles.evolutionHint}>
           Watch your productivity evolve
         </BodyText>
       </View>
@@ -31,7 +31,7 @@ const SimpleWebVersion: React.FC = () => {
         <View style={webStyles.quoteTextContainer}>
           <DisplayText 
             size={responsive.isMobile ? 'small' : 'medium'}
-            color={AppColors.textPrimary} 
+            className="text-omnii-text-primary font-extrabold"
             style={[webStyles.quote, { 
               fontSize: 36,
               lineHeight: 42,
@@ -42,7 +42,7 @@ const SimpleWebVersion: React.FC = () => {
           </DisplayText>
           <DisplayText 
             size={responsive.isMobile ? 'small' : 'medium'}
-            color={AppColors.textPrimary} 
+            className="text-omnii-text-primary font-extrabold"
             style={[webStyles.quote, { 
               fontSize: 36,
               lineHeight: 42,
@@ -60,16 +60,16 @@ const SimpleWebVersion: React.FC = () => {
         responsive.isMobile && { flexDirection: 'column', gap: 24 }
       ]}>
         <View style={webStyles.trustItem}>
-          <Heading4 color={AppColors.aiGradientStart} style={webStyles.trustNumber}>500+</Heading4>
-          <BodyText size={2} color={AppColors.textSecondary} style={webStyles.trustLabel}>Early users</BodyText>
+          <H4 className="text-omnii-primary" style={webStyles.trustNumber}>500+</H4>
+          <BodyText size={2} className="text-omnii-text-secondary" style={webStyles.trustLabel}>Early users</BodyText>
         </View>
         <View style={webStyles.trustItem}>
-          <Heading4 color={AppColors.aiGradientStart} style={webStyles.trustNumber}>10k+</Heading4>
-          <BodyText size={2} color={AppColors.textSecondary} style={webStyles.trustLabel}>Tasks optimized</BodyText>
+          <H4 className="text-omnii-primary" style={webStyles.trustNumber}>10k+</H4>
+          <BodyText size={2} className="text-omnii-text-secondary" style={webStyles.trustLabel}>Tasks optimized</BodyText>
         </View>
         <View style={webStyles.trustItem}>
-          <Heading4 color={AppColors.aiGradientStart} style={webStyles.trustNumber}>2.5hrs</Heading4>
-          <BodyText size={2} color={AppColors.textSecondary} style={webStyles.trustLabel}>Daily time saved</BodyText>
+          <H4 className="text-omnii-primary" style={webStyles.trustNumber}>2.5hrs</H4>
+          <BodyText size={2} className="text-omnii-text-secondary" style={webStyles.trustLabel}>Daily time saved</BodyText>
         </View>
       </View>
       
@@ -81,7 +81,7 @@ const SimpleWebVersion: React.FC = () => {
           minWidth: responsive.isMobileXS ? '90%' : 200,
           maxWidth: responsive.isMobile ? '90%' : 320,
         }]}>
-          <ButtonText size="large" color="#FFFFFF" style={[webStyles.ctaText, {
+          <ButtonText size="large" className="text-white" style={[webStyles.ctaText, {
             fontSize: responsive.isMobileXS ? 16 : 18,
           }]}>
             Start Your Evolution →
@@ -93,12 +93,7 @@ const SimpleWebVersion: React.FC = () => {
 };
 
 export const DramaticConclusion: React.FC = () => {
-  // Use simple web version on web platforms
-  if (Platform.OS === 'web') {
-    return <SimpleWebVersion />;
-  }
-
-  // Full mobile version with animations
+  // Always call hooks at the top level
   const [currentStage, setCurrentStage] = useState<'seed' | 'flower' | 'tree'>('seed');
   const [isMounted, setIsMounted] = useState(false);
   const responsive = useResponsiveDesign();
@@ -119,7 +114,7 @@ export const DramaticConclusion: React.FC = () => {
     if (!isMounted) return;
 
     const evolutionSequence = () => {
-      const stages: Array<'seed' | 'flower' | 'tree'> = ['seed', 'flower', 'tree'];
+      const stages: ('seed' | 'flower' | 'tree')[] = ['seed', 'flower', 'tree'];
       let currentIndex = 0;
       
       const evolve = () => {
@@ -134,7 +129,8 @@ export const DramaticConclusion: React.FC = () => {
           if (!isMounted) return;
           
           // Change stage
-          setCurrentStage(stages[currentIndex]);
+          const nextStage = stages[currentIndex] || 'seed';
+          setCurrentStage(nextStage);
           
           // Scale back up
           Animated.timing(stageTransition, {
@@ -197,6 +193,11 @@ export const DramaticConclusion: React.FC = () => {
       pulseLoop.stop();
     };
   }, [isMounted]);
+
+  // Use simple web version on web platforms
+  if (Platform.OS === 'web') {
+    return <SimpleWebVersion />;
+  }
   
   return (
     <View style={[styles.container, { paddingHorizontal: responsive.spacing.horizontal }]}>
@@ -211,7 +212,7 @@ export const DramaticConclusion: React.FC = () => {
           />
         </Animated.View>
         
-        <BodyText size={1} color={AppColors.textSecondary} style={styles.evolutionHint}>
+        <BodyText size={1} className="text-omnii-text-secondary" style={styles.evolutionHint}>
           Watch your productivity evolve
         </BodyText>
       </View>
@@ -221,7 +222,7 @@ export const DramaticConclusion: React.FC = () => {
         <View style={styles.quoteTextContainer}>
           <DisplayText 
             size={responsive.isMobile ? 'small' : 'medium'} 
-            color={AppColors.textPrimary} 
+            className="text-omnii-text-primary font-extrabold"
             style={[styles.quote, {
               fontSize: Math.round(36 * responsive.typography.titleScale),
               lineHeight: Math.round(42 * responsive.typography.lineHeightScale),
@@ -232,7 +233,7 @@ export const DramaticConclusion: React.FC = () => {
           </DisplayText>
           <DisplayText 
             size={responsive.isMobile ? 'small' : 'medium'} 
-            color={AppColors.textPrimary} 
+            className="text-omnii-text-primary font-extrabold"
             style={[styles.quote, {
               fontSize: Math.round(36 * responsive.typography.titleScale),
               lineHeight: Math.round(42 * responsive.typography.lineHeightScale),
@@ -250,16 +251,16 @@ export const DramaticConclusion: React.FC = () => {
         responsive.isMobile ? styles.trustMobile : styles.trustDesktop
       ]}>
         <View style={styles.trustItem}>
-          <Heading4 color={AppColors.aiGradientStart} style={styles.trustNumber}>500+</Heading4>
-          <BodyText size={2} color={AppColors.textSecondary} style={styles.trustLabel}>Early users</BodyText>
+          <H4 className="text-omnii-primary" style={styles.trustNumber}>500+</H4>
+          <BodyText size={2} className="text-omnii-text-secondary" style={styles.trustLabel}>Early users</BodyText>
         </View>
         <View style={styles.trustItem}>
-          <Heading4 color={AppColors.aiGradientStart} style={styles.trustNumber}>10k+</Heading4>
-          <BodyText size={2} color={AppColors.textSecondary} style={styles.trustLabel}>Tasks optimized</BodyText>
+          <H4 className="text-omnii-primary" style={styles.trustNumber}>10k+</H4>
+          <BodyText size={2} className="text-omnii-text-secondary" style={styles.trustLabel}>Tasks optimized</BodyText>
         </View>
         <View style={styles.trustItem}>
-          <Heading4 color={AppColors.aiGradientStart} style={styles.trustNumber}>2.5hrs</Heading4>
-          <BodyText size={2} color={AppColors.textSecondary} style={styles.trustLabel}>Daily time saved</BodyText>
+          <H4 className="text-omnii-primary" style={styles.trustNumber}>2.5hrs</H4>
+          <BodyText size={2} className="text-omnii-text-secondary" style={styles.trustLabel}>Daily time saved</BodyText>
         </View>
       </View>
       
@@ -273,7 +274,7 @@ export const DramaticConclusion: React.FC = () => {
             minWidth: responsive.isMobileXS ? '90%' : 200,
             maxWidth: responsive.isMobile ? '90%' : 320,
           }]}>
-            <ButtonText size="large" color="#FFFFFF" style={[styles.ctaText, {
+            <ButtonText size="large" className="text-white" style={[styles.ctaText, {
               fontSize: responsive.isMobileXS ? 16 : 18,
             }]}>
               Start Your Evolution →

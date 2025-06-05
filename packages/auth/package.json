@@ -1,5 +1,5 @@
 {
-  "name": "@acme/auth",
+  "name": "@omnii/auth",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@acme/db": "workspace:*",
+    "@omnii/db": "workspace:*",
     "@better-auth/expo": "1.2.8",
     "@t3-oss/env-nextjs": "^0.13.6",
     "better-auth": "1.2.8",
@@ -28,13 +28,13 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@acme/eslint-config": "workspace:*",
-    "@acme/prettier-config": "workspace:*",
-    "@acme/tsconfig": "workspace:*",
+    "@omnii/eslint-config": "workspace:*",
+    "@omnii/prettier-config": "workspace:*",
+    "@omnii/tsconfig": "workspace:*",
     "@types/react": "catalog:react19",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"
   },
-  "prettier": "@acme/prettier-config"
+  "prettier": "@omnii/prettier-config"
 }

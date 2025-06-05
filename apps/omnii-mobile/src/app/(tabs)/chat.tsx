@@ -8,7 +8,8 @@ import {
     TextInput,
     KeyboardAvoidingView,
     Platform,
-    FlatList
+    FlatList,
+    Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
@@ -32,7 +33,7 @@ import { trpc } from '~/utils/api';
 import { useQuery } from "@tanstack/react-query";
 
 
-// Tab configuration following EXACT profile.tsx pattern
+// Updated tab configuration following profile.tsx pattern
 const chatTabs: ChatTabConfig[] = [
     {
         key: 'conversation',
@@ -47,15 +48,15 @@ const chatTabs: ChatTabConfig[] = [
         gradient: ['#4ECDC4', '#44A08D'] // Teal gradient (position 2)
     },
     {
-        key: 'context',
-        label: 'Context',
-        icon: '🧠',
+        key: 'references',
+        label: 'References',
+        icon: '📚',
         gradient: ['#FFB347', '#FFD700'] // Orange-gold gradient (position 3)
     },
     {
-        key: 'progress',
-        label: 'Progress',
-        icon: '🏆',
+        key: 'memory',
+        label: 'Memory',
+        icon: '🧠',
         gradient: ['#FF6B6B', '#EE5A24'] // Red-orange gradient (position 4)
     }
 ];
@@ -98,6 +99,8 @@ export default function ChatScreen() {
     const [messageInput, setMessageInput] = useState('');
     const [pendingAction, setPendingAction] = useState<string | null>(null);
     const [showToolDropdown, setShowToolDropdown] = useState<string | null>(null); // 'add' | 'search' | null
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0);
     const flatListRef = useRef<FlatList>(null);
 
     // Mock data for other tabs (until WebSocket provides this)
@@ -108,27 +111,27 @@ export default function ChatScreen() {
     };
 
     // Updated quickActions array - removed Drive, added Tasks
-    const quickActions: Array<{
+    const quickActions: {
         id: string;
         icon?: string;
         iconComponent?: React.ReactNode;
         label: string;
         description: string;
         command: string;
-    }> = [
+    }[] = [
             { id: '1', iconComponent: <GmailIcon size={20} />, label: 'Gmail', description: 'Check latest emails', command: 'check my latest emails' },
             { id: '2', iconComponent: <CalendarIcon size={20} color="white" />, label: 'Calendar', description: 'View today\'s events', command: 'show my calendar for this past week and this week and next week' },
             { id: '3', iconComponent: <ContactsIcon size={20} />, label: 'Contacts', description: 'Find contacts', command: 'list all contacts' },
             { id: '4', iconComponent: <TasksIcon size={20} />, label: 'Tasks', description: 'Manage tasks', command: 'show my tasks' },
         ];
 
-    const achievements: Array<{
+    const achievements: {
         id: string;
         title: string;
         description: string;
         progress: string;
         icon: string;
-    }> = [];
+    }[] = [];
 
     // Animation refs (SIMPLIFIED - no more glow effects)
     const scaleAnimations = useRef(
@@ -276,6 +279,19 @@ export default function ChatScreen() {
         }
     }, [messages, pendingAction]);
 
+    // Recording timer effect
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isRecording) {
+            interval = setInterval(() => {
+                setRecordingDuration(prev => prev + 1);
+            }, 1000);
+        } else {
+            setRecordingDuration(0);
+        }
+        return () => clearInterval(interval);
+    }, [isRecording]);
+
     // REMOVED: Glow effects as requested - clean, professional design
     // Chat tabs component
     const ChatTabs = () => (
@@ -360,10 +376,10 @@ export default function ChatScreen() {
                 return <ConversationContent />;
             case 'actions':
                 return <ActionsContent />;
-            case 'context':
-                return <ContextContent />;
-            case 'progress':
-                return <ProgressContent />;
+            case 'references':
+                return <ReferencesContent />;
+            case 'memory':
+                return <MemoryContent />;
             default:
                 return null;
         }
@@ -386,19 +402,18 @@ export default function ChatScreen() {
                         {/* Simple Debug List */}
                         {__DEV__ && (
                             <View className={cn(
-                                "rounded-2xl p-5 mb-4",
-                                "bg-omnii-card",
-                                isDark && "bg-omnii-dark-card"
+                                "rounded-xl p-4 mb-4 border",
+                                isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
                             )}>
                                 <Text className={cn(
-                                    "omnii-heading text-lg font-semibold mb-2",
-                                    isDark && "text-omnii-dark-text-primary"
+                                    "text-lg font-semibold mb-2",
+                                    isDark ? "text-white" : "text-gray-900"
                                 )}>
                                     🐛 DEBUG: Messages array is empty (length: {messages.length})
                                 </Text>
                                 <Text className={cn(
-                                    "omnii-body text-sm",
-                                    isDark && "text-omnii-dark-text-secondary"
+                                    "text-sm",
+                                    isDark ? "text-slate-400" : "text-gray-600"
                                 )}>
                                     Showing nudges instead of FlatList
                                 </Text>
@@ -408,61 +423,57 @@ export default function ChatScreen() {
                         {/* Wayfinders - Shape of AI Nudges Pattern */}
                         <View className="mb-6">
                             <Text className={cn(
-                                "omnii-heading text-xl font-bold mb-4",
-                                isDark && "text-omnii-dark-text-primary"
+                                "text-xl font-bold mb-4",
+                                isDark ? "text-white" : "text-gray-900"
                             )}>💡 Try asking me...</Text>
                             <View className="gap-2">
                                 <TouchableOpacity
                                     className={cn(
-                                        "rounded-xl p-4",
-                                        "bg-omnii-card",
-                                        isDark && "bg-omnii-dark-card"
+                                        "rounded-xl p-4 border",
+                                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
                                     )}
                                     onPress={() => setMessageInput("What should I focus on today?")}
                                 >
                                     <Text className={cn(
-                                        "omnii-body text-sm",
-                                        isDark && "text-omnii-dark-text-primary"
-                                    )}>"What should I focus on today?"</Text>
+                                        "text-sm",
+                                        isDark ? "text-white" : "text-gray-900"
+                                    )}>&quot;What should I focus on today?&quot;</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     className={cn(
-                                        "rounded-xl p-4",
-                                        "bg-omnii-card",
-                                        isDark && "bg-omnii-dark-card"
+                                        "rounded-xl p-4 border",
+                                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
                                     )}
                                     onPress={() => setMessageInput("Help me plan tomorrow")}
                                 >
                                     <Text className={cn(
-                                        "omnii-body text-sm",
-                                        isDark && "text-omnii-dark-text-primary"
-                                    )}>"Help me plan tomorrow"</Text>
+                                        "text-sm",
+                                        isDark ? "text-white" : "text-gray-900"
+                                    )}>&quot;Help me plan tomorrow&quot;</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     className={cn(
-                                        "rounded-xl p-4",
-                                        "bg-omnii-card",
-                                        isDark && "bg-omnii-dark-card"
+                                        "rounded-xl p-4 border",
+                                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
                                     )}
                                     onPress={() => setMessageInput("list my calendar events")}
                                 >
                                     <Text className={cn(
-                                        "omnii-body text-sm",
-                                        isDark && "text-omnii-dark-text-primary"
-                                    )}>"List my calendar events"</Text>
+                                        "text-sm",
+                                        isDark ? "text-white" : "text-gray-900"
+                                    )}>&quot;List my calendar events&quot;</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     className={cn(
-                                        "rounded-xl p-4",
-                                        "bg-omnii-card",
-                                        isDark && "bg-omnii-dark-card"
+                                        "rounded-xl p-4 border",
+                                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
                                     )}
                                     onPress={() => setMessageInput("fetch my latest emails")}
                                 >
                                     <Text className={cn(
-                                        "omnii-body text-sm",
-                                        isDark && "text-omnii-dark-text-primary"
-                                    )}>"Fetch my latest emails"</Text>
+                                        "text-sm",
+                                        isDark ? "text-white" : "text-gray-900"
+                                    )}>&quot;Fetch my latest emails&quot;</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -495,13 +506,12 @@ export default function ChatScreen() {
                                         if (isTyping) {
                                             return (
                                                 <View className={cn(
-                                                    "rounded-2xl p-5 mb-4",
-                                                    "bg-omnii-card",
-                                                    isDark && "bg-omnii-dark-card"
+                                                    "rounded-xl p-4 mb-4 border",
+                                                    isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
                                                 )}>
                                                     <Text className={cn(
-                                                        "omnii-body text-sm",
-                                                        isDark && "text-omnii-dark-text-primary"
+                                                        "text-sm",
+                                                        isDark ? "text-white" : "text-gray-900"
                                                     )}>AI is thinking...</Text>
                                                 </View>
                                             );
@@ -520,379 +530,488 @@ export default function ChatScreen() {
 
     const ActionsContent = () => (
         <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-            <Text className={cn(
-                "omnii-heading text-xl font-bold mb-4",
-                isDark && "text-omnii-dark-text-primary"
-            )}>⚡ Quick Actions</Text>
-            {quickActions.map((action) => (
-                <TouchableOpacity
-                    key={action.id}
-                    className={cn(
-                        "rounded-xl p-4 mb-3 flex-row items-center",
-                        "bg-omnii-card",
-                        isDark && "bg-omnii-dark-card"
-                    )}
-                    onPress={() => handleActionTap(action)}
-                >
-                    <View className="mr-4">
-                        {action.iconComponent || <Text className="text-3xl">{action.icon}</Text>}
-                    </View>
-                    <View className="flex-1">
-                        <Text className={cn(
-                            "omnii-body text-base font-semibold mb-1",
-                            isDark && "text-omnii-dark-text-primary"
-                        )}>{action.label}</Text>
-                        <Text className={cn(
-                            "omnii-body text-sm",
-                            isDark && "text-omnii-dark-text-secondary"
-                        )}>{action.description}</Text>
-                    </View>
-                </TouchableOpacity>
-            ))}
-        </ScrollView>
-    );
-
-    const ContextContent = () => (
-        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-            <View className={cn(
-                "rounded-2xl p-5 mb-4",
-                "bg-omnii-card",
-                isDark && "bg-omnii-dark-card"
-            )}>
+            <View className="py-4">
                 <Text className={cn(
-                    "omnii-heading text-lg font-semibold mb-2",
-                    isDark && "text-omnii-dark-text-primary"
-                )}>🧠 Current Context</Text>
+                    "text-2xl font-bold mb-2",
+                    isDark ? "text-white" : "text-gray-900"
+                )}>⚡ Quick Actions</Text>
                 <Text className={cn(
-                    "omnii-body text-sm leading-5 mb-4",
-                    isDark && "text-omnii-dark-text-secondary"
-                )}>
-                    AI uses this information to provide personalized assistance
-                </Text>
-                <Text className={cn(
-                    "omnii-body text-sm leading-5 mb-1",
-                    isDark && "text-omnii-dark-text-primary"
-                )}>• Tasks completed today: {context.todayMetrics.tasksCompleted}</Text>
-                <Text className={cn(
-                    "omnii-body text-sm leading-5 mb-1",
-                    isDark && "text-omnii-dark-text-primary"
-                )}>• Focus time: {context.todayMetrics.focusTime} minutes</Text>
-                <Text className={cn(
-                    "omnii-body text-sm leading-5 mb-1",
-                    isDark && "text-omnii-dark-text-primary"
-                )}>• Energy level: {context.todayMetrics.energy}/10</Text>
-                <Text className={cn(
-                    "omnii-body text-sm leading-5",
-                    isDark && "text-omnii-dark-text-primary"
-                )}>• Current state: {context.userState}</Text>
-            </View>
-
-            <TouchableOpacity className={cn(
-                "bg-omnii-background rounded-xl p-4 mb-2 items-center border border-omnii-border",
-                isDark && "bg-omnii-dark-background border-omnii-dark-border"
-            )}>
-                <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-primary"
-                )}>Clear Conversation</Text>
-            </TouchableOpacity>
-        </ScrollView>
-    );
-
-    const ProgressContent = () => (
-        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-            <Text className={cn(
-                "omnii-heading text-xl font-bold mb-4",
-                isDark && "text-omnii-dark-text-primary"
-            )}>🏆 Chat Achievements</Text>
-            
-            {achievements.length === 0 ? (
-                <View className={cn(
-                    "rounded-2xl p-5 mb-4",
-                    "bg-omnii-card",
-                    isDark && "bg-omnii-dark-card"
-                )}>
-                    <Text className={cn(
-                        "omnii-body text-sm text-center",
-                        isDark && "text-omnii-dark-text-primary"
-                    )}>
-                        Start chatting to earn achievements!
-                    </Text>
+                    "text-base mb-6",
+                    isDark ? "text-slate-400" : "text-gray-600"
+                )}>Tap to execute common tasks</Text>
+                
+                <View className="gap-3">
+                    {quickActions.map((action) => (
+                        <TouchableOpacity
+                            key={action.id}
+                            className={cn(
+                                "flex-row items-center p-4 rounded-xl border",
+                                isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                            )}
+                            onPress={() => handleActionTap(action)}
+                        >
+                            <View className="w-10 h-10 rounded-lg bg-indigo-600 items-center justify-center mr-3">
+                                {action.iconComponent}
+                            </View>
+                            <View className="flex-1">
+                                <Text className={cn(
+                                    "font-semibold text-base mb-1",
+                                    isDark ? "text-white" : "text-gray-900"
+                                )}>{action.label}</Text>
+                                <Text className={cn(
+                                    "text-sm",
+                                    isDark ? "text-slate-400" : "text-gray-600"
+                                )}>{action.description}</Text>
+                            </View>
+                            <View className="w-6 h-6 rounded-full bg-indigo-600 items-center justify-center">
+                                <Text className="text-white text-xs">→</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
                 </View>
-            ) : (
-                achievements.map((achievement) => (
-                    <View key={achievement.id} className={cn(
-                        "rounded-2xl p-5 mb-3 flex-row items-center",
-                        "bg-omnii-card",
-                        isDark && "bg-omnii-dark-card"
-                    )}>
-                        <Text className="text-3xl mr-4">{achievement.icon}</Text>
-                        <View className="flex-1">
+            </View>
+        </ScrollView>
+    );
+
+    const ReferencesContent = () => (
+        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+            <View className="py-4">
+                <Text className={cn(
+                    "text-2xl font-bold mb-2",
+                    isDark ? "text-white" : "text-gray-900"
+                )}>📚 References</Text>
+                <Text className={cn(
+                    "text-base mb-6",
+                    isDark ? "text-slate-400" : "text-gray-600"
+                )}>Data sources the AI uses for context</Text>
+                
+                {/* Current Context Card */}
+                <View className={cn(
+                    "rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-blue-500",
+                    isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                )}>
+                    <View className="flex-row items-center mb-4">
+                        <View className={cn(
+                            "w-12 h-12 rounded-xl items-center justify-center mr-4",
+                            isDark ? "bg-blue-900/30" : "bg-blue-100"
+                        )}>
+                            <Text className="text-2xl">🎯</Text>
+                        </View>
+                        <View>
                             <Text className={cn(
-                                "omnii-body text-base font-semibold mb-1",
-                                isDark && "text-omnii-dark-text-primary"
-                            )}>{achievement.title}</Text>
+                                "text-xl font-bold",
+                                isDark ? "text-white" : "text-gray-900"
+                            )}>Current Context</Text>
                             <Text className={cn(
-                                "omnii-body text-sm leading-5 mb-1",
-                                isDark && "text-omnii-dark-text-secondary"
-                            )}>{achievement.description}</Text>
-                            <Text className={cn(
-                                "omnii-caption text-xs font-semibold",
-                                isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
-                            )}>{achievement.progress}</Text>
+                                "text-sm",
+                                isDark ? "text-slate-400" : "text-gray-600"
+                            )}>What the AI knows right now</Text>
                         </View>
                     </View>
-                ))
-            )}
+                    
+                    <View className="gap-3">
+                        <View className={cn(
+                            "flex-row justify-between items-center py-2 border-b",
+                            isDark ? "border-slate-700" : "border-gray-100"
+                        )}>
+                            <Text className={cn(
+                                "text-sm font-semibold",
+                                isDark ? "text-slate-300" : "text-gray-700"
+                            )}>Recent Emails:</Text>
+                            <Text className={cn(
+                                "text-sm font-medium",
+                                isDark ? "text-blue-400" : "text-blue-600"
+                            )}>12 unread (last 24h)</Text>
+                        </View>
+                        <View className={cn(
+                            "flex-row justify-between items-center py-2 border-b",
+                            isDark ? "border-slate-700" : "border-gray-100"
+                        )}>
+                            <Text className={cn(
+                                "text-sm font-semibold",
+                                isDark ? "text-slate-300" : "text-gray-700"
+                            )}>Calendar Events:</Text>
+                            <Text className={cn(
+                                "text-sm font-medium",
+                                isDark ? "text-green-400" : "text-green-600"
+                            )}>5 events (next 7 days)</Text>
+                        </View>
+                        <View className={cn(
+                            "flex-row justify-between items-center py-2 border-b",
+                            isDark ? "border-slate-700" : "border-gray-100"
+                        )}>
+                            <Text className={cn(
+                                "text-sm font-semibold",
+                                isDark ? "text-slate-300" : "text-gray-700"
+                            )}>Active Tasks:</Text>
+                            <Text className={cn(
+                                "text-sm font-medium",
+                                isDark ? "text-purple-400" : "text-purple-600"
+                            )}>8 pending</Text>
+                        </View>
+                        <View className="flex-row justify-between items-center py-2">
+                            <Text className={cn(
+                                "text-sm font-semibold",
+                                isDark ? "text-slate-300" : "text-gray-700"
+                            )}>Work Patterns:</Text>
+                            <Text className={cn(
+                                "text-sm font-medium",
+                                isDark ? "text-orange-400" : "text-orange-600"
+                            )}>Morning focused</Text>
+                        </View>
+                    </View>
+                </View>
 
-            <TouchableOpacity className="bg-ai-start bg-opacity-10 rounded-2xl p-5 flex-row items-center justify-center gap-3">
-                <Text className="text-2xl">⭐</Text>
-                <Text className="omnii-body text-base text-ai-start font-semibold">Start Chatting to Earn XP</Text>
-            </TouchableOpacity>
+                {/* Chat History Card */}
+                <View className={cn(
+                    "rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-green-500",
+                    isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                )}>
+                    <View className="flex-row items-center mb-3">
+                        <View className={cn(
+                            "w-10 h-10 rounded-lg items-center justify-center mr-3",
+                            isDark ? "bg-green-900/30" : "bg-green-100"
+                        )}>
+                            <Text className="text-xl">💬</Text>
+                        </View>
+                        <Text className={cn(
+                            "text-lg font-bold",
+                            isDark ? "text-white" : "text-gray-900"
+                        )}>Chat History</Text>
+                    </View>
+                    <Text className={cn(
+                        "text-sm leading-6 mb-4",
+                        isDark ? "text-slate-300" : "text-gray-600"
+                    )}>
+                        Conversation context from recent sessions to maintain continuity.
+                    </Text>
+                    <View className={cn(
+                        "px-3 py-2 rounded-lg self-start",
+                        isDark ? "bg-green-900/20" : "bg-green-100"
+                    )}>
+                        <Text className={cn(
+                            "text-xs font-semibold",
+                            isDark ? "text-green-400" : "text-green-700"
+                        )}>Active</Text>
+                    </View>
+                </View>
+
+                {/* Data Sources Card */}
+                <View className={cn(
+                    "rounded-2xl p-6 mb-6 border shadow-sm border-l-4 border-l-purple-500",
+                    isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                )}>
+                    <View className="flex-row items-center mb-3">
+                        <View className={cn(
+                            "w-10 h-10 rounded-lg items-center justify-center mr-3",
+                            isDark ? "bg-purple-900/30" : "bg-purple-100"
+                        )}>
+                            <Text className="text-xl">🔗</Text>
+                        </View>
+                        <Text className={cn(
+                            "text-lg font-bold",
+                            isDark ? "text-white" : "text-gray-900"
+                        )}>Connected Sources</Text>
+                    </View>
+                    <Text className={cn(
+                        "text-sm leading-6 mb-4",
+                        isDark ? "text-slate-300" : "text-gray-600"
+                    )}>
+                        External services providing real-time data for personalized assistance.
+                    </Text>
+                    <View className="gap-2">
+                        <View className="flex-row items-center">
+                            <View className="w-2 h-2 bg-green-500 rounded-full mr-3"></View>
+                            <Text className={cn(
+                                "text-sm font-medium flex-1",
+                                isDark ? "text-slate-400" : "text-gray-600"
+                            )}>Google Calendar - Events & scheduling</Text>
+                        </View>
+                        <View className="flex-row items-center">
+                            <View className="w-2 h-2 bg-green-500 rounded-full mr-3"></View>
+                            <Text className={cn(
+                                "text-sm font-medium flex-1",
+                                isDark ? "text-slate-400" : "text-gray-600"
+                            )}>Gmail - Email communication</Text>
+                        </View>
+                        <View className="flex-row items-center">
+                            <View className="w-2 h-2 bg-green-500 rounded-full mr-3"></View>
+                            <Text className={cn(
+                                "text-sm font-medium flex-1",
+                                isDark ? "text-slate-400" : "text-gray-600"
+                            )}>Google Contacts - Contact information</Text>
+                        </View>
+                    </View>
+                </View>
+            </View>
         </ScrollView>
     );
 
-    if (!user) {
+    const MemoryContent = () => {
+        const handleStartRecording = () => {
+            setIsRecording(true);
+            // TODO: Start actual recording with Neo4j integration
+        };
+
+        const handleStopRecording = () => {
+            setIsRecording(false);
+            Alert.alert(
+                "Recording Saved",
+                `Your ${recordingDuration}s recording has been saved to long-term memory for AI context.`,
+                [{ text: "OK", style: "default" }]
+            );
+            // TODO: Process recording and save to Neo4j
+        };
+
+        const formatTime = (seconds: number) => {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        };
+
         return (
-            <SafeAreaView className={cn(
-                "flex-1 bg-omnii-background",
-                isDark && "bg-omnii-dark-background"
-            )}>
-                <View className="flex-1 justify-center items-center px-5">
-                    <MessageCircle size={64} color={isDark ? '#a8aaae' : '#8E8E93'} />
+            <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+                <View className="py-4">
                     <Text className={cn(
-                        "omnii-heading text-3xl font-bold",
-                        isDark && "text-omnii-dark-text-primary"
-                    )}>Chat</Text>
+                        "text-2xl font-bold mb-2",
+                        isDark ? "text-white" : "text-gray-900"
+                    )}>🧠 Memory</Text>
                     <Text className={cn(
-                        "omnii-body text-base text-center mt-4",
-                        isDark && "text-omnii-dark-text-secondary"
+                        "text-base mb-6",
+                        isDark ? "text-slate-400" : "text-gray-600"
+                    )}>Long-term context and personal recordings</Text>
+                    
+                    {/* Voice Recording Card */}
+                    <View className={cn(
+                        "rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-red-500",
+                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
                     )}>
-                        Please log in to chat with your AI assistant.
-                    </Text>
-                    <Link href="/(auth)/login" asChild>
-                        <TouchableOpacity className="bg-ai-start py-3 px-8 rounded-xl mt-4">
-                            <Text className="text-white text-base font-semibold">Login</Text>
+                        <View className="flex-row items-center mb-4">
+                            <View className={cn(
+                                "w-12 h-12 rounded-xl items-center justify-center mr-4",
+                                isDark ? "bg-red-900/30" : "bg-red-100"
+                            )}>
+                                <Text className="text-2xl">🎤</Text>
+                            </View>
+                            <View>
+                                <Text className={cn(
+                                    "text-xl font-bold",
+                                    isDark ? "text-white" : "text-gray-900"
+                                )}>Voice Recording</Text>
+                                <Text className={cn(
+                                    "text-sm",
+                                    isDark ? "text-slate-400" : "text-gray-600"
+                                )}>Record context for AI memory</Text>
+                            </View>
+                        </View>
+                        
+                        <Text className={cn(
+                            "text-base leading-6 mb-5",
+                            isDark ? "text-slate-300" : "text-gray-700"
+                        )}>
+                            Record voice notes about your work patterns, preferences, and context that the AI should remember for future conversations.
+                        </Text>
+
+                        {isRecording && (
+                            <View className={cn(
+                                "rounded-xl p-4 mb-4",
+                                isDark ? "bg-red-900/20" : "bg-red-50"
+                            )}>
+                                <View className="flex-row items-center justify-center">
+                                    <View className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></View>
+                                    <Text className={cn(
+                                        "text-sm font-semibold",
+                                        isDark ? "text-red-400" : "text-red-600"
+                                    )}>
+                                        Recording: {formatTime(recordingDuration)}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
+                        
+                        <TouchableOpacity
+                            className={cn(
+                                "px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg",
+                                isRecording 
+                                    ? "bg-red-600" 
+                                    : "bg-indigo-600"
+                            )}
+                            onPress={isRecording ? handleStopRecording : handleStartRecording}
+                        >
+                            <Text className="text-white text-base font-bold mr-2">
+                                {isRecording ? "🛑 Stop Recording" : "🎤 Start Recording"}
+                            </Text>
                         </TouchableOpacity>
-                    </Link>
+                    </View>
+
+                    {/* Memory Graph Card */}
+                    <View className={cn(
+                        "rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-blue-500",
+                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                    )}>
+                        <View className="flex-row items-center mb-3">
+                            <View className={cn(
+                                "w-10 h-10 rounded-lg items-center justify-center mr-3",
+                                isDark ? "bg-blue-900/30" : "bg-blue-100"
+                            )}>
+                                <Text className="text-xl">🕸️</Text>
+                            </View>
+                            <Text className={cn(
+                                "text-lg font-bold",
+                                isDark ? "text-white" : "text-gray-900"
+                            )}>Memory Graph</Text>
+                        </View>
+                        <Text className={cn(
+                            "text-sm leading-6 mb-4",
+                            isDark ? "text-slate-300" : "text-gray-600"
+                        )}>
+                            Knowledge graph powered by Neo4j for long-term context and relationship mapping.
+                        </Text>
+                        <View className="gap-2">
+                            <View className="flex-row items-center">
+                                <View className="w-2 h-2 bg-blue-500 rounded-full mr-3"></View>
+                                <Text className={cn(
+                                    "text-sm font-medium flex-1",
+                                    isDark ? "text-slate-400" : "text-gray-600"
+                                )}>Work patterns and preferences</Text>
+                            </View>
+                            <View className="flex-row items-center">
+                                <View className="w-2 h-2 bg-green-500 rounded-full mr-3"></View>
+                                <Text className={cn(
+                                    "text-sm font-medium flex-1",
+                                    isDark ? "text-slate-400" : "text-gray-600"
+                                )}>Project relationships</Text>
+                            </View>
+                            <View className="flex-row items-center">
+                                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                                <Text className={cn(
+                                    "text-sm font-medium flex-1",
+                                    isDark ? "text-slate-400" : "text-gray-600"
+                                )}>Goal hierarchies</Text>
+                            </View>
+                        </View>
+                        <View className={cn(
+                            "px-3 py-2 rounded-lg self-start mt-4",
+                            isDark ? "bg-amber-900/20" : "bg-amber-100"
+                        )}>
+                            <Text className={cn(
+                                "text-xs font-semibold",
+                                isDark ? "text-amber-400" : "text-amber-700"
+                            )}>Coming Soon</Text>
+                        </View>
+                    </View>
+
+                    {/* Personal Context Card */}
+                    <View className={cn(
+                        "rounded-2xl p-6 mb-6 border shadow-sm border-l-4 border-l-green-500",
+                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                    )}>
+                        <View className="flex-row items-center mb-3">
+                            <View className={cn(
+                                "w-10 h-10 rounded-lg items-center justify-center mr-3",
+                                isDark ? "bg-green-900/30" : "bg-green-100"
+                            )}>
+                                <Text className="text-xl">👤</Text>
+                            </View>
+                            <Text className={cn(
+                                "text-lg font-bold",
+                                isDark ? "text-white" : "text-gray-900"
+                            )}>Personal Context</Text>
+                        </View>
+                        <Text className={cn(
+                            "text-sm leading-6 mb-4",
+                            isDark ? "text-slate-300" : "text-gray-600"
+                        )}>
+                            Manage what the AI remembers about your preferences and working style.
+                        </Text>
+                        <TouchableOpacity className={cn(
+                            "px-4 py-3 rounded-lg border",
+                            isDark ? "bg-slate-700 border-slate-600" : "bg-gray-50 border-gray-200"
+                        )}>
+                            <Text className={cn(
+                                "text-sm font-medium text-center",
+                                isDark ? "text-white" : "text-gray-900"
+                            )}>View & Edit Context</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </SafeAreaView>
+            </ScrollView>
         );
-    }
+    };
 
     return (
-        <KeyboardAvoidingView
-            className="flex-1"
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <SafeAreaView className={cn(
-                "flex-1 bg-omnii-background",
-                isDark && "bg-omnii-dark-background"
+        <SafeAreaView className={cn(
+            "flex-1",
+            isDark ? "bg-slate-900" : "bg-white"
+        )}>
+            {/* Header */}
+            <View className={cn(
+                "px-5 py-4 border-b",
+                isDark ? "border-slate-600" : "border-gray-200"
             )}>
-                {/* Header */}
-                <View className={cn(
-                    "bg-omnii-card p-6 pt-5 border-b border-omnii-border",
-                    isDark && "bg-omnii-dark-card border-omnii-dark-border"
-                )}>
-                    <View className="flex-row justify-between items-center mb-3 min-h-[40px]">
-                        <View className="flex-row items-center gap-3 flex-1">
-                            <Text className={cn(
-                                "omnii-heading text-3xl font-bold",
-                                isDark && "text-omnii-dark-text-primary"
-                            )}>💬 Chat</Text>
-                        </View>
-                    </View>
-                    <Text className={cn(
-                        "omnii-body text-base mb-4",
-                        isDark && "text-omnii-dark-text-secondary"
-                    )}>
-                        Your AI assistant who actually gets you
-                    </Text>
-                    <View className="flex-row items-center gap-2 mt-2">
-                        <View 
-                            className={cn(
-                                "w-2 h-2 rounded-full",
-                                isConnected ? "bg-green-500" : "bg-red-500"
-                            )}
-                        />
-                        <Text className={cn(
-                            "omnii-body text-sm font-medium",
-                            isDark && "text-omnii-dark-text-secondary"
-                        )}>
-                            {isConnected ? 'Connected' : 'Connecting...'}
-                        </Text>
-                    </View>
-                </View>
+                <Text className={cn(
+                    "text-3xl font-bold mb-1",
+                    isDark ? "text-white" : "text-gray-900"
+                )}>💬 Chat</Text>
+                <Text className={cn(
+                    "text-base",
+                    isDark ? "text-slate-400" : "text-gray-600"
+                )}>Your AI assistant for everything</Text>
+            </View>
 
-                {/* Chat Tabs */}
-                <ChatTabs />
+            {/* Tabs */}
+            <ChatTabs />
 
-                {/* Input Section - only show on conversation tab */}
-                {selectedTab === 'conversation' && (
-                    <View className="px-4 pb-4 relative z-20">
-                        {/* Quick Actions */}
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            className="mb-3"
-                        >
-                            <View className="flex-row gap-2 px-2">
-                                {quickActions.map((action) => (
-                                    <TouchableOpacity
-                                        key={action.id}
-                                        className={cn(
-                                            "p-3 rounded-xl items-center justify-center min-w-[80px] border",
-                                            "border-omnii-border-light",
-                                            "bg-omnii-card",
-                                            isDark && "bg-omnii-dark-card border-omnii-dark-border-light"
-                                        )}
-                                        onPress={() => handleQuickAction(action.command)}
-                                    >
-                                        <View className="mb-1">
-                                            {action.iconComponent || <Text className="text-lg">{action.icon}</Text>}
-                                        </View>
-                                        <Text className={cn(
-                                            "omnii-caption text-xs font-semibold text-center",
-                                            isDark && "text-omnii-dark-text-primary"
-                                        )}>
-                                            {action.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </ScrollView>
+            {/* Content */}
+            <View className="flex-1">
+                {renderTabContent()}
+            </View>
 
-                        {/* Input Container */}
-                        <View className={cn(
-                            "bg-omnii-card rounded-2xl border border-omnii-border-light shadow-sm overflow-hidden",
-                            isDark && "bg-omnii-dark-card border-omnii-dark-border-light"
-                        )}>
+            {/* Input Area - only show for conversation tab */}
+            {selectedTab === 'conversation' && (
+                <KeyboardAvoidingView 
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className={cn(
+                        "px-5 py-4 border-t",
+                        isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
+                    )}
+                >
+                    <View className="flex-row items-center space-x-3">
+                        <View className="flex-1">
                             <TextInput
                                 className={cn(
-                                    "bg-transparent px-4 py-3.5 text-base max-h-[120px] min-h-[44px]",
-                                    isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+                                    "rounded-xl px-4 py-3 text-base border",
+                                    isDark 
+                                        ? "bg-slate-800 border-slate-600 text-white placeholder:text-slate-400" 
+                                        : "bg-white border-gray-200 text-gray-900 placeholder:text-gray-500"
                                 )}
-                                style={{ textAlignVertical: 'top' }}
-                                multiline
                                 placeholder={getPlaceholder()}
-                                placeholderTextColor={isDark ? '#6c6e73' : AppColors.textSecondary}
                                 value={messageInput}
                                 onChangeText={setMessageInput}
-                                editable={isConnected && !isTyping && !pendingAction}
+                                multiline
+                                maxLength={500}
+                                editable={!isTyping && !pendingAction}
+                                placeholderTextColor={isDark ? '#94a3b8' : '#6b7280'}
                             />
-
-                            {/* Input Toolbar */}
-                            <View className="flex-row items-center justify-between px-4 pb-3 pt-2">
-                                <View className="flex-row items-center gap-1.5">
-                                    <TouchableOpacity
-                                        className={cn(
-                                            "w-8 h-8 bg-transparent rounded-2xl items-center justify-center border",
-                                            "border-omnii-border-light",
-                                            isDark && "border-omnii-dark-border-light",
-                                            showToolDropdown === 'add' && cn(
-                                                "border-2",
-                                                isDark ? "border-omnii-dark-text-primary" : "border-omnii-text-primary"
-                                            )
-                                        )}
-                                        onPress={() => handleToolButton('add')}
-                                    >
-                                        <Text className={cn(
-                                            "text-base font-semibold",
-                                            isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
-                                        )}>🔨</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        className={cn(
-                                            "w-8 h-8 bg-transparent rounded-2xl items-center justify-center border",
-                                            "border-omnii-border-light",
-                                            isDark && "border-omnii-dark-border-light",
-                                            showToolDropdown === 'search' && cn(
-                                                "border-2",
-                                                isDark ? "border-omnii-dark-text-primary" : "border-omnii-text-primary"
-                                            )
-                                        )}
-                                        onPress={() => handleToolButton('search')}
-                                    >
-                                        <Text className={cn(
-                                            "text-base font-semibold",
-                                            isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
-                                        )}>🔍</Text>
-                                    </TouchableOpacity>
-                                </View>
-
-                                <TouchableOpacity
-                                    className={cn(
-                                        "w-10 h-10 rounded-2xl items-center justify-center shadow-sm mb-0.5",
-                                        getSendButtonState() === 'disabled' 
-                                            ? cn(
-                                                "bg-omnii-border-light",
-                                                isDark && "bg-omnii-dark-border-light"
-                                            )
-                                            : "bg-ai-start"
-                                    )}
-                                    onPress={handleSendMessage}
-                                    disabled={getSendButtonState() === 'disabled'}
-                                >
-                                    {getSendButtonState() === 'loading' ? (
-                                        <Text className="text-white text-lg font-semibold">⏳</Text>
-                                    ) : (
-                                        <UpArrowIcon size={18} color="white" />
-                                    )}
-                                </TouchableOpacity>
-                            </View>
                         </View>
-
-                        {/* Tool Dropdowns */}
-                        {showToolDropdown && (
-                            <>
-                                <TouchableOpacity
-                                    className="absolute -top-[1000px] -left-[1000px] -right-[1000px] -bottom-[1000px] bg-transparent z-50"
-                                    onPress={() => setShowToolDropdown(null)}
-                                    activeOpacity={1}
-                                />
-
-                                <View className="absolute top-full left-2 right-2 z-50 mt-2">
-                                    <View className={cn(
-                                        "rounded-2xl p-2 border border-omnii-border-light",
-                                        isDark && "bg-omnii-dark-card border-omnii-dark-border-light"
-                                    )}>
-                                        <Text className={cn(
-                                            "omnii-body text-base font-semibold mb-2 px-2 pt-1",
-                                            isDark && "text-omnii-dark-text-primary"
-                                        )}>
-                                            {showToolDropdown === 'add' ? '🔨 Create' : '🔍 Search'}
-                                        </Text>
-                                        {toolDropdownActions[showToolDropdown as keyof typeof toolDropdownActions].map((action) => (
-                                            <TouchableOpacity
-                                                key={action.id}
-                                                className={cn(
-                                                    "flex-row items-center p-3 rounded-lg mb-1 border",
-                                                    "bg-omnii-background border-omnii-border-light",
-                                                    isDark && "bg-omnii-dark-background border-omnii-dark-border-light"
-                                                )}
-                                                onPress={() => handleDropdownAction(action)}
-                                            >
-                                                <View className="mr-3 w-6 items-center justify-center">
-                                                    {action.iconComponent}
-                                                </View>
-                                                <Text className={cn(
-                                                    "omnii-body text-sm font-medium flex-1",
-                                                    isDark && "text-omnii-dark-text-primary"
-                                                )}>{action.label}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </View>
-                            </>
-                        )}
+                        <TouchableOpacity
+                            className={cn(
+                                "w-12 h-12 rounded-xl items-center justify-center",
+                                getSendButtonState() === 'enabled' 
+                                    ? "bg-indigo-600" 
+                                    : isDark ? "bg-slate-700" : "bg-gray-200"
+                            )}
+                            onPress={handleSendMessage}
+                            disabled={getSendButtonState() !== 'enabled'}
+                        >
+                            <UpArrowIcon 
+                                size={20} 
+                                color={getSendButtonState() === 'enabled' ? 'white' : isDark ? '#64748b' : '#9ca3af'} 
+                            />
+                        </TouchableOpacity>
                     </View>
-                )}
-
-                {/* Tab Content */}
-                <View className="flex-1">
-                    {renderTabContent()}
-                </View>
-            </SafeAreaView>
-        </KeyboardAvoidingView>
+                </KeyboardAvoidingView>
+            )}
+        </SafeAreaView>
     );
 }

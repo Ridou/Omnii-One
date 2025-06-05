@@ -118,7 +118,7 @@ export default function HomeScreen() {
     };
     
     const currentLevelXP = levelRequirements[currentLevel] || 0;
-    const nextLevelXP = levelRequirements[currentLevel + 1] || levelRequirements[50];
+    const nextLevelXP = levelRequirements[currentLevel + 1] || levelRequirements[50] || 60000;
     const xpInCurrentLevel = totalXP - currentLevelXP;
     const xpNeededForLevel = nextLevelXP - currentLevelXP;
     
@@ -129,62 +129,64 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className={cn(
-          "rounded-2xl p-5 mb-4",
-          "bg-omnii-card",
-          isDark && "bg-omnii-dark-card"
+          "rounded-xl p-4 mb-6 border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
         )}>
           <View className="flex-row justify-between items-center mb-3">
             <Text className={cn(
-              "omnii-heading text-xl font-bold",
-              isDark && "text-omnii-dark-text-primary"
+              "text-xl font-bold",
+              isDark ? "text-white" : "text-gray-900"
             )}>Progress Overview</Text>
-            <Text className="omnii-body text-base font-semibold text-ai-start">{xpInCurrentLevel} XP</Text>
+            <Text className="text-base font-semibold text-indigo-600">{xpInCurrentLevel} XP</Text>
           </View>
           
           <View className="mb-4">
             <View className="flex-row justify-between items-center mb-2">
               <Text className={cn(
-                "omnii-body text-base font-semibold",
-                isDark && "text-omnii-dark-text-primary"
+                "text-base font-semibold",
+                isDark ? "text-white" : "text-gray-900"
               )}>Level {currentLevel}</Text>
-              <Text className="omnii-body text-sm text-warning font-semibold">
+              <Text className="text-sm text-yellow-500 font-semibold">
                 {xpNeededForLevel} XP to next level
               </Text>
             </View>
             <View className={cn(
               "h-2 rounded-full overflow-hidden",
-              isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
+              isDark ? "bg-slate-600" : "bg-gray-200"
             )}>
-              <View className="h-2 bg-ai-start" style={{ width: `${xpProgress}%` }} />
+              <View 
+                className="h-full bg-indigo-600 rounded-full" 
+                style={{ width: `${xpProgress}%` }} 
+              />
             </View>
           </View>
           
           <View className="flex-row justify-between">
             <View className="items-center">
               <Text className={cn(
-                "omnii-body text-xs font-medium mb-1",
-                isDark && "text-omnii-dark-text-secondary"
+                "text-xs font-medium mb-1",
+                isDark ? "text-slate-400" : "text-gray-600"
               )}>Total XP</Text>
-              <View className="bg-ai-start rounded-full px-2 py-1 mt-2">
+              <View className="bg-indigo-600 rounded-full px-2 py-1 mt-2">
                 <Text className="text-white text-xs font-bold">{xpInCurrentLevel}</Text>
               </View>
             </View>
             <View className="items-center">
               <Text className={cn(
-                "omnii-body text-xs font-medium mb-1",
-                isDark && "text-omnii-dark-text-secondary"
+                "text-xs font-medium mb-1",
+                isDark ? "text-slate-400" : "text-gray-600"
               )}>Level</Text>
-              <View className="bg-success rounded-full px-2 py-1 mt-2">
+              <View className="bg-green-500 rounded-full px-2 py-1 mt-2">
                 <Text className="text-white text-xs font-bold">{currentLevel}</Text>
               </View>
             </View>
             <View className="items-center">
               <Text className={cn(
-                "omnii-body text-xs font-medium mb-1",
-                isDark && "text-omnii-dark-text-secondary"
+                "text-xs font-medium mb-1",
+                isDark ? "text-slate-400" : "text-gray-600"
               )}>Next Goal</Text>
-              <View className="bg-warning rounded-full px-2 py-1 mt-2">
-                <Text className="text-white text-xs font-bold">{nextLevelXP}</Text>
+              <View className="bg-yellow-500 rounded-full px-2 py-1 mt-2">
+                <Text className="text-white text-xs font-bold">{nextLevelXP || 'Max'}</Text>
               </View>
             </View>
           </View>
@@ -192,20 +194,23 @@ export default function HomeScreen() {
 
         <View className="mb-6">
           <Text className={cn(
-            "omnii-heading text-2xl font-bold mb-2",
-            isDark && "text-omnii-dark-text-primary"
+            "text-2xl font-bold mb-4",
+            isDark ? "text-white" : "text-gray-900"
           )}>🎯 Current Goals</Text>
           {achievementData?.achievements.slice(0, 3).map((achievement) => (
-            <View key={achievement.id} className="mb-4">
+            <View key={achievement.id} className={cn(
+              "rounded-xl p-4 mb-4 border",
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+            )}>
               <Text className={cn(
-                "omnii-body text-base font-semibold mb-1",
-                isDark && "text-omnii-dark-text-primary"
+                "text-base font-semibold mb-1",
+                isDark ? "text-white" : "text-gray-900"
               )}>{achievement.title}</Text>
               <Text className={cn(
-                "omnii-body text-sm",
-                isDark && "text-omnii-dark-text-secondary"
+                "text-sm mb-2",
+                isDark ? "text-slate-400" : "text-gray-600"
               )}>{achievement.description}</Text>
-              <Text className="omnii-body text-sm font-semibold text-ai-start">
+              <Text className="text-sm font-semibold text-indigo-600">
                 {achievement.progress} / {achievement.maxProgress} • {achievement.xpReward} XP
               </Text>
             </View>
@@ -222,35 +227,51 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Text className={cn(
-        "omnii-heading text-2xl font-bold mb-4",
-        isDark && "text-omnii-dark-text-primary"
+        "text-2xl font-bold mb-4",
+        isDark ? "text-white" : "text-gray-900"
       )}>🔍 Available Achievements</Text>
       {achievementData?.achievements.map((achievement) => (
-        <View key={achievement.id} className="mb-4">
+        <View key={achievement.id} className={cn(
+          "rounded-xl p-4 mb-4 border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}>
           <Text className={cn(
-            "omnii-body text-base font-semibold mb-1",
-            isDark && "text-omnii-dark-text-primary"
+            "text-base font-semibold mb-1",
+            isDark ? "text-white" : "text-gray-900"
           )}>{achievement.title}</Text>
           <Text className={cn(
-            "omnii-body text-sm",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-sm mb-3",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>{achievement.description}</Text>
-          <View className="flex-row items-center justify-between mt-2">
-            <Text className="omnii-body text-sm font-semibold text-success">
-              {achievement.xpReward} XP
-            </Text>
-            <Text className={cn(
-              "omnii-body text-sm font-semibold",
-              isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
-            )}>
-              {achievement.difficulty.toUpperCase()}
-            </Text>
-          </View>
-          {achievement.completed && (
-            <View className="bg-success rounded-full px-2 py-1 mt-2">
-              <Text className="omnii-body text-sm font-semibold text-white">✓</Text>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center space-x-3">
+              <View className="bg-green-500 rounded-full px-3 py-1">
+                <Text className="text-white text-xs font-bold">
+                  {achievement.xpReward} XP
+                </Text>
+              </View>
+              <View className={cn(
+                "rounded-full px-3 py-1",
+                achievement.difficulty === 'easy' ? "bg-blue-100" :
+                achievement.difficulty === 'medium' ? "bg-yellow-100" :
+                achievement.difficulty === 'hard' ? "bg-red-100" : "bg-purple-100"
+              )}>
+                <Text className={cn(
+                  "text-xs font-semibold",
+                  achievement.difficulty === 'easy' ? "text-blue-700" :
+                  achievement.difficulty === 'medium' ? "text-yellow-700" :
+                  achievement.difficulty === 'hard' ? "text-red-700" : "text-purple-700"
+                )}>
+                  {achievement.difficulty.toUpperCase()}
+                </Text>
+              </View>
             </View>
-          )}
+            {achievement.completed && (
+              <View className="bg-green-500 rounded-full w-6 h-6 items-center justify-center">
+                <Text className="text-white text-xs font-bold">✓</Text>
+              </View>
+            )}
+          </View>
         </View>
       ))}
     </ScrollView>
@@ -263,71 +284,74 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Text className={cn(
-        "omnii-heading text-2xl font-bold mb-4",
-        isDark && "text-omnii-dark-text-primary"
+        "text-2xl font-bold mb-4",
+        isDark ? "text-white" : "text-gray-900"
       )}>🏆 Your Trophies</Text>
-      <View className="flex-row gap-4 mb-4">
+      
+      {/* Stats Cards */}
+      <View className="flex-row gap-4 mb-6">
         <View className={cn(
-          "flex-1 rounded-xl p-4",
-          "bg-omnii-card",
-          isDark && "bg-omnii-dark-card"
+          "flex-1 rounded-xl p-4 border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
         )}>
           <Text className={cn(
-            "omnii-body text-2xl font-bold mb-2",
-            isDark && "text-omnii-dark-text-primary"
+            "text-2xl font-bold mb-2",
+            isDark ? "text-white" : "text-gray-900"
           )}>{achievementData?.stats.completedAchievements || 0}</Text>
           <Text className={cn(
-            "omnii-body text-sm",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-sm",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>Completed</Text>
         </View>
         <View className={cn(
-          "flex-1 rounded-xl p-4",
-          "bg-omnii-card",
-          isDark && "bg-omnii-dark-card"
+          "flex-1 rounded-xl p-4 border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
         )}>
           <Text className={cn(
-            "omnii-body text-2xl font-bold mb-2",
-            isDark && "text-omnii-dark-text-primary"
+            "text-2xl font-bold mb-2",
+            isDark ? "text-white" : "text-gray-900"
           )}>{achievementData?.stats.totalXPFromAchievements || 0}</Text>
           <Text className={cn(
-            "omnii-body text-sm",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-sm",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>XP Earned</Text>
         </View>
         <View className={cn(
-          "flex-1 rounded-xl p-4",
-          "bg-omnii-card",
-          isDark && "bg-omnii-dark-card"
+          "flex-1 rounded-xl p-4 border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
         )}>
           <Text className={cn(
-            "omnii-body text-2xl font-bold mb-2",
-            isDark && "text-omnii-dark-text-primary"
+            "text-2xl font-bold mb-2",
+            isDark ? "text-white" : "text-gray-900"
           )}>{achievementData?.stats.currentStreak || 0}</Text>
           <Text className={cn(
-            "omnii-body text-sm",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-sm",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>Current Streak</Text>
         </View>
       </View>
 
+      {/* Completed Achievements */}
       {achievementData?.achievements.filter(a => a.completed).map((achievement) => (
-        <View key={achievement.id} className="mb-4">
-          <View className="flex-row items-center">
-            <Text className="omnii-body text-2xl font-semibold mr-2">{achievement.icon}</Text>
+        <View key={achievement.id} className={cn(
+          "rounded-xl p-4 mb-4 border border-l-4 border-l-green-500",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}>
+          <View className="flex-row items-center mb-2">
+            <Text className="text-2xl font-semibold mr-3">{achievement.icon}</Text>
             <Text className={cn(
-              "omnii-body text-base font-semibold",
-              isDark && "text-omnii-dark-text-primary"
+              "text-base font-semibold flex-1",
+              isDark ? "text-white" : "text-gray-900"
             )}>{achievement.title}</Text>
+            <View className="bg-green-500 rounded-full px-2 py-1">
+              <Text className="text-white text-xs font-bold">{achievement.xpReward} XP</Text>
+            </View>
           </View>
           <Text className={cn(
-            "omnii-body text-sm",
-            isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+            "text-sm",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>
             Completed {achievement.completedAt && new Date(achievement.completedAt).toLocaleDateString()}
-          </Text>
-          <Text className="omnii-body text-sm font-semibold text-success">
-            {achievement.xpReward} XP
           </Text>
         </View>
       ))}
@@ -341,22 +365,21 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Text className={cn(
-        "omnii-heading text-2xl font-bold mb-4",
-        isDark && "text-omnii-dark-text-primary"
+        "text-2xl font-bold mb-4",
+        isDark ? "text-white" : "text-gray-900"
       )}>👥 Community</Text>
       <View className={cn(
-        "rounded-xl p-8",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        "rounded-xl p-8 items-center border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
       )}>
-        <Text className="omnii-body text-2xl font-semibold mb-2">🌟</Text>
+        <Text className="text-4xl mb-3">🌟</Text>
         <Text className={cn(
-          "omnii-body text-base font-semibold mb-2",
-          isDark && "text-omnii-dark-text-primary"
+          "text-base font-semibold mb-2",
+          isDark ? "text-white" : "text-gray-900"
         )}>Share Your Progress</Text>
         <Text className={cn(
-          "omnii-body text-sm",
-          isDark && "text-omnii-dark-text-secondary"
+          "text-sm text-center",
+          isDark ? "text-slate-400" : "text-gray-600"
         )}>
           Connect with friends and celebrate achievements together!
         </Text>
@@ -382,13 +405,13 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <SafeAreaView className={cn(
-        "flex-1 bg-omnii-background",
-        isDark && "bg-omnii-dark-background"
+        "flex-1",
+        isDark ? "bg-slate-900" : "bg-white"
       )}>
         <View className="flex-1 justify-center items-center">
           <Text className={cn(
             "text-lg",
-            isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>Loading achievements...</Text>
         </View>
       </SafeAreaView>
@@ -398,17 +421,21 @@ export default function HomeScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView className={cn(
-        "flex-1 bg-omnii-background",
-        isDark && "bg-omnii-dark-background"
+        "flex-1",
+        isDark ? "bg-slate-900" : "bg-white"
       )}>
-        <View className="p-5 pb-2.5">
+        {/* Header */}
+        <View className={cn(
+          "px-5 py-4 border-b",
+          isDark ? "border-slate-600" : "border-gray-200"
+        )}>
           <Text className={cn(
-            "omnii-heading text-3xl font-bold mb-1",
-            isDark && "text-omnii-dark-text-primary"
+            "text-3xl font-bold mb-1",
+            isDark ? "text-white" : "text-gray-900"
           )}>🏆 Achievements</Text>
           <Text className={cn(
-            "omnii-body text-base",
-            isDark && "text-omnii-dark-text-secondary"
+            "text-base",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>Your personal victory celebration</Text>
         </View>
 
@@ -421,7 +448,7 @@ export default function HomeScreen() {
               style={[
                 selectedTab === tab.key && {
                   elevation: 4,
-                  shadowColor: AppColors.aiGradientStart,
+                  shadowColor: tab.gradient[0],
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.3,
                   shadowRadius: 8,

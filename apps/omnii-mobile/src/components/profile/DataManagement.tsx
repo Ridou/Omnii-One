@@ -227,7 +227,7 @@ export default function DataManagement({
 
   const confirmDeleteAccount = async () => {
     if (deleteConfirmationText.toLowerCase() !== 'delete my account') {
-      Alert.alert('Confirmation Required', 'Please type "delete my account" exactly as shown.');
+      Alert.alert('Confirmation Required', 'Please type &quot;delete my account&quot; exactly as shown.');
       return;
     }
     
@@ -322,7 +322,7 @@ export default function DataManagement({
     <View className="mb-8">
       <Text className={cn(
         "text-xl font-bold mb-4",
-        isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+        isDark ? "text-white" : "text-gray-900"
       )}>{title}</Text>
       {children}
     </View>
@@ -345,15 +345,12 @@ export default function DataManagement({
   }) => (
     <TouchableOpacity
       className={cn(
-        "rounded-xl mb-3 border",
+        "rounded-xl mb-3 border p-4",
         variant === 'danger' 
-          ? "border-error" 
+          ? "border-red-500" 
           : cn(
-              "border-omnii-border",
-              isDark && "border-omnii-dark-border"
-            ),
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+              isDark ? "border-slate-600 bg-slate-800" : "border-gray-200 bg-white"
+            )
       )}
       onPress={onPress}
       disabled={loading}
@@ -362,36 +359,33 @@ export default function DataManagement({
       accessibilityLabel={title}
       accessibilityHint={subtitle}
     >
-      <View className="p-4">
-        <View className="flex-row items-center">
-          {loading ? (
-            <ActivityIndicator
-              size="small"
-              color={variant === 'danger' ? AppColors.error : AppColors.aiGradientStart}
-            />
-          ) : (
-            <Icon
-              size={24}
-              color={variant === 'danger' ? AppColors.error : AppColors.aiGradientStart}
-            />
-          )}
-          <View className="ml-4 flex-1">
-            <Text className={cn(
-              "text-base font-semibold mb-1",
-              variant === 'danger' 
-                ? "text-error" 
-                : cn(
-                    "text-omnii-text-primary",
-                    isDark && "text-omnii-dark-text-primary"
-                  )
-            )}>
-              {title}
-            </Text>
-            <Text className={cn(
-              "text-sm leading-5",
-              isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
-            )}>{subtitle}</Text>
-          </View>
+      <View className="flex-row items-center">
+        {loading ? (
+          <ActivityIndicator
+            size="small"
+            color={variant === 'danger' ? '#ef4444' : '#6366f1'}
+          />
+        ) : (
+          <Icon
+            size={24}
+            color={variant === 'danger' ? '#ef4444' : '#6366f1'}
+          />
+        )}
+        <View className="ml-4 flex-1">
+          <Text className={cn(
+            "text-base font-semibold mb-1",
+            variant === 'danger' 
+              ? "text-red-500" 
+              : cn(
+                  isDark ? "text-white" : "text-gray-900"
+                )
+          )}>
+            {title}
+          </Text>
+          <Text className={cn(
+            "text-sm leading-5",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>{subtitle}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -412,19 +406,19 @@ export default function DataManagement({
   }) => (
     <View className={cn(
       "flex-row items-center justify-between py-4 border-b",
-      isDark ? "border-omnii-dark-border" : "border-omnii-border"
+      isDark ? "border-slate-600" : "border-gray-200"
     )}>
       <View className="flex-1 mr-4">
         <Text className={cn(
           "text-base font-semibold mb-1",
-          isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+          isDark ? "text-white" : "text-gray-900"
         )}>
           {title}
-          {required && <Text className="text-error"> *</Text>}
+          {required && <Text className="text-red-500"> *</Text>}
         </Text>
         <Text className={cn(
           "text-sm leading-5",
-          isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+          isDark ? "text-slate-400" : "text-gray-600"
         )}>{description}</Text>
       </View>
       <Switch
@@ -432,10 +426,10 @@ export default function DataManagement({
         onValueChange={onValueChange}
         disabled={required}
         trackColor={{
-          false: isDark ? '#38393e' : AppColors.border,
-          true: AppColors.aiGradientStart,
+          false: isDark ? '#475569' : '#e5e7eb',
+          true: '#6366f1',
         }}
-        thumbColor={value ? AppColors.background : AppColors.textSecondary}
+        thumbColor={value ? '#ffffff' : '#9ca3af'}
         accessible={true}
         accessibilityRole="switch"
         accessibilityLabel={`${title} consent`}
@@ -448,24 +442,23 @@ export default function DataManagement({
     <ScrollView 
       className={cn(
         "flex-1",
-        isDark ? "bg-omnii-dark-background" : "bg-omnii-background"
+        isDark ? "bg-slate-900" : "bg-white"
       )} 
       showsVerticalScrollIndicator={false}
     >
       <DataSection title="Your Privacy Rights">
         <View className={cn(
-          "rounded-2xl p-5 items-center border-l-4 border-ai-start",
-          "bg-omnii-card",
-          isDark && "bg-omnii-dark-card"
+          "rounded-2xl p-5 items-center border-l-4 border-indigo-500",
+          isDark ? "bg-slate-800" : "bg-white"
         )}>
-          <Shield size={32} color={AppColors.aiGradientStart} />
+          <Shield size={32} color="#6366f1" />
           <Text className={cn(
             "text-lg font-semibold mt-3 mb-2",
-            isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+            isDark ? "text-white" : "text-gray-900"
           )}>Data Protection</Text>
           <Text className={cn(
             "text-sm leading-6 text-center",
-            isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>
             You have the right to access, correct, delete, and export your personal data. 
             You can also manage your consent preferences at any time.
@@ -483,7 +476,7 @@ export default function DataManagement({
         />
         <Text className={cn(
           "text-xs leading-5 mt-2 mb-4",
-          isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+          isDark ? "text-slate-400" : "text-gray-600"
         )}>
           Includes your profile information, productivity data, achievement progress, 
           and chat history. Export will be emailed to {userEmail || user?.email || 'your registered email'}.
@@ -498,52 +491,50 @@ export default function DataManagement({
           onPress={() => setShowConsentModal(true)}
         />
         <View className={cn(
-          "rounded-lg p-3 mt-2",
-          "bg-omnii-card",
-          isDark && "bg-omnii-dark-card"
+          "rounded-xl p-4 mt-3",
+          isDark ? "bg-slate-800" : "bg-gray-50"
         )}>
           <Text className={cn(
-            "text-sm text-center",
-            isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+            "text-sm font-medium mb-2",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Current Settings:</Text>
+          <Text className={cn(
+            "text-xs leading-5",
+            isDark ? "text-slate-400" : "text-gray-600"
           )}>
-            Current settings: {Object.values(consents).filter(Boolean).length} of {Object.keys(consents).length} enabled
+            Analytics: {consents.analytics ? 'Enabled' : 'Disabled'} • 
+            AI Improvement: {consents.aiImprovement ? 'Enabled' : 'Disabled'} • 
+            Communications: {consents.communications ? 'Enabled' : 'Disabled'} • 
+            Personalization: {consents.personalization ? 'Enabled' : 'Disabled'}
           </Text>
         </View>
       </DataSection>
 
-      <DataSection title="Legal Documents">
-        <ActionButton
-          title="Privacy Policy"
-          subtitle="View our complete privacy policy and data practices"
-          icon={FileText}
-          onPress={() => setShowPrivacyPolicy(true)}
-        />
-        <ActionButton
-          title="Terms of Service"
-          subtitle="View the terms and conditions for using OMNII"
-          icon={FileText}
-          onPress={() => setShowTermsOfService(true)}
-        />
-      </DataSection>
-
-      <DataSection title="Account Deletion">
+      <DataSection title="Data Deletion">
         <View className={cn(
-          "rounded-xl p-4 flex-row items-center mb-4 border",
-          "bg-omnii-card border-error border-opacity-25",
-          isDark && "bg-omnii-dark-card"
+          "rounded-xl p-4 mb-3 border border-yellow-500",
+          isDark ? "bg-yellow-900/20" : "bg-yellow-50"
         )}>
-          <AlertTriangle size={24} color={AppColors.error} />
+          <View className="flex-row items-center mb-2">
+            <AlertTriangle size={20} color="#eab308" />
+            <Text className={cn(
+              "text-sm font-semibold ml-2",
+              isDark ? "text-yellow-400" : "text-yellow-800"
+            )}>
+              Important Privacy Information
+            </Text>
+          </View>
           <Text className={cn(
-            "text-sm leading-5 ml-3 flex-1",
-            isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+            "text-sm leading-5",
+            isDark ? "text-yellow-300" : "text-yellow-700"
           )}>
-            Account deletion is permanent and cannot be undone. All your data will be deleted within 30 days.
+            Account deletion is permanent and cannot be undone. We recommend exporting your data first.
           </Text>
         </View>
         
         <ActionButton
-          title="Preview Data for Deletion"
-          subtitle="See what data will be affected before proceeding"
+          title="Preview My Data"
+          subtitle="See what data will be deleted before proceeding"
           icon={Eye}
           onPress={handlePreviewData}
           loading={loadingPreview}
@@ -555,6 +546,30 @@ export default function DataManagement({
           icon={Trash2}
           onPress={handleDeleteAccount}
           variant="danger"
+          loading={isDeleting}
+        />
+      </DataSection>
+
+      <DataSection title="Support & Legal">
+        <ActionButton
+          title="Privacy Policy"
+          subtitle="Read our complete privacy policy and data practices"
+          icon={FileText}
+          onPress={openPrivacyPolicy}
+        />
+        
+        <ActionButton
+          title="Terms of Service"
+          subtitle="Review our terms of service and user agreement"
+          icon={FileText}
+          onPress={() => setShowTermsOfService(true)}
+        />
+        
+        <ActionButton
+          title="Contact Support"
+          subtitle="Get help with privacy questions or data requests"
+          icon={Mail}
+          onPress={contactSupport}
         />
       </DataSection>
 
@@ -672,35 +687,34 @@ export default function DataManagement({
       >
         <View className={cn(
           "flex-1",
-          isDark ? "bg-omnii-dark-background" : "bg-omnii-background"
+          isDark ? "bg-slate-900" : "bg-white"
         )}>
           <View className={cn(
             "flex-row justify-between items-center px-5 py-4 border-b",
-            isDark ? "border-omnii-dark-border" : "border-omnii-border"
+            isDark ? "border-slate-600" : "border-gray-200"
           )}>
             <Text className={cn(
               "text-xl font-semibold",
-              isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+              isDark ? "text-white" : "text-gray-900"
             )}>Privacy Preferences</Text>
             <TouchableOpacity
               className={cn(
                 "p-2 rounded-lg",
-                "bg-omnii-card",
-                isDark && "bg-omnii-dark-card"
+                isDark ? "bg-slate-800" : "bg-gray-100"
               )}
               onPress={() => setShowConsentModal(false)}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel="Close privacy preferences"
             >
-              <X size={24} color={isDark ? '#f0f0f3' : AppColors.textPrimary} />
+              <X size={24} color={isDark ? '#f0f0f3' : '#374151'} />
             </TouchableOpacity>
           </View>
           
           <ScrollView className="flex-1 px-5">
             <Text className={cn(
               "text-sm leading-6 my-5",
-              isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+              isDark ? "text-slate-400" : "text-gray-600"
             )}>
               Control how OMNII uses your data. You can change these settings at any time.
             </Text>
@@ -736,13 +750,13 @@ export default function DataManagement({
 
             <View className="p-5">
               <TouchableOpacity
-                className="bg-ai-start rounded-xl py-4 flex-row items-center justify-center"
+                className="bg-indigo-600 rounded-xl py-4 flex-row items-center justify-center"
                 onPress={() => handleConsentChange(consents)}
                 accessible={true}
                 accessibilityRole="button"
                 accessibilityLabel="Save privacy preferences"
               >
-                <CheckCircle size={20} color={AppColors.background} />
+                <CheckCircle size={20} color="#ffffff" />
                 <Text className="text-white text-base font-semibold ml-2">Save Preferences</Text>
               </TouchableOpacity>
             </View>
@@ -766,7 +780,7 @@ export default function DataManagement({
               and chat history will be permanently deleted.
             </Text>
             <Text style={styles.confirmationInstruction}>
-              Type "delete my account" to confirm:
+              Type &quot;delete my account&quot; to confirm:
             </Text>
             <TextInput
               style={styles.confirmationInput}

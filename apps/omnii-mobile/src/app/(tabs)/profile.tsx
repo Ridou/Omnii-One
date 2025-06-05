@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
 import { CircleUser as UserCircle } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import { useAuth } from '~/context/AuthContext';
 import { useProfile } from '~/context/ProfileContext';
 import { useOnboardingContext } from '~/context/OnboardingContext';
@@ -25,9 +26,9 @@ import DataManagement from '~/components/profile/DataManagement';
 import ThemeSelector from '~/components/profile/ThemeSelector';
 import { AppColors } from '~/constants/Colors';
 import { BRAND_COLORS } from '~/lib/assets';
-import { cn } from '~/utils/cn';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { ProfileTab, TabConfig } from '~/types/profile';
+import { cn } from '~/utils/cn';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -70,6 +71,9 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { theme, isDark } = useTheme();
   
+  // Add NativeWind's useColorScheme to force re-renders when theme changes
+  const { colorScheme: nativeWindColorScheme } = useColorScheme();
+  
   // Get real user progression data
   const level = getCurrentLevel();
   const currentXP = onboardingState.onboardingData.total_xp;
@@ -85,79 +89,6 @@ export default function ProfileScreen() {
       return acc;
     }, {} as Record<ProfileTab, Animated.Value>)
   ).current;
-
-  // Direct emergency logout function (bypasses all React logic)
-  const emergencyLogout = async () => {
-    console.log('🚨 === EMERGENCY DIRECT LOGOUT ===');
-    
-    try {
-      // Step 1: Clear localStorage
-      console.log('🧹 Step 1: Clearing localStorage...');
-      if (typeof localStorage !== 'undefined') {
-        const beforeKeys = Object.keys(localStorage);
-        console.log('📦 LocalStorage keys before:', beforeKeys);
-        localStorage.clear();
-        const afterKeys = Object.keys(localStorage);
-        console.log('📦 LocalStorage keys after:', afterKeys);
-        console.log('✅ LocalStorage cleared successfully');
-      } else {
-        console.log('❌ localStorage not available');
-      }
-      
-      // Step 2: Clear sessionStorage
-      console.log('🧹 Step 2: Clearing sessionStorage...');
-      if (typeof sessionStorage !== 'undefined') {
-        const beforeKeys = Object.keys(sessionStorage);
-        console.log('📦 SessionStorage keys before:', beforeKeys);
-        sessionStorage.clear();
-        const afterKeys = Object.keys(sessionStorage);
-        console.log('📦 SessionStorage keys after:', afterKeys);
-        console.log('✅ SessionStorage cleared successfully');
-      } else {
-        console.log('❌ sessionStorage not available');
-      }
-      
-      // Step 3: Direct Supabase signOut
-      console.log('🔄 Step 3: Direct Supabase signOut...');
-      if (typeof window !== 'undefined') {
-        console.log('🔍 Window object available');
-        if ('supabase' in window) {
-          console.log('🔍 Supabase found in window');
-          try {
-            // Direct call exactly like the emergency script
-            const result = await (window as Window & { supabase: { auth: { signOut: () => Promise<unknown> } } }
-              ).supabase.auth.signOut();
-            console.log('✅ Supabase signOut result:', result);
-            console.log('✅ Direct Supabase signOut completed');
-          } catch (supabaseError) {
-            console.error('❌ Supabase signOut error:', supabaseError);
-            console.log('⚠️ Continuing despite Supabase error...');
-          }
-        } else {
-          console.log('❌ Supabase not found in window');
-        }
-      } else {
-        console.log('❌ Window object not available');
-      }
-      
-      // Step 4: Force redirect
-      console.log('🎯 Step 4: Force redirect...');
-      if (typeof window !== 'undefined') {
-        console.log('🔄 Executing window.location.href = "/"');
-        window.location.href = '/';
-        console.log('✅ Redirect initiated');
-      } else {
-        console.log('❌ Cannot redirect - window not available');
-      }
-      
-    } catch (error) {
-      console.error('💥 Emergency logout failed:', error);
-      console.log('🔄 Fallback: Force page reload...');
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
-    }
-  };
 
   const handleLogout = async () => {
     if (!user) {
@@ -273,7 +204,7 @@ export default function ProfileScreen() {
                 </Text>
                 {/* Show notification dot on Connect tab for new users */}
                 {tab.key === 'connect' && level >= 3 && (
-                  <View className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border-2 border-white" />
+                  <View className={cn("absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border-2 shadow-sm", isDark ? "border-slate-800" : "border-white")} />
                 )}
               </View>
             </Animated.View>
@@ -288,63 +219,63 @@ export default function ProfileScreen() {
     switch (selectedTab) {
       case 'connect':
         return (
-          <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+          <ScrollView className={cn("flex-1 px-5", isDark ? "bg-slate-900" : "bg-white")} showsVerticalScrollIndicator={false}>
             {/* Discord CTA Card for Level 5+ */}
             {level >= 5 && (
-              <View className={cn(
-                "rounded-2xl p-5 mb-4 border-l-4 border-purple-500",
-                "bg-omnii-card",
-                isDark && "bg-omnii-dark-card"
-              )}>
-                <View className="flex-row items-center mb-3">
-                  <Text className="text-3xl mr-3">💬</Text>
+              <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-purple-500", 
+                isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+                <View className="flex-row items-center mb-4">
+                  <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                    isDark ? "bg-purple-900/30" : "bg-purple-100")}>
+                    <Text className="text-2xl">💬</Text>
+                  </View>
                   <View className="flex-row items-center justify-between flex-1">
-                    <Text className={cn(
-                      "omnii-heading text-xl font-bold flex-1",
-                      isDark && "text-omnii-dark-text-primary"
-                    )}>Join Our Community</Text>
-                    <View className="bg-red-500 px-2 py-1 rounded-xl">
+                    <Text className={cn("text-xl font-bold font-omnii-bold flex-1", 
+                      isDark ? "text-white" : "text-gray-900")}>Join Our Community</Text>
+                    <View className="bg-red-500 px-3 py-1.5 rounded-full">
                       <Text className="text-white text-xs font-bold tracking-wide">NEW</Text>
                     </View>
                   </View>
                 </View>
                 
-                <Text className={cn(
-                  "omnii-body text-base leading-6 mb-4",
-                  isDark && "text-omnii-dark-text-secondary"
-                )}>
+                <Text className={cn("text-base leading-6 mb-5", 
+                  isDark ? "text-slate-300" : "text-gray-700")}>
                   Connect with other productivity enthusiasts and share your OMNII journey! Get tips, insights, and be part of our growing community.
                 </Text>
                 
-                <View className="mb-5">
-                  <Text className={cn(
-                    "omnii-body text-sm font-medium mb-1.5 leading-5",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>
-                    • Early access to new features and updates
-                  </Text>
-                  <Text className={cn(
-                    "omnii-body text-sm font-medium mb-1.5 leading-5",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>
-                    • Share productivity tips and celebrate achievements
-                  </Text>
-                  <Text className={cn(
-                    "omnii-body text-sm font-medium mb-1.5 leading-5",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>
-                    • Direct feedback channel to shape OMNII's future
-                  </Text>
-                  <Text className={cn(
-                    "omnii-body text-sm font-medium leading-5",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>
-                    • Connect with like-minded productivity enthusiasts
-                  </Text>
+                <View className="space-y-3 mb-6">
+                  <View className="flex-row items-center">
+                    <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                    <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                      isDark ? "text-slate-400" : "text-gray-600")}>
+                      Early access to new features and updates
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                    <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                      isDark ? "text-slate-400" : "text-gray-600")}>
+                      Share productivity tips and celebrate achievements
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                    <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                      isDark ? "text-slate-400" : "text-gray-600")}>
+                      Direct feedback channel to shape OMNII&apos;s future
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                    <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                      isDark ? "text-slate-400" : "text-gray-600")}>
+                      Connect with like-minded productivity enthusiasts
+                    </Text>
+                  </View>
                 </View>
                 
                 <TouchableOpacity
-                  className="bg-ai-start py-3.5 px-5 rounded-xl flex-row items-center justify-center mt-4"
+                  className="bg-purple-600 hover:bg-purple-700 active:bg-purple-700 px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
                   onPress={async () => {
                     try {
                       await Linking.openURL('https://discord.gg/HPgAARkhkE');
@@ -360,419 +291,358 @@ export default function ProfileScreen() {
             )}
 
             {/* Placeholder Cards */}
-            <View className={cn(
-              "rounded-2xl p-5 mb-4 border-l-4 border-purple-500",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-lg font-semibold mb-2",
-                isDark && "text-omnii-dark-text-primary"
-              )}>📱 Calendar Integration</Text>
-              <Text className={cn(
-                "omnii-body text-sm leading-5 mb-3",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-blue-500", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-3">
+                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
+                  isDark ? "bg-blue-900/30" : "bg-blue-100")}>
+                  <Text className="text-xl">📱</Text>
+                </View>
+                <Text className={cn("text-lg font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Calendar Integration</Text>
+              </View>
+              <Text className={cn("text-sm leading-6 mb-4", 
+                isDark ? "text-slate-300" : "text-gray-600")}>
                 Connect your calendar to optimize scheduling and task management.
               </Text>
-              <Text className={cn(
-                "omnii-caption text-xs",
-                isDark && "text-omnii-dark-text-tertiary"
-              )}>Coming Soon</Text>
+              <View className={cn("px-3 py-2 rounded-lg self-start", 
+                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                <Text className={cn("text-xs font-semibold", 
+                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+              </View>
             </View>
             
-            <View className={cn(
-              "rounded-2xl p-5 mb-4 border-l-4 border-purple-500",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-lg font-semibold mb-2",
-                isDark && "text-omnii-dark-text-primary"
-              )}>✉️ Email Integration</Text>
-              <Text className={cn(
-                "omnii-body text-sm leading-5 mb-3",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-green-500", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-3">
+                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
+                  isDark ? "bg-green-900/30" : "bg-green-100")}>
+                  <Text className="text-xl">✉️</Text>
+                </View>
+                <Text className={cn("text-lg font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Email Integration</Text>
+              </View>
+              <Text className={cn("text-sm leading-6 mb-4", 
+                isDark ? "text-slate-300" : "text-gray-600")}>
                 Smart email processing and task extraction from your inbox.
               </Text>
-              <Text className={cn(
-                "omnii-caption text-xs",
-                isDark && "text-omnii-dark-text-tertiary"
-              )}>Coming Soon</Text>
+              <View className={cn("px-3 py-2 rounded-lg self-start", 
+                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                <Text className={cn("text-xs font-semibold", 
+                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+              </View>
             </View>
             
-            <View className={cn(
-              "rounded-2xl p-5 mb-4 border-l-4 border-purple-500",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-lg font-semibold mb-2",
-                isDark && "text-omnii-dark-text-primary"
-              )}>💬 Slack Integration</Text>
-              <Text className={cn(
-                "omnii-body text-sm leading-5 mb-3",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>
+            <View className={cn("rounded-2xl p-6 mb-6 border shadow-sm border-l-4 border-l-indigo-500", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-3">
+                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
+                  isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
+                  <Text className="text-xl">💬</Text>
+                </View>
+                <Text className={cn("text-lg font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Slack Integration</Text>
+              </View>
+              <Text className={cn("text-sm leading-6 mb-4", 
+                isDark ? "text-slate-300" : "text-gray-600")}>
                 Seamlessly manage tasks and projects from your team workspace.
               </Text>
-              <Text className={cn(
-                "omnii-caption text-xs",
-                isDark && "text-omnii-dark-text-tertiary"
-              )}>Coming Soon</Text>
+              <View className={cn("px-3 py-2 rounded-lg self-start", 
+                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                <Text className={cn("text-xs font-semibold", 
+                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+              </View>
             </View>
           </ScrollView>
         );
         
       case 'dna':
         return (
-          <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+          <ScrollView className={cn("flex-1 px-5", isDark ? "bg-slate-900" : "bg-white")} showsVerticalScrollIndicator={false}>
             {/* Automatic DNA Generation */}
-            <View className={cn(
-              "rounded-2xl p-5 mb-4 border-l-4 border-ai-start",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <View className="flex-row items-center mb-3">
-                <Text className="text-3xl mr-3">🧬</Text>
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-omnii-primary", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-4">
+                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                  isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
+                  <Text className="text-2xl">🧬</Text>
+                </View>
                 <View>
-                  <Text className={cn(
-                    "omnii-heading text-xl font-bold",
-                    isDark && "text-omnii-dark-text-primary"
-                  )}>Your Productivity DNA</Text>
-                  <Text className={cn(
-                    "omnii-body text-sm font-medium",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Generated from your inspiration preferences</Text>
+                  <Text className={cn("text-xl font-bold font-omnii-bold", 
+                    isDark ? "text-white" : "text-gray-900")}>Your Productivity DNA</Text>
+                  <Text className={cn("text-sm font-medium", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Generated from your inspiration preferences</Text>
                 </View>
               </View>
               
               {level >= 2 ? (
                 <View>
-                  <Text className={cn(
-                    "omnii-body text-base leading-6 mb-4",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>
-                    Based on your quote responses, we've crafted your unique productivity profile. You can customize these insights below.
+                  <Text className={cn("text-base leading-6 mb-5", 
+                    isDark ? "text-slate-300" : "text-gray-700")}>
+                    Based on your quote responses, we&apos;ve crafted your unique productivity profile. You can customize these insights below.
                   </Text>
                   
-                  <View className="mt-3">
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className={cn(
-                        "omnii-body text-sm font-semibold",
-                        isDark && "text-omnii-dark-text-primary"
-                      )}>Work Style:</Text>
-                      <Text className={cn(
-                        "omnii-body text-sm font-medium",
-                        isDark && "text-omnii-dark-text-secondary"
-                      )}>Results-Oriented</Text>
+                  <View className={cn("rounded-xl p-4 mb-5", 
+                    isDark ? "bg-slate-700/50" : "bg-gray-50")}>
+                    <View className={cn("flex-row justify-between items-center py-2 border-b", 
+                      isDark ? "border-slate-600" : "border-gray-200")}>
+                      <Text className={cn("text-sm font-semibold", 
+                        isDark ? "text-slate-300" : "text-gray-700")}>Work Style:</Text>
+                      <View className={cn("px-3 py-1 rounded-full", 
+                        isDark ? "bg-blue-900/30" : "bg-blue-100")}>
+                        <Text className={cn("text-sm font-medium", 
+                          isDark ? "text-blue-400" : "text-blue-700")}>Results-Oriented</Text>
+                      </View>
                     </View>
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className={cn(
-                        "omnii-body text-sm font-semibold",
-                        isDark && "text-omnii-dark-text-primary"
-                      )}>Energy Pattern:</Text>
-                      <Text className={cn(
-                        "omnii-body text-sm font-medium",
-                        isDark && "text-omnii-dark-text-secondary"
-                      )}>Morning Focused</Text>
+                    <View className={cn("flex-row justify-between items-center py-2 border-b", 
+                      isDark ? "border-slate-600" : "border-gray-200")}>
+                      <Text className={cn("text-sm font-semibold", 
+                        isDark ? "text-slate-300" : "text-gray-700")}>Energy Pattern:</Text>
+                      <View className={cn("px-3 py-1 rounded-full", 
+                        isDark ? "bg-green-900/30" : "bg-green-100")}>
+                        <Text className={cn("text-sm font-medium", 
+                          isDark ? "text-green-400" : "text-green-700")}>Morning Focused</Text>
+                      </View>
                     </View>
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className={cn(
-                        "omnii-body text-sm font-semibold",
-                        isDark && "text-omnii-dark-text-primary"
-                      )}>Communication:</Text>
-                      <Text className={cn(
-                        "omnii-body text-sm font-medium",
-                        isDark && "text-omnii-dark-text-secondary"
-                      )}>Direct & Clear</Text>
+                    <View className={cn("flex-row justify-between items-center py-2 border-b", 
+                      isDark ? "border-slate-600" : "border-gray-200")}>
+                      <Text className={cn("text-sm font-semibold", 
+                        isDark ? "text-slate-300" : "text-gray-700")}>Communication:</Text>
+                      <View className={cn("px-3 py-1 rounded-full", 
+                        isDark ? "bg-purple-900/30" : "bg-purple-100")}>
+                        <Text className={cn("text-sm font-medium", 
+                          isDark ? "text-purple-400" : "text-purple-700")}>Direct &amp; Clear</Text>
+                      </View>
                     </View>
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className={cn(
-                        "omnii-body text-sm font-semibold",
-                        isDark && "text-omnii-dark-text-primary"
-                      )}>Goal Orientation:</Text>
-                      <Text className={cn(
-                        "omnii-body text-sm font-medium",
-                        isDark && "text-omnii-dark-text-secondary"
-                      )}>Achievement Driven</Text>
+                    <View className={cn("flex-row justify-between items-center py-2 border-b", 
+                      isDark ? "border-slate-600" : "border-gray-200")}>
+                      <Text className={cn("text-sm font-semibold", 
+                        isDark ? "text-slate-300" : "text-gray-700")}>Goal Orientation:</Text>
+                      <View className={cn("px-3 py-1 rounded-full", 
+                        isDark ? "bg-orange-900/30" : "bg-orange-100")}>
+                        <Text className={cn("text-sm font-medium", 
+                          isDark ? "text-orange-400" : "text-orange-700")}>Achievement Driven</Text>
+                      </View>
                     </View>
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className={cn(
-                        "omnii-body text-sm font-semibold",
-                        isDark && "text-omnii-dark-text-primary"
-                      )}>Focus Preference:</Text>
-                      <Text className={cn(
-                        "omnii-body text-sm font-medium",
-                        isDark && "text-omnii-dark-text-secondary"
-                      )}>Deep Work Sessions</Text>
+                    <View className="flex-row justify-between items-center py-2">
+                      <Text className={cn("text-sm font-semibold", 
+                        isDark ? "text-slate-300" : "text-gray-700")}>Focus Preference:</Text>
+                      <View className={cn("px-3 py-1 rounded-full", 
+                        isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
+                        <Text className={cn("text-sm font-medium", 
+                          isDark ? "text-indigo-400" : "text-indigo-700")}>Deep Work Sessions</Text>
+                      </View>
                     </View>
                   </View>
                   
-                  <TouchableOpacity className="bg-ai-start py-3.5 px-5 rounded-xl flex-row items-center justify-center mt-4">
+                  <TouchableOpacity className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-700 px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg">
                     <Text className="text-white text-base font-bold mr-2">Customize Your DNA</Text>
                     <Text className="text-white text-base font-bold">→</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
-                <View className="items-center justify-center">
-                  <Text className={cn(
-                    "omnii-body text-sm font-medium mb-2",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>
+                <View className="items-center justify-center py-8">
+                  <View className={cn("w-16 h-16 rounded-full items-center justify-center mb-4", 
+                    isDark ? "bg-slate-700" : "bg-gray-100")}>
+                    <Text className="text-2xl">🔒</Text>
+                  </View>
+                  <Text className={cn("text-sm font-medium mb-2 text-center", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>
                     Complete more daily inspiration to unlock your personalized DNA profile.
                   </Text>
-                  <Text className={cn(
-                    "omnii-caption text-xs font-medium",
-                    isDark && "text-omnii-dark-text-tertiary"
-                  )}>
-                    Progress: {Math.min(level - 1, 1)}/1 completed
-                  </Text>
+                  <View className={cn("px-3 py-1.5 rounded-full", 
+                    isDark ? "bg-slate-700" : "bg-gray-100")}>
+                    <Text className={cn("text-xs font-medium", 
+                      isDark ? "text-slate-500" : "text-gray-500")}>
+                      Progress: {Math.min(level - 1, 1)}/1 completed
+                    </Text>
+                  </View>
                 </View>
               )}
             </View>
             
-            <View className={cn(
-              "rounded-2xl p-5 mb-4",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-lg font-semibold mb-2",
-                isDark && "text-omnii-dark-text-primary"
-              )}>⚡ Energy Mapping</Text>
-              <Text className={cn(
-                "omnii-body text-sm leading-5 mb-3",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-yellow-500", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-3">
+                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
+                  isDark ? "bg-yellow-900/30" : "bg-yellow-100")}>
+                  <Text className="text-xl">⚡</Text>
+                </View>
+                <Text className={cn("text-lg font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Energy Mapping</Text>
+              </View>
+              <Text className={cn("text-sm leading-6 mb-4", 
+                isDark ? "text-slate-300" : "text-gray-600")}>
                 Map your energy patterns to optimize your daily schedule.
               </Text>
-              <Text className={cn(
-                "omnii-caption text-xs",
-                isDark && "text-omnii-dark-text-tertiary"
-              )}>Coming Soon</Text>
+              <View className={cn("px-3 py-2 rounded-lg self-start", 
+                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                <Text className={cn("text-xs font-semibold", 
+                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+              </View>
             </View>
             
-            <View className={cn(
-              "rounded-2xl p-5 mb-4",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-lg font-semibold mb-2",
-                isDark && "text-omnii-dark-text-primary"
-              )}>🎯 Goal Hierarchy</Text>
-              <Text className={cn(
-                "omnii-body text-sm leading-5 mb-3",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>
+            <View className={cn("rounded-2xl p-6 mb-6 border shadow-sm border-l-4 border-l-green-500", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-3">
+                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
+                  isDark ? "bg-green-900/30" : "bg-green-100")}>
+                  <Text className="text-xl">🎯</Text>
+                </View>
+                <Text className={cn("text-lg font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Goal Hierarchy</Text>
+              </View>
+              <Text className={cn("text-sm leading-6 mb-4", 
+                isDark ? "text-slate-300" : "text-gray-600")}>
                 Set and prioritize your goals for maximum impact.
               </Text>
-              <Text className={cn(
-                "omnii-caption text-xs",
-                isDark && "text-omnii-dark-text-tertiary"
-              )}>Coming Soon</Text>
+              <View className={cn("px-3 py-2 rounded-lg self-start", 
+                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                <Text className={cn("text-xs font-semibold", 
+                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+              </View>
             </View>
           </ScrollView>
         );
         
       case 'ai':
         return (
-          <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+          <ScrollView className={cn("flex-1 px-5", isDark ? "bg-slate-900" : "bg-white")} showsVerticalScrollIndicator={false}>
             {/* AI Persona Tuning */}
-            <View className={cn(
-              "rounded-2xl p-5 mb-4 border-l-4 border-ai-start",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-xl font-bold mb-2",
-                isDark && "text-omnii-dark-text-primary"
-              )}>AI Persona</Text>
-              <Text className={cn(
-                "omnii-body text-sm leading-6 mb-4",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>
-                Customize how your AI assistant communicates and behaves
-              </Text>
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-omnii-primary", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-4">
+                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                  isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
+                  <Text className="text-2xl">🤖</Text>
+                </View>
+                <View>
+                  <Text className={cn("text-xl font-bold font-omnii-bold", 
+                    isDark ? "text-white" : "text-gray-900")}>AI Persona</Text>
+                  <Text className={cn("text-sm leading-6", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>
+                    Customize how your AI assistant communicates and behaves
+                  </Text>
+                </View>
+              </View>
               
               {/* Communication Style Dial */}
-              <View className="mb-3">
-                <Text className={cn(
-                  "omnii-body text-base font-semibold mb-2",
-                  isDark && "text-omnii-dark-text-primary"
-                )}>Communication Style</Text>
+              <View className="mb-6">
+                <Text className={cn("text-base font-bold mb-3", 
+                  isDark ? "text-white" : "text-gray-800")}>Communication Style</Text>
                 <View className="flex-row items-center gap-3">
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Casual</Text>
-                  <View className={cn(
-                    "flex-1 h-5 rounded-2xl overflow-hidden relative",
-                    isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
-                  )}>
-                    <View className="absolute top-0 left-0 bottom-0 bg-ai-start rounded-2xl" style={{ width: '65%' }} />
-                    <View className={cn(
-                      "absolute top-0 bottom-0 w-5 h-5 rounded-full border-2",
-                      isDark ? "bg-omnii-dark-card border-omnii-dark-border-light" : "bg-omnii-card border-omnii-border-light"
-                    )} style={{ left: '60%' }} />
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Casual</Text>
+                  <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
+                    isDark ? "bg-slate-700" : "bg-gray-200")}>
+                    <View className="absolute top-0 left-0 bottom-0 bg-indigo-600 rounded-2xl" style={{ width: '65%' }} />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '58%' }} />
                   </View>
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Professional</Text>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Professional</Text>
                 </View>
-                <Text className={cn(
-                  "omnii-caption text-xs font-medium mt-1",
-                  isDark && "text-omnii-dark-text-tertiary"
-                )}>Balanced Professional</Text>
+                <Text className={cn("text-xs font-medium mt-2 text-center", 
+                  isDark ? "text-slate-500" : "text-gray-500")}>Balanced Professional</Text>
               </View>
 
               {/* Response Length Dial */}
-              <View className="mb-3">
-                <Text className={cn(
-                  "omnii-body text-base font-semibold mb-2",
-                  isDark && "text-omnii-dark-text-primary"
-                )}>Response Length</Text>
+              <View className="mb-6">
+                <Text className={cn("text-base font-bold mb-3", 
+                  isDark ? "text-white" : "text-gray-800")}>Response Length</Text>
                 <View className="flex-row items-center gap-3">
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Brief</Text>
-                  <View className={cn(
-                    "flex-1 h-5 rounded-2xl overflow-hidden relative",
-                    isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
-                  )}>
-                    <View className="absolute top-0 left-0 bottom-0 bg-success rounded-2xl" style={{ width: '40%' }} />
-                    <View className={cn(
-                      "absolute top-0 bottom-0 w-5 h-5 rounded-full border-2",
-                      isDark ? "bg-omnii-dark-card border-omnii-dark-border-light" : "bg-omnii-card border-omnii-border-light"
-                    )} style={{ left: '35%' }} />
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Brief</Text>
+                  <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
+                    isDark ? "bg-slate-700" : "bg-gray-200")}>
+                    <View className="absolute top-0 left-0 bottom-0 bg-green-500 rounded-2xl" style={{ width: '40%' }} />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '32%' }} />
                   </View>
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Detailed</Text>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Detailed</Text>
                 </View>
-                <Text className={cn(
-                  "omnii-caption text-xs font-medium mt-1",
-                  isDark && "text-omnii-dark-text-tertiary"
-                )}>Concise</Text>
+                <Text className={cn("text-xs font-medium mt-2 text-center", 
+                  isDark ? "text-slate-500" : "text-gray-500")}>Concise</Text>
               </View>
 
               {/* Proactivity Level */}
-              <View className="mb-3">
-                <Text className={cn(
-                  "omnii-body text-base font-semibold mb-2",
-                  isDark && "text-omnii-dark-text-primary"
-                )}>Proactivity Level</Text>
+              <View className="mb-4">
+                <Text className={cn("text-base font-bold mb-3", 
+                  isDark ? "text-white" : "text-gray-800")}>Proactivity Level</Text>
                 <View className="flex-row items-center gap-3">
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Reactive</Text>
-                  <View className={cn(
-                    "flex-1 h-5 rounded-2xl overflow-hidden relative",
-                    isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
-                  )}>
-                    <View className="absolute top-0 left-0 bottom-0 bg-warning rounded-2xl" style={{ width: '80%' }} />
-                    <View className={cn(
-                      "absolute top-0 border-0 w-5 h-5 rounded-full border-2",
-                      isDark ? "bg-omnii-dark-card border-omnii-dark-border-light" : "bg-omnii-card border-omnii-border-light"
-                    )} style={{ left: '75%' }} />
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Reactive</Text>
+                  <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
+                    isDark ? "bg-slate-700" : "bg-gray-200")}>
+                    <View className="absolute top-0 left-0 bottom-0 bg-yellow-500 rounded-2xl" style={{ width: '80%' }} />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '72%' }} />
                   </View>
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Proactive</Text>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Proactive</Text>
                 </View>
-                <Text className={cn(
-                  "omnii-caption text-xs font-medium mt-1",
-                  isDark && "text-omnii-dark-text-tertiary"
-                )}>Highly Proactive</Text>
+                <Text className={cn("text-xs font-medium mt-2 text-center", 
+                  isDark ? "text-slate-500" : "text-gray-500")}>Highly Proactive</Text>
               </View>
             </View>
 
             {/* Notification Intelligence */}
-            <View className={cn(
-              "rounded-2xl p-5 mb-4 border-l-4 border-success",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-xl font-bold mb-2",
-                isDark && "text-omnii-dark-text-primary"
-              )}>🔔 Notification Intelligence</Text>
-              <Text className={cn(
-                "omnii-body text-sm leading-6 mb-4",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>
-                Smart notifications based on your context and energy
-              </Text>
+            <View className={cn("rounded-2xl p-6 mb-6 border shadow-sm border-l-4 border-l-green-500", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-4">
+                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                  isDark ? "bg-green-900/30" : "bg-green-100")}>
+                  <Text className="text-2xl">🔔</Text>
+                </View>
+                <View>
+                  <Text className={cn("text-xl font-bold font-omnii-bold", 
+                    isDark ? "text-white" : "text-gray-900")}>Notification Intelligence</Text>
+                  <Text className={cn("text-sm leading-6", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>
+                    Smart notifications based on your context and energy
+                  </Text>
+                </View>
+              </View>
               
               {/* Focus Respect */}
-              <View className="mb-3">
-                <Text className={cn(
-                  "omnii-body text-base font-semibold mb-2",
-                  isDark && "text-omnii-dark-text-primary"
-                )}>Focus Time Respect</Text>
+              <View className="mb-6">
+                <Text className={cn("text-base font-bold mb-3", 
+                  isDark ? "text-white" : "text-gray-800")}>Focus Time Respect</Text>
                 <View className="flex-row items-center gap-3">
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Interrupt</Text>
-                  <View className={cn(
-                    "flex-1 h-5 rounded-2xl overflow-hidden relative",
-                    isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
-                  )}>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Interrupt</Text>
+                  <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
+                    isDark ? "bg-slate-700" : "bg-gray-200")}>
                     <View className="absolute top-0 left-0 bottom-0 rounded-2xl" style={{ width: '90%', backgroundColor: '#4ECDC4' }} />
-                    <View className={cn(
-                      "absolute top-0 bottom-0 w-5 h-5 rounded-full border-2",
-                      isDark ? "bg-omnii-dark-card border-omnii-dark-border-light" : "bg-omnii-card border-omnii-border-light"
-                    )} style={{ left: '85%' }} />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '82%' }} />
                   </View>
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Respect</Text>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Respect</Text>
                 </View>
-                <Text className={cn(
-                  "omnii-caption text-xs font-medium mt-1",
-                  isDark && "text-omnii-dark-text-tertiary"
-                )}>Maximum Respect</Text>
+                <Text className={cn("text-xs font-medium mt-2 text-center", 
+                  isDark ? "text-slate-500" : "text-gray-500")}>Maximum Respect</Text>
               </View>
 
               {/* Urgency Threshold */}
-              <View className="mb-3">
-                <Text className={cn(
-                  "omnii-body text-base font-semibold mb-2",
-                  isDark && "text-omnii-dark-text-primary"
-                )}>Urgency Threshold</Text>
+              <View className="mb-4">
+                <Text className={cn("text-base font-bold mb-3", 
+                  isDark ? "text-white" : "text-gray-800")}>Urgency Threshold</Text>
                 <View className="flex-row items-center gap-3">
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>Low</Text>
-                  <View className={cn(
-                    "flex-1 h-5 rounded-2xl overflow-hidden relative",
-                    isDark ? "bg-omnii-dark-border-light" : "bg-omnii-border-light"
-                  )}>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Low</Text>
+                  <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
+                    isDark ? "bg-slate-700" : "bg-gray-200")}>
                     <View className="absolute top-0 left-0 bottom-0 rounded-2xl" style={{ width: '60%', backgroundColor: '#FFB347' }} />
-                    <View className={cn(
-                      "absolute top-0 bottom-0 w-5 h-5 rounded-full border-2",
-                      isDark ? "bg-omnii-dark-card border-omnii-dark-border-light" : "bg-omnii-card border-omnii-border-light"
-                    )} style={{ left: '55%' }} />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '52%' }} />
                   </View>
-                  <Text className={cn(
-                    "omnii-body text-sm font-semibold",
-                    isDark && "text-omnii-dark-text-secondary"
-                  )}>High</Text>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>High</Text>
                 </View>
-                <Text className={cn(
-                  "omnii-caption text-xs font-medium mt-1",
-                  isDark && "text-omnii-dark-text-tertiary"
-                )}>Moderate Threshold</Text>
+                <Text className={cn("text-xs font-medium mt-2 text-center", 
+                  isDark ? "text-slate-500" : "text-gray-500")}>Moderate Threshold</Text>
               </View>
             </View>
           </ScrollView>
@@ -780,62 +650,60 @@ export default function ProfileScreen() {
         
       case 'settings':
         return (
-          <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+          <ScrollView className={cn("flex-1 px-5", isDark ? "bg-slate-900" : "bg-white")} showsVerticalScrollIndicator={false}>
             {/* Account Management Section */}
-            <View className={cn(
-              "rounded-2xl p-5 mb-4",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-xl font-bold mb-3",
-                isDark && "text-omnii-dark-text-primary"
-              )}>
-                👤 Account Overview
-              </Text>
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className={cn(
-                  "omnii-body text-sm font-semibold",
-                  isDark && "text-omnii-dark-text-primary"
-                )}>Email:</Text>
-                <Text className={cn(
-                  "omnii-body text-sm font-medium",
-                  isDark && "text-omnii-dark-text-secondary"
-                )}>{user?.email || 'Not available'}</Text>
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-4">
+                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                  isDark ? "bg-blue-900/30" : "bg-blue-100")}>
+                  <Text className="text-2xl">⚙️</Text>
+                </View>
+                <Text className={cn("text-xl font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Account Settings</Text>
               </View>
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className={cn(
-                  "omnii-body text-sm font-semibold",
-                  isDark && "text-omnii-dark-text-primary"
-                )}>Level:</Text>
-                <Text className="omnii-body text-sm font-medium text-success">Level {level}</Text>
-              </View>
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className={cn(
-                  "omnii-body text-sm font-semibold",
-                  isDark && "text-omnii-dark-text-primary"
-                )}>Mascot Stage:</Text>
-                <Text className={cn(
-                  "omnii-body text-sm font-medium",
-                  isDark && "text-omnii-dark-text-secondary"
-                )}>
-                  🌱 {mascotStage === 'seed' ? 'Seed Stage' : mascotStage === 'flower' ? 'Flower Stage' : 'Tree Stage'}
-                </Text>
+              
+              <View className="space-y-4">
+                <View className={cn("flex-row justify-between items-center py-3 border-b", 
+                  isDark ? "border-slate-700" : "border-gray-100")}>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-300" : "text-gray-700")}>Email</Text>
+                  <Text className={cn("text-sm font-medium", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>{user?.email}</Text>
+                </View>
+                <View className={cn("flex-row justify-between items-center py-3 border-b", 
+                  isDark ? "border-slate-700" : "border-gray-100")}>
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-300" : "text-gray-700")}>Current Level</Text>
+                  <View className={cn("px-3 py-1.5 rounded-full", 
+                    isDark ? "bg-green-900/30" : "bg-green-100")}>
+                    <Text className={cn("text-sm font-bold", 
+                      isDark ? "text-green-400" : "text-green-700")}>Level {level}</Text>
+                  </View>
+                </View>
+                <View className="flex-row justify-between items-center py-3">
+                  <Text className={cn("text-sm font-semibold", 
+                    isDark ? "text-slate-300" : "text-gray-700")}>Total XP</Text>
+                  <View className={cn("px-3 py-1.5 rounded-full", 
+                    isDark ? "bg-purple-900/30" : "bg-purple-100")}>
+                    <Text className={cn("text-sm font-bold", 
+                      isDark ? "text-purple-400" : "text-purple-700")}>{currentXP} XP</Text>
+                  </View>
+                </View>
               </View>
             </View>
 
-            {/* NEW: Appearance Section - PLACED BEFORE DataManagement */}
-            <View className={cn(
-              "rounded-2xl p-5 mb-4",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-xl font-bold mb-3",
-                isDark && "text-omnii-dark-text-primary"
-              )}>
-                🎨 Appearance
-              </Text>
+            {/* Appearance Section */}
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-4">
+                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                  isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
+                  <Text className="text-2xl">🎨</Text>
+                </View>
+                <Text className={cn("text-xl font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Appearance</Text>
+              </View>
               
               <ThemeSelector 
                 currentTheme={state.theme?.colorScheme || 'light'}
@@ -843,138 +711,88 @@ export default function ProfileScreen() {
               />
             </View>
 
-            {/* GDPR Data Management Component */}
-            <DataManagement
-              userEmail={user?.email}
-            />
-          </ScrollView>
-        );
-        
-      default:
-        return (
-          <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-            <View className={cn(
-              "rounded-2xl p-5",
-              "bg-omnii-card",
-              isDark && "bg-omnii-dark-card"
-            )}>
-              <Text className={cn(
-                "omnii-heading text-lg font-semibold mb-2",
-                isDark && "text-omnii-dark-text-primary"
-              )}>Coming Soon</Text>
-              <Text className={cn(
-                "omnii-body text-sm",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>This section is under development.</Text>
+            {/* Account Actions Section */}
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-4">
+                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                  isDark ? "bg-red-900/30" : "bg-red-100")}>
+                  <Text className="text-2xl">🔓</Text>
+                </View>
+                <Text className={cn("text-xl font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Account Actions</Text>
+              </View>
+
+              <TouchableOpacity 
+                className={cn("px-6 py-4 rounded-xl border flex-row items-center justify-center", 
+                  isDark 
+                    ? "bg-slate-700 hover:bg-slate-600 active:bg-slate-600 border-slate-600" 
+                    : "bg-gray-100 hover:bg-gray-200 active:bg-gray-200 border-gray-200")}
+                onPress={handleLogout}
+              >
+                <Text className={cn("text-base font-bold", 
+                  isDark ? "text-slate-300" : "text-gray-700")}>Sign Out</Text>
+              </TouchableOpacity>
             </View>
+
+            {/* Privacy Notice */}
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm", 
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+              <View className="flex-row items-center mb-3">
+                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
+                  isDark ? "bg-green-900/30" : "bg-green-100")}>
+                  <Text className="text-xl">🔒</Text>
+                </View>
+                <Text className={cn("text-lg font-bold font-omnii-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Privacy &amp; Data</Text>
+              </View>
+              <Text className={cn("text-sm leading-6", 
+                isDark ? "text-slate-300" : "text-gray-600")}>
+                Your inspiration data and productivity insights are private and stored securely. We never share your personal information.
+              </Text>
+            </View>
+            
+            <DataManagement />
           </ScrollView>
         );
+
+      default:
+        return null;
     }
   };
 
-  // Show logged out state
-  if (!user) {
-    return (
-      <SafeAreaView className={cn(
-        "flex-1 bg-omnii-background",
-        isDark && "bg-omnii-dark-background"
-      )}>
-        <View className="flex-1 justify-center items-center p-6">
-          <UserCircle size={64} color={isDark ? '#a8aaae' : '#8E8E93'} />
-          <Text className={cn(
-            "omnii-heading text-3xl font-bold mt-4",
-            isDark && "text-omnii-dark-text-primary"
-          )}>Profile</Text>
-          <Text className={cn(
-            "omnii-body text-base text-center mt-2",
-            isDark && "text-omnii-dark-text-secondary"
-          )}>Please log in to view your profile</Text>
-          
-          <Link href="/(auth)/login" asChild>
-            <TouchableOpacity className="bg-ai-start py-3 px-6 rounded-xl mt-4">
-              <Text className="text-white text-base font-semibold">Login</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView className={cn(
-      "flex-1 bg-omnii-background",
-      isDark && "bg-omnii-dark-background"
-    )}>
-      {/* Header Section */}
-      <View className={cn(
-        "bg-omnii-card p-6 pt-5 border-b border-omnii-border",
-        isDark && "bg-omnii-dark-card border-omnii-dark-border"
-      )}>
-        <View className="flex-row justify-between items-center mb-3 min-h-[40px]">
-          <View className="flex-row items-center gap-3 flex-1">
-            <Text className={cn(
-              "omnii-heading text-3xl font-bold",
-              isDark && "text-omnii-dark-text-primary"
-            )}>Profile</Text>
+    <SafeAreaView className={cn("flex-1", isDark ? "bg-slate-900" : "bg-white")} key={`profile-theme-${isDark}`}>
+      {/* Header */}
+      <View className={cn("px-5 pt-4 pb-2", isDark ? "bg-slate-900" : "bg-white", "border-b", isDark ? "border-slate-700" : "border-gray-100")}>
+        <View className="flex-row justify-between items-center">
+          <View className="flex-1">
+            <Text className={cn("text-2xl font-bold font-omnii-bold", isDark ? "text-white" : "text-gray-900")}>Profile</Text>
+            <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
+              Level {level} • {currentXP} XP
+            </Text>
           </View>
-          <TouchableOpacity
-            className="bg-error px-4 py-2 rounded-xl shadow-sm"
-            onPress={handleLogout}
-          >
-            <Text className="text-white text-sm font-semibold">Logout</Text>
-          </TouchableOpacity>
-        </View>
-        <Text className={cn(
-          "omnii-body text-base mt-1",
-          isDark && "text-omnii-dark-text-secondary"
-        )}>
-          Your AI partnership command center
-        </Text>
-        
-        {/* User Info Row */}
-        <View className="flex-row items-center justify-between mt-4">
-          <View className="flex-row items-center gap-3">
-            <View className={cn(
-              "w-10 h-10 rounded-full bg-omnii-background items-center justify-center",
-              isDark && "bg-omnii-dark-background"
-            )}>
-              <UserCircle size={24} color={isDark ? '#a8aaae' : '#8E8E93'} />
+          
+          {/* Mascot */}
+          <View className="items-center ml-4">
+            <View className="w-12 h-12 bg-indigo-600 rounded-full items-center justify-center shadow-lg">
+              <Text className="text-2xl">
+                {mascotStage === 'seed' ? '🌱' : 
+                 mascotStage === 'flower' ? '🌸' : '🌳'}
+              </Text>
             </View>
-            <View>
-              <Text className={cn(
-                "omnii-body text-base font-semibold",
-                isDark && "text-omnii-dark-text-primary"
-              )}>{user.email}</Text>
-              <Text className={cn(
-                "omnii-caption text-sm",
-                isDark && "text-omnii-dark-text-secondary"
-              )}>Level {level}</Text>
-            </View>
-          </View>
-          <View className="bg-success px-3 py-1.5 rounded-full">
-            <Text className="text-white text-sm font-bold">Level {level}</Text>
+            <Text className={cn("text-xs mt-1 capitalize font-medium", isDark ? "text-slate-400" : "text-gray-500")}>
+              {mascotStage}
+            </Text>
           </View>
         </View>
       </View>
 
-      {/* Enhanced Filter Tabs */}
+      {/* Tab Navigation */}
       <ProfileTabs />
 
-      {/* Content */}
-      <FlatList
-        data={[1]}
-        renderItem={() => <View>{renderTabContent()}</View>}
-        keyExtractor={() => 'profile-content'}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={AppColors.aiGradientStart}
-          />
-        }
-        className="flex-1"
-      />
+      {/* Tab Content */}
+      {renderTabContent()}
     </SafeAreaView>
   );
 }

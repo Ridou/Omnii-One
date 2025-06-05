@@ -30,7 +30,7 @@ export default function AIInsightCard({
       case 'high': return AppColors.error;
       case 'medium': return AppColors.warning;
       case 'low': return AppColors.success;
-      default: return AppColors.textSecondary;
+      default: return isDark ? '#94a3b8' : '#6b7280';
     }
   };
 
@@ -38,15 +38,14 @@ export default function AIInsightCard({
     <View 
       className={cn(
         "rounded-2xl p-5 mb-4 border-l-4 shadow-sm",
-        "bg-omnii-card",
-        isDark && "bg-omnii-dark-card"
+        isDark ? "bg-slate-800" : "bg-white"
       )}
       style={{ borderLeftColor: AppColors.aiGradientStart }}
     >
       <View className="flex-row justify-between items-start mb-3">
         <Text className={cn(
           "text-base font-semibold flex-1 mr-3",
-          isDark && "text-omnii-dark-text-primary"
+          isDark ? "text-white" : "text-gray-900"
         )}>
           {insight.title}
         </Text>
@@ -63,7 +62,7 @@ export default function AIInsightCard({
           )}
           <View className={cn(
             "px-2 py-1 rounded-lg",
-            isDark ? "bg-omnii-dark-background" : "bg-omnii-background"
+            isDark ? "bg-slate-700" : "bg-gray-100"
           )}>
             <Text 
               className="text-xs font-bold"
@@ -77,7 +76,7 @@ export default function AIInsightCard({
       
       <Text className={cn(
         "text-sm leading-5 mb-3",
-        isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+        isDark ? "text-slate-400" : "text-gray-600"
       )}>{insight.message}</Text>
       
       {insight.suggestions && insight.suggestions.length > 0 && (
@@ -85,7 +84,7 @@ export default function AIInsightCard({
           {insight.suggestions.map((suggestion, index) => (
             <Text key={index} className={cn(
               "text-sm leading-5",
-              isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+              isDark ? "text-slate-400" : "text-gray-600"
             )}>• {suggestion}</Text>
           ))}
         </View>
@@ -95,13 +94,13 @@ export default function AIInsightCard({
       <TouchableOpacity 
         className={cn(
           "py-2 px-3 rounded-lg mb-3",
-          isDark ? "bg-omnii-dark-background" : "bg-omnii-background"
+          isDark ? "bg-slate-700" : "bg-gray-100"
         )}
         onPress={() => setShowSources(!showSources)}
       >
         <Text className={cn(
           "text-sm font-medium",
-          isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+          isDark ? "text-white" : "text-gray-900"
         )}>
           {showSources ? 'Hide' : 'View'} Sources ({insight.sources.length})
         </Text>
@@ -112,7 +111,7 @@ export default function AIInsightCard({
           {insight.sources.map((source, index) => (
             <Text key={index} className={cn(
               "text-sm leading-5",
-              isDark ? "text-omnii-dark-text-secondary" : "text-omnii-text-secondary"
+              isDark ? "text-slate-400" : "text-gray-600"
             )}>• {source}</Text>
           ))}
         </View>
@@ -122,7 +121,7 @@ export default function AIInsightCard({
       <View className="flex-row gap-2">
         {insight.action && (
           <TouchableOpacity 
-            className="bg-ai-start py-2 px-4 rounded-lg flex-1"
+            className="bg-indigo-600 py-2 px-4 rounded-lg flex-1"
             onPress={() => onAction?.(insight.action!)}
           >
             <Text className="text-white text-sm font-semibold text-center">{insight.action}</Text>
@@ -131,13 +130,13 @@ export default function AIInsightCard({
         <TouchableOpacity 
           className={cn(
             "py-2 px-4 rounded-lg border",
-            isDark ? "bg-omnii-dark-background border-omnii-dark-border-light" : "bg-omnii-background border-omnii-border-light"
+            isDark ? "bg-slate-700 border-slate-600" : "bg-gray-100 border-gray-200"
           )}
           onPress={onDismiss}
         >
           <Text className={cn(
             "text-sm font-semibold text-center",
-            isDark ? "text-omnii-dark-text-primary" : "text-omnii-text-primary"
+            isDark ? "text-white" : "text-gray-900"
           )}>Not Now</Text>
         </TouchableOpacity>
       </View>
