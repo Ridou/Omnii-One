@@ -1,7 +1,16 @@
 import React, { createContext, useContext, useMemo, ReactNode } from 'react';
 import { useColorScheme, AccessibilityInfo } from 'react-native';
-import { useProfile } from '~/context/ProfileContext';
 import type { ThemeSettings } from '~/types/profile';
+
+// Safe hook to optionally use profile context
+function useSafeProfile() {
+  try {
+    const { useProfile } = require('~/context/ProfileContext');
+    return useProfile();
+  } catch {
+    return null;
+  }
+}
 
 interface ThemeContextValue {
   theme: 'light' | 'dark';
@@ -24,13 +33,13 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const profileContext = useProfile();
+  const profileContext = useSafeProfile();
   const systemColorScheme = useColorScheme();
 
   // PERFORMANCE: Memoized theme resolution with proper error handling
   const themeValue = useMemo(() => {
     try {
-      // SAFETY: Handle case when profile context isn't ready
+      // SAFETY: Handle case when profile context isn't available (SSR/web)
       const userTheme = profileContext?.state?.theme?.colorScheme || 'light';
       
       // FIXED: Proper handling of all theme types
@@ -60,7 +69,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         userTheme
       };
     } catch (error) {
-      // FALLBACK: Safe defaults if anything fails
+      // FALLBACK: Safe defaults if anything fails (SSR-safe)
       console.warn('ThemeContext error, using defaults:', error);
       
       const fallbackSystemTheme: 'light' | 'dark' | null = 
@@ -85,40 +94,59 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   );
 }
 
-// Custom hook for theme consumption
+// Custom hook for theme consumption - SSR-safe
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
+    // Return safe defaults instead of throwing during SSR
+    return {
+      theme: 'light' as const,
+      isDark: false,
+      resolvedTheme: 'light' as const,
+      systemTheme: null as const,
+      userTheme: 'light' as const
+    };
   }
   return context;
 }
 
-// Integration hook with ProfileContext
+// Integration hook with ProfileContext - only available when ProfileProvider exists
 export function useThemeIntegration() {
-  const { state, updateTheme } = useProfile();
-  const { theme, isDark } = useTheme();
-  
-  // ACCESSIBILITY: Announce theme changes to screen readers
-  const handleThemeChange = async (newTheme: ThemeSettings['colorScheme']) => {
-    try {
-      updateTheme({ colorScheme: newTheme });
-      
-      // Announce to screen readers
-      const announcement = newTheme === 'auto' 
-        ? 'Theme set to automatic mode'
-        : `Theme changed to ${newTheme} mode`;
+  try {
+    const { useProfile } = require('~/context/ProfileContext');
+    const { state, updateTheme } = useProfile();
+    const { theme, isDark } = useTheme();
+    
+    // ACCESSIBILITY: Announce theme changes to screen readers
+    const handleThemeChange = async (newTheme: ThemeSettings['colorScheme']) => {
+      try {
+        updateTheme({ colorScheme: newTheme });
         
-      AccessibilityInfo.announceForAccessibility(announcement);
-    } catch (error) {
-      console.warn('Theme change failed:', error);
-    }
-  };
-  
-  return { 
-    themeSettings: state.theme, 
-    handleThemeChange,
-    currentTheme: theme,
-    isDark 
-  };
+        // Announce to screen readers
+        const announcement = newTheme === 'auto' 
+          ? 'Theme set to automatic mode'
+          : `Theme changed to ${newTheme} mode`;
+          
+        AccessibilityInfo.announceForAccessibility(announcement);
+      } catch (error) {
+        console.warn('Theme change failed:', error);
+      }
+    };
+    
+    return { 
+      themeSettings: state.theme, 
+      handleThemeChange,
+      currentTheme: theme,
+      isDark 
+    };
+  } catch {
+    // Fallback when ProfileProvider is not available
+    const { theme, isDark } = useTheme();
+    return {
+      themeSettings: { colorScheme: 'light' as const },
+      handleThemeChange: () => console.warn('Theme updates not available without ProfileProvider'),
+      currentTheme: theme,
+      isDark
+    };
+  }
 } 

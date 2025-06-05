@@ -3,22 +3,28 @@ const { FileStore } = require('metro-cache');
 const { withNativeWind } = require('nativewind/metro');
 const path = require('node:path');
 
-const config = withTurborepoManagedCache(
-  withNativeWind(getDefaultConfig(__dirname), {
-    input: './global.css',
-    configPath: './tailwind.config.js',
-  })
-);
+// const config = withTurborepoManagedCache(
+//   withNativeWind(getDefaultConfig(__dirname), {
+//     input: './global.css',
+//     configPath: './tailwind.config.js',
+//   })
+// );
 
-// With this (no NativeWind):  
-// const config = withTurborepoManagedCache(  
-//   getDefaultConfig(__dirname)  
+// With this (no NativeWind):
+// const config = withTurborepoManagedCache(
+//   getDefaultConfig(__dirname)
 // );
 
 // Simplified configuration for development builds
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 
 // Essential polyfills
+const config = withTurborepoManagedCache(
+  withNativeWind(getDefaultConfig(__dirname), {
+    input: './global.css',
+    configPath: './tailwind.config.js',
+  }),
+);
 config.resolver.alias = {
   ...config.resolver.alias,
   buffer: require.resolve('buffer'),
