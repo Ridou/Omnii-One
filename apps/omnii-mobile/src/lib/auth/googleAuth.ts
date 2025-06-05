@@ -7,6 +7,7 @@ import { supabase } from '~/lib/supabase';
 import { getOmniiScopes, getOmniiScopesString } from './scopes';
 import { storeOAuthTokens } from './tokenStorage';
 import Constants from 'expo-constants';
+import * as AuthRequest from 'expo-auth-session/build/AuthRequest';
 
 // Complete the auth session for web
 WebBrowser.maybeCompleteAuthSession();
@@ -86,17 +87,17 @@ export const getCurrentEnvironment = (): {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
     
-    if (hostname.includes('test.omnii.live')) {
+    if (hostname.includes('test.omnii.net')) {
       return {
         type: 'test',
         hostname,
-        redirectUri: 'https://test.omnii.live/auth/callback',
+        redirectUri: 'https://test.omnii.net/auth/callback',
       };
-    } else if (hostname.includes('omnii.live') && !hostname.includes('test.')) {
+    } else if (hostname.includes('omnii.net') && !hostname.includes('test.')) {
       return {
         type: 'production',
         hostname,
-        redirectUri: 'https://omnii.live/auth/callback',
+        redirectUri: 'https://omnii.net/auth/callback',
       };
     } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
       return {
@@ -119,7 +120,7 @@ export const getCurrentEnvironment = (): {
     return {
       type: 'unknown',
       hostname: typeof window !== 'undefined' ? window.location?.hostname : undefined,
-      redirectUri: 'https://omnii.live/auth/callback', // fallback for web
+      redirectUri: 'https://omnii.net/auth/callback', // fallback for web
     };
   }
 

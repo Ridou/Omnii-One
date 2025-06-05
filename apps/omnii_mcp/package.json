@@ -1,5 +1,5 @@
 {
-  "name": "omnii-mcp",
+  "name": "Omnii-MCP",
   "version": "1.0.0",
   "description": "Model Context Protocol for Omnii",
   "main": "dist/app.js",
@@ -18,7 +18,7 @@
     "test:coverage": "bun test --coverage",
     "test:integration": "bash scripts/run-integration-tests.sh",
     "test:composio": "TEST_BASE_URL=http://localhost:8081 bun test tests/integration/composio-endpoints.test.js",
-    "test:composio:ngrok": "TEST_BASE_URL=https://omnii.live bun test tests/integration/composio-endpoints.test.js",
+    "test:composio:ngrok": "TEST_BASE_URL=https://omnii.net bun test tests/integration/composio-endpoints.test.js",
     "test:sms-ai": "bun test tests/sms-ai.test.js",
     "test:jest": "jest",
     "test:neo4j": "bun test tests/neo4j-api.test.js",

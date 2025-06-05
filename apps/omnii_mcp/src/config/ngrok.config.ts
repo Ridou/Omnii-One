@@ -67,7 +67,7 @@ export class NgrokConfigManager {
   isUsingNgrok(): boolean {
     return (
       this.config.publicUrl.includes(".ngrok") ||
-      this.config.publicUrl.includes("omnii.live")
+      this.config.publicUrl.includes("omnii.net")
     );
   }
 

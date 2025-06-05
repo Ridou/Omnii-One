@@ -191,7 +191,7 @@ export default function PrivacyPolicyModal({ visible, onClose }: PrivacyPolicyMo
             <Text style={styles.bodyText}>
               If you have questions about this Privacy Policy or our data practices, please contact us:
             </Text>
-            <Text style={styles.contactInfo}><Text style={styles.bold}>Email</Text>: privacy@omnii.live</Text>
+            <Text style={styles.contactInfo}><Text style={styles.bold}>Email</Text>: privacy@omnii.net</Text>
             <Text style={styles.contactInfo}><Text style={styles.bold}>Address</Text>: OMNII Privacy Team, [Company Address]</Text>
 
             <Text style={styles.subsectionTitle}>6.2 Exercise Your Rights</Text>
@@ -204,17 +204,17 @@ export default function PrivacyPolicyModal({ visible, onClose }: PrivacyPolicyMo
             </View>
             <View style={styles.bulletPoint}>
               <Text style={styles.bullet}>•</Text>
-              <Text style={styles.bulletText}><Text style={styles.bold}>Email</Text>: Send a request to privacy@omnii.live</Text>
+              <Text style={styles.bulletText}><Text style={styles.bold}>Email</Text>: Send a request to privacy@omnii.net</Text>
             </View>
             <View style={styles.bulletPoint}>
               <Text style={styles.bullet}>•</Text>
-              <Text style={styles.bulletText}><Text style={styles.bold}>Online</Text>: Visit https://omnii.live/data-deletion</Text>
+              <Text style={styles.bulletText}><Text style={styles.bold}>Online</Text>: Visit https://omnii.net/data-deletion</Text>
             </View>
           </View>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              For the complete Privacy Policy, please visit: https://omnii.live/privacy
+              For the complete Privacy Policy, please visit: https://omnii.net/privacy
             </Text>
           </View>
         </ScrollView>

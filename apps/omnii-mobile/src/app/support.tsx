@@ -171,7 +171,7 @@ export default function SupportPage() {
       icon: <HelpCircle size={28} color={BRAND_COLORS.primary} />,
       title: "Need Help?",
       description: "Get technical support, troubleshoot issues, or ask questions about using OMNII.",
-      email: "support@omnii.live",
+      email: "support@omnii.net",
       subject: "Support Request",
       isPrimary: true
     },
@@ -179,7 +179,7 @@ export default function SupportPage() {
       icon: <MessageCircle size={28} color={BRAND_COLORS.primary} />,
       title: "General Contact",
       description: "Business inquiries, partnerships, feedback, or anything else you'd like to discuss.",
-      email: "contact@omnii.live",
+      email: "contact@omnii.net",
       subject: "General Inquiry",
       isPrimary: false
     }
@@ -211,10 +211,10 @@ export default function SupportPage() {
         title="Support - OMNII AI Productivity Assistant"
         description="Get help with OMNII. Contact our support team for technical assistance, questions, and feedback."
         keywords="OMNII support, customer service, help, contact, technical support, AI assistant help"
-        canonical="https://omnii.live/support"
-        ogTitle="Support - OMNII"
-        ogDescription="We're here to help you get the most out of OMNII. Contact our support team for assistance."
-        ogUrl="https://omnii.live/support"
+        canonical="https://omnii.net/support"
+        ogTitle="Support - OMNII AI Productivity Assistant"
+        ogDescription="Get help with OMNII. Contact our support team for technical assistance, questions, and feedback."
+        ogUrl="https://omnii.net/support"
       />
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -367,7 +367,7 @@ export default function SupportPage() {
             <View style={{ alignItems: 'center' }}>
               <TouchableOpacity 
                 style={styles.emailButton}
-                onPress={() => handleEmailPress('support@omnii.live', 'Support Request')}
+                onPress={() => handleEmailPress('support@omnii.net', 'Support Request')}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Send size={20} color="#FFFFFF" style={{ marginRight: SACRED_SPACING.sm }} />

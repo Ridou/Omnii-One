@@ -105,7 +105,7 @@ OMNII is an AI-powered productivity assistant that provides:
 ### 7.2 Data Security
 - We implement industry-standard security measures
 - You are responsible for maintaining your device and account security
-- Report security concerns immediately to security@omnii.live
+- Report security concerns immediately to security@omnii.net
 
 ## 8. Payment Terms and Subscriptions
 
@@ -205,7 +205,7 @@ You agree to indemnify and hold harmless OMNII Technologies from any claims, dam
 ### 15.1 Accessibility Commitment
 - We strive to make the App accessible to users with disabilities
 - The App includes VoiceOver support and Dynamic Type compatibility
-- Report accessibility issues to accessibility@omnii.live
+- Report accessibility issues to accessibility@omnii.net
 
 ### 15.2 Equal Access
 - We provide equal access to App features regardless of user characteristics
@@ -215,9 +215,9 @@ You agree to indemnify and hold harmless OMNII Technologies from any claims, dam
 ## 16. Contact Information and Support
 
 ### 16.1 General Contact
-- **Email**: support@omnii.live
-- **Website**: https://omnii.live/support
-- **Privacy Questions**: privacy@omnii.live
+- **Email**: support@omnii.net
+- **Website**: https://omnii.net/support
+- **Privacy Questions**: privacy@omnii.net
 
 ### 16.2 Support Response Times
 - **General Support**: Response within 48 hours
@@ -225,9 +225,9 @@ You agree to indemnify and hold harmless OMNII Technologies from any claims, dam
 - **Accessibility Issues**: Response within 72 hours
 
 ### 16.3 Legal Notices
-- **Legal Department**: legal@omnii.live
-- **Copyright Notices**: copyright@omnii.live
-- **Terms Questions**: terms@omnii.live
+- **Legal Department**: legal@omnii.net
+- **Copyright Notices**: copyright@omnii.net
+- **Terms Questions**: terms@omnii.net
 
 ## 17. Changes to Terms
 
@@ -257,6 +257,6 @@ You agree to indemnify and hold harmless OMNII Technologies from any claims, dam
 
 **Effective Date**: May 30, 2025  
 **Company**: OMNII Technologies  
-**Contact**: legal@omnii.live
+**Contact**: legal@omnii.net
 
 By using OMNII, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. 

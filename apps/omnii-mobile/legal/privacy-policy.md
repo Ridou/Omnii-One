@@ -217,14 +217,14 @@ We may update this Privacy Policy from time to time. We will notify you of any m
 ### 12.1 Privacy Questions
 If you have questions about this Privacy Policy or our data practices, please contact us:
 
-**Email**: privacy@omnii.live  
+**Email**: privacy@omnii.net  
 **Address**: OMNII Privacy Team, [Company Address]
 
 ### 12.2 Exercise Your Rights
 To exercise your privacy rights or submit a privacy request:
 - **In-App**: Use the Data Management section in your Profile
-- **Email**: Send a request to privacy@omnii.live
-- **Online**: Visit https://omnii.live/data-deletion
+- **Email**: Send a request to privacy@omnii.net
+- **Online**: Visit https://omnii.net/data-deletion
 
 ### 12.3 Response Times
 - **General Inquiries**: We respond within 48 hours

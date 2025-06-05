@@ -26,10 +26,16 @@ export default function LandingPage() {
           title="OMNII - AI Productivity Assistant | Reclaim Your Humanity"
           description="Let AI handle the rest. OMNII transforms chaos into clarity, insights into action, potential into progress with intelligent productivity assistance."
           keywords="AI productivity, task management, productivity assistant, AI suggestions, goal tracking, productivity app, reclaim humanity"
-          canonical="https://omnii.live/"
-          ogTitle="OMNII - Reclaim Your Humanity, Let AI Handle the Rest"
-          ogDescription="Transform chaos into clarity, insights into action, potential into progress. Not just another productivity app - a true AI partnership."
-          ogUrl="https://omnii.live/"
+          canonical="https://omnii.net/"
+          ogTitle="OMNII - AI Productivity Assistant"
+          ogDescription="Reclaim your humanity. Let AI handle the rest."
+          ogUrl="https://omnii.net/"
+          ogImage="https://omnii.net/icon-512.png"
+          ogType="website"
+          twitterCard="summary_large_image"
+          twitterTitle="OMNII - AI Productivity Assistant"
+          twitterDescription="Reclaim your humanity. Let AI handle the rest."
+          twitterImage="https://omnii.net/icon-512.png"
         />
         <LandingPageContent />
       </>
@@ -75,10 +81,16 @@ export default function LandingPage() {
         title="OMNII - AI Productivity Assistant | Reclaim Your Humanity"
         description="Let AI handle the rest. OMNII transforms chaos into clarity, insights into action, potential into progress with intelligent productivity assistance."
         keywords="AI productivity, task management, productivity assistant, AI suggestions, goal tracking, productivity app, reclaim humanity"
-        canonical="https://omnii.live/"
-        ogTitle="OMNII - Reclaim Your Humanity, Let AI Handle the Rest"
-        ogDescription="Transform chaos into clarity, insights into action, potential into progress. Not just another productivity app - a true AI partnership."
-        ogUrl="https://omnii.live/"
+        canonical="https://omnii.net/"
+        ogTitle="OMNII - AI Productivity Assistant"
+        ogDescription="Reclaim your humanity. Let AI handle the rest."
+        ogUrl="https://omnii.net/"
+        ogImage="https://omnii.net/icon-512.png"
+        ogType="website"
+        twitterCard="summary_large_image"
+        twitterTitle="OMNII - AI Productivity Assistant"
+        twitterDescription="Reclaim your humanity. Let AI handle the rest."
+        twitterImage="https://omnii.net/icon-512.png"
       />
       <LandingPageContent />
     </>

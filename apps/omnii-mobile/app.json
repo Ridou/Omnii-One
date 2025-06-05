@@ -54,10 +54,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "51484ef7-58a8-4358-ac95-bad6e32cc832"
-      }
+      "router": {}
     },
     "owner": "omnii",
     "splash": {

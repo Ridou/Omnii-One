@@ -106,8 +106,8 @@ export const debugOAuthIssues = async () => {
     }
   } else if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
     const currentHostname = window.location.hostname;
-    const isTestEnvironment = currentHostname.includes('test.omnii.live');
-    const isProductionEnvironment = currentHostname.includes('omnii.live') && !currentHostname.includes('test.');
+    const isTestEnvironment = currentHostname.includes('test.omnii.net');
+    const isProductionEnvironment = currentHostname.includes('omnii.net') && !currentHostname.includes('test.');
     const isLocalhost = currentHostname.includes('localhost') || currentHostname.includes('127.0.0.1');
     const isNgrok = currentHostname.includes('ngrok');
     
@@ -115,8 +115,8 @@ export const debugOAuthIssues = async () => {
     console.log('  - Current URL:', window.location.href);
     console.log('  - Hostname:', currentHostname);
     console.log('  - Environment Type:', 
-      isTestEnvironment ? '🧪 Test (test.omnii.live)' :
-      isProductionEnvironment ? '🚀 Production (omnii.live)' :
+      isTestEnvironment ? '🧪 Test (test.omnii.net)' :
+      isProductionEnvironment ? '🚀 Production (omnii.net)' :
       isLocalhost ? '💻 Localhost Development' :
       isNgrok ? '🔗 Ngrok Tunnel' :
       '❓ Unknown'
@@ -169,8 +169,8 @@ export const debugOAuthIssues = async () => {
   console.log('5. Check Google Cloud Console:');
   console.log('   - OAuth consent screen published?');
   console.log('   - Redirect URIs include ALL environments:');
-  console.log('     * https://omnii.live/auth/callback (production web)');
-  console.log('     * https://test.omnii.live/auth/callback (test web)');
+  console.log('     * https://omnii.net/auth/callback (production web)');
+  console.log('     * https://test.omnii.net/auth/callback (test web)');
   console.log('     * http://localhost:*/auth/callback (development web)');
   console.log('     * omnii-mobile://auth/callback (mobile app) ← CRITICAL for mobile');
   console.log('   - Scopes approved?');
@@ -211,8 +211,8 @@ export const runOAuthDiagnostics = async () => {
   console.log('1. 🔧 Check Supabase Configuration:');
   console.log('   - Go to Supabase Dashboard > Auth > URL Configuration');
   console.log('   - Add ALL redirect URLs for all environments:');
-  console.log('     * https://omnii.live/auth/callback (production)');
-  console.log('     * https://test.omnii.live/auth/callback (test)');
+  console.log('     * https://omnii.net/auth/callback (production)');
+  console.log('     * https://test.omnii.net/auth/callback (test)');
   console.log('     * localhost URLs (development)');
   console.log('     * omnii-mobile://auth/callback (mobile app)');
   console.log('     * Your ngrok URLs if using tunneling');
@@ -224,14 +224,14 @@ export const runOAuthDiagnostics = async () => {
   console.log('   - Go to Credentials > OAuth 2.0 Client IDs');
   console.log('   - Add ALL authorized redirect URIs:');
   console.log('     * https://aaxiawuatfajjpvwtjuz.supabase.co/auth/v1/callback (Supabase)');
-  console.log('     * https://omnii.live/auth/callback (production)');
-  console.log('     * https://test.omnii.live/auth/callback (test)');
+  console.log('     * https://omnii.net/auth/callback (production)');
+  console.log('     * https://test.omnii.net/auth/callback (test)');
   console.log('     * http://localhost:*/auth/callback (local development)');
   console.log('     * omnii-mobile://auth/callback (mobile app)');
   console.log('');
   console.log('3. 🔧 Environment-Specific Testing:');
-  console.log('   - Test.omnii.live: Will auto-redirect to test.omnii.live/auth/callback');
-  console.log('   - Omnii.live: Will auto-redirect to omnii.live/auth/callback');
+  console.log('   - Test.omnii.net: Will auto-redirect to test.omnii.net/auth/callback');
+  console.log('   - Omnii.net: Will auto-redirect to omnii.net/auth/callback');
   console.log('   - Localhost: Will auto-redirect to localhost:PORT/auth/callback');
   console.log('   - Mobile: Will always use omnii-mobile://auth/callback');
   console.log('');
@@ -253,7 +253,7 @@ export const runOAuthDiagnostics = async () => {
   console.log('   - Test OAuth in browser first');
   console.log('   - Ensure redirect URIs don\'t have trailing slashes or extra paths');
   console.log('');
-  console.log('✨ The app now automatically handles test.omnii.live vs omnii.live!');
+  console.log('✨ The app now automatically handles test.omnii.net vs omnii.net!');
   console.log('Just make sure both domains are configured in your OAuth settings.');
   console.log('');
   console.log('=== END TROUBLESHOOTING GUIDE ===');
@@ -300,11 +300,11 @@ export const testEnvironmentDetection = () => {
       console.log('\n✅ Expected Behavior:');
       switch (environment.type) {
         case 'test':
-          console.log('  - OAuth will redirect to: https://test.omnii.live/auth/callback');
+          console.log('  - OAuth will redirect to: https://test.omnii.net/auth/callback');
           console.log('  - This is the TEST environment');
           break;
         case 'production':
-          console.log('  - OAuth will redirect to: https://omnii.live/auth/callback');
+          console.log('  - OAuth will redirect to: https://omnii.net/auth/callback');
           console.log('  - This is the PRODUCTION environment');
           break;
         case 'localhost':
@@ -335,8 +335,8 @@ export const testEnvironmentDetection = () => {
       console.log('   - Also add web URLs for testing:');
     }
     
-    console.log('   - https://omnii.live/auth/callback');
-    console.log('   - https://test.omnii.live/auth/callback');
+    console.log('   - https://omnii.net/auth/callback');
+    console.log('   - https://test.omnii.net/auth/callback');
     console.log('   - http://localhost:*/auth/callback (for development)');
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
       console.log('   - omnii-mobile://auth/callback (for mobile app)');

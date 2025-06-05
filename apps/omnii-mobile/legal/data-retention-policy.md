@@ -275,20 +275,20 @@ Retention periods are determined based on:
 ## 10. Contact Information
 
 ### 10.1 Data Retention Inquiries
-- **Email**: retention@omnii.live
+- **Email**: retention@omnii.net
 - **Subject Line**: "Data Retention Inquiry"
 - **Response Time**: Within 48 hours for general inquiries
 
 ### 10.2 Rights Requests
-- **Email**: privacy@omnii.live
+- **Email**: privacy@omnii.net
 - **In-App**: Data Management section in Profile settings
-- **Online Form**: https://omnii.live/data-requests
+- **Online Form**: https://omnii.net/data-requests
 - **Response Time**: 30 days (GDPR), 45 days (CCPA)
 
 ### 10.3 Urgent Issues
-- **Security**: security@omnii.live
-- **Legal**: legal@omnii.live
-- **DPO**: dpo@omnii.live (for GDPR matters)
+- **Security**: security@omnii.net
+- **Legal**: legal@omnii.net
+- **DPO**: dpo@omnii.net (for GDPR matters)
 
 ---
 
@@ -296,6 +296,6 @@ Retention periods are determined based on:
 - **Effective Date**: May 30, 2025
 - **Next Review**: May 30, 2026
 - **Approval**: OMNII Privacy Officer
-- **Contact**: privacy@omnii.live
+- **Contact**: privacy@omnii.net
 
 This Data Retention Policy is part of our comprehensive privacy framework and works in conjunction with our Privacy Policy and Terms of Service to protect your data rights. 

@@ -5,4 +5,7 @@ Allow: /terms-of-service
 Allow: /about
 Allow: /support
 
-Sitemap: https://omnii.live/sitemap.xml 
+# SEO optimized crawling
+Crawl-delay: 1
+
+Sitemap: https://omnii.net/sitemap.xml 

@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.9.1"
+    "version": ">= 5.9.1",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -9,8 +10,8 @@
       "env": {
         "NODE_ENV": "development",
         "ENVIRONMENT": "development",
-        "API_URL": "https://dev-api.omnii.live",
-        "SENTRY_DSN": "",
+        "API_URL": "https://dev-api.omnii.net",
+        "SENTRY_DSN": "https://placeholder-sentry-dsn.ingest.sentry.io/placeholder",
         "ANALYTICS_ENABLED": "false",
         "DEBUG_MODE": "true",
         "PERFORMANCE_MONITORING": "false"
@@ -18,14 +19,7 @@
       "ios": {
         "resourceClass": "m-medium",
         "buildConfiguration": "Debug",
-        "simulator": true,
-        "entitlements": {
-          "aps-environment": "development"
-        },
-        "infoPlist": {
-          "UIBackgroundModes": [],
-          "ITSAppUsesNonExemptEncryption": false
-        }
+        "simulator": true
       },
       "android": {
         "buildType": "apk",
@@ -37,7 +31,7 @@
       "env": {
         "NODE_ENV": "staging",
         "ENVIRONMENT": "staging",
-        "API_URL": "https://staging-api.omnii.live",
+        "API_URL": "https://staging-api.omnii.net",
         "SENTRY_DSN": "$SENTRY_DSN",
         "ANALYTICS_ENABLED": "true",
         "DEBUG_MODE": "false",
@@ -45,22 +39,7 @@
       },
       "ios": {
         "resourceClass": "m-medium",
-        "buildConfiguration": "Release",
-        "entitlements": {
-          "aps-environment": "development",
-          "com.apple.developer.applesignin": [
-            "Default"
-          ]
-        },
-        "infoPlist": {
-          "ITSAppUsesNonExemptEncryption": false,
-          "NSCameraUsageDescription": "OMNII needs camera access to scan documents and capture task-related images for productivity tracking.",
-          "NSMicrophoneUsageDescription": "OMNII uses microphone access for voice commands and audio note-taking to enhance your productivity workflow.",
-          "NSLocationWhenInUseUsageDescription": "OMNII uses your general location to provide context-aware task suggestions and time zone appropriate scheduling.",
-          "UIBackgroundModes": [
-            "background-processing"
-          ]
-        }
+        "buildConfiguration": "Release"
       },
       "android": {
         "buildType": "apk",
@@ -72,7 +51,7 @@
       "env": {
         "NODE_ENV": "production",
         "ENVIRONMENT": "production",
-        "API_URL": "https://api.omnii.live",
+        "API_URL": "https://api.omnii.net",
         "SENTRY_DSN": "$SENTRY_DSN",
         "ANALYTICS_ENABLED": "true",
         "ENABLE_CRASH_REPORTING": "true",
@@ -82,115 +61,10 @@
       },
       "ios": {
         "resourceClass": "m-medium",
-        "buildConfiguration": "Release",
-        "distributionType": "app-store",
-        "entitlements": {
-          "aps-environment": "production",
-          "com.apple.developer.applesignin": [
-            "Default"
-          ],
-          "keychain-access-groups": [
-            "$(AppIdentifierPrefix)com.omnii.mobile"
-          ],
-          "com.apple.security.application-groups": [
-            "group.com.omnii.mobile"
-          ]
-        },
-        "infoPlist": {
-          "CFBundleDisplayName": "OMNII",
-          "CFBundleName": "OMNII",
-          "CFBundleShortVersionString": "1.0.0",
-          "CFBundleVersion": "1",
-          "LSApplicationQueriesSchemes": [
-            "googlegmail",
-            "ms-outlook",
-            "readdle-spark",
-            "airmail",
-            "mailto",
-            "tel",
-            "sms"
-          ],
-          "NSAppTransportSecurity": {
-            "NSAllowsArbitraryLoads": false,
-            "NSAllowsArbitraryLoadsInWebContent": false,
-            "NSAllowsLocalNetworking": false,
-            "NSExceptionDomains": {
-              "omnii.live": {
-                "NSExceptionRequiresForwardSecrecy": false,
-                "NSExceptionMinimumTLSVersion": "TLSv1.2",
-                "NSIncludesSubdomains": true,
-                "NSExceptionAllowsInsecureHTTPLoads": false
-              },
-              "supabase.co": {
-                "NSExceptionRequiresForwardSecrecy": false,
-                "NSExceptionMinimumTLSVersion": "TLSv1.2",
-                "NSIncludesSubdomains": true,
-                "NSExceptionAllowsInsecureHTTPLoads": false
-              }
-            }
-          },
-          "ITSAppUsesNonExemptEncryption": false,
-          "NSCameraUsageDescription": "OMNII needs camera access to scan documents and capture task-related images for productivity tracking.",
-          "NSMicrophoneUsageDescription": "OMNII uses microphone access for voice commands and audio note-taking to enhance your productivity workflow.",
-          "NSLocationWhenInUseUsageDescription": "OMNII uses your general location to provide context-aware task suggestions and time zone appropriate scheduling.",
-          "NSContactsUsageDescription": "OMNII accesses contacts to help you delegate tasks and collaborate with your team members.",
-          "NSCalendarsUsageDescription": "OMNII integrates with your calendar to provide intelligent task scheduling and avoid conflicts with existing events.",
-          "NSRemindersUsageDescription": "OMNII syncs with your reminders to provide a unified view of all your tasks and commitments.",
-          "NSUserTrackingUsageDescription": "OMNII uses tracking to provide personalized productivity insights and improve AI recommendations while keeping your data private.",
-          "NSPhotoLibraryUsageDescription": "OMNII needs access to your photo library to attach images to tasks and save productivity-related screenshots.",
-          "NSPhotoLibraryAddUsageDescription": "OMNII can save productivity screenshots and task-related images to your photo library.",
-          "NSSpeechRecognitionUsageDescription": "OMNII uses speech recognition for voice commands and dictation to improve your productivity workflow.",
-          "NSFaceIDUsageDescription": "OMNII uses Face ID to securely authenticate and protect your productivity data.",
-          "UIBackgroundModes": [
-            "background-processing",
-            "background-fetch"
-          ],
-          "BGTaskSchedulerPermittedIdentifiers": [
-            "com.omnii.mobile.sync",
-            "com.omnii.mobile.analytics",
-            "com.omnii.mobile.backup"
-          ],
-          "UIRequiredDeviceCapabilities": [
-            "arm64"
-          ],
-          "UIStatusBarStyle": "UIStatusBarStyleDefault",
-          "UIViewControllerBasedStatusBarAppearance": true,
-          "UISupportedInterfaceOrientations": [
-            "UIInterfaceOrientationPortrait",
-            "UIInterfaceOrientationPortraitUpsideDown"
-          ],
-          "UISupportedInterfaceOrientations~ipad": [
-            "UIInterfaceOrientationPortrait",
-            "UIInterfaceOrientationPortraitUpsideDown",
-            "UIInterfaceOrientationLandscapeLeft",
-            "UIInterfaceOrientationLandscapeRight"
-          ],
-          "UILaunchStoryboardName": "SplashScreen",
-          "UIApplicationSupportsIndirectInputEvents": true,
-          "LSRequiresIPhoneOS": true,
-          "NSSupportsAutomaticTermination": true,
-          "NSSupportsSuddenTermination": true,
-          "UIUserInterfaceStyle": "Automatic",
-          "UIWhitePointAdaptivityStyle": "UIWhitePointAdaptivityStyleStandard",
-          "AccessibilitySettings": {
-            "VoiceOverEnabled": true,
-            "DynamicTypeEnabled": true,
-            "ReduceMotionEnabled": true,
-            "HighContrastEnabled": true
-          },
-          "Privacy": {
-            "DataCollectionMinimization": true,
-            "UserConsentRequired": true,
-            "DataRetentionPolicy": "https://omnii.live/data-retention",
-            "PrivacyPolicyURL": "https://omnii.live/privacy"
-          }
-        },
-        "config": {
-          "usesNonExemptEncryption": false
-        }
+        "buildConfiguration": "Release"
       },
       "android": {
-        "buildType": "aab",
+        "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease"
       }
     },
@@ -198,7 +72,6 @@
       "extends": "production",
       "ios": {
         "simulator": true,
-        "distributionType": "internal",
         "resourceClass": "m-medium"
       }
     }
@@ -211,39 +84,7 @@
         "ascApiKeyId": "$ASC_API_KEY_ID",
         "appleId": "$APPLE_ID",
         "ascAppId": "$ASC_APP_ID",
-        "appleTeamId": "$APPLE_TEAM_ID",
-        "sku": "omnii-mobile-ios",
-        "language": "en-US",
-        "companyName": "OMNII Technologies",
-        "appName": "OMNII",
-        "bundleIdentifier": "com.omnii.mobile",
-        "metadataPath": "./app-store-metadata",
-        "releaseType": "AFTER_APPROVAL",
-        "copyright": "2025 OMNII Technologies. All rights reserved.",
-        "primaryCategory": "PRODUCTIVITY",
-        "secondaryCategory": "BUSINESS",
-        "contentRights": {
-          "containsThirdPartyContent": false,
-          "hasRights": true
-        },
-        "ageRatingDeclaration": {
-          "alcoholTobaccoOrDrugUseOrReferences": "NONE",
-          "contests": "NONE",
-          "gambling": false,
-          "gamblingAndContests": false,
-          "horror": "NONE",
-          "matureOrSuggestiveThemes": "NONE",
-          "medicalOrTreatmentInformation": "NONE",
-          "profanityOrCrudeHumor": "NONE",
-          "sexualContentGraphicAndNudity": "NONE",
-          "sexualContentOrNudity": "NONE",
-          "violenceCartoonOrFantasy": "NONE",
-          "violenceRealistic": "NONE",
-          "violenceRealisticProlongedGraphicOrSadistic": "NONE",
-          "seventeenPlus": false,
-          "unrestrictedWebAccess": false,
-          "gamblingSimulated": "NONE"
-        }
+        "appleTeamId": "$APPLE_TEAM_ID"
       },
       "android": {
         "serviceAccountKeyPath": "./private-keys/google-service-account.json",

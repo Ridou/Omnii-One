@@ -32,11 +32,11 @@ export default function TermsOfServiceScreen() {
   });
 
   const openEmail = () => {
-    Linking.openURL('mailto:legal@omnii.live?subject=Terms of Service Inquiry');
+    Linking.openURL('mailto:legal@omnii.net?subject=Terms of Service Inquiry');
   };
 
   const openSupport = () => {
-    Linking.openURL('mailto:support@omnii.live?subject=Support Request');
+    Linking.openURL('mailto:support@omnii.net?subject=Support Request');
   };
 
   return (
@@ -45,10 +45,10 @@ export default function TermsOfServiceScreen() {
         title="Terms of Service - OMNII AI Productivity Assistant"
         description="OMNII Terms of Service - The terms and conditions for using our AI productivity assistant."
         keywords="terms of service, user agreement, OMNII, AI assistant, productivity app, legal terms, conditions"
-        canonical="https://omnii.live/terms-of-service"
-        ogTitle="Terms of Service - OMNII"
-        ogDescription="Read the terms and conditions for using OMNII AI productivity assistant."
-        ogUrl="https://omnii.live/terms-of-service"
+        canonical="https://omnii.net/terms-of-service"
+        ogTitle="Terms of Service - OMNII AI Productivity Assistant"
+        ogDescription="Terms of Service for OMNII - AI-powered productivity assistant. Learn about our usage terms and conditions."
+        ogUrl="https://omnii.net/terms-of-service"
       />
       <SafeAreaView style={styles.container}>
         {/* Header */}
@@ -424,14 +424,14 @@ export default function TermsOfServiceScreen() {
               <TouchableOpacity style={styles.contactButton} onPress={openSupport}>
                 <Mail size={20} color={BRAND_COLORS.primary} />
                 <BodyText color={BRAND_COLORS.primary} style={styles.contactText}>
-                  support@omnii.live
+                  support@omnii.net
                 </BodyText>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.contactButton} onPress={openEmail}>
                 <FileText size={20} color={BRAND_COLORS.primary} />
                 <BodyText color={BRAND_COLORS.primary} style={styles.contactText}>
-                  legal@omnii.live
+                  legal@omnii.net
                 </BodyText>
               </TouchableOpacity>
 
@@ -459,7 +459,7 @@ export default function TermsOfServiceScreen() {
               By using OMNII, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
             </CaptionText>
             <CaptionText color={BRAND_COLORS.secondaryText} style={styles.footerText}>
-              For the complete Terms of Service, visit: https://omnii.live/terms
+              For the complete Terms of Service, visit: https://omnii.net/terms
             </CaptionText>
           </View>
         </ScrollView>

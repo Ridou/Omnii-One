@@ -3,7 +3,8 @@ import 'dotenv/config';
 export default {
   expo: {
     name: 'OMNII',
-    slug: 'omnii-mobile',
+    slug: 'omnii',
+    owner: 'omnii8',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
@@ -17,6 +18,7 @@ export default {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
+      bundleIdentifier: 'com.omnii.mobile',
       icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
     },
     android: {
@@ -92,9 +94,12 @@ export default {
     },
     plugins: [
       'expo-secure-store',
-      ['expo-router', { origin: 'https://omnii.live' }],
+      ['expo-router', { origin: 'https://omnii.net' }],
     ],
     extra: {
+      eas: {
+        projectId: "320277da-e364-485f-9098-82c908f7b327"
+      },
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
       googleClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '',
@@ -104,9 +109,6 @@ export default {
       environment: process.env.EXPO_PUBLIC_ENVIRONMENT || 'production',
       appVersion: process.env.EXPO_PUBLIC_APP_VERSION || '1.0.0',
       stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
-      eas: {
-        projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
-      },
     },
   },
 };

@@ -225,9 +225,9 @@ export default function TermsOfServiceModal({ visible, onClose }: TermsOfService
             <Text style={styles.bodyText}>
               For questions about these Terms or the App, contact us at:
             </Text>
-            <Text style={styles.contactInfo}><Text style={styles.bold}>Email</Text>: support@omnii.live</Text>
-            <Text style={styles.contactInfo}><Text style={styles.bold}>Website</Text>: https://omnii.live/support</Text>
-            <Text style={styles.contactInfo}><Text style={styles.bold}>Legal Matters</Text>: legal@omnii.live</Text>
+            <Text style={styles.contactInfo}><Text style={styles.bold}>Email</Text>: support@omnii.net</Text>
+            <Text style={styles.contactInfo}><Text style={styles.bold}>Website</Text>: https://omnii.net/support</Text>
+            <Text style={styles.contactInfo}><Text style={styles.bold}>Legal Matters</Text>: legal@omnii.net</Text>
           </View>
 
           <View style={styles.footer}>
@@ -235,7 +235,7 @@ export default function TermsOfServiceModal({ visible, onClose }: TermsOfService
               By using OMNII, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
             </Text>
             <Text style={styles.footerText}>
-              For the complete Terms of Service, please visit: https://omnii.live/terms
+              For the complete Terms of Service, please visit: https://omnii.net/terms
             </Text>
           </View>
         </ScrollView>

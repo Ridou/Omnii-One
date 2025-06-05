@@ -1,8 +1,9 @@
 {
-  "name": "bolt-expo-starter",
+  "name": "Omnii",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "npm@10.2.4",
   "scripts": {
     "start": "EXPO_NO_TELEMETRY=1 expo start --dev-client",
     "dev": "EXPO_NO_TELEMETRY=1 expo start --dev-client",
@@ -11,9 +12,6 @@
     "dev:web": "EXPO_NO_TELEMETRY=1 expo start --web",
     "dev:ios": "EXPO_NO_TELEMETRY=1 expo start --dev-client --ios",
     "dev:android": "EXPO_NO_TELEMETRY=1 expo start --dev-client --android",
-    "build:dev:ios": "eas build --platform ios --profile development",
-    "build:dev:android": "eas build --platform android --profile development",
-    "build:dev": "eas build --platform all --profile development",
     "build:web": "expo export --platform web",
     "build:web:static": "expo export --platform web --output-dir dist-static",
     "build:web:spa": "expo export --platform web --output-dir dist-spa",
@@ -73,11 +71,6 @@
     "zod": "^3.25.43"
   },
   "devDependencies": {
-    "@acme/api": "workspace:*",
-    "@acme/eslint-config": "workspace:*",
-    "@acme/prettier-config": "workspace:*",
-    "@acme/tailwind-config": "workspace:*",
-    "@acme/tsconfig": "workspace:*",
     "@babel/core": "^7.27.4",
     "@types/react": "~18.3.12",
     "@types/react-native": "^0.73.0",
