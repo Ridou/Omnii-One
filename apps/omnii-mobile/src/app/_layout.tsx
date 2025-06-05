@@ -29,14 +29,14 @@ if (typeof global.process === 'undefined') {
 import React, { useState, useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { AuthProvider } from '~/context/AuthContext';
 import { ProfileProvider } from '~/context/ProfileContext';
 import { OnboardingProvider } from '~/context/OnboardingContext';
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
 import { useFrameworkReady } from '~/hooks/useFrameworkReady';
 
-// Safe gesture provider that only loads after hydration
+// Safe gesture provider that loads GestureProvider after hydration
 function SafeGestureProvider({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   
@@ -44,17 +44,17 @@ function SafeGestureProvider({ children }: { children: React.ReactNode }) {
     setIsClient(true);
   }, []);
   
-  // During SSR or before hydration, render without gesture handler
-  if (!isClient || Platform.OS === 'web') {
-    return <>{children}</>;
+  // During SSR or before hydration on web, render without gesture handler
+  if (!isClient && Platform.OS === 'web') {
+    return <View style={{ flex: 1 }}>{children}</View>;
   }
   
-  // Only load GestureProvider on native platforms after hydration
+  // On native platforms or after hydration, use GestureProvider
   try {
     const { GestureProvider } = require('~/components/common/GestureProvider');
     return <GestureProvider>{children}</GestureProvider>;
   } catch {
-    return <>{children}</>;
+    return <View style={{ flex: 1 }}>{children}</View>;
   }
 }
 

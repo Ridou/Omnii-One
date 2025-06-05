@@ -93,6 +93,7 @@ export default {
       }
     },
     plugins: [
+      'expo-font',
       'expo-secure-store',
       ['expo-router', { origin: 'https://omnii.net' }],
     ],

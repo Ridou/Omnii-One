@@ -66,8 +66,12 @@ export default function ChatScreen() {
     const { recordFeatureVisit } = useOnboardingContext();
     const router = useRouter();
 
-    const { data } = useQuery(trpc.hello.test);
-    console.log('trpc data:',data)
+    const { data } = useQuery({
+        queryKey: ['hello', 'test'],
+        queryFn: () => trpc.hello.test,
+        enabled: !!user // Only run when user is available
+    });
+    // console.log('trpc data:',JSON.stringify(data, null, 2))
 
 
 
@@ -255,7 +259,7 @@ export default function ChatScreen() {
     useEffect(() => {
         if (messages.length > 0) {
             const lastMessage = messages[messages.length - 1];
-            if (lastMessage.sender === 'user' && !pendingAction) {
+            if (lastMessage && lastMessage.sender === 'user' && !pendingAction) {
                 setPendingAction(lastMessage.content);
             }
         }
@@ -265,7 +269,7 @@ export default function ChatScreen() {
     useEffect(() => {
         if (messages.length > 0) {
             const lastMessage = messages[messages.length - 1];
-            if (lastMessage.sender === 'ai' && pendingAction) {
+            if (lastMessage && lastMessage.sender === 'ai' && pendingAction) {
                 setPendingAction(null);
             }
         }

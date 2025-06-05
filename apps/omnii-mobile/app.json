@@ -9,6 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "platforms": ["ios", "android", "web"],
+    "jsEngine": "jsc",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.omnii.mobile",
