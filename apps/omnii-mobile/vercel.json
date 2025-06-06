@@ -2,10 +2,7 @@
   "buildCommand": "npm run build:web:static && node scripts/generate-static-html.cjs",
   "outputDirectory": "dist-static",
   "rewrites": [
-    {
-      "source": "/googleF7XC7eDi6hzXCdTRDmoDWeLiZwFKCS9WY2ZuUubxtqE.html",
-      "destination": "/googleF7XC7eDi6hzXCdTRDmoDWeLiZwFKCS9WY2ZuUubxtqE.html"
-    },
+   
     {
       "source": "/privacy-policy",
       "destination": "/privacy-policy.html"
