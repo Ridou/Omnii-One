@@ -210,7 +210,7 @@ export class EmailPlugin implements GoogleServicePlugin {
               const logDir = path.join(process.cwd(), 'logs');
               
               // Create logs directory using Bun
-              await Bun.write(path.join(logDir, '.gitkeep'), ''); // This will create the directory
+              // await Bun.write(path.join(logDir, '.gitkeep'), ''); // This will create the directory
               
               const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
               const logFile = path.join(logDir, `formatted-email-response-${timestamp}.log`);
@@ -222,7 +222,7 @@ export class EmailPlugin implements GoogleServicePlugin {
                                `\nFormatted Response Structure:\n${formattedStructure}\n` +
                                `\nSample Structured Data:\n${formattedResponse.data?.structured ? JSON.stringify(formattedResponse.data.structured, null, 2).substring(0, 1500) : 'No structured data'}...\n`;
               
-              await Bun.write(logFile, logContent);
+              // await Bun.write(logFile, logContent);
               console.log(`[EmailPlugin] 📝 Formatted response structure logged to: ${logFile}`);
             } catch (fileError) {
               console.error(`[EmailPlugin] Failed to write formatted response log:`, fileError);
