@@ -24,7 +24,7 @@ WebBrowser.maybeCompleteAuthSession();
 // Google OAuth Client IDs for different platforms
 const GOOGLE_WEB_CLIENT_ID =
   Constants.expoConfig?.extra?.googleWebClientId ||
-  '904371950268-9clur0d39ia92s6ugfgfsrp7ef9hc3ut.apps.googleusercontent.com';
+  '31768914670-v6qqf961ersh1m2ahtlekff552ovis66.apps.googleusercontent.com';
 const GOOGLE_IOS_CLIENT_ID =
   Constants.expoConfig?.extra?.googleIosClientId ||
   '904371950268-abund19lqsma5d4rhfkkv212e5j7hv5e.apps.googleusercontent.com';

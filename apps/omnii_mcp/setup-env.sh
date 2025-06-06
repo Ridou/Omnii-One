@@ -16,7 +16,7 @@ NODE_ENV=development
 PORT=8000
 
 # Supabase Configuration (CRITICAL)
-SUPABASE_URL=https://aaxiawuatfajjpvwtjuz.supabase.co
+SUPABASE_URL=https://auth.omnii.net
 SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
 # Neo4j Database Configuration (CRITICAL)

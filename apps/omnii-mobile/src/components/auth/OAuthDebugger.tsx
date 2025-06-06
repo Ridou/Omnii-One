@@ -114,7 +114,7 @@ Supabase URL: ${Constants.expoConfig?.extra?.supabaseUrl ? 'Set' : 'Missing'}
 Supabase Key: ${Constants.expoConfig?.extra?.supabaseAnonKey ? 'Set' : 'Missing'}
 
 Expected Redirect URIs:
-1. https://aaxiawuatfajjpvwtjuz.supabase.co/auth/v1/callback (Supabase)
+1. https://auth.omnii.net/auth/v1/callback (Supabase)
 2. omnii-mobile://auth/callback (Deep link)
 
 Make sure these are configured in:

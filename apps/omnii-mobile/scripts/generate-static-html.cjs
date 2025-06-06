@@ -843,8 +843,8 @@ function generateStaticHTML(route, data) {
   <!-- React App Hydration - Only redirect to interactive version after user interaction -->
   <script>
     // Google OAuth Configuration
-    const GOOGLE_CLIENT_ID = '904371950268-9clur0d39ia92s6ugfgfsrp7ef9hc3ut.apps.googleusercontent.com';
-    const SUPABASE_URL = 'https://aaxiawuatfajjpvwtjuz.supabase.co';
+    const GOOGLE_CLIENT_ID = '31768914670-v6qqf961ersh1m2ahtlekff552ovis66.apps.googleusercontent.com';
+    const SUPABASE_URL = 'https://auth.omnii.net';
     
     // Enhanced interaction detection for seamless transition to React app
     let userInteracted = false;

@@ -42,7 +42,7 @@ Create a `.env` file with the following configuration:
 
 ```env
 # Supabase Configuration
-SUPABASE_URL=https://aaxiawuatfajjpvwtjuz.supabase.co
+SUPABASE_URL=https://auth.omnii.net
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFheGlhd3VhdGZhampwdnd0anV6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczOTM0Mjk1NSwiZXhwIjoyMDU0OTE4OTU1fQ.pwNzf927IZ_gULwx2QaFJmeNYGKC32hQ_ihPGQmkmEk
 
 # Composio Configuration

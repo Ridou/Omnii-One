@@ -10,9 +10,9 @@ try {
 }
 
 // Google OAuth Client IDs for different platforms
-const GOOGLE_WEB_CLIENT_ID = '904371950268-9clur0d39ia92s6ugfgfsrp7ef9hc3ut.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID = '31768914670-v6qqf961ersh1m2ahtlekff552ovis66.apps.googleusercontent.com';
 const GOOGLE_IOS_CLIENT_ID = '904371950268-abund19lqsma5d4rhfkkv212e5j7hv5e.apps.googleusercontent.com';
-const SUPABASE_URL = 'https://aaxiawuatfajjpvwtjuz.supabase.co';
+const SUPABASE_URL = 'https://auth.omnii.net';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFheGlhd3VhdGZhampwdnd0anV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkzNDI5NTUsImV4cCI6MjA1NDkxODk1NX0.vZTqi6asrLDD21cIobrNvQvzwCIMxidiqp1ehXOMqTk';
 
 export const debugAuthConfig = () => {
@@ -42,7 +42,7 @@ export const debugAuthConfig = () => {
   console.log('\nOAuth Configuration:');
   console.log('- Config Valid:', validateOAuthConfig() ? '✅ Valid' : '❌ Invalid');
   console.log('- App Redirect URI:', getRedirectUri());
-  console.log('- Supabase Server Callback: https://aaxiawuatfajjpvwtjuz.supabase.co/auth/v1/callback');
+  console.log('- Supabase Server Callback: https://auth.omnii.net/auth/v1/callback');
   
   console.log('\n🔧 Supabase OAuth Flow (Custom Development Build):');
   console.log('1. User clicks "Sign in with Google"');
@@ -223,7 +223,7 @@ export const runOAuthDiagnostics = async () => {
   console.log('   - Ensure app is published (or add test users)');
   console.log('   - Go to Credentials > OAuth 2.0 Client IDs');
   console.log('   - Add ALL authorized redirect URIs:');
-  console.log('     * https://aaxiawuatfajjpvwtjuz.supabase.co/auth/v1/callback (Supabase)');
+  console.log('     * https://auth.omnii.net/auth/v1/callback (Supabase)');
   console.log('     * https://omnii.net/auth/callback (production)');
   console.log('     * https://test.omnii.net/auth/callback (test)');
   console.log('     * http://localhost:*/auth/callback (local development)');
