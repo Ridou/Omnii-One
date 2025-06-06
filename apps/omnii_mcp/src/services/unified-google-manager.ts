@@ -9,14 +9,8 @@ import { EmailPlugin } from "./plugins/email-plugin";
 import { ExecutionContextType } from "../types/action-planning.types";
 import { UnifiedToolResponse } from "../types/unified-response.types";
 import { isValidUnifiedToolResponse, validateUnifiedToolResponse } from "../types/unified-response.validation";
-import { 
-  GoogleServiceType, 
-  GoogleServiceConfig,
-  GOOGLE_SERVICES,
-  getGoogleServiceConfig,
-  getGoogleServiceAction,
-  getGoogleServiceIntegrationId,
-  getGoogleServiceAppName
+import {
+  GoogleServiceType, getGoogleServiceConfig
 } from "../types/composio-enums";
 import { GoogleServicePlugin, IOAuthTokenManager } from "./google-service-plugin";
 
@@ -592,7 +586,7 @@ Return ONLY the service name (CALENDAR, CONTACTS, TASKS, EMAIL) or "NONE" if unc
   }
 
   /**
-   * Refresh Google OAuth token
+   * Refresh Google OAuth token with retry logic
    */
   private async refreshToken(refreshToken: string): Promise<{
     access_token: string;
@@ -600,46 +594,136 @@ Return ONLY the service name (CALENDAR, CONTACTS, TASKS, EMAIL) or "NONE" if unc
     expires_in: number;
     scope?: string;
   }> {
-    try {
-      console.log('[UnifiedGoogleManager] 🔄 Refreshing Google OAuth token...');
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second base delay
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[UnifiedGoogleManager] 🔄 Refreshing Google OAuth token (attempt ${attempt}/${maxRetries})...`);
 
-      const response = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: process.env.GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-          refresh_token: refreshToken,
-          grant_type: 'refresh_token',
-        }),
-      });
+        const response = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: process.env.GOOGLE_CLIENT_ID!,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token',
+          }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Token refresh failed: ${response.status} ${errorData}`);
+        if (!response.ok) {
+          const errorData = await response.text();
+          const error = new Error(`Token refresh failed: ${response.status} ${errorData}`);
+          
+          // Parse error response for better handling
+          let parsedError: any = {};
+          try {
+            parsedError = JSON.parse(errorData);
+          } catch {
+            // Keep as raw text if not JSON
+          }
+          
+          // Check if this is a retryable error
+          const isRetryable = this.isRetryableTokenError(response.status, parsedError);
+          
+          console.log(`[UnifiedGoogleManager] ❌ Token refresh failed (attempt ${attempt}/${maxRetries}):`, {
+            status: response.status,
+            error: parsedError.error || 'unknown',
+            description: parsedError.error_description || errorData,
+            retryable: isRetryable
+          });
+          
+          // Don't retry on certain error types
+          if (!isRetryable || attempt === maxRetries) {
+            console.error('[UnifiedGoogleManager] 💥 Token refresh failed permanently:', error);
+            throw error;
+          }
+          
+          // Exponential backoff with jitter
+          const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+          console.log(`[UnifiedGoogleManager] ⏰ Retrying in ${Math.round(delay)}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        const tokenData = await response.json() as {
+          access_token: string;
+          refresh_token?: string;
+          expires_in: number;
+          scope?: string;
+        };
+
+        console.log(`[UnifiedGoogleManager] ✅ Token refresh successful on attempt ${attempt}`);
+        
+        return {
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token || refreshToken, // Use existing refresh token if new one not provided
+          expires_in: tokenData.expires_in,
+          scope: tokenData.scope
+        };
+      } catch (error) {
+        if (attempt === maxRetries) {
+          console.error('[UnifiedGoogleManager] 💥 All retry attempts failed:', error);
+          throw error;
+        }
+        
+        // Only log and continue for network/timeout errors
+        if (error instanceof Error && (
+          error.message.includes('fetch') || 
+          error.message.includes('timeout') ||
+          error.message.includes('network')
+        )) {
+          console.log(`[UnifiedGoogleManager] 🌐 Network error on attempt ${attempt}, retrying...`);
+          const delay = baseDelay * Math.pow(2, attempt - 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // Re-throw non-retryable errors immediately
+        throw error;
       }
-      
-      const tokenData = await response.json() as {
-        access_token: string;
-        refresh_token?: string;
-        expires_in: number;
-        scope?: string;
-      };
-
-      console.log('[UnifiedGoogleManager] 🔄 Token refresh response received');
-      
-      return {
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token || refreshToken, // Use existing refresh token if new one not provided
-        expires_in: tokenData.expires_in,
-        scope: tokenData.scope
-      };
-    } catch (error) {
-      console.error('[UnifiedGoogleManager] 💥 Failed to refresh token:', error);
-      throw error;
     }
+    
+    throw new Error('Token refresh failed after all retry attempts');
+  }
+
+  /**
+   * Determine if a token refresh error is retryable
+   */
+  private isRetryableTokenError(status: number, parsedError: any): boolean {
+    // Don't retry on authentication/authorization errors
+    if (status === 401) {
+      const errorType = parsedError.error;
+      
+      // These 401 errors are typically permanent and shouldn't be retried
+      if (errorType === 'invalid_grant' || 
+          errorType === 'unauthorized_client' ||
+          errorType === 'invalid_client') {
+        console.log(`[UnifiedGoogleManager] 🚫 Non-retryable 401 error: ${errorType}`);
+        return false;
+      }
+    }
+    
+    // Don't retry on bad request (malformed request)
+    if (status === 400) {
+      return false;
+    }
+    
+    // Retry on server errors and rate limiting
+    if (status >= 500 || status === 429) {
+      return true;
+    }
+    
+    // Default to not retrying for other 4xx errors
+    if (status >= 400 && status < 500) {
+      return false;
+    }
+    
+    // Retry on network-level issues (handled separately)
+    return true;
   }
 
   /**
@@ -794,8 +878,36 @@ Return ONLY the service name (CALENDAR, CONTACTS, TASKS, EMAIL) or "NONE" if unc
       console.log('[UnifiedGoogleManager] 🔍 BEFORE REFRESH - Getting current token info...');
       const currentTokenInfo = await this.getTokenInfo(currentToken.access_token);
 
-      // Refresh the token
-      const refreshedTokenData = await this.refreshToken(currentToken.refresh_token);
+      // Refresh the token with enhanced error handling
+      let refreshedTokenData;
+      try {
+        refreshedTokenData = await this.refreshToken(currentToken.refresh_token);
+      } catch (refreshError) {
+        console.error('[UnifiedGoogleManager] 💥 Token refresh failed:', refreshError);
+        
+        // Handle specific error types
+        if (refreshError instanceof Error) {
+          const errorMessage = refreshError.message.toLowerCase();
+          
+          if (errorMessage.includes('unauthorized_client')) {
+            console.log('[UnifiedGoogleManager] 🚫 Unauthorized client error - check OAuth credentials');
+            throw new Error('OAuth client credentials are invalid. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.');
+          }
+          
+          if (errorMessage.includes('invalid_grant')) {
+            console.log('[UnifiedGoogleManager] 🚫 Invalid grant error - refresh token expired or revoked');
+            throw new Error('Refresh token is invalid or expired. User needs to re-authenticate.');
+          }
+          
+          if (errorMessage.includes('invalid_client')) {
+            console.log('[UnifiedGoogleManager] 🚫 Invalid client error - OAuth app configuration issue');
+            throw new Error('OAuth client configuration is invalid. Check OAuth app settings in Google Cloud Console.');
+          }
+        }
+        
+        // Re-throw original error if not a known type
+        throw refreshError;
+      }
       
       // Update token in database
       await this.updateToken(
