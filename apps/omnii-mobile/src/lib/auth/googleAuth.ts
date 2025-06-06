@@ -322,6 +322,10 @@ export const signInWithGoogle = async (): Promise<void> => {
     const scopeString = getOmniiScopesString();
     console.log('🎯 Using providerScopes for Google OAuth:', scopeString);
 
+    // Log Supabase configuration
+    console.log('🔍 Supabase instance URL:', (supabase as any).supabaseUrl || 'Not accessible');
+    console.log('🔍 Supabase auth config:', JSON.stringify((supabase.auth as any).config || {}, null, 2));
+    
     // Start Supabase OAuth request
     const startTime = Date.now();
     const { data, error } = await supabase.auth.signInWithOAuth({
