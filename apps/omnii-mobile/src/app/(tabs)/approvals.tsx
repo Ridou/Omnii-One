@@ -23,6 +23,13 @@ import EmptyState from '~/components/EmptyState';
 import DebugPanel from '~/components/common/DebugPanel';
 import LevelCelebration from '~/components/onboarding/LevelCelebration';
 import ContextualNudge from '~/components/common/ContextualNudge';
+import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
+import { 
+  MascotStage, 
+  MascotSize, 
+  CheeringTrigger, 
+  getMascotStageByLevel 
+} from '~/types/mascot';
 import { AppColors } from '~/constants/Colors';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { OnboardingQuote, LevelProgression } from '~/types/onboarding';
@@ -129,6 +136,11 @@ export default function ApprovalsScreen() {
     recordFeatureVisit,
     isSystemReady,
   } = useOnboardingContext();
+  
+  // Mascot state management
+  const { cheeringState, triggerCheering } = useMascotCheering();
+  const currentLevel = getCurrentLevel();
+  const mascotStage = getMascotStageByLevel(currentLevel);
   
   const [approvals, setApprovals] = useState<Approval[]>(mockApprovals);
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -308,6 +320,9 @@ export default function ApprovalsScreen() {
       const expectedXP = 26; // Actual server amount (20 base + 5.5 engagement rounded up)
       setPendingXP(prev => prev + expectedXP);
       
+      // Trigger mascot cheering for approval
+      triggerCheering(CheeringTrigger.TASK_COMPLETE);
+      
       // Handle onboarding quote approval silently
       const timeSpent = Math.round(Math.random() * 3000 + 1000); // 1-4 seconds realistic time, rounded to integer
       
@@ -326,14 +341,20 @@ export default function ApprovalsScreen() {
       // Handle regular approval silently - no ugly alert
       // Remove from list immediately
       setApprovals(prev => prev.filter(a => a.id !== task.approval!.id));
+      
+      // Trigger mascot cheering for approval
+      triggerCheering(CheeringTrigger.TASK_COMPLETE);
     }
-  }, [recordQuoteResponse]);
+  }, [recordQuoteResponse, triggerCheering]);
 
   const handleReject = useCallback(async (task: Task) => {
     if (task.type === 'onboarding_quote' && task.quote) {
       // OPTIMISTIC UPDATE: Match actual server XP amounts for accurate feedback  
       const expectedXP = 14; // Actual server amount (8 base + 5.5 engagement rounded up)
       setPendingXP(prev => prev + expectedXP);
+      
+      // Trigger mascot cheering for reject (still positive engagement)
+      triggerCheering(CheeringTrigger.TASK_COMPLETE);
       
       // Handle onboarding quote rejection silently
       const timeSpent = Math.round(Math.random() * 2000 + 800); // 0.8-2.8 seconds realistic time, rounded to integer
@@ -353,8 +374,11 @@ export default function ApprovalsScreen() {
       // Handle regular approval rejection silently - no ugly alert
       // Remove from list immediately
       setApprovals(prev => prev.filter(a => a.id !== task.approval!.id));
+      
+      // Trigger mascot cheering for engagement
+      triggerCheering(CheeringTrigger.TASK_COMPLETE);
     }
-  }, [recordQuoteResponse]);
+  }, [recordQuoteResponse, triggerCheering]);
 
   const handleCelebrationComplete = () => {
     if (currentCelebration) {
@@ -554,14 +578,56 @@ export default function ApprovalsScreen() {
         "px-5 py-4 border-b",
         isDark ? "border-slate-600" : "border-gray-200"
       )}>
-        <Text className={cn(
-          "text-3xl font-bold mb-1",
-          isDark ? "text-white" : "text-gray-900"
-        )}>⏳ Approvals</Text>
-        <Text className={cn(
-          "text-base",
-          isDark ? "text-slate-400" : "text-gray-600"
-        )}>Review and approve tasks</Text>
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1">
+            <Text className={cn(
+              "text-3xl font-bold mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>⏳ Approvals</Text>
+            <Text className={cn(
+              "text-base",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Review and approve tasks</Text>
+          </View>
+          
+          <View className="flex-row items-center gap-3">
+            {/* Debug Button - Only show in development */}
+            {__DEV__ && (
+              <TouchableOpacity
+                onPress={() => setShowDebugPanel(true)}
+                className={cn(
+                  "w-12 h-12 rounded-xl items-center justify-center border-2",
+                  isDark 
+                    ? "bg-slate-800 border-indigo-500/30" 
+                    : "bg-white border-indigo-200"
+                )}
+                style={{
+                  shadowColor: '#6366f1',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <Text className="text-lg">🔧</Text>
+              </TouchableOpacity>
+            )}
+            
+            {/* Mascot in header */}
+            <MascotContainer position="header">
+              <Mascot
+                stage={mascotStage}
+                level={currentLevel}
+                size={MascotSize.STANDARD}
+                showLevel={true}
+                enableInteraction={true}
+                enableCheering={cheeringState.isActive}
+                cheeringTrigger={cheeringState.trigger}
+                onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
+              />
+            </MascotContainer>
+          </View>
+        </View>
       </View>
 
       {/* Filter Tabs */}

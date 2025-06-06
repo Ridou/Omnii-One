@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,11 +24,14 @@ import { AppLogo } from '~/components/common/OmniiLogo';
 import WorkStyleAssessment from '~/components/profile/WorkStyleAssessment';
 import DataManagement from '~/components/profile/DataManagement';
 import ThemeSelector from '~/components/profile/ThemeSelector';
+import { Mascot, useMascotCheering, MascotContainer } from '~/components/common/Mascot';
+import { XPProgressBar } from '~/components/common/XPProgressBar';
 import { AppColors } from '~/constants/Colors';
 import { BRAND_COLORS } from '~/lib/assets';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { ProfileTab, TabConfig } from '~/types/profile';
 import { cn } from '~/utils/cn';
+import { getMascotStageByLevel, CheeringTrigger, MascotSize } from '~/types/mascot';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -77,7 +80,11 @@ export default function ProfileScreen() {
   // Get real user progression data
   const level = getCurrentLevel();
   const currentXP = onboardingState.onboardingData.total_xp;
-  const mascotStage = level <= 10 ? 'seed' : level <= 25 ? 'flower' : 'tree';
+  const mascotStage = getMascotStageByLevel(level);
+  
+  // Mascot cheering functionality
+  const { cheeringState, triggerCheering } = useMascotCheering();
+  const prevLevel = useRef(level);
   
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('connect');
   const [refreshing, setRefreshing] = useState(false);
@@ -89,6 +96,19 @@ export default function ProfileScreen() {
       return acc;
     }, {} as Record<ProfileTab, Animated.Value>)
   ).current;
+
+  // Trigger cheering on level up
+  useEffect(() => {
+    if (level > prevLevel.current && prevLevel.current > 0) {
+      triggerCheering(CheeringTrigger.LEVEL_UP);
+    }
+    prevLevel.current = level;
+  }, [level, triggerCheering]);
+
+  // Handle mascot tap interaction
+  const handleMascotTap = () => {
+    triggerCheering(CheeringTrigger.TAP_INTERACTION);
+  };
 
   const handleLogout = async () => {
     if (!user) {
@@ -764,27 +784,37 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView className={cn("flex-1", isDark ? "bg-slate-900" : "bg-white")} key={`profile-theme-${isDark}`}>
       {/* Header */}
-      <View className={cn("px-5 pt-4 pb-2", isDark ? "bg-slate-900" : "bg-white", "border-b", isDark ? "border-slate-700" : "border-gray-100")}>
-        <View className="flex-row justify-between items-center">
+      <View className={cn(
+        "px-5 py-4 border-b",
+        isDark ? "border-slate-600" : "border-gray-200"
+      )}>
+        <View className="flex-row items-start justify-between">
           <View className="flex-1">
-            <Text className={cn("text-2xl font-bold font-omnii-bold", isDark ? "text-white" : "text-gray-900")}>Profile</Text>
-            <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
-              Level {level} • {currentXP} XP
-            </Text>
+            <Text className={cn(
+              "text-3xl font-bold mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>👤 Profile</Text>
+            <XPProgressBar
+              currentXP={currentXP}
+              currentLevel={level}
+              size="compact"
+              showText={true}
+            />
           </View>
           
-          {/* Mascot */}
-          <View className="items-center ml-4">
-            <View className="w-12 h-12 bg-indigo-600 rounded-full items-center justify-center shadow-lg">
-              <Text className="text-2xl">
-                {mascotStage === 'seed' ? '🌱' : 
-                 mascotStage === 'flower' ? '🌸' : '🌳'}
-              </Text>
-            </View>
-            <Text className={cn("text-xs mt-1 capitalize font-medium", isDark ? "text-slate-400" : "text-gray-500")}>
-              {mascotStage}
-            </Text>
-          </View>
+          {/* Mascot in header */}
+          <MascotContainer position="header">
+            <Mascot
+              stage={mascotStage}
+              level={level}
+              size={MascotSize.STANDARD}
+              showLevel={true}
+              enableInteraction={true}
+              enableCheering={cheeringState.isActive}
+              cheeringTrigger={cheeringState.trigger}
+              onTap={handleMascotTap}
+            />
+          </MascotContainer>
         </View>
       </View>
 

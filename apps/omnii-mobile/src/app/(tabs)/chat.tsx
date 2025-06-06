@@ -22,6 +22,13 @@ import { ChatMessage } from '~/components/chat/ChatMessage';
 import { PendingMessage } from '~/components/chat/PendingMessage';
 import { ConnectionError } from '~/components/chat/ConnectionError';
 import { WebSocketDebug } from '~/components/chat/WebSocketDebug';
+import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
+import { 
+  MascotStage, 
+  MascotSize, 
+  CheeringTrigger, 
+  getMascotStageByLevel 
+} from '~/types/mascot';
 import { AppColors } from '~/constants/Colors';
 import { BRAND_COLORS } from '~/lib/assets';
 import { cn } from '~/utils/cn';
@@ -65,8 +72,13 @@ const chatTabs: ChatTabConfig[] = [
 export default function ChatScreen() {
     const { user } = useAuth();
     const { isDark } = useTheme();
-    const { recordFeatureVisit } = useOnboardingContext();
+    const { recordFeatureVisit, getCurrentLevel } = useOnboardingContext();
     const router = useRouter();
+
+    // Mascot state management
+    const { cheeringState, triggerCheering } = useMascotCheering();
+    const currentLevel = getCurrentLevel();
+    const mascotStage = getMascotStageByLevel(currentLevel);
 
     const { data } = useQuery({
         queryKey: ['hello', 'test'],
@@ -167,6 +179,9 @@ export default function ChatScreen() {
             setMessageInput('');
             // Set pending action based on message content
             setPendingAction(message);
+            
+            // Trigger mascot cheering for sending a message
+            triggerCheering(CheeringTrigger.TASK_COMPLETE);
         }
     };
 
@@ -198,6 +213,9 @@ export default function ChatScreen() {
                 sendMessage(command);
                 setMessageInput('');
                 setPendingAction(command);
+                
+                // Trigger mascot cheering for using quick actions
+                triggerCheering(CheeringTrigger.TASK_COMPLETE);
             }
         }, 100);
     };
@@ -949,14 +967,32 @@ export default function ChatScreen() {
                 "px-5 py-4 border-b",
                 isDark ? "border-slate-600" : "border-gray-200"
             )}>
-                <Text className={cn(
-                    "text-3xl font-bold mb-1",
-                    isDark ? "text-white" : "text-gray-900"
-                )}>💬 Chat</Text>
-                <Text className={cn(
-                    "text-base",
-                    isDark ? "text-slate-400" : "text-gray-600"
-                )}>Your AI assistant for everything</Text>
+                <View className="flex-row items-start justify-between">
+                    <View className="flex-1">
+                        <Text className={cn(
+                            "text-3xl font-bold mb-1",
+                            isDark ? "text-white" : "text-gray-900"
+                        )}>💬 Chat</Text>
+                        <Text className={cn(
+                            "text-base",
+                            isDark ? "text-slate-400" : "text-gray-600"
+                        )}>Your AI assistant for everything</Text>
+                    </View>
+                    
+                    {/* Mascot in header */}
+                    <MascotContainer position="header">
+                        <Mascot
+                            stage={mascotStage}
+                            level={currentLevel}
+                            size={MascotSize.STANDARD}
+                            showLevel={true}
+                            enableInteraction={true}
+                            enableCheering={cheeringState.isActive}
+                            cheeringTrigger={cheeringState.trigger}
+                            onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
+                        />
+                    </MascotContainer>
+                </View>
             </View>
 
             {/* Tabs */}

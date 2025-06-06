@@ -14,9 +14,17 @@ import { TrendingUp } from 'lucide-react-native';
 import { cn } from '~/utils/cn';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
+import { useOnboardingContext } from '~/context/OnboardingContext';
 import { useFetchAnalytics } from '~/hooks/useFetchAnalytics';
 import MetricCard from '~/components/analytics/MetricCard';
 import AIInsightCard from '~/components/analytics/AIInsightCard';
+import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
+import { 
+  MascotStage, 
+  MascotSize, 
+  CheeringTrigger, 
+  getMascotStageByLevel 
+} from '~/types/mascot';
 import { AppColors } from '~/constants/Colors';
 import Svg, { Defs, LinearGradient, Stop, Rect, Line, Circle } from 'react-native-svg';
 import type { AnalyticsTab, AnalyticsTabConfig } from '~/types/analytics';
@@ -54,11 +62,22 @@ const analyticsTabs: AnalyticsTabConfig[] = [
 export default function AnalyticsScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
+  const { getCurrentLevel, recordFeatureVisit } = useOnboardingContext();
   const { analytics, isLoading, refetch } = useFetchAnalytics();
   const router = useRouter();
   
+  // Mascot state management
+  const { cheeringState, triggerCheering } = useMascotCheering();
+  const currentLevel = getCurrentLevel();
+  const mascotStage = getMascotStageByLevel(currentLevel);
+  
   const [selectedTab, setSelectedTab] = useState<AnalyticsTab>('dashboard');
   const [refreshing, setRefreshing] = useState(false);
+
+  // Record feature visit for exploration tracking
+  useEffect(() => {
+    recordFeatureVisit('analytics');
+  }, []);
 
   // Animation refs (SIMPLIFIED - no more glow effects)
   const scaleAnimations = useRef(
@@ -701,14 +720,32 @@ export default function AnalyticsScreen() {
         "px-5 py-4 border-b",
         isDark ? "border-slate-600" : "border-gray-200"
       )}>
-        <Text className={cn(
-          "text-3xl font-bold mb-1",
-          isDark ? "text-white" : "text-gray-900"
-        )}>📊 Analytics</Text>
-        <Text className={cn(
-          "text-base",
-          isDark ? "text-slate-400" : "text-gray-600"
-        )}>Track your productivity patterns</Text>
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1">
+            <Text className={cn(
+              "text-3xl font-bold mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>📊 Analytics</Text>
+            <Text className={cn(
+              "text-base",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Track your productivity patterns</Text>
+          </View>
+          
+          {/* Mascot in header */}
+          <MascotContainer position="header">
+            <Mascot
+              stage={mascotStage}
+              level={currentLevel}
+              size={MascotSize.STANDARD}
+              showLevel={true}
+              enableInteraction={true}
+              enableCheering={cheeringState.isActive}
+              cheeringTrigger={cheeringState.trigger}
+              onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
+            />
+          </MascotContainer>
+        </View>
       </View>
 
       {/* Tabs */}

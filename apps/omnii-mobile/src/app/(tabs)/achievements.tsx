@@ -7,6 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { cn } from '~/utils/cn';
 import { AppColors } from '~/constants/Colors';
 import { useFetchAchievements } from '~/hooks/useFetchAchievements';
+import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
+import { 
+  MascotStage, 
+  MascotSize, 
+  CheeringTrigger, 
+  getMascotStageByLevel 
+} from '~/types/mascot';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Link, useRouter } from 'expo-router';
 import { useOnboardingContext } from '~/context/OnboardingContext';
@@ -48,6 +55,11 @@ export default function HomeScreen() {
   const { data: achievementData, loading, error } = useFetchAchievements();
   const { recordFeatureVisit, getCurrentLevel, state, getXPProgressToNextLevel } = useOnboardingContext();
   const router = useRouter();
+  
+  // Mascot state management
+  const { cheeringState, triggerCheering } = useMascotCheering();
+  const currentLevel = getCurrentLevel();
+  const mascotStage = getMascotStageByLevel(currentLevel);
   
   // Tab state following EXACT profile.tsx pattern
   const [selectedTab, setSelectedTab] = useState<AchievementTab>('evolve');
@@ -107,7 +119,6 @@ export default function HomeScreen() {
   // REMOVED: Glow effects as requested - clean, professional design
   // Tab content components
   const EvolveContent = () => {
-    const currentLevel = getCurrentLevel();
     const totalXP = state.onboardingData.total_xp;
     const xpProgress = getXPProgressToNextLevel();
     
@@ -429,14 +440,32 @@ export default function HomeScreen() {
           "px-5 py-4 border-b",
           isDark ? "border-slate-600" : "border-gray-200"
         )}>
-          <Text className={cn(
-            "text-3xl font-bold mb-1",
-            isDark ? "text-white" : "text-gray-900"
-          )}>🏆 Achievements</Text>
-          <Text className={cn(
-            "text-base",
-            isDark ? "text-slate-400" : "text-gray-600"
-          )}>Your personal victory celebration</Text>
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1">
+              <Text className={cn(
+                "text-3xl font-bold mb-1",
+                isDark ? "text-white" : "text-gray-900"
+              )}>🏆 Achievements</Text>
+              <Text className={cn(
+                "text-base",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Your personal victory celebration</Text>
+            </View>
+            
+            {/* Mascot in header */}
+            <MascotContainer position="header">
+              <Mascot
+                stage={mascotStage}
+                level={currentLevel}
+                size={MascotSize.STANDARD}
+                showLevel={true}
+                enableInteraction={true}
+                enableCheering={cheeringState.isActive}
+                cheeringTrigger={cheeringState.trigger}
+                onTap={() => triggerCheering(CheeringTrigger.ACHIEVEMENT_UNLOCK)}
+              />
+            </MascotContainer>
+          </View>
         </View>
 
         {/* Tabs with clean design (no glow effects) */}
