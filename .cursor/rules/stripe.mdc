@@ -1,0 +1,886 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 💳 OMNII Stripe Paywall Implementation Plan
+*3-Day Free Trial → Paid Subscription System*
+
+## 🎯 **OVERVIEW**
+Implement a comprehensive Stripe-based paywall system that:
+- **Tracks user login** to determine payment eligibility
+- **Provides 3-day free trial** for all new users
+- **Enforces paywall** after trial expiration
+- **Updates Supabase user records** with payment status
+- **Handles subscription lifecycle** (active, expired, canceled)
+- **Provides seamless payment experience** with multiple plan options
+
+---
+
+## 💾 **DATABASE SCHEMA IMPLEMENTATION**
+
+### **Users Table Extensions**
+```sql
+-- Add payment and subscription tracking columns to existing users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'trial' 
+  CHECK (subscription_status IN ('trial', 'active', 'past_due', 'canceled', 'expired'));
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_started_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '3 days');
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_id TEXT UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_plan_id TEXT; -- monthly/yearly
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_started_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_current_period_start TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_current_period_end TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_payment_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS payment_method_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_converted BOOLEAN DEFAULT FALSE;
+
+-- Create subscription events table for detailed tracking
+CREATE TABLE IF NOT EXISTS subscription_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  stripe_subscription_id TEXT NOT NULL,
+  event_type TEXT NOT NULL CHECK (event_type IN (
+    'subscription_created', 'subscription_updated', 'subscription_canceled',
+    'payment_succeeded', 'payment_failed', 'trial_started', 'trial_ended'
+  )),
+  stripe_event_id TEXT UNIQUE NOT NULL,
+  event_data JSONB DEFAULT '{}',
+  processed_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create payment transactions table for audit trail
+CREATE TABLE IF NOT EXISTS payment_transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  stripe_payment_intent_id TEXT UNIQUE NOT NULL,
+  stripe_subscription_id TEXT,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT DEFAULT 'usd',
+  status TEXT NOT NULL CHECK (status IN (
+    'pending', 'succeeded', 'failed', 'canceled', 'refunded'
+  )),
+  payment_method_type TEXT, -- card, apple_pay, google_pay, etc.
+  failure_reason TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create subscription analytics table
+CREATE TABLE IF NOT EXISTS subscription_analytics (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  trial_starts INTEGER DEFAULT 0,
+  trial_conversions INTEGER DEFAULT 0,
+  subscription_creations INTEGER DEFAULT 0,
+  subscription_cancellations INTEGER DEFAULT 0,
+  monthly_revenue_cents INTEGER DEFAULT 0,
+  yearly_revenue_cents INTEGER DEFAULT 0,
+  churn_rate REAL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(date)
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_users_subscription_status ON users(subscription_status);
+CREATE INDEX idx_users_trial_ends_at ON users(trial_ends_at);
+CREATE INDEX idx_users_stripe_customer_id ON users(stripe_customer_id);
+CREATE INDEX idx_subscription_events_user_id ON subscription_events(user_id);
+CREATE INDEX idx_subscription_events_stripe_id ON subscription_events(stripe_subscription_id);
+CREATE INDEX idx_payment_transactions_user_id ON payment_transactions(user_id);
+```
+
+### **Database Functions for Trial Management**
+```sql
+-- Function to check if user trial has expired
+CREATE OR REPLACE FUNCTION is_trial_expired(user_uuid UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  trial_end TIMESTAMPTZ;
+  current_status TEXT;
+BEGIN
+  SELECT trial_ends_at, subscription_status 
+  INTO trial_end, current_status 
+  FROM users 
+  WHERE id = user_uuid;
+  
+  -- If no trial data, assume expired
+  IF trial_end IS NULL THEN
+    RETURN TRUE;
+  END IF;
+  
+  -- If subscription is active, trial expiration doesn't matter
+  IF current_status = 'active' THEN
+    RETURN FALSE;
+  END IF;
+  
+  -- Check if trial period has passed
+  RETURN (NOW() > trial_end);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get trial days remaining
+CREATE OR REPLACE FUNCTION get_trial_days_remaining(user_uuid UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  trial_end TIMESTAMPTZ;
+  days_remaining INTEGER;
+BEGIN
+  SELECT trial_ends_at INTO trial_end FROM users WHERE id = user_uuid;
+  
+  IF trial_end IS NULL THEN
+    RETURN 0;
+  END IF;
+  
+  days_remaining := EXTRACT(DAY FROM (trial_end - NOW()));
+  
+  -- Return 0 if negative (expired)
+  RETURN GREATEST(0, days_remaining);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to update subscription status
+CREATE OR REPLACE FUNCTION update_user_subscription(
+  user_uuid UUID,
+  new_status TEXT,
+  stripe_sub_id TEXT DEFAULT NULL,
+  stripe_customer_id TEXT DEFAULT NULL,
+  plan_id TEXT DEFAULT NULL,
+  period_start TIMESTAMPTZ DEFAULT NULL,
+  period_end TIMESTAMPTZ DEFAULT NULL
+)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE users 
+  SET 
+    subscription_status = new_status,
+    subscription_id = COALESCE(stripe_sub_id, subscription_id),
+    stripe_customer_id = COALESCE(stripe_customer_id, users.stripe_customer_id),
+    subscription_plan_id = COALESCE(plan_id, subscription_plan_id),
+    subscription_current_period_start = COALESCE(period_start, subscription_current_period_start),
+    subscription_current_period_end = COALESCE(period_end, subscription_current_period_end),
+    last_payment_at = CASE 
+      WHEN new_status = 'active' THEN NOW() 
+      ELSE last_payment_at 
+    END,
+    trial_converted = CASE 
+      WHEN new_status = 'active' AND subscription_status = 'trial' THEN TRUE 
+      ELSE trial_converted 
+    END,
+    subscription_started_at = CASE 
+      WHEN new_status = 'active' AND subscription_started_at IS NULL THEN NOW()
+      ELSE subscription_started_at 
+    END
+  WHERE id = user_uuid;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to log subscription events
+CREATE OR REPLACE FUNCTION log_subscription_event(
+  user_uuid UUID,
+  stripe_sub_id TEXT,
+  event_type TEXT,
+  stripe_event_id TEXT,
+  event_data JSONB DEFAULT '{}'
+)
+RETURNS UUID AS $$
+DECLARE
+  event_id UUID;
+BEGIN
+  INSERT INTO subscription_events (
+    user_id, stripe_subscription_id, event_type, stripe_event_id, event_data
+  ) VALUES (
+    user_uuid, stripe_sub_id, event_type, stripe_event_id, event_data
+  ) RETURNING id INTO event_id;
+  
+  RETURN event_id;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+---
+
+## 🏗️ **STRIPE INFRASTRUCTURE SETUP**
+
+### **Stripe Products & Prices Configuration**
+```typescript
+// Stripe Dashboard Setup Required:
+
+const STRIPE_PRODUCTS = {
+  omnii_pro: {
+    name: "OMNII Pro",
+    description: "AI-powered productivity assistant with unlimited access",
+    prices: {
+      monthly: {
+        amount: 999, // $9.99
+        currency: "usd",
+        recurring: { interval: "month" },
+        lookup_key: "omnii_pro_monthly"
+      },
+      yearly: {
+        amount: 9999, // $99.99 (17% savings)
+        currency: "usd", 
+        recurring: { interval: "year" },
+        lookup_key: "omnii_pro_yearly"
+      }
+    }
+  }
+};
+
+// Environment Variables Required:
+const STRIPE_CONFIG = {
+  STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY, // Server-side only
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_MONTHLY_PRICE_ID: process.env.STRIPE_MONTHLY_PRICE_ID,
+  STRIPE_YEARLY_PRICE_ID: process.env.STRIPE_YEARLY_PRICE_ID,
+};
+```
+
+### **Supabase Edge Functions for Stripe Integration**
+```typescript
+// supabase/functions/stripe-create-subscription/index.ts
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import Stripe from 'https://esm.sh/stripe@12.0.0';
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+  apiVersion: '2023-10-16',
+});
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+serve(async (req) => {
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  try {
+    const { userId, priceId, email, fullName } = await req.json();
+
+    // Validate user exists and is eligible
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, stripe_customer_id, subscription_status')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      throw new Error('User not found');
+    }
+
+    // Create or retrieve Stripe customer
+    let customerId = user.stripe_customer_id;
+    
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: email,
+        name: fullName,
+        metadata: { userId: userId }
+      });
+      customerId = customer.id;
+
+      // Update user with customer ID
+      await supabase
+        .from('users')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', userId);
+    }
+
+    // Create subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent'],
+      metadata: { userId: userId }
+    });
+
+    const paymentIntent = subscription.latest_invoice?.payment_intent;
+
+    return new Response(
+      JSON.stringify({
+        subscriptionId: subscription.id,
+        clientSecret: paymentIntent?.client_secret,
+        customerId: customerId
+      }),
+      { 
+        headers: { 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Subscription creation error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        headers: { 'Content-Type': 'application/json' },
+        status: 400 
+      }
+    );
+  }
+});
+```
+
+### **Stripe Webhook Handler**
+```typescript
+// supabase/functions/stripe-webhook/index.ts
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import Stripe from 'https://esm.sh/stripe@12.0.0';
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
+  apiVersion: '2023-10-16',
+});
+
+const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')!;
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+serve(async (req) => {
+  const signature = req.headers.get('stripe-signature');
+  const body = await req.text();
+
+  try {
+    const event = stripe.webhooks.constructEvent(body, signature!, webhookSecret);
+
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdate(event.data.object);
+        break;
+        
+      case 'customer.subscription.deleted':
+        await handleSubscriptionCanceled(event.data.object);
+        break;
+        
+      case 'invoice.payment_succeeded':
+        await handlePaymentSucceeded(event.data.object);
+        break;
+        
+      case 'invoice.payment_failed':
+        await handlePaymentFailed(event.data.object);
+        break;
+    }
+
+    return new Response('OK', { status: 200 });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return new Response('Webhook error', { status: 400 });
+  }
+});
+
+async function handleSubscriptionUpdate(subscription: any) {
+  const userId = subscription.metadata?.userId;
+  if (!userId) return;
+
+  await supabase.rpc('update_user_subscription', {
+    user_uuid: userId,
+    new_status: subscription.status === 'active' ? 'active' : subscription.status,
+    stripe_sub_id: subscription.id,
+    plan_id: subscription.items.data[0]?.price?.lookup_key,
+    period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+    period_end: new Date(subscription.current_period_end * 1000).toISOString()
+  });
+}
+
+async function handleSubscriptionCanceled(subscription: any) {
+  const userId = subscription.metadata?.userId;
+  if (!userId) return;
+
+  await supabase.rpc('update_user_subscription', {
+    user_uuid: userId,
+    new_status: 'canceled'
+  });
+}
+
+async function handlePaymentSucceeded(invoice: any) {
+  const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+  const userId = subscription.metadata?.userId;
+  if (!userId) return;
+
+  // Log successful payment
+  await supabase.from('payment_transactions').insert({
+    user_id: userId,
+    stripe_payment_intent_id: invoice.payment_intent,
+    stripe_subscription_id: invoice.subscription,
+    amount_cents: invoice.amount_paid,
+    status: 'succeeded',
+    payment_method_type: invoice.payment_intent?.payment_method?.type
+  });
+
+  // Update subscription status
+  await supabase.rpc('update_user_subscription', {
+    user_uuid: userId,
+    new_status: 'active'
+  });
+}
+
+async function handlePaymentFailed(invoice: any) {
+  const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+  const userId = subscription.metadata?.userId;
+  if (!userId) return;
+
+  await supabase.rpc('update_user_subscription', {
+    user_uuid: userId,
+    new_status: 'past_due'
+  });
+}
+```
+
+---
+
+## 📱 **FRONTEND IMPLEMENTATION**
+
+### **Subscription Status Hook**
+```typescript
+// hooks/useSubscription.ts
+import { useState, useEffect } from 'react';
+import { Alert } from 'react-native';
+import { useSupabase } from '../context/SupabaseContext';
+
+interface SubscriptionStatus {
+  status: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired';
+  trialDaysRemaining: number;
+  isTrialExpired: boolean;
+  canAccessApp: boolean;
+  subscriptionPlan?: string;
+  nextBillingDate?: Date;
+}
+
+export const useSubscription = () => {
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({
+    status: 'trial',
+    trialDaysRemaining: 3,
+    isTrialExpired: false,
+    canAccessApp: true
+  });
+  const [loading, setLoading] = useState(true);
+  const { user, supabase } = useSupabase();
+
+  useEffect(() => {
+    if (user) {
+      checkSubscriptionStatus();
+      // Check status every 5 minutes
+      const interval = setInterval(checkSubscriptionStatus, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const checkSubscriptionStatus = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          subscription_status,
+          trial_ends_at,
+          subscription_current_period_end,
+          subscription_plan_id
+        `)
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      const now = new Date();
+      const trialEnd = new Date(data.trial_ends_at);
+      const daysRemaining = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+      const isTrialExpired = now > trialEnd;
+      
+      const canAccessApp = data.subscription_status === 'active' || 
+                          (data.subscription_status === 'trial' && !isTrialExpired);
+
+      setSubscriptionStatus({
+        status: data.subscription_status,
+        trialDaysRemaining: daysRemaining,
+        isTrialExpired,
+        canAccessApp,
+        subscriptionPlan: data.subscription_plan_id,
+        nextBillingDate: data.subscription_current_period_end ? 
+          new Date(data.subscription_current_period_end) : undefined
+      });
+
+      // Show paywall if trial expired and no active subscription
+      if (!canAccessApp && data.subscription_status === 'trial') {
+        showTrialExpiredAlert();
+      }
+
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showTrialExpiredAlert = () => {
+    Alert.alert(
+      '🔒 Trial Expired',
+      'Your 3-day free trial has ended. Subscribe to continue using OMNII and unlock your full productivity potential!',
+      [
+        { 
+          text: 'Subscribe Now', 
+          onPress: () => navigation.navigate('Paywall'),
+          style: 'default' 
+        }
+      ],
+      { cancelable: false }
+    );
+  };
+
+  return {
+    subscriptionStatus,
+    loading,
+    checkSubscriptionStatus,
+    showTrialExpiredAlert
+  };
+};
+```
+
+### **Subscription Gate Component**
+```typescript
+// components/auth/SubscriptionGate.tsx
+import React from 'react';
+import { View } from 'react-native';
+import { useSubscription } from '../../hooks/useSubscription';
+import { PaywallScreen } from '../../screens/PaywallScreen';
+import { TrialBanner } from './TrialBanner';
+import { LoadingScreen } from '../common/LoadingScreen';
+
+interface SubscriptionGateProps {
+  children: React.ReactNode;
+}
+
+export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({ children }) => {
+  const { subscriptionStatus, loading } = useSubscription();
+
+  if (loading) {
+    return <LoadingScreen message="Checking subscription..." />;
+  }
+
+  // Block access if trial expired and no active subscription
+  if (!subscriptionStatus.canAccessApp) {
+    return <PaywallScreen />;
+  }
+
+  // Show trial banner if still in trial period
+  if (subscriptionStatus.status === 'trial') {
+    return (
+      <View style={{ flex: 1 }}>
+        <TrialBanner daysRemaining={subscriptionStatus.trialDaysRemaining} />
+        {children}
+      </View>
+    );
+  }
+
+  // Full access for active subscribers
+  return <>{children}</>;
+};
+```
+
+### **Paywall Screen Implementation**
+```typescript
+// screens/PaywallScreen.tsx
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useStripe } from '@stripe/stripe-react-native';
+import { useSupabase } from '../context/SupabaseContext';
+
+const SUBSCRIPTION_PLANS = [
+  {
+    id: 'monthly',
+    name: 'Monthly',
+    price: '$9.99',
+    period: 'per month',
+    priceId: process.env.EXPO_PUBLIC_STRIPE_MONTHLY_PRICE_ID,
+    savings: null,
+    popular: false
+  },
+  {
+    id: 'yearly', 
+    name: 'Yearly',
+    price: '$99.99',
+    period: 'per year',
+    priceId: process.env.EXPO_PUBLIC_STRIPE_YEARLY_PRICE_ID,
+    savings: 'Save 17%',
+    popular: true
+  }
+];
+
+const FEATURES = [
+  '🤖 AI-powered task suggestions',
+  '📊 Advanced analytics & insights', 
+  '🎮 Gamified productivity system',
+  '🎯 Achievement tracking',
+  '💬 AI productivity coach',
+  '🔄 Cross-device sync',
+  '📱 Mobile & desktop apps',
+  '💎 Priority support'
+];
+
+export const PaywallScreen = () => {
+  const [loading, setLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('yearly');
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { user, supabase } = useSupabase();
+
+  const handleSubscribe = async (plan) => {
+    setLoading(true);
+    
+    try {
+      // Create subscription on server
+      const { data, error } = await supabase.functions.invoke('stripe-create-subscription', {
+        body: {
+          userId: user.id,
+          priceId: plan.priceId,
+          email: user.email,
+          fullName: user.user_metadata?.full_name
+        }
+      });
+
+      if (error) throw error;
+
+      // Initialize payment sheet
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: 'OMNII',
+        customerId: data.customerId,
+        clientSecret: data.clientSecret,
+        style: 'alwaysDark',
+        googlePay: {
+          merchantCountryCode: 'US',
+          testEnv: __DEV__,
+          currencyCode: 'USD'
+        },
+        applePay: {
+          merchantCountryCode: 'US'
+        },
+        returnURL: 'omnii://payment-complete'
+      });
+
+      if (initError) throw initError;
+
+      // Present payment sheet
+      const { error: paymentError } = await presentPaymentSheet();
+
+      if (paymentError) {
+        if (paymentError.code !== 'Canceled') {
+          Alert.alert('Payment Error', paymentError.message);
+        }
+      } else {
+        // Payment successful - webhook will update user status
+        Alert.alert(
+          '🎉 Welcome to OMNII Pro!',
+          'Your subscription is now active. Enjoy unlimited access to all features!',
+          [{ text: 'Get Started', onPress: () => navigation.replace('Main') }]
+        );
+      }
+
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error('Subscription error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* Header */}
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
+        <Text style={styles.title}>Unlock Your Full Potential</Text>
+        <Text style={styles.subtitle}>
+          Your 3-day trial has ended. Continue your productivity journey with OMNII Pro.
+        </Text>
+      </LinearGradient>
+
+      {/* Features */}
+      <View style={styles.featuresSection}>
+        <Text style={styles.featuresTitle}>What's Included:</Text>
+        {FEATURES.map((feature, index) => (
+          <View key={index} style={styles.featureItem}>
+            <Text style={styles.featureText}>{feature}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Plans */}
+      <View style={styles.plansSection}>
+        {SUBSCRIPTION_PLANS.map((plan) => (
+          <TouchableOpacity
+            key={plan.id}
+            style={[
+              styles.planCard,
+              selectedPlan === plan.id && styles.selectedPlan,
+              plan.popular && styles.popularPlan
+            ]}
+            onPress={() => setSelectedPlan(plan.id)}
+          >
+            {plan.popular && (
+              <View style={styles.popularBadge}>
+                <Text style={styles.popularText}>MOST POPULAR</Text>
+              </View>
+            )}
+            
+            <Text style={styles.planName}>{plan.name}</Text>
+            <Text style={styles.planPrice}>{plan.price}</Text>
+            <Text style={styles.planPeriod}>{plan.period}</Text>
+            
+            {plan.savings && (
+              <Text style={styles.savings}>{plan.savings}</Text>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Subscribe Button */}
+      <TouchableOpacity
+        style={[styles.subscribeButton, loading && styles.loadingButton]}
+        onPress={() => handleSubscribe(SUBSCRIPTION_PLANS.find(p => p.id === selectedPlan))}
+        disabled={loading}
+      >
+        <Text style={styles.subscribeButtonText}>
+          {loading ? 'Processing...' : 'Subscribe Now'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Trial Info */}
+      <View style={styles.trialInfo}>
+        <Text style={styles.trialText}>
+          ✨ You enjoyed 3 days free • Cancel anytime
+        </Text>
+      </View>
+    </ScrollView>
+  );
+};
+```
+
+---
+
+## 🔧 **IMPLEMENTATION PHASES**
+
+### **Phase 1: Database & Infrastructure (Week 1)**
+- [ ] **Day 1-2**: Implement database schema changes
+  - Add subscription columns to users table
+  - Create subscription_events and payment_transactions tables
+  - Implement helper functions and indexes
+  
+- [ ] **Day 3-4**: Set up Stripe infrastructure
+  - Create Stripe products and prices
+  - Configure webhook endpoints
+  - Set up environment variables
+  
+- [ ] **Day 5-7**: Build Supabase Edge Functions
+  - Implement stripe-create-subscription function
+  - Build stripe-webhook handler
+  - Test webhook event processing
+
+### **Phase 2: Frontend Integration (Week 2)**
+- [ ] **Day 1-3**: Implement subscription hooks and components
+  - Build useSubscription hook
+  - Create SubscriptionGate component
+  - Add trial banner component
+  
+- [ ] **Day 4-6**: Build paywall interface
+  - Design and implement PaywallScreen
+  - Add Stripe payment sheet integration
+  - Create plan selection interface
+  
+- [ ] **Day 7**: Integration testing
+  - Test complete payment flow
+  - Verify webhook processing
+  - Test trial expiration behavior
+
+### **Phase 3: Advanced Features (Week 3)**
+- [ ] **Day 1-2**: Subscription management
+  - Add subscription status indicators
+  - Implement plan change functionality
+  - Add billing history view
+  
+- [ ] **Day 3-4**: Error handling and edge cases
+  - Handle failed payments
+  - Implement retry logic
+  - Add customer support integration
+  
+- [ ] **Day 5-7**: Analytics and optimization
+  - Implement subscription analytics
+  - Add conversion tracking
+  - Optimize paywall UI/UX
+
+---
+
+## 📊 **SUCCESS METRICS & ANALYTICS**
+
+### **Conversion Metrics**
+- **Trial-to-Paid Conversion Rate**: % of trial users who subscribe
+- **Plan Distribution**: Monthly vs. yearly subscription split
+- **Time to Conversion**: How quickly users subscribe during trial
+- **Paywall Abandonment Rate**: % users who see paywall but don't subscribe
+
+### **Revenue Metrics**
+- **Monthly Recurring Revenue (MRR)**: Monthly subscription revenue
+- **Annual Recurring Revenue (ARR)**: Yearly subscription revenue  
+- **Average Revenue Per User (ARPU)**: Average monthly revenue per subscriber
+- **Customer Lifetime Value (CLV)**: Predicted total revenue per customer
+
+### **Retention Metrics**
+- **Churn Rate**: % subscribers who cancel per month
+- **Payment Failure Rate**: % of payments that fail
+- **Reactivation Rate**: % of canceled users who resubscribe
+- **Trial Extension Requests**: Users requesting longer trials
+
+### **User Experience Metrics**
+- **Payment Completion Rate**: % who complete payment after starting
+- **Payment Method Distribution**: Card vs. Apple Pay vs. Google Pay usage
+- **Support Ticket Volume**: Payment-related support requests
+- **App Store Review Sentiment**: Reviews mentioning pricing/value
+
+---
+
+## 🚨 **EDGE CASES & ERROR HANDLING**
+
+### **Payment Failures**
+- **Insufficient Funds**: Graceful handling with retry options
+- **Expired Cards**: Proactive email notifications and easy update flow
+- **Bank Declines**: Clear error messages and alternative payment methods
+
+### **Subscription Edge Cases**
+- **Duplicate Subscriptions**: Prevent users from having multiple active subscriptions
+- **Refund Requests**: Process through Stripe dashboard with automatic status updates
+- **Account Deletion**: Handle subscription cancellation when user deletes account
+
+### **Trial Management**
+- **Clock Manipulation**: Server-side trial validation to prevent abuse
+- **Multiple Accounts**: Device fingerprinting to prevent trial abuse
+- **Grace Period**: 24-hour grace period for payment failures before access restriction
+
+---
+
+## 🔐 **SECURITY CONSIDERATIONS**
+
+### **Data Protection**
+- **PII Handling**: Minimize storage of payment information
+- **Encryption**: All payment data encrypted in transit and at rest
+- **Access Control**: Limited admin access to payment data
+
+### **Fraud Prevention**
+- **Stripe Radar**: Enable automatic fraud detection
+- **Rate Limiting**: Prevent API abuse on payment endpoints
+- **Webhook Verification**: Verify all webhook signatures
+
+### **Compliance**
+- **PCI DSS**: Stripe handles compliance, but ensure proper integration
+- **GDPR**: Implement data deletion for EU users
+- **Apple/Google Guidelines**: Follow app store subscription guidelines
+
+This comprehensive implementation plan provides a robust foundation for implementing the Stripe paywall system while ensuring security, reliability, and optimal user experience.

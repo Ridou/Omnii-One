@@ -39,6 +39,7 @@ import { UpArrowIcon, RightArrowIcon, CalendarIcon, GmailIcon, ContactsIcon, Tas
 
 import { trpc } from '~/utils/api';
 import { useQuery } from "@tanstack/react-query";
+import { useXPContext } from '~/context/XPContext';
 
 
 // Updated tab configuration following profile.tsx pattern
@@ -73,12 +74,12 @@ const chatTabs: ChatTabConfig[] = [
 export default function ChatScreen() {
     const { user } = useAuth();
     const { isDark } = useTheme();
-    const { recordFeatureVisit, getCurrentLevel, state: onboardingState } = useOnboardingContext();
+    const { recordFeatureVisit } = useXPContext();
+    const { currentLevel, currentXP } = useXPContext();
     const router = useRouter();
 
     // Mascot state management
     const { cheeringState, triggerCheering } = useMascotCheering();
-    const currentLevel = getCurrentLevel();
     const mascotStage = getMascotStageByLevel(currentLevel);
 
     const { data } = useQuery({
@@ -975,9 +976,7 @@ export default function ChatScreen() {
                             isDark ? "text-white" : "text-gray-900"
                         )}>💬 Chat</Text>
                         <XPProgressBar
-                            currentXP={onboardingState.onboardingData.total_xp}
-                            currentLevel={currentLevel}
-                            size="compact"
+                            size="small"
                             showText={true}
                         />
                     </View>

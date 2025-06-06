@@ -11,8 +11,10 @@ import {
 } from 'react-native';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { useAuth } from '~/context/AuthContext';
+import { useOnboardingContext } from '~/context/OnboardingContext';
 import { AppColors } from '~/constants/Colors';
 import { XPSystemUtils } from '~/constants/XPSystem';
+import type { LevelProgression } from '~/types/onboarding';
 
 interface DebugPanelProps {
   visible: boolean;
@@ -31,6 +33,13 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     pendingXP,
     refetchXP
   } = useXPSystem();
+  
+  const {
+    state: onboardingState,
+    completeOnboarding,
+    triggerLevelUp,
+    isOnboardingComplete
+  } = useOnboardingContext();
 
   // Enhanced debugging with unified system logging
   const logCurrentState = () => {
@@ -45,6 +54,10 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
       isLoading,
       error: error || 'None',
       segmentsFilled: Math.floor((xpProgress.progress_percentage || 0) / 10),
+      // Onboarding state
+      onboardingCompleted: onboardingState.onboardingData.completed,
+      onboardingActive: onboardingState.isActive,
+      unlockedFeatures: onboardingState.unlockedFeatures,
       timestamp: new Date().toISOString()
     });
   };
@@ -78,6 +91,9 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     console.log(`🚀 Leveling up from ${currentLevel} to ${nextLevel} (needs ${xpNeeded} XP)`);
     
     await awardXPWithLogging(xpNeeded, 'Debug Level Up');
+    
+    // Let the unified XP system handle level progression and celebrations naturally
+    console.log('✅ [DEBUG] XP awarded, letting unified system handle level progression naturally');
   };
 
   const handleJumpToLevel = async (targetLevel: number) => {
@@ -94,6 +110,10 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     
     if (xpNeeded > 0) {
       await awardXPWithLogging(xpNeeded, `Debug Jump to Level ${targetLevel}`);
+      
+      // Wait for the XP system to process and trigger natural level-ups
+      // The unified XP system will handle level progression and celebrations properly
+      console.log('✅ [DEBUG] XP awarded, letting unified system handle level progression naturally');
     }
   };
 

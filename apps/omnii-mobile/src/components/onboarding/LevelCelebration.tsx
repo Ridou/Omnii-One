@@ -6,13 +6,23 @@ import {
   Dimensions, 
   Modal,
   TouchableOpacity,
-  StatusBar 
+  StatusBar,
+  ScrollView 
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { cn } from '~/utils/cn';
 import { useTheme } from '~/context/ThemeContext';
 import type { LevelProgression } from '~/types/onboarding';
+import { LEVEL_REQUIREMENTS } from '~/types/onboarding';
+import { Mascot } from '~/components/common/Mascot';
+import { 
+  MascotStage, 
+  MascotSize, 
+  CheeringTrigger, 
+  getMascotStageByLevel 
+} from '~/types/mascot';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,13 +45,55 @@ export default function LevelCelebration({
   const router = useRouter();
   const [animationPhase, setAnimationPhase] = useState<'entrance' | 'celebration' | 'features' | 'complete'>('entrance');
   
-  // Animated values
+  // Calculate the actual XP gained for this level up
+  const calculateXPGained = (levelProgression: LevelProgression | null): number => {
+    if (!levelProgression) return 0;
+    
+    // ✅ VALIDATION: Check if the progression data makes sense
+    const currentLevelXP = levelProgression.xp_at_level_up;
+    const fromLevelRequirement = LEVEL_REQUIREMENTS[levelProgression.from_level as keyof typeof LEVEL_REQUIREMENTS] || 0;
+    const toLevelRequirement = LEVEL_REQUIREMENTS[levelProgression.to_level as keyof typeof LEVEL_REQUIREMENTS] || 0;
+    
+    // Validate that the user has enough XP for the claimed level
+    if (currentLevelXP < toLevelRequirement) {
+      console.warn('⚠️ [LevelCelebration] Invalid progression data - insufficient XP for level:', {
+        currentXP: currentLevelXP,
+        requiredXP: toLevelRequirement,
+        claimedLevel: levelProgression.to_level,
+        fromLevel: levelProgression.from_level
+      });
+      return 0; // This will cause the celebration to show 0 XP (indicating invalid data)
+    }
+    
+    // More accurate calculation: XP at level up minus XP required for previous level
+    const xpInPreviousLevel = currentLevelXP - fromLevelRequirement;
+    
+    // For a cleaner display, show XP needed to level up (more intuitive)
+    const xpToLevelUp = toLevelRequirement - fromLevelRequirement;
+    
+    console.log('🎯 [LevelCelebration] XP Calculation:', {
+      fromLevel: levelProgression.from_level,
+      toLevel: levelProgression.to_level,
+      totalXP: currentLevelXP,
+      fromLevelReq: fromLevelRequirement,
+      toLevelReq: toLevelRequirement,
+      xpToLevelUp,
+      xpInPreviousLevel,
+      isValid: currentLevelXP >= toLevelRequirement
+    });
+    
+    // Show the XP required to reach this level (more meaningful for user)
+    return xpToLevelUp;
+  };
+  
+  // Animated values - MORE PARTICLES for bigger dopamine hit!
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const sparkleRotation = useRef(new Animated.Value(0)).current;
   const titleScale = useRef(new Animated.Value(0.5)).current;
-  const particleAnimations = useRef(Array.from({ length: 12 }, () => new Animated.Value(0))).current;
+  const particleAnimations = useRef(Array.from({ length: 24 }, () => new Animated.Value(0))).current; // Double the particles!
   const featureSlideIns = useRef(Array.from({ length: 3 }, () => new Animated.Value(-width))).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current; // New pulse animation for level badge
 
   useEffect(() => {
     if (visible && levelProgression) {
@@ -88,14 +140,19 @@ export default function LevelCelebration({
   const startMainCelebration = async () => {
     setAnimationPhase('celebration');
     
-    // Epic level up explosion
+    // Epic level up explosion with MORE haptic feedback!
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
-    // Title scale up
+    // Double haptic for extra satisfaction
+    setTimeout(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }, 200);
+    
+    // Dramatic title scale up with bounce
     Animated.spring(titleScale, {
-      toValue: 1.2,
-      tension: 80,
-      friction: 6,
+      toValue: 1.3, // Bigger scale!
+      tension: 60,  // More bounce
+      friction: 5,  // More dramatic
       useNativeDriver: true,
     }).start(() => {
       Animated.spring(titleScale, {
@@ -106,28 +163,44 @@ export default function LevelCelebration({
       }).start();
     });
 
-    // Sparkle rotation
+    // Continuous pulsing animation for level badge
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Faster sparkle rotation for more energy
     Animated.loop(
       Animated.timing(sparkleRotation, {
         toValue: 1,
-        duration: 3000,
+        duration: 2000, // Faster rotation
         useNativeDriver: true,
       })
     ).start();
 
-    // Particle burst animation
+    // More intense particle burst animation with staggered timing
     particleAnimations.forEach((anim, index) => {
-      const delay = index * 50;
+      const delay = (index % 8) * 30; // Stagger in waves
       setTimeout(() => {
         Animated.sequence([
           Animated.timing(anim, {
             toValue: 1,
-            duration: 800,
+            duration: 1200, // Longer duration
             useNativeDriver: true,
           }),
           Animated.timing(anim, {
             toValue: 0,
-            duration: 600,
+            duration: 800,
             useNativeDriver: true,
           }),
         ]).start();
@@ -137,7 +210,7 @@ export default function LevelCelebration({
     // Wait then show features
     setTimeout(() => {
       showUnlockedFeatures();
-    }, 1500);
+    }, 2000); // Longer celebration time
   };
 
   const showUnlockedFeatures = () => {
@@ -156,10 +229,10 @@ export default function LevelCelebration({
       }, delay);
     });
 
-    // Auto-complete after showing features
+    // Show buttons after 2.5 seconds (2-3 seconds as requested)
     setTimeout(() => {
       setAnimationPhase('complete');
-    }, 2000);
+    }, 2500);
   };
 
   const getUnlockedFeatures = (level: number) => {
@@ -251,6 +324,17 @@ export default function LevelCelebration({
 
   if (!visible || !levelProgression) return null;
 
+  // ✅ VALIDATION: Don't show celebration if data is invalid
+  const xpGained = calculateXPGained(levelProgression);
+  if (xpGained === 0) {
+    console.warn('⚠️ [LevelCelebration] Closing celebration due to invalid progression data');
+    // Auto-close invalid celebration after a brief delay
+    setTimeout(() => {
+      onComplete();
+    }, 100);
+    return null;
+  }
+
   const levelColors = getLevelColors(levelProgression.to_level);
   const unlockedFeatures = getUnlockedFeatures(levelProgression.to_level);
   const isLevel5 = levelProgression.to_level === 5;
@@ -262,218 +346,278 @@ export default function LevelCelebration({
 
   return (
     <Modal visible={visible} animationType="none" transparent>
-      <StatusBar backgroundColor="rgba(0,0,0,0.9)" barStyle="light-content" />
-      <View className={cn(
-        "flex-1 justify-center items-center",
-        "bg-black/95"
-      )}>
-        <Animated.View
-          className={cn(
-            "w-[90%] max-w-md items-center py-10"
-          )}
-          style={{
-            transform: [{ scale: scaleAnim }],
-            opacity: opacityAnim,
-          }}
-        >
-          {/* Background Sparkles */}
-          {particleAnimations.map((anim, index) => {
-            const angle = (index / particleAnimations.length) * 2 * Math.PI;
-            const radius = 120;
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
-            
-            return (
-              <Animated.View
-                key={index}
-                className="absolute top-20 left-1/2 -ml-2.5"
-                style={{
-                  transform: [
-                    { translateX: x },
-                    { translateY: y },
-                    { scale: anim },
-                    { rotate: sparkleRotate },
-                  ],
-                  opacity: anim,
-                }}
-              >
-                <Text className="text-xl text-center">✨</Text>
-              </Animated.View>
-            );
-          })}
-
-          {/* Main Content */}
-          <View className="items-center w-full">
-            {/* Level Badge */}
-            <View 
-              className="w-20 h-20 rounded-full justify-center items-center mb-5 shadow-2xl"
-              style={{ 
-                backgroundColor: levelColors.primary,
-                shadowColor: levelColors.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.4,
-                shadowRadius: 12,
-                elevation: 8,
+      <StatusBar backgroundColor="rgba(0,0,0,0.95)" barStyle="light-content" />
+      
+      {/* Dark Background */}
+      <View 
+        style={{ 
+          flex: 1, 
+          backgroundColor: 'rgba(15, 15, 35, 0.97)' // Dark purple-blue background
+        }}
+      >
+        <SafeAreaView style={{ flex: 1 }}>
+          <ScrollView 
+            contentContainerStyle={{ 
+              flexGrow: 1, 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              paddingHorizontal: 16,
+              paddingVertical: 20,
+              minHeight: height * 0.8 // Ensure minimum height for proper centering
+            }}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <Animated.View
+              className="w-full items-center"
+              style={{
+                transform: [{ scale: scaleAnim }],
+                opacity: opacityAnim,
+                maxWidth: 350, // Limit max width for better responsive design
+                width: '100%'
               }}
             >
-              <Text className="text-3xl font-bold text-white">
-                {levelProgression.to_level}
-              </Text>
-            </View>
-
-            {/* Title */}
-            <Animated.View
-              className="items-center mb-6"
-              style={{ transform: [{ scale: titleScale }] }}
-            >
-              <Text 
-                className="text-2xl font-bold text-center tracking-wider mb-2"
-                style={{ 
-                  color: levelColors.primary,
-                  textShadowColor: 'rgba(0,0,0,0.3)',
-                  textShadowOffset: { width: 0, height: 2 },
-                  textShadowRadius: 4,
-                }}
-              >
-                {getLevelTitle(levelProgression.to_level)}
-              </Text>
-              {isLevel5 && (
-                <Text className="text-base text-orange-400 text-center font-semibold">
-                  🎉 ALL CORE FEATURES UNLOCKED! 🎉
-                </Text>
-              )}
-            </Animated.View>
-
-            {/* XP Gained */}
-            <View className="items-center mb-8">
-              <Text className={cn(
-                "text-xs tracking-widest mb-1",
-                isDark ? "text-gray-400" : "text-gray-500"
-              )}>
-                XP GAINED
-              </Text>
-              <Text 
-                className="text-4xl font-bold"
-                style={{ 
-                  color: levelColors.primary,
-                  textShadowColor: 'rgba(0,0,0,0.3)',
-                  textShadowOffset: { width: 0, height: 2 },
-                  textShadowRadius: 4,
-                }}
-              >
-                +{levelProgression.xp_at_level_up - (levelProgression.from_level * 100)}
-              </Text>
-            </View>
-
-            {/* Unlocked Features */}
-            {animationPhase === 'features' && unlockedFeatures.length > 0 && (
-              <View className="w-full items-center mb-6">
-                <Text className="text-sm text-white tracking-wide mb-4 text-center">
-                  NEW FEATURES UNLOCKED
-                </Text>
-                {unlockedFeatures.map((feature, index) => (
+              {/* Floating Sparkles with MORE VARIETY! */}
+              {particleAnimations.map((anim, index) => {
+                const angle = (index / particleAnimations.length) * 2 * Math.PI;
+                const radius = 160 + (index % 3) * 20; // Varying radius for depth
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                // Different sparkle types for more visual interest
+                const sparkleTypes = ['✨', '⭐', '💫', '🌟', '✦', '⚡'];
+                const sparkleType = sparkleTypes[index % sparkleTypes.length];
+                const sparkleSize = index % 2 === 0 ? 'text-3xl' : 'text-2xl';
+                
+                return (
                   <Animated.View
                     key={index}
-                    className={cn(
-                      "flex-row items-center w-full p-4 rounded-xl border mb-3",
-                      isDark ? "bg-gray-800/50" : "bg-white/10"
-                    )}
+                    className="absolute"
                     style={{
-                      transform: [{ translateX: featureSlideIns[index] || new Animated.Value(-width) }],
-                      backgroundColor: `${levelColors.primary}15`,
-                      borderColor: `${levelColors.primary}40`,
+                      transform: [
+                        { translateX: x },
+                        { translateY: y },
+                        { scale: anim },
+                        { rotate: sparkleRotate },
+                      ],
+                      opacity: anim,
                     }}
                   >
-                    <Text className="text-2xl mr-3">{feature.icon}</Text>
-                    <View className="flex-1">
-                      <Text 
-                        className="text-base font-semibold mb-1"
-                        style={{ color: levelColors.primary }}
-                      >
-                        {feature.title}
-                      </Text>
-                      <Text className={cn(
-                        "text-sm leading-5",
-                        isDark ? "text-gray-300" : "text-gray-200"
-                      )}>
-                        {feature.description}
-                      </Text>
-                    </View>
+                    <Text className={sparkleSize}>{sparkleType}</Text>
                   </Animated.View>
-                ))}
-              </View>
-            )}
+                );
+              })}
 
-            {/* Level 5 Discord CTA */}
-            {isLevel5 && animationPhase === 'complete' && onDiscordCTA && (
-              <TouchableOpacity 
-                className="bg-[#5865F2] px-6 py-3 rounded-xl mb-4 shadow-lg active:scale-95"
-                onPress={handleDiscordCTA}
+              {/* Level Badge with Glow and Pulse */}
+              <Animated.View 
+                className="relative mb-6"
                 style={{
-                  shadowColor: '#5865F2',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 6,
+                  transform: [{ scale: pulseAnim }],
                 }}
               >
-                <Text className="text-white text-sm font-semibold text-center">
-                  💬 Join our Discord for feedback & exclusive tips!
-                </Text>
-              </TouchableOpacity>
-            )}
+                <View
+                  className="w-24 h-24 rounded-full justify-center items-center shadow-2xl border-4 border-white/30"
+                  style={{ 
+                    backgroundColor: levelColors.primary,
+                    shadowColor: levelColors.primary,
+                    shadowOffset: { width: 0, height: 12 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 25,
+                    elevation: 15,
+                  }}
+                >
+                  <Text className="text-4xl font-black text-white">
+                    {levelProgression.to_level}
+                  </Text>
+                </View>
+                
+                {/* Multiple Pulsing Rings for more impact */}
+                <Animated.View 
+                  className="absolute inset-0 w-24 h-24 rounded-full border-2 opacity-60"
+                  style={{ 
+                    borderColor: levelColors.primary,
+                    transform: [{ scale: pulseAnim }],
+                  }}
+                />
+                <Animated.View 
+                  className="absolute inset-0 w-24 h-24 rounded-full border-2 opacity-30"
+                  style={{ 
+                    borderColor: levelColors.secondary,
+                    transform: [{ scale: pulseAnim.interpolate({
+                      inputRange: [1, 1.1],
+                      outputRange: [1.1, 1.2]
+                    }) }],
+                  }}
+                />
+              </Animated.View>
 
-            {/* Navigation CTAs for unlocked features */}
-            {animationPhase === 'complete' && unlockedFeatures.length > 0 && (
-              <View className="w-full mb-4">
-                {unlockedFeatures.filter(f => f.route).map((feature, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    className={cn(
-                      "flex-row items-center justify-center py-3 px-6 rounded-xl mb-2 shadow-lg active:scale-95"
-                    )}
-                    style={{
-                      backgroundColor: levelColors.primary,
-                      shadowColor: levelColors.primary,
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 8,
-                      elevation: 6,
-                    }}
-                    onPress={() => handleNavigationCTA(feature.route)}
+              {/* Title with Gradient Text Effect */}
+              <Animated.View
+                className="items-center mb-4"
+                style={{ transform: [{ scale: titleScale }] }}
+              >
+                <Text 
+                  className="text-2xl font-black text-center tracking-wider mb-2 text-white"
+                  style={{ 
+                    textShadowColor: levelColors.primary,
+                    textShadowOffset: { width: 0, height: 2 },
+                    textShadowRadius: 8,
+                  }}
+                >
+                  {getLevelTitle(levelProgression.to_level)}
+                </Text>
+                {isLevel5 && (
+                  <View 
+                    className="px-4 py-2 rounded-full"
+                    style={{ backgroundColor: '#F59E0B' }} // Solid amber background
                   >
-                    <Text className="text-white text-base font-semibold mr-2">
-                      Explore {feature.title}
+                    <Text className="text-sm font-bold text-black text-center">
+                      🎉 ALL CORE FEATURES UNLOCKED! 🎉
                     </Text>
-                    <Text className="text-white text-lg">→</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Continue Button */}
-            {animationPhase === 'complete' && (
-              <TouchableOpacity 
-                className={cn(
-                  "px-8 py-4 rounded-2xl shadow-xl active:scale-95",
-                  isLevel5 ? "bg-gradient-to-r from-red-500 to-red-600" : "bg-gradient-to-r from-indigo-500 to-purple-600"
+                  </View>
                 )}
-                onPress={onComplete}
-                style={{
-                  shadowColor: isLevel5 ? '#FF3B30' : '#6366f1',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 12,
-                  elevation: 8,
-                }}
-              >
-                <Text className="text-white text-lg font-semibold text-center">
-                  {isLevel5 ? 'Begin Your Journey' : 'Continue'}
+              </Animated.View>
+
+              {/* XP Gained with Glow Effect */}
+              <View className="items-center mb-6">
+                <Text className="text-xs tracking-[0.2em] mb-2 text-gray-300 font-semibold">
+                  XP GAINED
                 </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </Animated.View>
+                <View 
+                  className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-3"
+                  style={{ 
+                    shadowColor: levelColors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 12,
+                  }}
+                >
+                  <Text 
+                    className="text-4xl font-black text-center"
+                    style={{ 
+                      color: levelColors.primary,
+                      textShadowColor: 'rgba(255,255,255,0.3)',
+                      textShadowOffset: { width: 0, height: 2 },
+                      textShadowRadius: 4,
+                    }}
+                  >
+                    +{xpGained}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Unlocked Features with Glassmorphism */}
+              {animationPhase === 'features' && unlockedFeatures.length > 0 && (
+                <View className="w-full mb-6">
+                  <Text className="text-sm font-bold text-white/90 tracking-wide mb-4 text-center">
+                    ✨ NEW FEATURES UNLOCKED ✨
+                  </Text>
+                  {unlockedFeatures.map((feature, index) => (
+                    <Animated.View
+                      key={index}
+                      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-3 mb-3 flex-row items-center"
+                      style={{
+                        transform: [{ translateX: featureSlideIns[index] || new Animated.Value(-width) }],
+                      }}
+                    >
+                      <View 
+                        className="w-10 h-10 rounded-xl items-center justify-center mr-3"
+                        style={{ backgroundColor: `${levelColors.primary}40` }}
+                      >
+                        <Text className="text-xl">{feature.icon}</Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text 
+                          className="text-base font-bold mb-1"
+                          style={{ color: levelColors.primary }}
+                        >
+                          {feature.title}
+                        </Text>
+                        <Text className="text-xs text-gray-300 leading-4">
+                          {feature.description}
+                        </Text>
+                      </View>
+                    </Animated.View>
+                  ))}
+                </View>
+              )}
+
+              {/* Action Buttons */}
+              {animationPhase === 'complete' && (
+                <View className="w-full">
+                  {/* Discord CTA for Level 5 */}
+                  {isLevel5 && onDiscordCTA && (
+                    <TouchableOpacity 
+                      className="bg-[#5865F2] rounded-2xl py-3 px-6 shadow-xl active:scale-95 border border-white/20 mb-4"
+                      onPress={handleDiscordCTA}
+                      style={{
+                        shadowColor: '#5865F2',
+                        shadowOffset: { width: 0, height: 8 },
+                        shadowOpacity: 0.4,
+                        shadowRadius: 16,
+                      }}
+                    >
+                      <Text className="text-white text-base font-bold text-center">
+                        💬 Join our Discord for feedback & exclusive tips!
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Navigation CTAs */}
+                  {unlockedFeatures.filter(f => f.route).map((feature, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      className="rounded-2xl py-3 px-6 shadow-xl active:scale-95 border border-white/20 mb-6"
+                      style={{
+                        backgroundColor: levelColors.primary,
+                        shadowColor: levelColors.primary,
+                        shadowOffset: { width: 0, height: 8 },
+                        shadowOpacity: 0.4,
+                        shadowRadius: 16,
+                      }}
+                      onPress={() => handleNavigationCTA(feature.route)}
+                    >
+                      <View className="items-center">
+                        <Text className="text-white text-base font-bold mb-1">
+                          Explore {feature.title}
+                        </Text>
+                        <Text className="text-white/90 text-sm font-semibold">
+                          +25 XP for first visit! ✨
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+
+                  {/* Continue Button */}
+                  <TouchableOpacity 
+                    className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-2xl py-3 px-8 shadow-xl active:scale-95 mb-6"
+                    onPress={onComplete}
+                  >
+                    <Text className="text-white text-base font-bold text-center">
+                      {isLevel5 ? '🚀 Begin Your Journey' : '✨ Continue'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Celebrating Mascot */}
+                  <View className="items-center mt-2">
+                    <Mascot
+                      stage={getMascotStageByLevel(levelProgression.to_level)}
+                      level={levelProgression.to_level}
+                      size={MascotSize.LARGE}
+                      showLevel={false}
+                      enableInteraction={false}
+                      enableCheering={false}
+                      cheeringTrigger={CheeringTrigger.LEVEL_UP}
+                    />
+                    <Text className="text-white/70 text-xs mt-2 text-center font-medium">
+                      🎉 Congratulations on reaching Level {levelProgression.to_level}! 🎉
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </Animated.View>
+          </ScrollView>
+        </SafeAreaView>
       </View>
     </Modal>
   );

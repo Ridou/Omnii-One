@@ -18,6 +18,7 @@ import {
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Link, useRouter } from 'expo-router';
 import { useOnboardingContext } from '~/context/OnboardingContext';
+import { useXPContext } from '~/context/XPContext';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { XPSystemUtils } from '~/constants/XPSystem';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -56,7 +57,7 @@ export default function HomeScreen() {
   const { user, session, isInitialized } = useAuth();
   const { isDark } = useTheme();
   const { data: achievementData, loading, error } = useFetchAchievements();
-  const { recordFeatureVisit } = useOnboardingContext();
+  const { recordFeatureVisit } = useXPContext();
   const { xpProgress, currentLevel, currentXP, awardXP } = useXPSystem();
   const router = useRouter();
   

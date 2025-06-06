@@ -29,6 +29,7 @@ import {
 import { AppColors } from '~/constants/Colors';
 import Svg, { Defs, LinearGradient, Stop, Rect, Line, Circle } from 'react-native-svg';
 import type { AnalyticsTab, AnalyticsTabConfig } from '~/types/analytics';
+import { useXPContext } from '~/context/XPContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -63,13 +64,13 @@ const analyticsTabs: AnalyticsTabConfig[] = [
 export default function AnalyticsScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
-  const { getCurrentLevel, recordFeatureVisit, state: onboardingState } = useOnboardingContext();
+  const { recordFeatureVisit } = useXPContext();
+  const { currentLevel } = useXPContext();
   const { analytics, isLoading, refetch } = useFetchAnalytics();
   const router = useRouter();
   
   // Mascot state management
   const { cheeringState, triggerCheering } = useMascotCheering();
-  const currentLevel = getCurrentLevel();
   const mascotStage = getMascotStageByLevel(currentLevel);
   
   const [selectedTab, setSelectedTab] = useState<AnalyticsTab>('dashboard');
@@ -728,9 +729,7 @@ export default function AnalyticsScreen() {
               isDark ? "text-white" : "text-gray-900"
             )}>📊 Analytics</Text>
             <XPProgressBar
-              currentXP={onboardingState.onboardingData.total_xp}
-              currentLevel={currentLevel}
-              size="compact"
+              size="small"
               showText={true}
             />
           </View>

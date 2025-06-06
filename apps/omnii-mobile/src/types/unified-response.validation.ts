@@ -51,6 +51,47 @@ export const XPRealtimeUpdateSchema = z.object({
   timestamp: z.string(),
 });
 
+// ✅ ACHIEVEMENT SYSTEM SCHEMAS: Centralized achievement data validation
+export const AchievementDataSchema = z.object({
+  achievement_id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  category: z.string(),
+  difficulty: z.string(),
+  xp_reward: z.number(),
+  icon: z.string(),
+  max_progress: z.number(),
+  current_progress: z.number(),
+  completed: z.boolean(),
+  completed_at: z.string().nullable(),
+  can_unlock: z.boolean(),
+  progress_percentage: z.number()
+});
+
+export const AchievementProgressResultSchema = z.object({
+  progress_updated: z.boolean(),
+  new_progress: z.number(),
+  achievement_unlocked: z.boolean(),
+  xp_awarded: z.number(),
+  level_up: z.boolean(),
+  new_level: z.number()
+});
+
+export const AchievementStatsSchema = z.object({
+  total_achievements: z.number(),
+  completed_achievements: z.number(),
+  completion_percentage: z.number(),
+  total_xp_from_achievements: z.number(),
+  current_streak: z.number(),
+  longest_streak: z.number(),
+  recent_unlocks: z.array(z.object({
+    achievement_id: z.string(),
+    title: z.string(),
+    xp_awarded: z.number(),
+    unlocked_at: z.string()
+  }))
+});
+
 // Core action schema
 export const UnifiedActionSchema = z.object({
   id: z.string(),
@@ -365,6 +406,11 @@ export type XPProgress = z.infer<typeof XPProgressSchema>;
 export type LevelProgression = z.infer<typeof LevelProgressionSchema>;
 export type XPRealtimeUpdate = z.infer<typeof XPRealtimeUpdateSchema>;
 
+// ✅ ACHIEVEMENT SYSTEM TYPES: Zod-inferred for type safety
+export type AchievementData = z.infer<typeof AchievementDataSchema>;
+export type AchievementProgressResult = z.infer<typeof AchievementProgressResultSchema>;
+export type AchievementStats = z.infer<typeof AchievementStatsSchema>;
+
 // ✅ TASK TYPES: Zod-inferred for type safety with external data
 export type TaskData = z.infer<typeof TaskDataSchema>;
 export type TaskList = z.infer<typeof TaskListSchema>;
@@ -522,6 +568,63 @@ export function validateXPUpdate(data: any): XPUpdate {
     return validated;
   } catch (error) {
     console.error('[XPValidation] ❌ XP validation failed:', error);
+    throw error;
+  }
+}
+
+// ✅ ACHIEVEMENT-SPECIFIC TYPE GUARDS: Static achievement data detection
+export function isValidAchievementData(data: any): data is AchievementData {
+  const result = AchievementDataSchema.safeParse(data);
+  if (result.success) {
+    console.log('[AchievementValidation] ✅ Valid AchievementData detected');
+    return true;
+  }
+  console.log('[AchievementValidation] ❌ Invalid AchievementData:', result.error.message);
+  return false;
+}
+
+export function isValidAchievementProgressResult(data: any): data is AchievementProgressResult {
+  return AchievementProgressResultSchema.safeParse(data).success;
+}
+
+export function isValidAchievementStats(data: any): data is AchievementStats {
+  return AchievementStatsSchema.safeParse(data).success;
+}
+
+export function validateAchievementData(data: any): AchievementData {
+  console.log('[AchievementValidation] 🔍 Validating AchievementData with Zod...');
+  
+  try {
+    const validated = AchievementDataSchema.parse(data);
+    console.log('[AchievementValidation] ✅ Achievement validation successful:', {
+      id: validated.achievement_id,
+      title: validated.title,
+      completed: validated.completed,
+      progress: `${validated.current_progress}/${validated.max_progress}`
+    });
+    
+    return validated;
+  } catch (error) {
+    console.error('[AchievementValidation] ❌ Achievement validation failed:', error);
+    throw error;
+  }
+}
+
+export function validateAchievementProgressResult(data: any): AchievementProgressResult {
+  console.log('[AchievementValidation] 🔍 Validating AchievementProgressResult with Zod...');
+  
+  try {
+    const validated = AchievementProgressResultSchema.parse(data);
+    console.log('[AchievementValidation] ✅ Achievement progress validation successful:', {
+      progressUpdated: validated.progress_updated,
+      newProgress: validated.new_progress,
+      achievementUnlocked: validated.achievement_unlocked,
+      xpAwarded: validated.xp_awarded
+    });
+    
+    return validated;
+  } catch (error) {
+    console.error('[AchievementValidation] ❌ Achievement progress validation failed:', error);
     throw error;
   }
 } 

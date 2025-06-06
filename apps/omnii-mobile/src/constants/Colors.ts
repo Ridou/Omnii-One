@@ -12,8 +12,8 @@ export const AppColors = {
   errorLight: '#fd79a8',
   
   // Priority Colors
-  highPriority: '#e17055',
-  mediumPriority: '#fdcb6e', 
+  highPriority: '#FF3B30',
+  mediumPriority: '#FF7043',
   lowPriority: '#74b9ff',
   
   // Base Colors

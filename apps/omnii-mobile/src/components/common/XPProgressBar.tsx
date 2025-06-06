@@ -63,6 +63,9 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
     XPSystemUtils.getProgressPercentage(displayXP, displayLevel) : 
     xpProgress.progress_percentage;
 
+  // ✅ CLAMP PROGRESS: Ensure progress is always between 0-100
+  const clampedProgress = Math.min(100, Math.max(0, actualProgress || 0));
+
   const xpInLevel = overrideXP !== undefined || overrideLevel !== undefined ?
     XPSystemUtils.getXPInCurrentLevel(displayXP, displayLevel) :
     xpProgress.xp_in_current_level;
@@ -71,40 +74,37 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
     XPSystemUtils.getNextLevelXP(displayLevel) :
     xpProgress.next_level_xp;
 
-  // Log debug info for progress bar updates
+  // Log debug info for progress bar updates (ONLY in development and only for errors)
   useEffect(() => {
-    if (__DEV__) {
-      console.log('🎯 [XPProgressBar] Progress Update:', {
+    if (__DEV__ && error) {
+      console.log('🎯 [XPProgressBar] Progress Error:', {
         displayXP,
         displayLevel,
-        actualProgress,
-        xpInLevel,
-        nextLevelXP,
-        xpProgressData: xpProgress,
-        timestamp: new Date().toISOString()
+        rawProgress: actualProgress,
+        clampedProgress,
+        error
       });
     }
-  }, [displayXP, displayLevel, actualProgress, xpInLevel, nextLevelXP, xpProgress]);
+  }, [error, displayXP, displayLevel, actualProgress, clampedProgress]);
 
   // Animate progress bar when XP changes (with proper dependencies)
   useEffect(() => {
     if (animated) {
-      console.log(`🎬 [XPProgressBar] Animating to ${actualProgress}%`);
       Animated.timing(progressAnim, {
-        toValue: actualProgress,
+        toValue: clampedProgress,
         duration: 800,
         useNativeDriver: false,
       }).start();
     } else {
-      progressAnim.setValue(actualProgress);
+      progressAnim.setValue(clampedProgress);
     }
-  }, [actualProgress, animated, progressAnim, displayXP, displayLevel]);
+  }, [clampedProgress, animated, progressAnim, displayXP, displayLevel]);
 
   // Configuration based on variant and size
   const config = getVariantConfig(variant, size);
 
-  // Show loading state
-  if (isLoading && !overrideXP) {
+  // Show loading state - ONLY on initial load, not on cached updates
+  if (isLoading && !overrideXP && currentXP === 0 && currentLevel === 1) {
     return (
       <View className={cn("w-full", className)}>
         <View className={cn(
@@ -202,22 +202,11 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
             <View className={cn("flex-row", config.segmentGap)}>
               {Array.from({ length: segmentCount }, (_, index) => {
                 const segmentThreshold = ((index + 1) / segmentCount) * 100;
-                const isActive = actualProgress >= segmentThreshold;
-                const isPartial = actualProgress > (index / segmentCount) * 100 && 
-                                actualProgress < segmentThreshold;
+                const isActive = clampedProgress >= segmentThreshold;
+                const isPartial = clampedProgress > (index / segmentCount) * 100 && 
+                                clampedProgress < segmentThreshold;
                 const partialProgress = isPartial ? 
-                  ((actualProgress - (index / segmentCount) * 100) / (100 / segmentCount)) : 0;
-                
-                // Debug logging for segment states
-                if (__DEV__ && index < 5) {
-                  console.log(`🔳 [XPProgressBar] Segment ${index}:`, {
-                    threshold: segmentThreshold,
-                    isActive,
-                    isPartial,
-                    partialProgress,
-                    actualProgress
-                  });
-                }
+                  ((clampedProgress - (index / segmentCount) * 100) / (100 / segmentCount)) : 0;
                 
                 return (
                   <View
@@ -252,10 +241,10 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
               isDark ? "bg-slate-700" : "bg-gray-200"
             )}>
               <Animated.View
-                key={`xp-progress-${displayLevel}-${Math.floor(displayXP / 100)}`}
+                key={`smooth-progress-${displayLevel}-${Math.floor(displayXP / 100)}`}
                 className={cn(
                   "h-full rounded-full",
-                  getProgressGradient(variant, pendingXP > 0)
+                  getProgressGradient(variant, false)
                 )}
                 style={{
                   width: progressAnim.interpolate({
@@ -264,6 +253,7 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
                     extrapolate: 'clamp',
                   }),
                   transform: [{ translateX: 0 }],
+                  ...(pendingXP > 0 && { opacity: 0.8 }),
                 }}
               />
             </View>
@@ -325,7 +315,7 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
                 config.secondaryTextSize,
                 isDark ? "text-green-400" : "text-green-700"
               )}>
-                {Math.round(actualProgress)}%
+                {Math.round(clampedProgress)}%
               </Text>
             </View>
           </View>
@@ -412,22 +402,16 @@ function getVariantConfig(variant: string, size: string) {
 }
 
 /**
- * Get progress gradient classes based on variant and pending state
+ * Get progress gradient classes based on variant (no animation classes)
  */
 function getProgressGradient(variant: string, hasPending: boolean): string {
-  if (hasPending) {
-    // Simple solid color when pending (gradients might not work in RN)
-    return 'bg-yellow-500 animate-pulse';
-  }
-
+  // Always return solid colors to avoid animation warnings
   switch (variant) {
     case 'minimal':
       return 'bg-indigo-500';
     case 'detailed':
-      // Fallback to solid color instead of gradient
       return 'bg-purple-600';
     default:
-      // Fallback to solid color instead of gradient
       return 'bg-indigo-600';
   }
 } 

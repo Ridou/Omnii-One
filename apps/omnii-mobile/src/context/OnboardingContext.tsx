@@ -11,9 +11,6 @@ import type {
   OnboardingData,
   HolisticPreferences,
   AIPersonality,
-  LevelProgression,
-  ContextualNudge,
-  FeatureExploration,
   AITuningPreferences
 } from '~/types/onboarding';
 
@@ -31,48 +28,7 @@ const syncUserOnboardingSecure = async (userId: string) => {
   return data;
 };
 
-const recordFeatureVisitSecure = async (userId: string, featureName: string) => {
-  const { data, error } = await supabase.rpc('record_feature_visit_secure', {
-    p_user_id: userId,
-    p_feature_name: featureName
-  });
-  
-  if (error) {
-    console.error('🚨 Feature visit recording failed:', error);
-    throw error;
-  }
-  
-  return data[0]; // Returns single row
-};
-
-const getUserLevelXP = async (userId: string) => {
-  const { data, error } = await supabase.rpc('get_user_level_xp', {
-    p_user_id: userId
-  });
-  
-  if (error) {
-    console.error('🚨 Get level/XP failed:', error);
-    throw error;
-  }
-  
-  return data[0]; // Returns single row
-};
-
-// SECURITY: Helper function to get unlocked features for a level (matches server-side logic)
-function getUnlockedFeaturesForLevel(level: number): string[] {
-  const features: string[] = ['approvals']; // Always available
-  
-  if (level >= 2) features.push('achievements');
-  if (level >= 3) features.push('chat', 'voice_commands');
-  if (level >= 4) features.push('analytics');
-  if (level >= 5) features.push('profile'); // ALL CORE FEATURES
-  if (level >= 6) features.push('advanced_insights', 'habit_tracking');
-  if (level >= 10) features.push('predictive_analytics', 'team_features');
-  
-  return features;
-}
-
-// Initial state
+// Initial state - focused only on onboarding flow
 const initialState: OnboardingState = {
   isActive: false,
   currentQuoteIndex: 0,
@@ -87,13 +43,13 @@ const initialState: OnboardingState = {
     feature_exploration: {},
     active_nudges: [],
   },
-  unlockedFeatures: ['approvals'],
+  unlockedFeatures: ['approvals'], // Deprecated - use XPContext
   pendingUnlocks: [],
-  celebrationQueue: [],
+  celebrationQueue: [], // Deprecated - use XPContext
   isLoading: false,
 };
 
-// Reducer
+// Simplified reducer focused on onboarding flow
 function onboardingReducer(state: OnboardingState, action: OnboardingAction): OnboardingState {
   switch (action.type) {
     case 'START_ONBOARDING':
@@ -146,72 +102,6 @@ function onboardingReducer(state: OnboardingState, action: OnboardingAction): On
         currentQuoteIndex: Math.min(state.currentQuoteIndex + 1, state.quotes.length),
       };
 
-    case 'AWARD_XP':
-      const newTotalXP = state.onboardingData.total_xp + action.payload.amount;
-      const newOnboardingXP = state.onboardingData.onboarding_xp + action.payload.amount;
-      
-      // Only update XP, don't automatically calculate levels
-      // Let the LEVEL_UP action handle level progression properly
-      return {
-        ...state,
-        onboardingData: {
-          ...state.onboardingData,
-          total_xp: newTotalXP,
-          onboarding_xp: newOnboardingXP,
-          // Keep current level - only change via LEVEL_UP action
-        },
-      };
-
-    case 'LEVEL_UP':
-      const levelProgression = action.payload;
-      const newUnlockedFeatures = getUnlockedFeaturesForLevel(levelProgression.to_level);
-      const previousUnlockedFeatures = getUnlockedFeaturesForLevel(levelProgression.from_level);
-      
-      // Find newly unlocked features
-      const justUnlocked = newUnlockedFeatures.filter(feature => !previousUnlockedFeatures.includes(feature));
-      
-      // Check for existing nudges to avoid duplicates
-      const existingNudgeFeatures = state.onboardingData.active_nudges.map(n => n.feature_name);
-      
-      // Create nudges only for newly unlocked features that don't already have nudges
-      const newNudges = justUnlocked
-        .filter(feature => !existingNudgeFeatures.includes(feature))
-        .map(feature => createFeatureNudge(feature, levelProgression.to_level))
-        .filter(Boolean) as ContextualNudge[];
-      
-      return {
-        ...state,
-        onboardingData: {
-          ...state.onboardingData,
-          current_level: levelProgression.to_level,
-          highest_level_achieved: Math.max(
-            state.onboardingData.highest_level_achieved, 
-            levelProgression.to_level
-          ),
-          last_level_up_at: levelProgression.achieved_at,
-          // Add new nudges with delays
-          active_nudges: [...state.onboardingData.active_nudges, ...newNudges],
-        },
-        unlockedFeatures: newUnlockedFeatures,
-        celebrationQueue: [...state.celebrationQueue, levelProgression],
-      };
-
-    case 'UNLOCK_FEATURE':
-      if (!state.unlockedFeatures.includes(action.payload.feature)) {
-        return {
-          ...state,
-          unlockedFeatures: [...state.unlockedFeatures, action.payload.feature],
-          pendingUnlocks: [...state.pendingUnlocks, action.payload.feature],
-        };
-      }
-      return state;
-
-    case 'SHOW_CELEBRATION':
-      return {
-        ...state,
-        celebrationQueue: state.celebrationQueue.filter(c => c.id !== action.payload),
-      };
-
     case 'COMPLETE_ONBOARDING':
       return {
         ...state,
@@ -260,233 +150,43 @@ function onboardingReducer(state: OnboardingState, action: OnboardingAction): On
     case 'LOAD_STATE':
       // SECURITY: Load server-validated data only
       const loadedData = action.payload.onboardingData || state.onboardingData;
-      const serverUnlockedFeatures = getUnlockedFeaturesForLevel(loadedData.current_level);
-      
-      // PERSISTENT TAB UNLOCKING: Never downgrade unlocked features
-      // Once a feature is unlocked, it should stay unlocked
-      const persistentUnlockedFeatures = (() => {
-        const currentFeatures = new Set(state.unlockedFeatures);
-        const serverFeatures = new Set(serverUnlockedFeatures);
-        
-        // Union of current and server features - never remove features
-        const allFeatures = new Set([...currentFeatures, ...serverFeatures]);
-        
-        console.log('🔓 TAB PERSISTENCE CHECK:', {
-          serverLevel: loadedData.current_level,
-          serverFeatures: Array.from(serverFeatures),
-          currentFeatures: Array.from(currentFeatures),
-          finalFeatures: Array.from(allFeatures),
-          neverDowngrade: 'Features once unlocked stay unlocked'
-        });
-        
-        return Array.from(allFeatures);
-      })();
-      
-      // Log validation results for debugging
-      if (__DEV__) {
-        console.log('📥 LOAD_STATE (Server-Validated):', {
-          serverLevel: loadedData.current_level,
-          currentLevel: state.onboardingData.current_level,
-          serverXP: loadedData.total_xp,
-          currentXP: state.onboardingData.total_xp,
-          serverFeatures: serverUnlockedFeatures,
-          currentFeatures: state.unlockedFeatures,
-          finalFeatures: persistentUnlockedFeatures,
-          completed: loadedData.completed,
-          tabPersistence: 'ENABLED - No downgrading'
-        });
-      }
-      
-      // Filter out invalid nudges
-      const validNudges = (loadedData.active_nudges || []).filter((nudge: ContextualNudge) => {
-        return persistentUnlockedFeatures.includes(nudge.feature_name) && nudge.shown !== undefined;
-      });
       
       return {
         ...state,
-        onboardingData: {
-          ...loadedData,
-          active_nudges: validNudges,
-        },
+        onboardingData: loadedData,
         holisticPreferences: action.payload.holisticPreferences || state.holisticPreferences,
-        unlockedFeatures: persistentUnlockedFeatures,
       };
 
-    // New: Feature exploration actions
+    // Deprecated actions - now handled by XPContext
+    case 'AWARD_XP':
+    case 'LEVEL_UP':
+    case 'UNLOCK_FEATURE':
+    case 'SHOW_CELEBRATION':
     case 'RECORD_FEATURE_VISIT':
-      const { feature, isFirstVisit } = action.payload;
-      const existingExploration = state.onboardingData.feature_exploration[feature];
-      
-      return {
-        ...state,
-        onboardingData: {
-          ...state.onboardingData,
-          feature_exploration: {
-            ...state.onboardingData.feature_exploration,
-            [feature]: {
-              feature_name: feature,
-              first_visit_at: existingExploration?.first_visit_at || (isFirstVisit ? new Date().toISOString() : undefined),
-              visit_count: (existingExploration?.visit_count || 0) + 1,
-              xp_rewarded: isFirstVisit ? true : (existingExploration?.xp_rewarded || false),
-              nudge_dismissed: existingExploration?.nudge_dismissed || false,
-              last_nudge_shown: existingExploration?.last_nudge_shown,
-            },
-          },
-        },
-      };
-
     case 'CREATE_NUDGE':
-      return {
-        ...state,
-        onboardingData: {
-          ...state.onboardingData,
-          active_nudges: [...state.onboardingData.active_nudges, action.payload],
-        },
-      };
-
     case 'DISMISS_NUDGE':
-      const nudgeId = action.payload;
-      return {
-        ...state,
-        onboardingData: {
-          ...state.onboardingData,
-          active_nudges: state.onboardingData.active_nudges.map(nudge =>
-            nudge.id === nudgeId ? { ...nudge, dismissed: true } : nudge
-          ),
-          feature_exploration: {
-            ...state.onboardingData.feature_exploration,
-            // Mark the feature's nudge as dismissed
-            ...Object.fromEntries(
-              Object.entries(state.onboardingData.feature_exploration).map(([key, exploration]) => [
-                key,
-                state.onboardingData.active_nudges.find(n => n.id === nudgeId)?.feature_name === key
-                  ? { ...exploration, nudge_dismissed: true }
-                  : exploration
-              ])
-            ),
-          },
-        },
-      };
-
     case 'MARK_NUDGE_SHOWN':
-      const nudgeIdToMarkShown = action.payload;
-      return {
-        ...state,
-        onboardingData: {
-          ...state.onboardingData,
-          active_nudges: state.onboardingData.active_nudges.map(nudge =>
-            nudge.id === nudgeIdToMarkShown ? { ...nudge, shown: true } : nudge
-          ),
-        },
-      };
-
     case 'CLEAN_EXPIRED_NUDGES':
-      const now = new Date();
-      return {
-        ...state,
-        onboardingData: {
-          ...state.onboardingData,
-          active_nudges: state.onboardingData.active_nudges.filter(nudge => {
-            const createdAt = new Date(nudge.created_at);
-            const expireTime = new Date(createdAt.getTime() + nudge.dismiss_after_hours * 60 * 60 * 1000);
-            return now < expireTime && !nudge.dismissed;
-          }),
-        },
-      };
-
     case 'CLEAR_ALL_NUDGES':
-      return {
-        ...state,
-        onboardingData: {
-          ...state.onboardingData,
-          active_nudges: [],
-        },
-      };
+      console.warn('⚠️ [OnboardingContext] Deprecated action:', action.type, '- Use XPContext instead');
+      return state;
 
     default:
       return state;
   }
 }
 
-// Helper function to create contextual nudges for newly unlocked features
-function createFeatureNudge(feature: string, level: number): ContextualNudge | null {
-  const nudgeConfigs = {
-    achievements: {
-      title: "🏆 Your Achievement System is Ready!",
-      message: "Start tracking your productivity milestones and unlock rewards as you grow. Your journey to mastery begins here!",
-      icon: "🏆",
-      xp_reward: 25,
-      trigger_delay_minutes: 0, // Show immediately after level celebration
-      dismiss_after_hours: 24, // Auto-dismiss after 24 hours
-    },
-    chat: {
-      title: "💬 Your AI Assistant Awaits!",
-      message: "Meet your personal productivity companion. Get instant help, tips, and use voice commands to supercharge your workflow!",
-      icon: "💬", 
-      xp_reward: 30,
-      trigger_delay_minutes: 0, // Show immediately after level celebration
-      dismiss_after_hours: 48, // Auto-dismiss after 48 hours
-    },
-    analytics: {
-      title: "📊 Unlock Your Productivity Insights!",
-      message: "Discover when you're most productive, track your progress, and get personalized recommendations based on your work patterns.",
-      icon: "📊",
-      xp_reward: 35,
-      trigger_delay_minutes: 0, // Show immediately after level celebration
-      dismiss_after_hours: 72, // Auto-dismiss after 72 hours
-    },
-    profile: {
-      title: "👤 Make OMNII Truly Yours!",
-      message: "Customize your AI's personality, fine-tune your experience, and join our vibrant community of productivity enthusiasts.",
-      icon: "👤",
-      xp_reward: 40,
-      trigger_delay_minutes: 0, // Show immediately after level celebration
-      dismiss_after_hours: 168, // Auto-dismiss after 1 week
-    }
-  };
-
-  const config = nudgeConfigs[feature as keyof typeof nudgeConfigs];
-  if (!config) return null;
-
-  return {
-    id: `nudge_${feature}_${Date.now()}`,
-    feature_name: feature,
-    title: config.title,
-    message: config.message,
-    icon: config.icon,
-    xp_reward: config.xp_reward,
-    trigger_delay_minutes: config.trigger_delay_minutes,
-    dismiss_after_hours: config.dismiss_after_hours,
-    created_at: new Date().toISOString(),
-    dismissed: false,
-    shown: false,
-  };
-}
-
-// Context interface
+// Simplified context interface focused on onboarding
 interface OnboardingContextValue {
   state: OnboardingState;
   
-  // Core actions
+  // Core onboarding actions
   startOnboarding: () => Promise<void>;
   recordQuoteResponse: (quoteId: string, action: 'approve' | 'decline', timeSpent: number) => Promise<void>;
   advanceToNextQuote: () => void;
   completeOnboarding: () => Promise<void>;
   
-  // Level/XP actions
-  awardXP: (amount: number, reason: string, category: string) => Promise<void>;
-  triggerLevelUp: (progression: LevelProgression) => void;
-  
-  // Feature management
-  unlockFeature: (feature: string, level: number) => void;
-  isFeatureUnlocked: (feature: string) => boolean;
-  getTabsForLevel: (level: number) => string[];
-  
-  // Celebrations
-  showCelebration: (celebrationId: string) => void;
-  getNextCelebration: () => LevelProgression | null;
-  
-  // Preferences
+  // Preferences management
   updateHolisticPreferences: (preferences: Partial<HolisticPreferences>) => void;
   updateAIPersonality: (personality: Partial<AIPersonality>) => void;
   updateAITuning: (tuning: AITuningPreferences) => void;
@@ -494,27 +194,13 @@ interface OnboardingContextValue {
   // Utilities
   getCurrentQuote: () => OnboardingQuote | null;
   isOnboardingComplete: () => boolean;
-  getCurrentLevel: () => number;
   getProgressPercentage: () => number;
-  getXPProgressToNextLevel: () => number;
-  getXPNeededForNextLevel: () => number;
   
   // System state
   isSystemReady: boolean;
   
-  // New: Feature exploration and nudges
-  recordFeatureVisit: (feature: string) => Promise<void>;
-  getActiveNudges: () => ContextualNudge[];
-  dismissNudge: (nudgeId: string) => void;
-  markNudgeShown: (nudgeId: string) => void;
-  clearAllNudges: () => void;
-  hasVisitedFeature: (feature: string) => boolean;
-  getFeatureExploration: (feature: string) => FeatureExploration | null;
-  
   // Reset
   resetOnboarding: () => void;
-  
-  // Debug functions for testing
   debugResetOnboarding: () => Promise<void>;
 }
 
@@ -528,13 +214,11 @@ interface OnboardingProviderProps {
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { user } = useAuth();
-  const { awardXP: unifiedAwardXP, syncXP: syncUnifiedXP } = useXPContext();
+  const { currentLevel, isFeatureUnlocked } = useXPContext(); // Use XPContext for level/feature data
   const [state, dispatch] = useReducer(onboardingReducer, initialState);
   const onboardingHook = useOnboarding();
-
-  // SECURITY: Refs to prevent race conditions
-  const saveInProgressRef = useRef(false);
   const initializationCompletedRef = useRef(false);
+  const saveInProgressRef = useRef(false);
 
   // SECURITY: Server-side sync function (replaces all client-side calculations)
   const syncWithServer = useCallback(async () => {
@@ -644,49 +328,11 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     syncWithServer
   ]);
 
-  // Handle delayed nudge creation
-  useEffect(() => {
-    const nudgesToShow = state.onboardingData.active_nudges.filter(nudge => {
-      const createdAt = new Date(nudge.created_at);
-      const showTime = new Date(createdAt.getTime() + nudge.trigger_delay_minutes * 60 * 1000);
-      const now = new Date();
-      return now >= showTime && !nudge.dismissed;
-    });
-
-    // Create timers for nudges that haven't been triggered yet
-    state.onboardingData.active_nudges.forEach(nudge => {
-      if (!nudge.dismissed) {
-        const createdAt = new Date(nudge.created_at);
-        const showTime = new Date(createdAt.getTime() + nudge.trigger_delay_minutes * 60 * 1000);
-        const now = new Date();
-        const delay = showTime.getTime() - now.getTime();
-
-        if (delay > 0 && delay < 24 * 60 * 60 * 1000) { // Max 24 hours
-          const timeoutId = setTimeout(() => {
-            // Nudge is ready to be shown - will be handled by UI components
-            console.log(`🔔 Nudge ready: ${nudge.title}`);
-          }, delay);
-
-          return () => clearTimeout(timeoutId);
-        }
-      }
-    });
-  }, [state.onboardingData.active_nudges]);
-
-  // Clean up expired nudges every hour
-  useEffect(() => {
-    const cleanupInterval = setInterval(() => {
-      dispatch({ type: 'CLEAN_EXPIRED_NUDGES' });
-    }, 60 * 60 * 1000); // Every hour
-
-    return () => clearInterval(cleanupInterval);
-  }, []);
-
-  // Context value implementation
+  // Context value implementation - simplified to onboarding only
   const value: OnboardingContextValue = {
     state,
 
-    // Core actions
+    // Core onboarding actions
     startOnboarding: async () => {
       dispatch({ type: 'SET_LOADING', payload: true });
       try {
@@ -754,101 +400,28 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         const result = await onboardingHook.recordQuoteResponse(quoteId, action, timeSpent);
         
         if (result) {
-          // Award XP using unified system instead of local dispatch
-          console.log('💰 [OnboardingContext] Awarding XP via unified system:', {
+          // XP awarding is now handled by XPContext through the unified system
+          console.log('💰 [OnboardingContext] Quote response recorded, XP handled by XPContext:', {
             amount: result.xp_awarded,
             reason: `Quote ${action}`,
             category: 'onboarding'
           });
-          
-          // Sync unified XP system after server XP award
-          await syncUnifiedXP();
-
-          // Check if we should level up (server-side validation)
-          const currentLevel = state.onboardingData.current_level;
-          const newTotalXP = state.onboardingData.total_xp + result.xp_awarded;
-          
-          // Log for debugging
-          if (__DEV__) {
-            console.log('📝 Quote Response XP:', {
-              quoteId,
-              action,
-              xpAwarded: result.xp_awarded,
-              currentLevel,
-              currentXP: state.onboardingData.total_xp,
-              newTotalXP
-            });
-          }
-          
-          // SECURITY: Use server function to determine level up
-          // The server has already validated the level in the recordQuoteResponse function
-          if (result.level_up && result.new_level > currentLevel) {
-            const nextLevel = result.new_level;
-            
-            // Only level up if we haven't already leveled up
-            setTimeout(() => {
-              // Re-check current level from the latest state
-              const latestState = state.onboardingData;
-              const latestLevel = latestState.current_level;
-              
-              // Only proceed if we haven't already leveled up
-              if (latestLevel === currentLevel) {
-                console.log(`🎮 Level Up from Quote: ${currentLevel} → ${nextLevel} (${newTotalXP} XP)`);
-                
-                const getMilestoneUnlocks = (level: number) => {
-                  switch (level) {
-                    case 2: return ['achievements_full'];
-                    case 3: return ['chat_full', 'voice_commands'];
-                    case 4: return ['analytics_full'];
-                    case 5: return ['profile_full', 'ALL_CORE_FEATURES'];
-                    case 6: return ['advanced_insights', 'habit_tracking'];
-                    case 10: return ['predictive_analytics', 'team_features'];
-                    case 15: return ['automations', 'api_access'];
-                    case 20: return ['mentor_mode', 'community_leadership'];
-                    default: return [];
-                  }
-                };
-
-                const levelProgression: LevelProgression = {
-                  id: `${Date.now()}`,
-                  user_id: user?.id || '',
-                  from_level: currentLevel,
-                  to_level: nextLevel,
-                  xp_at_level_up: newTotalXP,
-                  milestone_unlocks: getMilestoneUnlocks(nextLevel),
-                  celebration_shown: false,
-                  unlock_animations_played: [],
-                  achieved_at: new Date().toISOString(),
-                };
-
-                dispatch({ type: 'LEVEL_UP', payload: levelProgression });
-
-                // Complete onboarding when Level 5 is reached (ALL CORE FEATURES UNLOCKED!)
-                if (nextLevel === 5 && !state.onboardingData.completed) {
-                  setTimeout(() => {
-                    dispatch({
-                      type: 'COMPLETE_ONBOARDING',
-                      payload: {
-                        finalLevel: nextLevel,
-                        totalXP: newTotalXP,
-                      },
-                    });
-                    console.log('🎉 Onboarding automatically completed at Level 5!');
-                  }, 2000); // Allow celebration to show first
-                }
-              } else {
-                console.log(`⏭️ Skipping quote level up - already at level ${latestLevel}`);
-              }
-            }, 100); // Small delay to let state update
-          }
         }
 
         // Only advance to next quote if we haven't completed onboarding
-        if (state.onboardingData.current_level < 5) {
+        if (currentLevel < 5) {
           dispatch({ type: 'ADVANCE_QUOTE' });
+        } else {
+          // Complete onboarding when Level 5 is reached
+          dispatch({
+            type: 'COMPLETE_ONBOARDING',
+            payload: {
+              finalLevel: currentLevel,
+              totalXP: result?.xp_awarded || 0,
+            },
+          });
         }
 
-        // Remove the old completion check based on quote count
       } catch (error) {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to record response' });
       } finally {
@@ -866,7 +439,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         dispatch({
           type: 'COMPLETE_ONBOARDING',
           payload: {
-            finalLevel: state.onboardingData.current_level,
+            finalLevel: currentLevel,
             totalXP: state.onboardingData.total_xp,
           },
         });
@@ -875,54 +448,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       }
     },
 
-    // Level/XP actions (SECURITY: Server handles all calculations)
-    awardXP: async (amount: number, reason: string, category: string) => {
-      // Log XP award for debugging
-      if (__DEV__) {
-        console.log('💰 [OnboardingContext] Awarding XP via unified system:', {
-          amount,
-          reason,
-          category,
-          currentLevel: state.onboardingData.current_level,
-          currentXP: state.onboardingData.total_xp,
-        });
-      }
-      
-      // Use unified XP system instead of local dispatch
-      if (user) {
-        await unifiedAwardXP(amount, reason, category);
-      }
-    },
-
-    triggerLevelUp: (progression: LevelProgression) => {
-      dispatch({ type: 'LEVEL_UP', payload: progression });
-    },
-
-    // Feature management
-    unlockFeature: (feature: string, level: number) => {
-      dispatch({ type: 'UNLOCK_FEATURE', payload: { feature, level } });
-    },
-
-    isFeatureUnlocked: (feature: string) => {
-      return state.unlockedFeatures.includes(feature);
-    },
-
-    getTabsForLevel: (level: number) => {
-      return getUnlockedFeaturesForLevel(level).filter(feature => 
-        ['approvals', 'achievements', 'chat', 'analytics', 'profile'].includes(feature)
-      );
-    },
-
-    // Celebrations
-    showCelebration: (celebrationId: string) => {
-      dispatch({ type: 'SHOW_CELEBRATION', payload: celebrationId });
-    },
-
-    getNextCelebration: () => {
-      return state.celebrationQueue[0] || null;
-    },
-
-    // Preferences
+    // Preferences management
     updateHolisticPreferences: (preferences: Partial<HolisticPreferences>) => {
       dispatch({ type: 'UPDATE_PREFERENCES', payload: preferences });
     },
@@ -947,114 +473,9 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       return state.onboardingData.completed;
     },
 
-    getCurrentLevel: () => {
-      return state.onboardingData.current_level;
-    },
-
     getProgressPercentage: () => {
       if (state.quotes.length === 0) return 0;
       return Math.round((state.currentQuoteIndex / state.quotes.length) * 100);
-    },
-
-    getXPProgressToNextLevel: () => {
-      // SECURITY: Get progress from server state (already validated)
-      const currentLevel = state.onboardingData.current_level;
-      const currentXP = state.onboardingData.total_xp;
-      
-      // Use server-provided progress data if available
-      if ((state.onboardingData as any).xp_progress_percentage !== undefined) {
-        return (state.onboardingData as any).xp_progress_percentage;
-      }
-      
-      // Fallback calculation for backward compatibility
-      if (currentLevel >= 50) return 100;
-      return Math.min(100, Math.max(0, Math.round((currentXP / (currentLevel * 150)) * 100)));
-    },
-
-    getXPNeededForNextLevel: () => {
-      // SECURITY: Get XP needed from server state
-      if ((state.onboardingData as any).xp_needed_for_next_level !== undefined) {
-        return (state.onboardingData as any).xp_needed_for_next_level;
-      }
-      
-      // Fallback for backward compatibility
-      const currentLevel = state.onboardingData.current_level;
-      if (currentLevel >= 50) return 0;
-      return Math.max(0, (currentLevel + 1) * 150 - state.onboardingData.total_xp);
-    },
-
-    // New: Feature exploration and nudges
-    recordFeatureVisit: async (feature: string) => {
-      if (!user) return;
-      
-      try {
-        // SECURITY: Use server-side function for feature visit recording
-        const result = await recordFeatureVisitSecure(user.id, feature);
-        
-        console.log('🔒 Secure feature visit recorded:', {
-          feature,
-          xpAwarded: result.xp_awarded,
-          isFirstVisit: result.is_first_visit,
-          visitCount: result.visit_count
-        });
-        
-        // Record the visit locally
-        dispatch({ 
-          type: 'RECORD_FEATURE_VISIT', 
-          payload: { 
-            feature, 
-            isFirstVisit: result.is_first_visit 
-          } 
-        });
-        
-        // Award XP if it's a first visit and onboarding is complete
-        if (result.is_first_visit && result.xp_awarded > 0 && state.onboardingData.completed) {
-          console.log('💰 [OnboardingContext] Feature exploration XP via unified system:', {
-            feature,
-            amount: result.xp_awarded,
-            reason: `First exploration of ${feature}`,
-            category: 'exploration'
-          });
-          
-          // Use unified XP system
-          await unifiedAwardXP(result.xp_awarded, `First exploration of ${feature}`, 'exploration');
-        }
-      } catch (error) {
-        console.error('❌ Feature visit recording failed:', error);
-        
-        // Fallback to local recording only
-        const existingExploration = state.onboardingData.feature_exploration[feature];
-        const isFirstVisit = !existingExploration?.first_visit_at;
-        
-        dispatch({ 
-          type: 'RECORD_FEATURE_VISIT', 
-          payload: { feature, isFirstVisit } 
-        });
-      }
-    },
-
-    getActiveNudges: () => {
-      return state.onboardingData.active_nudges;
-    },
-
-    dismissNudge: (nudgeId: string) => {
-      dispatch({ type: 'DISMISS_NUDGE', payload: nudgeId });
-    },
-
-    markNudgeShown: (nudgeId: string) => {
-      dispatch({ type: 'MARK_NUDGE_SHOWN', payload: nudgeId });
-    },
-
-    clearAllNudges: () => {
-      dispatch({ type: 'CLEAR_ALL_NUDGES' });
-    },
-
-    hasVisitedFeature: (feature: string) => {
-      return !!state.onboardingData.feature_exploration[feature];
-    },
-
-    getFeatureExploration: (feature: string) => {
-      return state.onboardingData.feature_exploration[feature] || null;
     },
 
     // Reset

@@ -1,0 +1,1636 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Approvals Screen Redesign Implementation Plan
+
+## Overview
+Transform the current approvals screen (`app/(tabs)/approvals.tsx`) to match the modern, AI-focused design from the provided HTML while maintaining all existing functionality including navigation, filtering, refresh, and authentication.
+
+## 🎯 Design Goals
+- Modern AI-powered interface with gradients and animations
+- Maintain all existing functionality (navigation to details, filtering, refresh)
+- Enhanced visual hierarchy and user experience
+- Interactive AI insights and voice feedback
+- Responsive design with smooth animations
+
+## 📋 Current State Analysis
+
+### Existing Functionality to Preserve
+- ✅ Navigation to `/request/${item.id}` when clicking tasks
+- ✅ Filter tabs (All, Pending, In Progress, Completed)
+- ✅ Pull-to-refresh functionality
+- ✅ Authentication checks and login redirect
+- ✅ Data fetching with `useFetchApprovals` hook
+- ✅ Empty state handling
+- ✅ Stats calculation and display
+
+### Current Issues to Address
+- Basic styling lacks modern AI theme
+- No interactive AI elements
+- Limited visual hierarchy
+- Missing animations and micro-interactions
+- Stats layout could be more prominent
+
+## 🏗️ Implementation Steps
+
+### Step 1: Create New Components
+
+#### 1.1 AIStatusBadge Component
+**File**: `components/common/AIStatusBadge.tsx`
+```typescript
+import React, { useRef, useEffect } from 'react';
+import { View, Text, Animated } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { AppColors } from '@/constants/Colors';
+
+export default function AIStatusBadge() {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const dotBlinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Pulse animation for the badge
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.02,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Blinking animation for the dot
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(dotBlinkAnim, {
+          toValue: 0.3,
+          duration: 750,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dotBlinkAnim, {
+          toValue: 1,
+          duration: 750,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+      <LinearGradient
+        colors={[AppColors.aiGradientStart, AppColors.aiGradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 20,
+          gap: 6,
+        }}
+      >
+        <Animated.View
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: '#00b894',
+            opacity: dotBlinkAnim,
+          }}
+        />
+        <Text
+          style={{
+            color: 'white',
+            fontSize: 12,
+            fontWeight: '600',
+          }}
+        >
+          AI Active
+        </Text>
+      </LinearGradient>
+    </Animated.View>
+  );
+}
+```
+
+#### 1.2 AIInsightsBanner Component  
+**File**: `components/common/AIInsightsBanner.tsx`
+```typescript
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, Animated, Image } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { AppColors } from '@/constants/Colors';
+
+interface AIInsightsBannerProps {
+  onPress: () => void;
+}
+
+export default function AIInsightsBanner({ onPress }: AIInsightsBannerProps) {
+  const shimmerAnim = useRef(new Animated.Value(-1)).current;
+  const logoGlowAnim = useRef(new Animated.Value(1)).current;
+  const logoRotateAnim = useRef(new Animated.Value(0)).current;
+  
+  const [currentInsight, setCurrentInsight] = useState(0);
+  
+  const insights = [
+    "You've completed 80% of today's priorities - amazing!",
+    "🔥 High Priority: Follow up with Sarah about Q2 planning - due today at 2 PM",
+    "3 emails need responses - shall I draft replies?",
+    "Your next meeting starts in 15 minutes",
+    "Time for a 5-minute break - you've been focused for 90 minutes"
+  ];
+
+  useEffect(() => {
+    // Shimmer animation
+    Animated.loop(
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Logo glow animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoGlowAnim, {
+          toValue: 1.1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoGlowAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Logo rotation animation
+    Animated.loop(
+      Animated.timing(logoRotateAnim, {
+        toValue: 1,
+        duration: 8000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Rotate insights every 5 seconds
+    const interval = setInterval(() => {
+      setCurrentInsight((prev) => (prev + 1) % insights.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const shimmerTranslateX = shimmerAnim.interpolate({
+    inputRange: [-1, 1],
+    outputRange: [-300, 300],
+  });
+
+  const logoRotation = logoRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+      <LinearGradient
+        colors={[AppColors.aiGradientStart, AppColors.aiGradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          margin: 20,
+          borderRadius: 16,
+          padding: 20,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Shimmer overlay */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            transform: [{ translateX: shimmerTranslateX }],
+          }}
+        >
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.1)', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ flex: 1 }}
+          />
+        </Animated.View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          {/* Animated App Logo with Glow */}
+          <Animated.View
+            style={{
+              transform: [
+                { scale: logoGlowAnim },
+                { rotate: logoRotation }
+              ],
+              shadowColor: '#ffffff',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 10,
+              elevation: 10,
+            }}
+          >
+            <Image
+              source={require('@/assets/images/public/logos/omniiLogoPNG.png')}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+              }}
+              resizeMode="contain"
+            />
+          </Animated.View>
+          
+          <Text
+            style={{
+              color: 'white',
+              fontSize: 16,
+              fontWeight: '700',
+              marginLeft: 10,
+            }}
+          >
+            AI Insights
+          </Text>
+        </View>
+
+        <Text
+          style={{
+            color: 'white',
+            fontSize: 14,
+            opacity: 0.9,
+            lineHeight: 20,
+          }}
+        >
+          "{insights[currentInsight]}"
+        </Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+```
+
+#### 1.3 VoiceFeedbackModal Component
+**File**: `components/common/VoiceFeedbackModal.tsx`
+```typescript
+import React, { useRef, useEffect } from 'react';
+import { 
+  Modal, 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  Animated, 
+  Image,
+  Dimensions 
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { AppColors } from '@/constants/Colors';
+
+interface VoiceFeedbackModalProps {
+  visible: boolean;
+  onClose: () => void;
+  insights?: string[];
+}
+
+const { width: screenWidth } = Dimensions.get('window');
+
+export default function VoiceFeedbackModal({ 
+  visible, 
+  onClose, 
+  insights = [
+    "🎯 Focus on Sarah's follow-up first",
+    "📊 Marketing prep can wait until 4 PM", 
+    "🧘 You have 30 min free at 3 PM for deep work"
+  ]
+}: VoiceFeedbackModalProps) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const logoGlowAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (visible) {
+      // Modal entrance animation
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Logo glow animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(logoGlowAnim, {
+            toValue: 1.2,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(logoGlowAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      // Modal exit animation
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
+  return (
+    <Modal
+      transparent
+      visible={visible}
+      animationType="none"
+      onRequestClose={onClose}
+    >
+      <Animated.View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          opacity: fadeAnim,
+        }}
+      >
+        <Animated.View
+          style={{
+            transform: [{ scale: scaleAnim }],
+            backgroundColor: 'white',
+            borderRadius: 24,
+            padding: 40,
+            maxWidth: screenWidth - 40,
+            alignItems: 'center',
+          }}
+        >
+          {/* Animated App Logo with Enhanced Glow */}
+          <Animated.View
+            style={{
+              transform: [{ scale: logoGlowAnim }],
+              shadowColor: AppColors.aiGradientStart,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 1,
+              shadowRadius: 20,
+              elevation: 20,
+              marginBottom: 20,
+            }}
+          >
+            <Image
+              source={require('@/assets/images/public/logos/omniiLogoPNG.png')}
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 20,
+              }}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: AppColors.textPrimary,
+              marginBottom: 10,
+              textAlign: 'center',
+            }}
+          >
+            Your Daily Priorities
+          </Text>
+
+          <View style={{ marginBottom: 20 }}>
+            {insights.map((insight, index) => (
+              <Text
+                key={index}
+                style={{
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                  textAlign: 'center',
+                  lineHeight: 20,
+                  marginBottom: index < insights.length - 1 ? 8 : 0,
+                }}
+              >
+                {insight}
+              </Text>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            onPress={onClose}
+            style={{
+              backgroundColor: AppColors.aiGradientStart,
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+              borderRadius: 8,
+            }}
+          >
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 16,
+                fontWeight: '600',
+              }}
+            >
+              Got it!
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+}
+```
+
+#### 1.4 Enhanced ApprovalCard Component
+**File**: `components/ApprovalCard.tsx` (redesign existing)
+```typescript
+import React, { useRef } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  Animated 
+} from 'react-native';
+import { AppColors } from '@/constants/Colors';
+
+interface ApprovalCardProps {
+  approval: {
+    id: string;
+    title: string;
+    description: string;
+    priority: 'high' | 'medium' | 'low';
+    created_at: string;
+    requested_by: string;
+    type: string;
+  };
+  onApprove?: (id: string) => void;
+  onDecline?: (id: string) => void;
+  onPress?: () => void;
+}
+
+export default function ApprovalCard({ 
+  approval, 
+  onApprove, 
+  onDecline, 
+  onPress 
+}: ApprovalCardProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.98,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const getPriorityConfig = (priority: string) => {
+    switch(priority) {
+      case 'high':
+        return {
+          color: AppColors.highPriority,
+          label: 'HIGH PRIORITY',
+          emoji: '🔥',
+          borderColor: AppColors.highPriority,
+        };
+      case 'medium':
+        return {
+          color: AppColors.mediumPriority,
+          label: 'MEDIUM PRIORITY',
+          emoji: '📊',
+          borderColor: AppColors.mediumPriority,
+        };
+      case 'low':
+        return {
+          color: AppColors.lowPriority,
+          label: 'LOW PRIORITY',
+          emoji: '✅',
+          borderColor: AppColors.lowPriority,
+        };
+      default:
+        return {
+          color: AppColors.aiGradientStart,
+          label: 'PRIORITY',
+          emoji: '📋',
+          borderColor: AppColors.aiGradientStart,
+        };
+    }
+  };
+
+  const priorityConfig = getPriorityConfig(approval.priority);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.9}
+    >
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            borderLeftColor: priorityConfig.borderColor,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        {/* Priority Badge */}
+        <View style={styles.header}>
+          <View
+            style={[
+              styles.priorityBadge,
+              { backgroundColor: priorityConfig.color },
+            ]}
+          >
+            <Text style={styles.priorityText}>
+              {priorityConfig.label}
+            </Text>
+          </View>
+        </View>
+
+        {/* Title with Emoji */}
+        <Text style={styles.title}>
+          {priorityConfig.emoji} {approval.title}
+        </Text>
+
+        {/* Description */}
+        <Text style={styles.description}>
+          {approval.description}
+        </Text>
+
+        {/* Meta Information */}
+        <View style={styles.meta}>
+          <Text style={styles.metaText}>
+            📅 Suggested for today at 2:00 PM
+          </Text>
+          <View style={styles.aiGeneratedBadge}>
+            <Text style={styles.aiGeneratedText}>AI Generated</Text>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actions}>
+          {onApprove && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.approveButton]}
+              onPress={() => onApprove(approval.id)}
+            >
+              <Text style={styles.approveButtonText}>✓ Approve</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.detailsButton]}
+            onPress={onPress}
+          >
+            <Text style={styles.detailsButtonText}>Details</Text>
+          </TouchableOpacity>
+
+          {onDecline && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.skipButton]}
+              onPress={() => onDecline(approval.id)}
+            >
+              <Text style={styles.skipButtonText}>✕ Skip</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: AppColors.cardBackground,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  header: {
+    marginBottom: 12,
+  },
+  priorityBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  priorityText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 8,
+    lineHeight: 24,
+  },
+  description: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  meta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  metaText: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+  },
+  aiGeneratedBadge: {
+    backgroundColor: `${AppColors.aiGradientStart}10`,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  aiGeneratedText: {
+    color: AppColors.aiGradientStart,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  approveButton: {
+    backgroundColor: AppColors.success,
+  },
+  approveButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  detailsButton: {
+    backgroundColor: AppColors.aiGradientStart,
+  },
+  detailsButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  skipButton: {
+    backgroundColor: AppColors.background,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  skipButtonText: {
+    color: AppColors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});
+```
+
+### Step 2: Update Main Screen Layout
+
+#### 2.1 Header Section Redesign
+```typescript
+// New header structure:
+// - Title: "Approvals" 
+// - AIStatusBadge component
+// - Subtitle: "AI-curated tasks awaiting your confirmation"
+```
+
+#### 2.2 Stats Grid Transformation
+```typescript
+// Change from 4 horizontal cards to 2x2 grid:
+// Top row: Total Tasks | Pending Approval  
+// Bottom row: In Progress | Completed
+// Larger numbers (32px), enhanced styling
+```
+
+#### 2.3 Add AI Insights Section
+```typescript
+// Insert AIInsightsBanner between stats and filter tabs
+// Dynamic insights with shimmer animation
+// Clickable to show VoiceFeedbackModal
+```
+
+### Step 3: Styling System Updates
+
+#### 3.1 Color Constants
+**File**: `constants/Colors.ts`
+```typescript
+export const AppColors = {
+  // AI Theme
+  aiGradientStart: '#667eea',
+  aiGradientEnd: '#764ba2',
+  
+  // Status Colors
+  success: '#00b894',
+  successLight: '#55efc4',
+  warning: '#fdcb6e',
+  error: '#e17055',
+  errorLight: '#fd79a8',
+  
+  // Priority Colors
+  highPriority: '#e17055',
+  mediumPriority: '#fdcb6e', 
+  lowPriority: '#74b9ff',
+  
+  // Base Colors
+  background: '#f8f9fa',
+  cardBackground: '#ffffff',
+  textPrimary: '#2d3436',
+  textSecondary: '#636e72',
+  border: '#e9ecef',
+  borderLight: '#f1f3f4',
+};
+```
+
+#### 3.2 Animation Configurations
+**File**: `constants/Animations.ts`
+```typescript
+export const Animations = {
+  pulse: {
+    duration: 2000,
+    useNativeDriver: true,
+  },
+  shimmer: {
+    duration: 3000,
+    useNativeDriver: true,
+  },
+  cardHover: {
+    duration: 200,
+    useNativeDriver: true,
+  },
+};
+```
+
+### Step 4: Component Implementation Details
+
+#### 4.1 AIStatusBadge Implementation
+```typescript
+// Features to implement:
+// - Gradient background using LinearGradient
+// - Pulsing animation with Animated.Value
+// - Green dot with blinking animation
+// - "AI Active" text with proper typography
+```
+
+#### 4.2 AIInsightsBanner Implementation  
+```typescript
+// Features to implement:
+// - Gradient background with shimmer overlay
+// - Animated AI logo with color rotation
+// - Dynamic insights text rotation
+// - Touch handling for modal trigger
+// - Proper accessibility labels
+```
+
+#### 4.3 VoiceFeedbackModal Implementation
+```typescript
+// Features to implement:
+// - Modal overlay with backdrop
+// - Animated AI logo with pulse effect
+// - Priority recommendations display
+// - Voice synthesis integration (optional)
+// - Smooth enter/exit animations
+```
+
+#### 4.4 Enhanced ApprovalCard Implementation
+```typescript
+// Features to implement:
+// - Left border color coding by priority
+// - Priority badges with proper colors
+// - Emoji icons for visual appeal
+// - Enhanced typography hierarchy
+// - Improved action button layout
+// - Press animation effects
+// - AI-generated source badges
+// - Maintain Link navigation to details
+```
+
+### Step 5: Main Screen Redesign
+
+#### 5.1 Header Section
+```typescript
+const HeaderSection = () => (
+  <View style={styles.header}>
+    <View style={styles.headerTop}>
+      <Text style={styles.title}>Approvals</Text>
+      <AIStatusBadge />
+    </View>
+    <Text style={styles.subtitle}>
+      AI-curated tasks awaiting your confirmation
+    </Text>
+  </View>
+);
+```
+
+#### 5.2 Stats Grid with StatCard Component
+```typescript
+// StatCard Component
+const StatCard = ({ label, value }: { label: string; value: number }) => (
+  <View style={styles.statCard}>
+    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statValue}>{value}</Text>
+  </View>
+);
+
+// Stats Grid Implementation
+const StatsGrid = ({ stats }) => (
+  <View style={styles.statsContainer}>
+    <View style={styles.statsRow}>
+      <StatCard label="Total Tasks" value={stats.total} />
+      <StatCard label="Pending Approval" value={stats.pending} />
+    </View>
+    <View style={styles.statsRow}>
+      <StatCard label="In Progress" value={stats.inProgress} />
+      <StatCard label="Completed" value={stats.completed} />
+    </View>
+  </View>
+);
+```
+
+#### 5.3 Enhanced Filter Tabs Implementation
+```typescript
+const FilterTabs = ({ selectedFilter, onFilterChange, stats }) => (
+  <View style={styles.filterTabsContainer}>
+    <TouchableOpacity
+      style={[
+        styles.filterTab,
+        selectedFilter === 'all' && styles.filterTabActive
+      ]}
+      onPress={() => onFilterChange('all')}
+    >
+      <Text style={[
+        styles.filterTabText,
+        selectedFilter === 'all' && styles.filterTabTextActive
+      ]}>
+        All ({stats.total})
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.filterTab,
+        selectedFilter === 'high' && styles.filterTabActive
+      ]}
+      onPress={() => onFilterChange('high')}
+    >
+      <Text style={[
+        styles.filterTabText,
+        selectedFilter === 'high' && styles.filterTabTextActive
+      ]}>
+        Pending ({stats.pending})
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.filterTab,
+        selectedFilter === 'medium' && styles.filterTabActive
+      ]}
+      onPress={() => onFilterChange('medium')}
+    >
+      <Text style={[
+        styles.filterTabText,
+        selectedFilter === 'medium' && styles.filterTabTextActive
+      ]}>
+        In Progress ({stats.inProgress})
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.filterTab,
+        selectedFilter === 'low' && styles.filterTabActive
+      ]}
+      onPress={() => onFilterChange('low')}
+    >
+      <Text style={[
+        styles.filterTabText,
+        selectedFilter === 'low' && styles.filterTabTextActive
+      ]}>
+        Completed ({stats.completed})
+      </Text>
+    </TouchableOpacity>
+  </View>
+);
+```
+
+#### 5.4 Complete Main Screen Implementation
+```typescript
+// app/(tabs)/approvals.tsx - Complete Implementation
+import { useState, useCallback } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  FlatList, 
+  RefreshControl, 
+  TouchableOpacity 
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
+import ApprovalCard from '@/components/ApprovalCard';
+import EmptyState from '@/components/EmptyState';
+import AIStatusBadge from '@/components/common/AIStatusBadge';
+import AIInsightsBanner from '@/components/common/AIInsightsBanner';
+import VoiceFeedbackModal from '@/components/common/VoiceFeedbackModal';
+import { useFetchApprovals } from '@/hooks/useFetchApprovals';
+import { AppColors } from '@/constants/Colors';
+
+export default function ApprovalsScreen() {
+  const { user } = useAuth();
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const { approvals, isLoading, refetch } = useFetchApprovals();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
+  const filteredApprovals = approvals.filter(approval => {
+    if (selectedFilter === 'all') return true;
+    return approval.priority === selectedFilter;
+  });
+
+  const stats = {
+    total: approvals.length,
+    pending: approvals.filter(a => a.priority === 'high').length,
+    inProgress: approvals.filter(a => a.priority === 'medium').length,
+    completed: approvals.filter(a => a.priority === 'low').length,
+  };
+
+  const StatCard = ({ label, value }: { label: string; value: number }) => (
+    <View style={styles.statCard}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+    </View>
+  );
+
+  const FilterTabs = () => (
+    <View style={styles.filterTabsContainer}>
+      <TouchableOpacity
+        style={[styles.filterTab, selectedFilter === 'all' && styles.filterTabActive]}
+        onPress={() => setSelectedFilter('all')}
+      >
+        <Text style={[styles.filterTabText, selectedFilter === 'all' && styles.filterTabTextActive]}>
+          All ({stats.total})
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.filterTab, selectedFilter === 'high' && styles.filterTabActive]}
+        onPress={() => setSelectedFilter('high')}
+      >
+        <Text style={[styles.filterTabText, selectedFilter === 'high' && styles.filterTabTextActive]}>
+          Pending ({stats.pending})
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.filterTab, selectedFilter === 'medium' && styles.filterTabActive]}
+        onPress={() => setSelectedFilter('medium')}
+      >
+        <Text style={[styles.filterTabText, selectedFilter === 'medium' && styles.filterTabTextActive]}>
+          In Progress ({stats.inProgress})
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.filterTab, selectedFilter === 'low' && styles.filterTabActive]}
+        onPress={() => setSelectedFilter('low')}
+      >
+        <Text style={[styles.filterTabText, selectedFilter === 'low' && styles.filterTabTextActive]}>
+          Completed ({stats.completed})
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderItem = ({ item }) => (
+    <Link href={`/request/${item.id}`} style={{ textDecoration: 'none' }}>
+      <ApprovalCard approval={item} />
+    </Link>
+  );
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Please log in to view your approvals.</Text>
+          <Link href="/(auth)/login" asChild>
+            <TouchableOpacity style={styles.loginButton}>
+              <Text style={styles.loginButtonText}>Login</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header Section */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>Approvals</Text>
+          <AIStatusBadge />
+        </View>
+        <Text style={styles.subtitle}>
+          AI-curated tasks awaiting your confirmation
+        </Text>
+      </View>
+
+      {/* Stats Grid */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statsRow}>
+          <StatCard label="Total Tasks" value={stats.total} />
+          <StatCard label="Pending Approval" value={stats.pending} />
+        </View>
+        <View style={styles.statsRow}>
+          <StatCard label="In Progress" value={stats.inProgress} />
+          <StatCard label="Completed" value={stats.completed} />
+        </View>
+      </View>
+
+      {/* AI Insights Banner */}
+      <AIInsightsBanner onPress={() => setShowVoiceModal(true)} />
+
+      {/* Filter Tabs */}
+      <FilterTabs />
+
+      {/* Tasks List */}
+      <View style={styles.listContainer}>
+        <FlatList
+          data={filteredApprovals}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={AppColors.aiGradientStart}
+            />
+          }
+          ListEmptyComponent={
+            <EmptyState
+              title="No tasks found"
+              message="Create a new task to get started"
+              icon="check-circle"
+            />
+          }
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20 }}
+        />
+      </View>
+
+      {/* Voice Feedback Modal */}
+      <VoiceFeedbackModal
+        visible={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+      />
+    </SafeAreaView>
+  );
+}
+```
+
+### Step 6: Styling Implementation
+#### 6.1 Complete Main Screen Styles
+```typescript
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: AppColors.background,
+  },
+  header: {
+    backgroundColor: AppColors.cardBackground,
+    padding: 24,
+    paddingTop: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.border,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: AppColors.textSecondary,
+    fontWeight: '400',
+  },
+  statsContainer: {
+    padding: 20,
+    gap: 16,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: AppColors.cardBackground,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: AppColors.textPrimary,
+    lineHeight: 36,
+  },
+  filterTabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: AppColors.cardBackground,
+    margin: 20,
+    marginTop: 0,
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  filterTabActive: {
+    backgroundColor: AppColors.background,
+  },
+  filterTabText: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    fontWeight: '600',
+  },
+  filterTabTextActive: {
+    color: AppColors.textPrimary,
+    fontWeight: '700',
+  },
+  listContainer: {
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  loginButton: {
+    marginTop: 16,
+    backgroundColor: AppColors.aiGradientStart,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+```
+
+#### 6.2 Color Constants Implementation
+```typescript
+// constants/Colors.ts - Complete Implementation
+export const AppColors = {
+  // AI Theme
+  aiGradientStart: '#667eea',
+  aiGradientEnd: '#764ba2',
+  
+  // Status Colors
+  success: '#00b894',
+  successLight: '#55efc4',
+  warning: '#fdcb6e',
+  error: '#e17055',
+  errorLight: '#fd79a8',
+  
+  // Priority Colors
+  highPriority: '#e17055',
+  mediumPriority: '#fdcb6e', 
+  lowPriority: '#74b9ff',
+  
+  // Base Colors
+  background: '#f8f9fa',
+  cardBackground: '#ffffff',
+  textPrimary: '#2d3436',
+  textSecondary: '#636e72',
+  border: '#e9ecef',
+  borderLight: '#f1f3f4',
+  
+  // Shadow System
+  shadows: {
+    card: {
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 12,
+      elevation: 2,
+    },
+    elevated: {
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      elevation: 4,
+    },
+    glow: {
+      shadowColor: '#667eea',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 10,
+      elevation: 10,
+    },
+  },
+};
+```
+
+#### 6.3 Animation Constants Implementation
+```typescript
+// constants/Animations.ts - Complete Implementation
+export const Animations = {
+  // Timing configurations
+  pulse: {
+    duration: 2000,
+    useNativeDriver: true,
+  },
+  shimmer: {
+    duration: 3000,
+    useNativeDriver: true,
+  },
+  cardPress: {
+    duration: 100,
+    useNativeDriver: true,
+  },
+  modalEntrance: {
+    duration: 300,
+    useNativeDriver: true,
+  },
+  logoGlow: {
+    duration: 1500,
+    useNativeDriver: true,
+  },
+  logoRotation: {
+    duration: 8000,
+    useNativeDriver: true,
+  },
+  
+  // Spring configurations
+  modalSpring: {
+    tension: 100,
+    friction: 8,
+    useNativeDriver: true,
+  },
+  
+  // Interpolation values
+  scaleValues: {
+    pressed: 0.98,
+    normal: 1,
+    enlarged: 1.02,
+  },
+  
+  // Opacity values
+  opacityValues: {
+    hidden: 0,
+    dimmed: 0.3,
+    visible: 1,
+  },
+};
+```
+
+### Step 7: Animation Implementation
+
+#### 7.1 Pulse Animation (AI Badge)
+```typescript
+const pulseAnim = useRef(new Animated.Value(1)).current;
+
+useEffect(() => {
+  Animated.loop(
+    Animated.sequence([
+      Animated.timing(pulseAnim, {
+        toValue: 1.02,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ])
+  ).start();
+}, []);
+```
+
+#### 7.2 Shimmer Animation (AI Insights)
+```typescript
+const shimmerAnim = useRef(new Animated.Value(-1)).current;
+
+useEffect(() => {
+  Animated.loop(
+    Animated.timing(shimmerAnim, {
+      toValue: 1,
+      duration: 3000,
+      useNativeDriver: true,
+    })
+  ).start();
+}, []);
+```
+
+#### 7.3 Card Press Animation
+```typescript
+const scaleAnim = useRef(new Animated.Value(1)).current;
+
+const handlePressIn = () => {
+  Animated.timing(scaleAnim, {
+    toValue: 0.98,
+    duration: 100,
+    useNativeDriver: true,
+  }).start();
+};
+
+const handlePressOut = () => {
+  Animated.timing(scaleAnim, {
+    toValue: 1,
+    duration: 100,
+    useNativeDriver: true,
+  }).start();
+};
+```
+
+## 📱 Responsive Design Considerations
+
+### Mobile Optimization
+- Ensure touch targets are at least 44px
+- Optimize animations for 60fps performance
+- Handle different screen sizes gracefully
+- Test on various devices and orientations
+
+### Accessibility
+- Proper accessibility labels for all interactive elements
+- Screen reader support for AI insights
+- High contrast mode compatibility
+- Voice feedback integration (optional)
+
+## 🧪 Testing Strategy
+
+### Functionality Testing
+- [ ] Navigation to task details still works
+- [ ] Filter tabs function correctly
+- [ ] Pull-to-refresh works
+- [ ] Authentication flow intact
+- [ ] Empty states display properly
+- [ ] Stats calculations accurate
+
+### Visual Testing
+- [ ] Animations run smoothly
+- [ ] Gradients render correctly
+- [ ] Typography hierarchy clear
+- [ ] Color scheme consistent
+- [ ] Responsive layout works
+
+### Performance Testing
+- [ ] No animation lag
+- [ ] Smooth scrolling
+- [ ] Fast component mounting
+- [ ] Memory usage optimized
+
+## 📦 Dependencies
+
+### New Dependencies Needed
+```json
+{
+  "react-native-linear-gradient": "^2.8.3",
+  "react-native-reanimated": "^3.6.2"
+}
+```
+
+### Installation Commands
+```bash
+npm install react-native-linear-gradient react-native-reanimated
+cd ios && pod install
+```
+
+## 🚀 Deployment Checklist
+
+### Pre-deployment
+- [ ] All components created and tested
+- [ ] Existing functionality verified
+- [ ] Animations optimized
+- [ ] Code review completed
+- [ ] Performance testing passed
+
+### Post-deployment
+- [ ] Monitor for any regressions
+- [ ] Gather user feedback
+- [ ] Performance metrics tracking
+- [ ] A/B testing setup (optional)
+
+## 📝 File Structure
+
+```
+components/
+├── common/
+│   ├── AIStatusBadge.tsx          # New
+│   ├── AIInsightsBanner.tsx       # New
+│   └── VoiceFeedbackModal.tsx     # New
+├── ApprovalCard.tsx               # Enhanced
+└── EmptyState.tsx                 # Existing
+
+constants/
+├── Colors.ts                      # New/Enhanced
+└── Animations.ts                  # New
+
+app/(tabs)/
+└── approvals.tsx                  # Enhanced
+
+hooks/
+└── useFetchApprovals.ts          # Existing (no changes)
+```
+
+## 🎨 Design System
+
+### Typography Scale
+- **Title**: 28px, weight 700
+- **Subtitle**: 16px, weight 400  
+- **Stat Numbers**: 32px, weight 800
+- **Stat Labels**: 14px, weight 500
+- **Card Titles**: 18px, weight 600
+- **Card Text**: 14px, weight 400
+
+### Spacing System
+- **Container Padding**: 20px
+- **Card Padding**: 20px
+- **Element Gaps**: 8px, 12px, 16px, 20px, 24px
+- **Border Radius**: 8px, 12px, 16px, 20px
+
+### Shadow System
+```typescript
+const shadows = {
+  card: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  elevated: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+};
+```
+
+## 🔄 Migration Strategy
+
+### Phase 1: Component Creation
+1. Create new components (AIStatusBadge, AIInsightsBanner, VoiceFeedbackModal)
+2. Test components in isolation
+3. Create storybook entries (optional)
+
+### Phase 2: ApprovalCard Enhancement
+1. Backup existing ApprovalCard
+2. Implement new design
+3. Test navigation functionality
+4. Verify all props work correctly
+
+### Phase 3: Main Screen Integration
+1. Update approvals.tsx layout
+2. Integrate new components
+3. Test all existing functionality
+4. Performance optimization
+
+### Phase 4: Polish & Testing
+1. Fine-tune animations
+2. Accessibility improvements
+3. Cross-device testing
+4. Performance monitoring
+
+## 📊 Success Metrics
+
+### User Experience
+- Reduced time to complete approval tasks
+- Increased user engagement with AI insights
+- Positive feedback on visual design
+- Improved task completion rates
+
+### Technical Performance
+- Maintain 60fps animations
+- No increase in memory usage
+- Fast component render times
+- Stable navigation performance
+
+## 🐛 Risk Mitigation
+
+### Potential Issues
+1. **Animation Performance**: Use native driver, optimize re-renders
+2. **Navigation Regression**: Thorough testing of Link components
+3. **Memory Leaks**: Proper cleanup of animations and listeners
+4. **Accessibility**: Test with screen readers and voice control
+
+### Rollback Plan
+- Keep backup of original components
+- Feature flags for new design elements
+- Gradual rollout strategy
+- Quick revert capability
+
+---
+
+This implementation plan provides a comprehensive roadmap for transforming the approvals screen while maintaining all existing functionality. The focus is on creating a modern, AI-powered interface that enhances user experience without breaking any current workflows. 

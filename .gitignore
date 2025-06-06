@@ -67,7 +67,6 @@ android/local.properties
 
 # ===== DEVELOPMENT TOOLS =====
 .vscode/
-.cursor/
 .idea/
 *.swp
 *.swo

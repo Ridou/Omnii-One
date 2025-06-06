@@ -1,0 +1,1066 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 🎯 OMNII Landing Page Enhancement Implementation Plan
+
+## 📋 PROJECT OVERVIEW
+
+**Objective**: Enhance ONLY the middle body content and hero subtitle while preserving existing structure, logo, and footer sections exactly as implemented.
+
+**Strategy**: Mobile-first responsive design with webapp enhancements, following established codebase patterns from `profile.tsx` and `achievements.tsx`.
+
+---
+
+## 🚫 STRICT PRESERVATION REQUIREMENTS
+
+### DO NOT MODIFY
+- ✅ **Current Logo**: Preserve `SplashLogo` component and all bounce/rotation/scale animations
+- ✅ **Hero Structure**: Keep all existing layout, spacing, CTA logic, and authentication flow
+- ✅ **Footer Section**: Maintain all links, styling, and structure unchanged
+- ✅ **Sacred Spacing**: Preserve all `SACRED_SPACING` constants and usage
+- ✅ **Color Systems**: Use existing `AppColors` and `BRAND_COLORS` only
+- ✅ **Typography**: Use existing components (`BrandText`, `DisplayText`, `Heading2`, etc.)
+
+### ALLOWED MODIFICATIONS
+- ✅ **Hero Subtitle Text**: Update content only, preserve styling
+- ✅ **Middle Sections**: Replace two middle sections with new interactive components
+- ✅ **Add Responsive Utils**: Create new responsive system for landing page
+
+---
+
+## 🛠 IMPLEMENTATION STEPS
+
+### Phase 1: Foundation Setup
+
+#### Step 1.1: Create Responsive Utilities
+**File**: `utils/responsive.ts`
+
+```typescript
+import { Dimensions } from 'react-native';
+
+export const ResponsiveBreakpoints = {
+  mobile: {
+    small: 320,    // iPhone SE
+    medium: 375,   // iPhone 12/13 
+    large: 414,    // iPhone 12/13 Pro Max
+  },
+  tablet: {
+    portrait: 768,  // iPad portrait
+    landscape: 1024, // iPad landscape  
+  },
+  desktop: {
+    small: 1280,   // Small laptops
+    medium: 1440,  // Standard monitors
+    large: 1920,   // Large monitors
+    xlarge: 2560,  // 4K displays
+  }
+} as const;
+
+export const useResponsiveDesign = () => {
+  const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
+  
+  return {
+    windowWidth,
+    windowHeight,
+    isMobile: windowWidth < ResponsiveBreakpoints.tablet.portrait,
+    isTablet: windowWidth >= ResponsiveBreakpoints.tablet.portrait && windowWidth < ResponsiveBreakpoints.desktop.small,
+    isDesktop: windowWidth >= ResponsiveBreakpoints.desktop.small,
+    isLargeDesktop: windowWidth >= ResponsiveBreakpoints.desktop.large,
+    
+    // Dynamic spacing following existing SACRED_SPACING pattern
+    spacing: {
+      horizontal: windowWidth < ResponsiveBreakpoints.tablet.portrait ? 24 : windowWidth < ResponsiveBreakpoints.desktop.small ? 32 : 48,
+      vertical: windowWidth < ResponsiveBreakpoints.tablet.portrait ? 16 : 24,
+    },
+    
+    // Layout configurations
+    layout: {
+      featureColumns: windowWidth < ResponsiveBreakpoints.tablet.portrait ? 1 : windowWidth < ResponsiveBreakpoints.desktop.small ? 2 : 3,
+      tabHeight: windowWidth < ResponsiveBreakpoints.tablet.portrait ? 60 : windowWidth < ResponsiveBreakpoints.desktop.small ? 70 : 80,
+      maxContentWidth: Math.min(windowWidth - 32, 1440), // Max content width with margins
+    },
+    
+    // Touch targets following iOS HIG
+    touchTarget: {
+      minimum: 44,
+      recommended: windowWidth < ResponsiveBreakpoints.tablet.portrait ? 44 : 48,
+    }
+  };
+};
+```
+
+#### Step 1.2: Update Hero Subtitle Only
+**File**: `components/landing/LandingPageContent.tsx`
+
+**Change Line ~320 (subtitle text only):**
+```typescript
+// FROM:
+Turn your notes into knowledge, your ideas into action, your work into impact.
+
+// TO:
+Transform chaos into clarity, insights into action, potential into progress.
+```
+
+**Preserve all styling, spacing, and layout exactly as-is.**
+
+---
+
+### Phase 2: Interactive Components
+
+#### Step 2.1: Create Mascot Display Component
+**File**: `components/landing/MascotDisplay.tsx`
+
+```typescript
+import React, { useRef, useEffect } from 'react';
+import { View, Image, Animated, StyleSheet } from 'react-native';
+import { BodyText, CaptionText } from '@/components/common/Typography';
+import { AppColors } from '@/constants/Colors';
+
+interface MascotDisplayProps {
+  stage: 'seed' | 'flower' | 'tree';
+  size: 'small' | 'medium' | 'large' | 'xlarge';
+  showLevel?: boolean;
+  level?: number;
+  style?: any;
+}
+
+export const MascotDisplay: React.FC<MascotDisplayProps> = ({
+  stage,
+  size,
+  showLevel = false,
+  level = 1,
+  style
+}) => {
+  // Animation setup following profile.tsx pattern
+  const breathingAnim = useRef(new Animated.Value(1)).current;
+  const floatingAnim = useRef(new Animated.Value(0)).current;
+  
+  // Size configurations matching existing LOGO_DIMENSIONS pattern
+  const sizeConfig = {
+    small: { width: 64, height: 64 },
+    medium: { width: 128, height: 128 },
+    large: { width: 256, height: 256 },
+    xlarge: { width: 512, height: 512 },
+  };
+  
+  // Asset mapping (placeholder - will use actual assets when available)
+  const mascotAssets = {
+    seed: {
+      small: require('@/assets/images/public/logos/omniiLogoPNG.png'), // Placeholder
+      medium: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+      large: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+      xlarge: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+    },
+    flower: {
+      small: require('@/assets/images/public/logos/omniiLogoPNG.png'), // Placeholder
+      medium: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+      large: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+      xlarge: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+    },
+    tree: {
+      small: require('@/assets/images/public/logos/omniiLogoPNG.png'), // Placeholder
+      medium: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+      large: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+      xlarge: require('@/assets/images/public/logos/omniiLogoPNG.png'),
+    }
+  };
+  
+  useEffect(() => {
+    // Breathing animation - gentle scale
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathingAnim, {
+          toValue: 1.03,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(breathingAnim, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+    
+    // Floating animation - subtle vertical movement
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatingAnim, {
+          toValue: -8,
+          duration: 3500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatingAnim, {
+          toValue: 0,
+          duration: 3500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+  
+  const currentSize = sizeConfig[size];
+  
+  return (
+    <View style={[styles.container, style]}>
+      <Animated.View
+        style={[
+          styles.mascotContainer,
+          {
+            transform: [
+              { scale: breathingAnim },
+              { translateY: floatingAnim }
+            ],
+          }
+        ]}
+      >
+        <Image
+          source={mascotAssets[stage][size]}
+          style={[styles.mascotImage, currentSize]}
+          resizeMode="contain"
+        />
+        
+        {showLevel && (
+          <View style={styles.levelBadge}>
+            <CaptionText color="#FFFFFF" style={styles.levelText}>
+              Lv. {level}
+            </CaptionText>
+          </View>
+        )}
+      </Animated.View>
+      
+      <BodyText size={2} color={AppColors.textSecondary} style={styles.stageText}>
+        {stage === 'seed' ? '🌱 Seed Stage' : stage === 'flower' ? '🌸 Flower Stage' : '🌳 Tree Stage'}
+      </BodyText>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mascotContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mascotImage: {
+    borderRadius: 8,
+  },
+  levelBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: AppColors.aiGradientStart,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  levelText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  stageText: {
+    marginTop: 8,
+    textAlign: 'center',
+  },
+});
+```
+
+#### Step 2.2: Create Feature Showcase Component
+**File**: `components/landing/FeatureShowcase.tsx`
+
+```typescript
+import React, { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Heading2, Heading4, BodyText, CaptionText } from '@/components/common/Typography';
+import { AppColors } from '@/constants/Colors';
+import { useResponsiveDesign } from '@/utils/responsive';
+import { MascotDisplay } from './MascotDisplay';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+
+type FeatureTab = 'intelligence' | 'evolution' | 'insights' | 'partnership' | 'chat';
+
+const showcaseTabs = [
+  {
+    key: 'intelligence' as FeatureTab,
+    label: 'Intelligence',
+    icon: '🧠',
+    gradient: [AppColors.aiGradientStart, AppColors.aiGradientEnd] as [string, string],
+    title: 'AI that understands YOUR workflow patterns',
+    description: 'Not another generic assistant. OMNII learns how YOU think, work, and prioritize.',
+    features: [
+      'Analyzes your unique work patterns',
+      'Suggests optimal timing for tasks',
+      'Adapts to your personal style'
+    ]
+  },
+  {
+    key: 'evolution' as FeatureTab,
+    label: 'Evolution',
+    icon: '🌱',
+    gradient: ['#00b894', '#55efc4'] as [string, string],
+    title: 'Watch your productivity DNA grow',
+    description: 'Start simple, evolve naturally. Your mascot grows as your productivity mastery deepens.',
+    features: [
+      '🌱 Seed: Basic task management',
+      '🌸 Flower: Pattern recognition',
+      '🌳 Tree: Workflow mastery'
+    ]
+  },
+  {
+    key: 'insights' as FeatureTab,
+    label: 'Insights',
+    icon: '📊',
+    gradient: ['#667eea', '#764ba2'] as [string, string],
+    title: 'Analytics that predict your perfect day',
+    description: 'Know when you\'ll be most focused, when you need breaks, and how to optimize tomorrow.',
+    features: [
+      'Energy pattern mapping',
+      'Distraction prediction alerts',
+      'Optimal work scheduling'
+    ]
+  },
+  {
+    key: 'partnership' as FeatureTab,
+    label: 'Partnership',
+    icon: '🤝',
+    gradient: ['#4ECDC4', '#44A08D'] as [string, string],
+    title: 'Human-AI collaboration, not replacement',
+    description: 'OMNII amplifies your intelligence, doesn\'t replace it. You stay in control.',
+    features: [
+      'AI suggests, you decide',
+      'Transparent reasoning always',
+      'Every action is reversible'
+    ]
+  },
+  {
+    key: 'chat' as FeatureTab,
+    label: 'Chat',
+    icon: '💬',
+    gradient: ['#FFB347', '#FFD700'] as [string, string],
+    title: 'Conversation that actually gets things done',
+    description: 'Talk to AI that understands context, remembers conversations, and takes action.',
+    features: [
+      'Natural conversation flow',
+      'Full context awareness',
+      'Action-oriented responses'
+    ]
+  }
+];
+
+export const FeatureShowcase: React.FC = () => {
+  const [selectedTab, setSelectedTab] = useState<FeatureTab>('intelligence');
+  const [currentDemo, setCurrentDemo] = useState(0);
+  const responsive = useResponsiveDesign();
+  
+  // Animation setup following exact profile.tsx pattern
+  const shimmerAnimations = useRef(
+    showcaseTabs.reduce((acc, tab) => {
+      acc[tab.key] = new Animated.Value(0);
+      return acc;
+    }, {} as Record<FeatureTab, Animated.Value>)
+  ).current;
+  
+  const scaleAnimations = useRef(
+    showcaseTabs.reduce((acc, tab) => {
+      acc[tab.key] = new Animated.Value(1);
+      return acc;
+    }, {} as Record<FeatureTab, Animated.Value>)
+  ).current;
+  
+  // Shimmer animation for active tab (exact profile.tsx implementation)
+  useEffect(() => {
+    const activeAnimation = shimmerAnimations[selectedTab];
+    
+    const shimmerLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(activeAnimation, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false, // For gradient position
+        }),
+        Animated.timing(activeAnimation, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    
+    shimmerLoop.start();
+    
+    return () => {
+      shimmerLoop.stop();
+      activeAnimation.setValue(0);
+    };
+  }, [selectedTab, shimmerAnimations]);
+  
+  // Auto-cycling demo
+  useEffect(() => {
+    const activeTab = showcaseTabs.find(tab => tab.key === selectedTab);
+    if (!activeTab) return;
+    
+    const interval = setInterval(() => {
+      setCurrentDemo(prev => (prev + 1) % activeTab.features.length);
+    }, 2500);
+    
+    return () => clearInterval(interval);
+  }, [selectedTab]);
+  
+  // Tab press handler with animation (exact profile.tsx pattern)
+  const handleTabPress = (tabKey: FeatureTab) => {
+    const scaleAnim = scaleAnimations[tabKey];
+    
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    setSelectedTab(tabKey);
+    setCurrentDemo(0);
+  };
+  
+  // Shimmer gradient component (exact profile.tsx implementation)
+  const ShimmerGradient = ({ colors }: { colors: [string, string] }) => {
+    const shimmerAnim = shimmerAnimations[selectedTab];
+    
+    const translateX = shimmerAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [-200, 200],
+    });
+    
+    return (
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          transform: [{ translateX }],
+        }}
+      >
+        <Svg height="100%" width="200%" style={{ position: 'absolute' }}>
+          <Defs>
+            <LinearGradient id="shimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor={colors[0]} stopOpacity="0.8" />
+              <Stop offset="50%" stopColor={colors[1]} stopOpacity="1" />
+              <Stop offset="100%" stopColor={colors[0]} stopOpacity="0.8" />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#shimmer)" />
+        </Svg>
+      </Animated.View>
+    );
+  };
+  
+  const activeTab = showcaseTabs.find(tab => tab.key === selectedTab)!;
+  
+  return (
+    <View style={[styles.container, { paddingHorizontal: responsive.spacing.horizontal }]}>
+      <View style={styles.header}>
+        <Heading2 color={AppColors.textPrimary} style={styles.title}>
+          What makes OMNII different
+        </Heading2>
+        <BodyText size={1} color={AppColors.textSecondary} style={styles.subtitle}>
+          Not just another productivity app. A true AI partnership.
+        </BodyText>
+      </View>
+      
+      {/* Tab System (exact profile.tsx pattern) */}
+      <View style={styles.tabsContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsScrollContent}
+        >
+          {showcaseTabs.map((tab) => {
+            const isActive = selectedTab === tab.key;
+            
+            return (
+              <Animated.View
+                key={tab.key}
+                style={{
+                  transform: [{ scale: scaleAnimations[tab.key] }],
+                  marginRight: 12,
+                }}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    { height: responsive.layout.tabHeight },
+                    isActive && styles.activeTab,
+                    isActive && {
+                      backgroundColor: 'transparent',
+                      overflow: 'hidden',
+                    }
+                  ]}
+                  onPress={() => handleTabPress(tab.key)}
+                  activeOpacity={0.8}
+                >
+                  {isActive && (
+                    <>
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: tab.gradient[0],
+                        }}
+                      />
+                      <ShimmerGradient colors={tab.gradient} />
+                    </>
+                  )}
+                  
+                  <View style={styles.tabContent}>
+                    <BodyText size={2} style={styles.tabIcon}>{tab.icon}</BodyText>
+                    <CaptionText 
+                      color={isActive ? '#FFFFFF' : AppColors.textSecondary}
+                      style={styles.tabLabel}
+                    >
+                      {tab.label}
+                    </CaptionText>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
+        </ScrollView>
+      </View>
+      
+      {/* Content Section */}
+      <View style={[
+        styles.contentContainer,
+        responsive.isMobile ? styles.contentMobile : styles.contentDesktop
+      ]}>
+        <View style={styles.textContent}>
+          <Heading4 color={AppColors.textPrimary} style={styles.featureTitle}>
+            {activeTab.title}
+          </Heading4>
+          <BodyText size={2} color={AppColors.textSecondary} style={styles.featureDescription}>
+            {activeTab.description}
+          </BodyText>
+          
+          {/* Auto-cycling demo features */}
+          <View style={styles.demoContainer}>
+            {activeTab.features.map((feature, index) => (
+              <View 
+                key={index}
+                style={[
+                  styles.demoItem,
+                  index === currentDemo && styles.demoItemActive
+                ]}
+              >
+                <BodyText 
+                  size={2} 
+                  color={index === currentDemo ? AppColors.aiGradientStart : AppColors.textSecondary}
+                  style={styles.demoText}
+                >
+                  {feature}
+                </BodyText>
+              </View>
+            ))}
+          </View>
+        </View>
+        
+        {/* Mascot Display */}
+        <View style={styles.mascotContainer}>
+          <MascotDisplay
+            stage={selectedTab === 'intelligence' ? 'seed' : selectedTab === 'evolution' ? 'flower' : 'tree'}
+            size={responsive.isMobile ? 'medium' : 'large'}
+            showLevel={selectedTab === 'evolution'}
+            level={selectedTab === 'evolution' ? 15 : undefined}
+          />
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: AppColors.background,
+    paddingVertical: 48,
+  },
+  header: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  subtitle: {
+    textAlign: 'center',
+    maxWidth: 600,
+  },
+  tabsContainer: {
+    marginBottom: 32,
+  },
+  tabsScrollContent: {
+    paddingHorizontal: 4,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: AppColors.cardBackground,
+    borderWidth: 2,
+    borderColor: AppColors.borderLight,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...AppColors.shadows.card,
+  },
+  activeTab: {
+    borderWidth: 0,
+    ...AppColors.shadows.elevated,
+  },
+  tabContent: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  tabIcon: {
+    fontSize: 18,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  contentContainer: {
+    backgroundColor: AppColors.cardBackground,
+    borderRadius: 20,
+    padding: 24,
+    ...AppColors.shadows.card,
+  },
+  contentMobile: {
+    gap: 24,
+  },
+  contentDesktop: {
+    flexDirection: 'row',
+    gap: 32,
+    alignItems: 'center',
+  },
+  textContent: {
+    flex: 1,
+  },
+  featureTitle: {
+    marginBottom: 12,
+  },
+  featureDescription: {
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  demoContainer: {
+    gap: 8,
+  },
+  demoItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: AppColors.background,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+  },
+  demoItemActive: {
+    borderColor: AppColors.aiGradientStart,
+    backgroundColor: `${AppColors.aiGradientStart}10`,
+  },
+  demoText: {
+    fontWeight: '500',
+  },
+  mascotContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 150,
+  },
+});
+```
+
+#### Step 2.3: Create Dramatic Conclusion Component
+**File**: `components/landing/DramaticConclusion.tsx`
+
+```typescript
+import React, { useRef, useEffect, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Link } from 'expo-router';
+import { DisplayText, Heading4, BodyText, ButtonText } from '@/components/common/Typography';
+import { AppColors, BRAND_COLORS } from '@/constants/Colors';
+import { useResponsiveDesign } from '@/utils/responsive';
+import { MascotDisplay } from './MascotDisplay';
+
+export const DramaticConclusion: React.FC = () => {
+  const [currentStage, setCurrentStage] = useState<'seed' | 'flower' | 'tree'>('seed');
+  const responsive = useResponsiveDesign();
+  
+  // Animations
+  const quoteOpacity = useRef(new Animated.Value(0)).current;
+  const ctaPulse = useRef(new Animated.Value(1)).current;
+  const stageTransition = useRef(new Animated.Value(1)).current;
+  
+  // Evolution sequence
+  useEffect(() => {
+    const evolutionSequence = () => {
+      const stages: Array<'seed' | 'flower' | 'tree'> = ['seed', 'flower', 'tree'];
+      let currentIndex = 0;
+      
+      const evolve = () => {
+        // Scale down
+        Animated.timing(stageTransition, {
+          toValue: 0.8,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          // Change stage
+          setCurrentStage(stages[currentIndex]);
+          
+          // Scale back up
+          Animated.timing(stageTransition, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+          
+          currentIndex = (currentIndex + 1) % stages.length;
+        });
+      };
+      
+      evolve(); // Initial evolution
+      const interval = setInterval(evolve, 4000);
+      
+      return () => clearInterval(interval);
+    };
+    
+    const cleanupEvolution = evolutionSequence();
+    
+    // Quote fade in after short delay
+    const quoteTimer = setTimeout(() => {
+      Animated.timing(quoteOpacity, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }).start();
+    }, 1000);
+    
+    // CTA pulse animation
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ctaPulse, {
+          toValue: 1.05,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ctaPulse, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulseLoop.start();
+    
+    return () => {
+      cleanupEvolution();
+      clearTimeout(quoteTimer);
+      pulseLoop.stop();
+    };
+  }, []);
+  
+  return (
+    <View style={[styles.container, { paddingHorizontal: responsive.spacing.horizontal }]}>
+      {/* Evolution Display */}
+      <View style={styles.evolutionContainer}>
+        <Animated.View style={{ transform: [{ scale: stageTransition }] }}>
+          <MascotDisplay
+            stage={currentStage}
+            size={responsive.isMobile ? 'large' : 'xlarge'}
+            showLevel
+            level={currentStage === 'seed' ? 5 : currentStage === 'flower' ? 18 : 30}
+          />
+        </Animated.View>
+        
+        <BodyText size={1} color={AppColors.textSecondary} style={styles.evolutionHint}>
+          Watch your productivity evolve
+        </BodyText>
+      </View>
+      
+      {/* Philosophy Quote */}
+      <Animated.View style={[styles.quoteContainer, { opacity: quoteOpacity }]}>
+        <DisplayText 
+          size={responsive.isMobile ? 'small' : 'medium'} 
+          color={AppColors.textPrimary} 
+          style={styles.quote}
+        >
+          "In a world drowning in digital noise, OMNII doesn't add another notification.{'\n\n'}It creates the silence you need to hear your own genius."
+        </DisplayText>
+      </Animated.View>
+      
+      {/* Trust Indicators */}
+      <View style={[
+        styles.trustContainer,
+        responsive.isMobile ? styles.trustMobile : styles.trustDesktop
+      ]}>
+        <View style={styles.trustItem}>
+          <Heading4 color={AppColors.aiGradientStart} style={styles.trustNumber}>500+</Heading4>
+          <BodyText size={2} color={AppColors.textSecondary} style={styles.trustLabel}>Early users</BodyText>
+        </View>
+        <View style={styles.trustItem}>
+          <Heading4 color={AppColors.aiGradientStart} style={styles.trustNumber}>10k+</Heading4>
+          <BodyText size={2} color={AppColors.textSecondary} style={styles.trustLabel}>Tasks optimized</BodyText>
+        </View>
+        <View style={styles.trustItem}>
+          <Heading4 color={AppColors.aiGradientStart} style={styles.trustNumber}>2.5hrs</Heading4>
+          <BodyText size={2} color={AppColors.textSecondary} style={styles.trustLabel}>Daily time saved</BodyText>
+        </View>
+      </View>
+      
+      {/* Final CTA */}
+      <Animated.View style={{ transform: [{ scale: ctaPulse }] }}>
+        <Link href="/(auth)/login" asChild>
+          <TouchableOpacity style={[styles.ctaButton, { backgroundColor: BRAND_COLORS.primary }]}>
+            <ButtonText size="large" color="#FFFFFF" style={styles.ctaText}>
+              Start Your Evolution →
+            </ButtonText>
+          </TouchableOpacity>
+        </Link>
+      </Animated.View>
+      
+      <BodyText size={2} color={AppColors.textSecondary} style={styles.disclaimer}>
+        Free to start • No credit card required • Cancel anytime
+      </BodyText>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: AppColors.cardBackground,
+    paddingVertical: 64,
+    alignItems: 'center',
+  },
+  evolutionContainer: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  evolutionHint: {
+    marginTop: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  quoteContainer: {
+    marginBottom: 48,
+    paddingHorizontal: 24,
+  },
+  quote: {
+    textAlign: 'center',
+    lineHeight: 44,
+    fontStyle: 'italic',
+  },
+  trustContainer: {
+    marginBottom: 32,
+  },
+  trustMobile: {
+    gap: 24,
+    alignItems: 'center',
+  },
+  trustDesktop: {
+    flexDirection: 'row',
+    gap: 48,
+  },
+  trustItem: {
+    alignItems: 'center',
+  },
+  trustNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  trustLabel: {
+    textAlign: 'center',
+  },
+  ctaButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    marginBottom: 16,
+    ...AppColors.shadows.elevated,
+  },
+  ctaText: {
+    fontWeight: '700',
+  },
+  disclaimer: {
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+});
+```
+
+---
+
+### Phase 3: Integration
+
+#### Step 3.1: Update Main Landing Page
+**File**: `components/landing/LandingPageContent.tsx`
+
+**Replace the two middle sections (keep hero and footer unchanged):**
+
+```typescript
+// REMOVE these two sections:
+// 1. <View style={[styles.section, styles.sectionGray]}> // "Omnii thinks with you"
+// 2. <View style={styles.section}> // "From chaos to clarity in seconds"
+
+// ADD these imports at top:
+import { FeatureShowcase } from './FeatureShowcase';
+import { DramaticConclusion } from './DramaticConclusion';
+
+// REPLACE middle content with:
+<FeatureShowcase />
+<DramaticConclusion />
+```
+
+---
+
+## 📱 RESPONSIVE DESIGN SPECIFICATIONS
+
+### Mobile (≤768px)
+- **Layout**: Single column, stacked content
+- **Touch Targets**: 44px minimum (iOS HIG)
+- **Padding**: 24px horizontal (existing `SACRED_SPACING.lg`)
+- **Tab System**: Horizontal scroll, 60px height
+- **Typography**: Responsive scaling with existing variants
+
+### Tablet (768px - 1280px)
+- **Layout**: 2-column feature content
+- **Touch Targets**: 48px for comfortable interaction
+- **Padding**: 32px horizontal
+- **Tab System**: Flex layout, 70px height
+- **Enhanced Spacing**: 1.2x multipliers
+
+### Desktop (≥1280px)
+- **Layout**: 3-column grids, horizontal arrangements
+- **Padding**: 48px horizontal (existing `SACRED_SPACING.xxl`)
+- **Tab System**: Full width layout, 80px height
+- **Max Content**: 1440px centered
+- **Enhanced Interactions**: Hover states, larger touch targets
+
+---
+
+## 🎨 ANIMATION SPECIFICATIONS
+
+### Performance Requirements
+```typescript
+// Transform animations (60fps)
+useNativeDriver: true  // scale, translate, rotate
+
+// Layout animations (use sparingly)
+useNativeDriver: false // width, height, backgroundColor
+```
+
+### Animation Details
+- **Tab Press**: Scale 0.95 → 1.0 (100ms)
+- **Shimmer Effect**: TranslateX -200 → 200 (1500ms loop)
+- **Mascot Breathing**: Scale 1.0 → 1.03 (2500ms loop)
+- **Mascot Floating**: TranslateY 0 → -8px (3500ms loop)
+- **Evolution Transition**: Scale 1.0 → 0.8 → 1.0 (600ms total)
+- **Quote Reveal**: Opacity 0 → 1 (1000ms)
+- **CTA Pulse**: Scale 1.0 → 1.05 (2000ms loop)
+
+---
+
+## 🧪 TESTING REQUIREMENTS
+
+### Device Testing Matrix
+- **iPhone SE (320px)**: Basic functionality
+- **iPhone 12/13 (375px)**: Standard mobile
+- **iPhone 12/13 Pro Max (414px)**: Large mobile
+- **iPad (768px)**: Tablet portrait
+- **iPad Pro (1024px)**: Tablet landscape
+- **MacBook Air (1280px)**: Small laptop
+- **MacBook Pro (1440px)**: Standard laptop
+- **iMac (1920px)**: Desktop
+- **Pro Display XDR (2560px)**: Large display
+
+### Performance Benchmarks
+- **First Contentful Paint**: <1.5s
+- **Animation FPS**: Consistent 60fps
+- **Bundle Size Impact**: <500KB additional
+- **Memory Usage**: No leaks in 5min session
+
+---
+
+## ✅ SUCCESS CRITERIA
+
+### Compliance Checklist
+- [ ] Hero structure completely preserved
+- [ ] Logo animations unchanged
+- [ ] Footer links and styling preserved
+- [ ] Typography uses existing components only
+- [ ] Colors use existing AppColors/BRAND_COLORS only
+- [ ] Sacred spacing constants maintained
+- [ ] Authentication logic intact
+
+### Enhancement Goals
+- [ ] Interactive tabs perform smoothly on all devices
+- [ ] Shimmer effects maintain 60fps performance
+- [ ] Mascot animations feel organic and engaging
+- [ ] Auto-cycling demos showcase value clearly
+- [ ] Evolution sequence creates emotional impact
+- [ ] Mobile-first design scales to large displays perfectly
+- [ ] Page load time remains under 3 seconds
+- [ ] No accessibility regressions
+
+### Quality Gates
+- [ ] TypeScript compiles without errors
+- [ ] All animations use proper `useNativeDriver` settings
+- [ ] Responsive breakpoints work across device matrix
+- [ ] Touch targets meet iOS HIG guidelines (44px minimum)
+- [ ] Content hierarchy follows design system
+- [ ] Performance benchmarks met on target devices
+
+---
+
+## 🚀 DEPLOYMENT CHECKLIST
+
+### Pre-Implementation
+- [ ] Review existing codebase patterns
+- [ ] Confirm asset availability for mascot stages
+- [ ] Validate responsive utility approach
+- [ ] Test shimmer animation performance
+
+### Implementation Phase
+- [ ] Create responsive utilities
+- [ ] Build MascotDisplay with placeholder assets
+- [ ] Implement FeatureShowcase with tab system
+- [ ] Create DramaticConclusion with evolution
+- [ ] Update hero subtitle text only
+- [ ] Integrate components into main landing page
+
+### Post-Implementation
+- [ ] Test across all responsive breakpoints
+- [ ] Validate animation performance
+- [ ] Confirm authentication flow preservation
+- [ ] Run accessibility audit
+- [ ] Performance testing on target devices
+- [ ] Update asset placeholders when mascot images available
+
+---
+
+This implementation plan provides a complete roadmap for enhancing the OMNII landing page while strictly preserving existing functionality and following established codebase patterns. The mobile-first responsive design ensures excellent user experience across all device types and screen sizes. 

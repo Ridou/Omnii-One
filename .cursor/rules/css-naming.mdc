@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+1. Component-First Naming (Recommended for OMNII)
+Pattern: {component}-{brand}-{variant}
+/* ✅ SAFE - No conflicts */
+.card-omnii { }              /* component-brand */
+.card-omnii-elevated { }     /* component-brand-variant */
+.btn-omnii-primary { }       /* component-brand-variant */
+.input-omnii-search { }      /* component-brand-purpose */
+.indicator-priority-high { } /* component-type-level */
