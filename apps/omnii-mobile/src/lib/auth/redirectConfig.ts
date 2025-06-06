@@ -3,6 +3,13 @@ import { Platform } from 'react-native';
 
 // ===== REDIRECT URL CONFIGURATION =====
 // This file manages all OAuth redirect URLs for different environments and platforms
+//
+// IMPORTANT: OAuth Flow Explanation
+// 1. Google OAuth → Supabase Auth Server (auth.omnii.net/auth/v1/callback)
+// 2. Supabase Auth Server → Your App (omnii.net/auth/callback) 
+// 3. Your App → Final Destination (omnii.net/approvals)
+//
+// The URLs in this file are for step 2-3 (Supabase → Your App → Final Destination)
 
 // Environment types
 export enum OAuthEnvironment {
@@ -237,7 +244,14 @@ export const getSupabaseRedirectUrlsForConfig = (): string[] => {
 
 // Helper to log configuration instructions
 export const logSupabaseSetupInstructions = (): void => {
-  console.log('🔧 SUPABASE REDIRECT URL CONFIGURATION:');
+  console.log('🔧 OAUTH CONFIGURATION INSTRUCTIONS:');
+  console.log('');
+  console.log('📍 STEP 1: Google OAuth Configuration');
+  console.log('   Register this URL with Google OAuth:');
+  console.log('   🔗 https://auth.omnii.net/auth/v1/callback');
+  console.log('   (This is the Supabase Auth server URL)');
+  console.log('');
+  console.log('📍 STEP 2: Supabase Redirect URL Configuration');
   console.log('   Add these URLs to your Supabase project\'s URL Configuration:');
   console.log('   (Dashboard → Authentication → URL Configuration → Redirect URLs)');
   console.log('');
@@ -247,12 +261,28 @@ export const logSupabaseSetupInstructions = (): void => {
   });
   
   console.log('');
-  console.log('💡 Why multiple URLs?');
-  console.log('   • Production web app: omnii.net');
-  console.log('   • Staging web app: omnii.live');  
-  console.log('   • Local development: localhost');
-  console.log('   • Mobile app: omnii-mobile:// deep link');
+  console.log('💡 OAuth Flow:');
+  console.log('   1. User → Google OAuth → Supabase (auth.omnii.net/auth/v1/callback)');
+  console.log('   2. Supabase → Your App (omnii.net/auth/callback)');
+  console.log('   3. Your App → Final Destination (omnii.net/approvals)');
   console.log('');
+};
+
+// Get the Google OAuth callback URL (what you register with Google)
+export const getGoogleOAuthCallbackUrl = (): string => {
+  const config = detectEnvironment();
+  
+  switch (config.environment) {
+    case OAuthEnvironment.PRODUCTION:
+      return 'https://auth.omnii.net/auth/v1/callback';
+    case OAuthEnvironment.STAGING:
+      return 'https://auth.omnii.live/auth/v1/callback';
+    case OAuthEnvironment.LOCAL:
+      // For local development, you might use a different Supabase instance
+      return 'https://auth.omnii.net/auth/v1/callback';
+    default:
+      return 'https://auth.omnii.net/auth/v1/callback';
+  }
 };
 
 // Handle post-OAuth navigation (redirect to final destination)
