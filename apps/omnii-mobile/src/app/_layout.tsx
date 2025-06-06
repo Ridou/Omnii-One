@@ -49,20 +49,8 @@ function SafeGestureProvider({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   useFrameworkReady();
 
-  // For static export (server-side rendering), render with minimal context
-  if (Platform.OS === 'web') {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <SafeGestureProvider>
-          <ThemeProvider>
-            <ThemedStack />
-          </ThemeProvider>
-        </SafeGestureProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  // For native platforms (iOS/Android), render with full context providers
+  // Use the same provider structure for all platforms
+  // AuthProvider handles SSR/hydration internally
   return (
     <QueryClientProvider client={queryClient}>
       <SafeGestureProvider>

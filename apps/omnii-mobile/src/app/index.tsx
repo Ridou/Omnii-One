@@ -6,42 +6,11 @@ import { AppHead } from '~/components/common/Head';
 import { isStaticExport } from '~/utils/navigation';
 
 
-// Dynamically import AuthContext to avoid SSR issues
-let useAuth: any = null;
-if (typeof window !== 'undefined' || Platform.OS !== 'web') {
-  // Only import on client-side or mobile
-  const authModule = require('~/context/AuthContext');
-  useAuth = authModule.useAuth;
-}
+import { useAuth } from '~/context/AuthContext';
 
 export default function LandingPage() {
+  // ✅ All hooks called at top level
   const router = useRouter();
-  
-  // For static export or when auth context is not available, always show landing page
-  if (!useAuth || isStaticExport()) {
-    console.log('🔧 Static export mode or no auth context: Showing landing page');
-    return (
-      <>
-        <AppHead
-          title="OMNII - AI Productivity Assistant | Reclaim Your Humanity"
-          description="Let AI handle the rest. OMNII transforms chaos into clarity, insights into action, potential into progress with intelligent productivity assistance."
-          keywords="AI productivity, task management, productivity assistant, AI suggestions, goal tracking, productivity app, reclaim humanity"
-          canonical="https://omnii.net/"
-          ogTitle="OMNII - AI Productivity Assistant"
-          ogDescription="Reclaim your humanity. Let AI handle the rest."
-          ogUrl="https://omnii.net/"
-          ogImage="https://omnii.net/icon-512.png"
-          ogType="website"
-          twitterCard="summary_large_image"
-          twitterTitle="OMNII - AI Productivity Assistant"
-          twitterDescription="Reclaim your humanity. Let AI handle the rest."
-          twitterImage="https://omnii.net/icon-512.png"
-        />
-        <LandingPageContent />
-      </>
-    );
-  }
-
   const { isInitialized, user, session } = useAuth();
   const [hasRouted, setHasRouted] = React.useState(false);
 
@@ -73,6 +42,31 @@ export default function LandingPage() {
     setHasRouted(true);
     router.replace('/(tabs)/approvals');
   }, [isInitialized, user?.id, session, hasRouted, router]);
+
+  // For static export, always show landing page
+  if (isStaticExport()) {
+    console.log('🔧 Static export mode: Showing landing page');
+    return (
+      <>
+        <AppHead
+          title="OMNII - AI Productivity Assistant | Reclaim Your Humanity"
+          description="Let AI handle the rest. OMNII transforms chaos into clarity, insights into action, potential into progress with intelligent productivity assistance."
+          keywords="AI productivity, task management, productivity assistant, AI suggestions, goal tracking, productivity app, reclaim humanity"
+          canonical="https://omnii.net/"
+          ogTitle="OMNII - AI Productivity Assistant"
+          ogDescription="Reclaim your humanity. Let AI handle the rest."
+          ogUrl="https://omnii.net/"
+          ogImage="https://omnii.net/icon-512.png"
+          ogType="website"
+          twitterCard="summary_large_image"
+          twitterTitle="OMNII - AI Productivity Assistant"
+          twitterDescription="Reclaim your humanity. Let AI handle the rest."
+          twitterImage="https://omnii.net/icon-512.png"
+        />
+        <LandingPageContent />
+      </>
+    );
+  }
 
   // Always show landing page content with SEO metadata
   return (

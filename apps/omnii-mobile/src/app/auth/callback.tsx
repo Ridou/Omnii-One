@@ -102,8 +102,8 @@ export default function CallbackScreen() {
                 console.log('👤 User email:', data.user?.email);
                 console.log(`🔐 Session ID: ${data.session.access_token?.substring(0, 20)}...`);
                 console.log('🎯 Redirecting to approvals page...');
-                // Immediate redirect - no delay needed
-                window.location.replace(`${window.location.origin}/#/(tabs)/approvals`);
+                // Redirect to clean URL
+                window.location.replace(`${window.location.origin}/approvals`);
                 return;
               }
               
@@ -136,8 +136,8 @@ export default function CallbackScreen() {
                 console.log('👤 User email:', data.user?.email);
                 console.log(`🔐 Session ID: ${data.session.access_token?.substring(0, 20)}...`);
                 console.log('🎯 Redirecting to approvals page...');
-                // Immediate redirect - no delay needed
-                window.location.replace(`${window.location.origin}/#/(tabs)/approvals`);
+                // Redirect to clean URL
+                window.location.replace(`${window.location.origin}/approvals`);
                 return;
               }
               

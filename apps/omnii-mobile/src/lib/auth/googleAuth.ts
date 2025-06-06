@@ -8,6 +8,15 @@ import { getOmniiScopes, getOmniiScopesString } from './scopes';
 import { storeOAuthTokens } from './tokenStorage';
 import Constants from 'expo-constants';
 import * as AuthRequest from 'expo-auth-session/build/AuthRequest';
+import { 
+  getOAuthRedirectUrl, 
+  getFinalDestinationUrl,
+  getEnvironmentConfig,
+  logSupabaseSetupInstructions,
+  getSupabaseRedirectUrlsForConfig,
+  handlePostOAuthNavigation,
+  isMobileEnvironment
+} from './redirectConfig';
 
 // Complete the auth session for web
 WebBrowser.maybeCompleteAuthSession();
@@ -62,89 +71,14 @@ if (__DEV__) {
   );
   console.log(`- OAuth Scopes: ${scopes.length} scopes configured`);
   console.log('- Services: Gmail, Drive, Calendar, Contacts, Sheets, Tasks');
+  
+  // Log redirect URL configuration
+  logSupabaseSetupInstructions();
 }
-
-// Helper function to detect current environment
-export const getCurrentEnvironment = (): {
-  type: 'test' | 'production' | 'localhost' | 'ngrok' | 'mobile' | 'unknown';
-  hostname?: string;
-  redirectUri: string;
-} => {
-  // First check if we're in a mobile environment (React Native)
-  if (Platform.OS === 'ios' || Platform.OS === 'android') {
-    console.log('📱 Detected mobile platform:', Platform.OS);
-    return {
-      type: 'mobile',
-      hostname: Platform.OS,
-      redirectUri: makeRedirectUri({
-        scheme: 'omnii-mobile',
-        path: 'auth/callback',
-      }),
-    };
-  }
-
-  // For web platforms, check the current location
-  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
-    const hostname = window.location.hostname;
-    
-    if (hostname.includes('test.omnii.net')) {
-      return {
-        type: 'test',
-        hostname,
-        redirectUri: 'https://test.omnii.net/auth/callback',
-      };
-    } else if (hostname.includes('omnii.net') && !hostname.includes('test.')) {
-      return {
-        type: 'production',
-        hostname,
-        redirectUri: 'https://omnii.net/auth/callback',
-      };
-    } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
-      return {
-        type: 'localhost',
-        hostname,
-        redirectUri: `${window.location.protocol}//${hostname}:${window.location.port}/auth/callback`,
-      };
-    } else if (hostname.includes('ngrok')) {
-      return {
-        type: 'ngrok',
-        hostname,
-        redirectUri: `${window.location.protocol}//${hostname}/auth/callback`,
-      };
-    }
-  }
-
-  // If we can't determine the environment but we have window object, it's likely web
-  if (typeof window !== 'undefined') {
-    console.log('🌐 Unknown web environment, using production fallback');
-    return {
-      type: 'unknown',
-      hostname: typeof window !== 'undefined' ? window.location?.hostname : undefined,
-      redirectUri: 'https://omnii.net/auth/callback', // fallback for web
-    };
-  }
-
-  // Final fallback - assume mobile if no window object
-  console.log('📱 No window object detected, assuming mobile environment');
-  return {
-    type: 'mobile',
-    redirectUri: makeRedirectUri({
-      scheme: 'omnii-mobile',
-      path: 'auth/callback',
-    }),
-  };
-};
 
 // Get the correct redirect URI following Supabase + Expo pattern
 export const getRedirectUri = (): string => {
-  const environment = getCurrentEnvironment();
-  
-  console.log('🌍 Environment Detection Result:');
-  console.log(`  - Type: ${environment.type}`);
-  console.log(`  - Hostname: ${environment.hostname || 'N/A'}`);
-  console.log(`  - Redirect URI: ${environment.redirectUri}`);
-  
-  return environment.redirectUri;
+  return getOAuthRedirectUrl();
 };
 
 // OAuth configuration for custom development build
