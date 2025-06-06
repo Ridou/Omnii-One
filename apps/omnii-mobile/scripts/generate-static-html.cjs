@@ -172,6 +172,8 @@ const routes = {
   }
 };
 
+const GOOGLE_SITE_VERIFICATION_META = '<meta name="google-site-verification" content="ts5_mpKNxYK_HPwsxsgLMcU8M2KcXOm7xI886yxq52Y" />';
+
 function generateStaticHTML(route, data) {
   const structuredData = route === '/' ? `
   <script type="application/ld+json">
@@ -202,6 +204,7 @@ function generateStaticHTML(route, data) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${data.title}</title>
   <meta name="description" content="${data.description}">
+  ${GOOGLE_SITE_VERIFICATION_META}
   <meta name="robots" content="index, follow">
   
   <!-- Open Graph -->
@@ -1211,6 +1214,7 @@ function generateLandingPageHTML() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OMNII - AI Productivity Assistant | Reclaim Your Humanity</title>
   <meta name="description" content="Let AI handle the rest. OMNII transforms chaos into clarity, insights into action, potential into progress with intelligent productivity assistance.">
+  ${GOOGLE_SITE_VERIFICATION_META}
   <meta name="robots" content="index, follow">
   
   <!-- Open Graph -->

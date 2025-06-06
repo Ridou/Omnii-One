@@ -1,0 +1,21 @@
+name: OMNII CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  google-bot-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Bun (latest stable)
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Run the OMNII Google Bot Check script
+      - name: OMNII Google Bot Check
+        run: bun test scripts/omnii-google-bot-check.test.ts
