@@ -18,9 +18,9 @@ import {
  * - user_achievement_progress: user_id, achievement_id (refs achievements.id), current_progress, completed
  * - achievement_unlocks: user_id, achievement_id (refs achievements.id), unlocked_at, xp_awarded
  * 
- * NOTE: Backend SQL functions need fixing:
- * - Use 'a.id' instead of 'a.achievement_id' for achievements table
- * - The error hints suggest using 'uap.achievement_id' for user_achievement_progress table
+ * NOTE: Backend SQL functions status:
+ * ✅ get_user_achievements - FIXED
+ * ✅ get_user_achievement_stats - FIXED (GROUP BY issue resolved)
  */
 export const achievementService = {
   /**
