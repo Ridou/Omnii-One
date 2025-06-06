@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useRef, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '~/context/AuthContext';
+import { useXPContext } from '~/context/XPContext';
 import { useOnboarding } from '~/hooks/useOnboarding';
 import { supabase } from '~/lib/supabase';
 import type { 
@@ -473,7 +474,7 @@ interface OnboardingContextValue {
   completeOnboarding: () => Promise<void>;
   
   // Level/XP actions
-  awardXP: (amount: number, reason: string, category: string) => void;
+  awardXP: (amount: number, reason: string, category: string) => Promise<void>;
   triggerLevelUp: (progression: LevelProgression) => void;
   
   // Feature management
@@ -502,7 +503,7 @@ interface OnboardingContextValue {
   isSystemReady: boolean;
   
   // New: Feature exploration and nudges
-  recordFeatureVisit: (feature: string) => void;
+  recordFeatureVisit: (feature: string) => Promise<void>;
   getActiveNudges: () => ContextualNudge[];
   dismissNudge: (nudgeId: string) => void;
   markNudgeShown: (nudgeId: string) => void;
@@ -527,6 +528,7 @@ interface OnboardingProviderProps {
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { user } = useAuth();
+  const { awardXP: unifiedAwardXP, syncXP: syncUnifiedXP } = useXPContext();
   const [state, dispatch] = useReducer(onboardingReducer, initialState);
   const onboardingHook = useOnboarding();
 
@@ -752,15 +754,15 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         const result = await onboardingHook.recordQuoteResponse(quoteId, action, timeSpent);
         
         if (result) {
-          // Award XP first
-          dispatch({
-            type: 'AWARD_XP',
-            payload: {
-              amount: result.xp_awarded,
-              reason: `Quote ${action}`,
-              category: 'onboarding',
-            },
+          // Award XP using unified system instead of local dispatch
+          console.log('💰 [OnboardingContext] Awarding XP via unified system:', {
+            amount: result.xp_awarded,
+            reason: `Quote ${action}`,
+            category: 'onboarding'
           });
+          
+          // Sync unified XP system after server XP award
+          await syncUnifiedXP();
 
           // Check if we should level up (server-side validation)
           const currentLevel = state.onboardingData.current_level;
@@ -874,10 +876,10 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     },
 
     // Level/XP actions (SECURITY: Server handles all calculations)
-    awardXP: (amount: number, reason: string, category: string) => {
+    awardXP: async (amount: number, reason: string, category: string) => {
       // Log XP award for debugging
       if (__DEV__) {
-        console.log('💰 Awarding XP (will sync with server):', {
+        console.log('💰 [OnboardingContext] Awarding XP via unified system:', {
           amount,
           reason,
           category,
@@ -886,17 +888,9 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         });
       }
       
-      // SECURITY: Let server handle the XP award and level calculations
-      // This is just a local update - server sync will correct any inconsistencies
-      dispatch({ type: 'AWARD_XP', payload: { amount, reason, category } });
-      
-      // RACE CONDITION FIX: Delay server sync to ensure XP transaction is committed
+      // Use unified XP system instead of local dispatch
       if (user) {
-        setTimeout(() => {
-          syncWithServer().catch(error => {
-            console.error('Failed to sync after XP award:', error);
-          });
-        }, 1000); // 1 second delay to ensure server transaction is committed
+        await unifiedAwardXP(amount, reason, category);
       }
     },
 
@@ -944,7 +938,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     // Utilities
     getCurrentQuote: () => {
       if (state.currentQuoteIndex < state.quotes.length) {
-        return state.quotes[state.currentQuoteIndex];
+        return state.quotes[state.currentQuoteIndex] || null;
       }
       return null;
     },
@@ -990,52 +984,53 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     },
 
     // New: Feature exploration and nudges
-    recordFeatureVisit: (feature: string) => {
+    recordFeatureVisit: async (feature: string) => {
       if (!user) return;
       
-      // SECURITY: Use server-side function for feature visit recording
-      recordFeatureVisitSecure(user.id, feature)
-        .then(result => {
-          console.log('🔒 Secure feature visit recorded:', {
-            feature,
-            xpAwarded: result.xp_awarded,
-            isFirstVisit: result.is_first_visit,
-            visitCount: result.visit_count
-          });
-          
-          // Record the visit locally
-          dispatch({ 
-            type: 'RECORD_FEATURE_VISIT', 
-            payload: { 
-              feature, 
-              isFirstVisit: result.is_first_visit 
-            } 
-          });
-          
-          // Award XP if it's a first visit and onboarding is complete
-          if (result.is_first_visit && result.xp_awarded > 0 && state.onboardingData.completed) {
-            dispatch({
-              type: 'AWARD_XP',
-              payload: {
-                amount: result.xp_awarded,
-                reason: `First exploration of ${feature}`,
-                category: 'exploration',
-              },
-            });
-          }
-        })
-        .catch(error => {
-          console.error('❌ Feature visit recording failed:', error);
-          
-          // Fallback to local recording only
-          const existingExploration = state.onboardingData.feature_exploration[feature];
-          const isFirstVisit = !existingExploration?.first_visit_at;
-          
-          dispatch({ 
-            type: 'RECORD_FEATURE_VISIT', 
-            payload: { feature, isFirstVisit } 
-          });
+      try {
+        // SECURITY: Use server-side function for feature visit recording
+        const result = await recordFeatureVisitSecure(user.id, feature);
+        
+        console.log('🔒 Secure feature visit recorded:', {
+          feature,
+          xpAwarded: result.xp_awarded,
+          isFirstVisit: result.is_first_visit,
+          visitCount: result.visit_count
         });
+        
+        // Record the visit locally
+        dispatch({ 
+          type: 'RECORD_FEATURE_VISIT', 
+          payload: { 
+            feature, 
+            isFirstVisit: result.is_first_visit 
+          } 
+        });
+        
+        // Award XP if it's a first visit and onboarding is complete
+        if (result.is_first_visit && result.xp_awarded > 0 && state.onboardingData.completed) {
+          console.log('💰 [OnboardingContext] Feature exploration XP via unified system:', {
+            feature,
+            amount: result.xp_awarded,
+            reason: `First exploration of ${feature}`,
+            category: 'exploration'
+          });
+          
+          // Use unified XP system
+          await unifiedAwardXP(result.xp_awarded, `First exploration of ${feature}`, 'exploration');
+        }
+      } catch (error) {
+        console.error('❌ Feature visit recording failed:', error);
+        
+        // Fallback to local recording only
+        const existingExploration = state.onboardingData.feature_exploration[feature];
+        const isFirstVisit = !existingExploration?.first_visit_at;
+        
+        dispatch({ 
+          type: 'RECORD_FEATURE_VISIT', 
+          payload: { feature, isFirstVisit } 
+        });
+      }
     },
 
     getActiveNudges: () => {

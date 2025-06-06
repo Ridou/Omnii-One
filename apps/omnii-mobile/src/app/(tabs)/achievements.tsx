@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
 import LandingPageContent from '~/components/landing/LandingPageContent';
-import { View, Text, ScrollView, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Animated, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cn } from '~/utils/cn';
 import { AppColors } from '~/constants/Colors';
 import { useFetchAchievements } from '~/hooks/useFetchAchievements';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
+import { XPProgressBar } from '~/components/common/XPProgressBar';
 import { 
   MascotStage, 
   MascotSize, 
@@ -17,6 +18,8 @@ import {
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Link, useRouter } from 'expo-router';
 import { useOnboardingContext } from '~/context/OnboardingContext';
+import { useXPSystem } from '~/hooks/useXPSystem';
+import { XPSystemUtils } from '~/constants/XPSystem';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Tab configuration following EXACT profile.tsx pattern
@@ -53,12 +56,12 @@ export default function HomeScreen() {
   const { user, session, isInitialized } = useAuth();
   const { isDark } = useTheme();
   const { data: achievementData, loading, error } = useFetchAchievements();
-  const { recordFeatureVisit, getCurrentLevel, state, getXPProgressToNextLevel } = useOnboardingContext();
+  const { recordFeatureVisit } = useOnboardingContext();
+  const { xpProgress, currentLevel, currentXP, awardXP } = useXPSystem();
   const router = useRouter();
   
   // Mascot state management
   const { cheeringState, triggerCheering } = useMascotCheering();
-  const currentLevel = getCurrentLevel();
   const mascotStage = getMascotStageByLevel(currentLevel);
   
   // Tab state following EXACT profile.tsx pattern
@@ -116,29 +119,15 @@ export default function HomeScreen() {
     return <LandingPageContent />;
   }
 
-  // REMOVED: Glow effects as requested - clean, professional design
   // Tab content components
   const EvolveContent = () => {
-    const totalXP = state.onboardingData.total_xp;
-    const xpProgress = getXPProgressToNextLevel();
-    
-    // Calculate XP for current level range
-    const levelRequirements: Record<number, number> = {
-      1: 0, 2: 100, 3: 200, 4: 320, 5: 450, 6: 750, 7: 1100, 8: 1500, 
-      9: 1950, 10: 2500, 15: 5000, 20: 8000, 25: 12000, 30: 18000, 40: 35000, 50: 60000
-    };
-    
-    const currentLevelXP = levelRequirements[currentLevel] || 0;
-    const nextLevelXP = levelRequirements[currentLevel + 1] || levelRequirements[50] || 60000;
-    const xpInCurrentLevel = totalXP - currentLevelXP;
-    const xpNeededForLevel = nextLevelXP - currentLevelXP;
-    
     return (
       <ScrollView 
         className="flex-1"
         contentContainerStyle={{ padding: 20 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Progress Overview Card */}
         <View className={cn(
           "rounded-xl p-4 mb-6 border",
           isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
@@ -148,61 +137,63 @@ export default function HomeScreen() {
               "text-xl font-bold",
               isDark ? "text-white" : "text-gray-900"
             )}>Progress Overview</Text>
-            <Text className="text-base font-semibold text-indigo-600">{xpInCurrentLevel} XP</Text>
+            <Text className="text-base font-semibold text-indigo-600">
+              {xpProgress.xp_in_current_level} XP
+            </Text>
           </View>
           
-          <View className="mb-4">
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className={cn(
-                "text-base font-semibold",
-                isDark ? "text-white" : "text-gray-900"
-              )}>Level {currentLevel}</Text>
-              <Text className="text-sm text-orange-500 font-semibold">
-                {xpNeededForLevel} XP to next level
-              </Text>
-            </View>
-            <View className={cn(
-              "h-2 rounded-full overflow-hidden",
-              isDark ? "bg-slate-600" : "bg-gray-200"
-            )}>
-              <View 
-                className="h-full bg-indigo-600 rounded-full" 
-                style={{ width: `${xpProgress}%` }} 
-              />
-            </View>
-          </View>
+          {/* Enhanced XP Progress Bar - Detailed variant */}
+          <XPProgressBar
+            variant="detailed"
+            size="large"
+            showText={true}
+            showLevel={true}
+            showProgress={true}
+            showPending={true}
+            animated={true}
+            showSegments={false}
+            className="mb-4"
+          />
           
+          {/* Level Insights */}
           <View className="flex-row justify-between">
             <View className="items-center">
               <Text className={cn(
                 "text-xs font-medium mb-1",
                 isDark ? "text-slate-400" : "text-gray-600"
-              )}>Total XP</Text>
-              <View className="bg-indigo-600 rounded-full px-2 py-1 mt-2">
-                <Text className="text-white text-xs font-bold">{xpInCurrentLevel}</Text>
-              </View>
-            </View>
-            <View className="items-center">
-              <Text className={cn(
-                "text-xs font-medium mb-1",
-                isDark ? "text-slate-400" : "text-gray-600"
-              )}>Level</Text>
+              )}>Level Progress</Text>
               <View className="bg-green-500 rounded-full px-2 py-1 mt-2">
-                <Text className="text-white text-xs font-bold">{currentLevel}</Text>
+                <Text className="text-white text-xs font-bold">
+                  {Math.round(xpProgress.progress_percentage)}%
+                </Text>
               </View>
             </View>
             <View className="items-center">
               <Text className={cn(
                 "text-xs font-medium mb-1",
                 isDark ? "text-slate-400" : "text-gray-600"
-              )}>Next Goal</Text>
+              )}>To Next Level</Text>
               <View className="bg-orange-500 rounded-full px-2 py-1 mt-2">
-                <Text className="text-white text-xs font-bold">{nextLevelXP || 'Max'}</Text>
+                <Text className="text-white text-xs font-bold">
+                  {xpProgress.xp_to_next_level} XP
+                </Text>
+              </View>
+            </View>
+            <View className="items-center">
+              <Text className={cn(
+                "text-xs font-medium mb-1",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Level Title</Text>
+              <View className="bg-purple-500 rounded-full px-2 py-1 mt-2">
+                <Text className="text-white text-xs font-bold">
+                  {XPSystemUtils.getLevelTitle(currentLevel)}
+                </Text>
               </View>
             </View>
           </View>
         </View>
 
+        {/* Current Goals Section */}
         <View className="mb-6">
           <Text className={cn(
             "text-2xl font-bold mb-4",
@@ -224,6 +215,25 @@ export default function HomeScreen() {
               <Text className="text-sm font-semibold text-indigo-600">
                 {achievement.progress} / {achievement.maxProgress} • {achievement.xpReward} XP
               </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Feature Unlocks */}
+        <View className="mb-6">
+          <Text className={cn(
+            "text-2xl font-bold mb-4",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🔓 Unlocked Features</Text>
+          {XPSystemUtils.getFeaturesUnlockedAtLevel(currentLevel).map((feature, index) => (
+            <View key={index} className={cn(
+              "rounded-xl p-3 mb-2 border",
+              isDark ? "bg-green-900/20 border-green-600/30" : "bg-green-50 border-green-200"
+            )}>
+              <Text className={cn(
+                "text-sm font-medium",
+                isDark ? "text-green-400" : "text-green-700"
+              )}>✅ {feature}</Text>
             </View>
           ))}
         </View>
@@ -446,10 +456,12 @@ export default function HomeScreen() {
                 "text-3xl font-bold mb-1",
                 isDark ? "text-white" : "text-gray-900"
               )}>🏆 Achievements</Text>
-              <Text className={cn(
-                "text-base",
-                isDark ? "text-slate-400" : "text-gray-600"
-              )}>Your personal victory celebration</Text>
+              <XPProgressBar
+                variant="compact"
+                size="small"
+                showText={true}
+                showLevel={true}
+              />
             </View>
             
             {/* Mascot in header */}

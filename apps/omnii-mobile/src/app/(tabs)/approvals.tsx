@@ -24,6 +24,7 @@ import DebugPanel from '~/components/common/DebugPanel';
 import LevelCelebration from '~/components/onboarding/LevelCelebration';
 import ContextualNudge from '~/components/common/ContextualNudge';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
+import { XPProgressBar } from '~/components/common/XPProgressBar';
 import { 
   MascotStage, 
   MascotSize, 
@@ -33,6 +34,8 @@ import {
 import { AppColors } from '~/constants/Colors';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { OnboardingQuote, LevelProgression } from '~/types/onboarding';
+import { useXPSystem } from '~/hooks/useXPSystem';
+import { XPSystemUtils, XP_REWARDS } from '~/constants/XPSystem';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -59,31 +62,35 @@ interface Task {
   approval?: Approval; // For regular approvals
 }
 
-// Tab configuration with gradient styling like achievements
+// Tab configuration with AI-focused productivity patterns (Shape of AI inspired)
 const approvalTabs = [
   {
-    key: 'pending',
-    label: 'Pending',
-    icon: '⏳',
-    gradient: ['#667eea', '#764ba2'] // Purple gradient
+    key: 'priority',
+    label: 'Priority',
+    icon: '🔥',
+    gradient: ['#FF3B30', '#DC143C'], // Red for urgent
+    description: 'AI-suggested high-impact items'
   },
   {
-    key: 'approved',
-    label: 'Approved', 
-    icon: '✅',
-    gradient: ['#4ECDC4', '#44A08D'] // Teal gradient
+    key: 'smart',
+    label: 'Smart',
+    icon: '🤖',
+    gradient: ['#667eea', '#764ba2'], // Purple for AI
+    description: 'AI-curated recommendations'
   },
   {
-    key: 'recent',
-    label: 'Recent',
-    icon: '📋',
-    gradient: ['#FF7043', '#FF5722'] // NEW: Vibrant orange gradient
+    key: 'quick',
+    label: 'Quick',
+    icon: '⚡',
+    gradient: ['#4ECDC4', '#44A08D'], // Teal for speed
+    description: 'Fast decisions to build momentum'
   },
   {
-    key: 'insights',
-    label: 'Insights',
-    icon: '📊',
-    gradient: ['#FF3B30', '#DC143C'] // NEW: Clean red gradient
+    key: 'context',
+    label: 'Context',
+    icon: '📝',
+    gradient: ['#FF7043', '#FF5722'], // Orange for attention
+    description: 'Items needing more information'
   }
 ];
 
@@ -127,28 +134,25 @@ export default function ApprovalsScreen() {
     recordQuoteResponse,
     getCurrentQuote,
     isOnboardingComplete,
-    getCurrentLevel,
-    getXPProgressToNextLevel,
-    getXPNeededForNextLevel,
     getNextCelebration,
     showCelebration,
     completeOnboarding,
     recordFeatureVisit,
     isSystemReady,
   } = useOnboardingContext();
+  const { xpProgress, currentLevel, currentXP, awardXP } = useXPSystem();
   
   // Mascot state management
   const { cheeringState, triggerCheering } = useMascotCheering();
-  const currentLevel = getCurrentLevel();
   const mascotStage = getMascotStageByLevel(currentLevel);
   
   const [approvals, setApprovals] = useState<Approval[]>(mockApprovals);
-  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState('smart');
   const [refreshing, setRefreshing] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [currentCelebration, setCurrentCelebration] = useState<LevelProgression | null>(null);
-  // OPTIMISTIC UPDATES: Track pending XP for instant UI feedback
+  // OPTIMISTIC UPDATES: Track pending XP for instant UI feedback - managed by XP system
   const [pendingXP, setPendingXP] = useState(0);
   // PREVENT RECURSIVE AUTO-START: Track if we've already attempted to start
   const [autoStartAttempted, setAutoStartAttempted] = useState(false);
@@ -167,14 +171,14 @@ export default function ApprovalsScreen() {
       user && // User authenticated
       !onboardingState.isActive && // Not already active
       !onboardingState.onboardingData.completed && // Server: Not completed
-      getCurrentLevel() < 5; // Server: Level < 5
+      currentLevel <= 5; // Server: Level 1-5 (fixed to include level 5)
 
-    console.log('🔍 AUTO-START CHECK (Clean & Proper):', {
+    console.log('🚀 AUTO-START CHECK (Fixed Level 1-5):', {
       isSystemReady,
       user: !!user,
       userEmail: user?.email,
-      serverLevel: getCurrentLevel(),
-      serverXP: onboardingState.onboardingData.total_xp,
+      serverLevel: currentLevel,
+      serverXP: currentXP,
       serverCompleted: onboardingState.onboardingData.completed,
       isActive: onboardingState.isActive,
       shouldAutoStart,
@@ -184,17 +188,17 @@ export default function ApprovalsScreen() {
         if (!user) return 'No user authenticated';
         if (onboardingState.isActive) return 'Onboarding already active';
         if (onboardingState.onboardingData.completed) return 'Server: Onboarding completed';
-        if (getCurrentLevel() >= 5) return 'Server: Level 5+ reached (all core features unlocked)';
+        if (currentLevel > 5) return 'Server: Level 6+ reached (onboarding complete)';
         return 'Unknown reason';
-      })() : autoStartAttempted ? 'Already attempted this session' : 'SERVER VALIDATED: Continue onboarding to Level 5'
+      })() : autoStartAttempted ? 'Already attempted this session' : 'SERVER VALIDATED: Starting/Continuing onboarding for Level 1-5'
     });
 
     if (shouldAutoStart && !autoStartAttempted) {
-      console.log('🚀 AUTO-START: Clean server-driven onboarding start', {
+      console.log('🚀 AUTO-START: Clean server-driven onboarding start (Level 1-5)', {
         userEmail: user.email,
-        serverLevel: getCurrentLevel(),
-        serverXP: onboardingState.onboardingData.total_xp,
-        reason: 'System ready + Server confirms onboarding needed (Level < 5)'
+        serverLevel: currentLevel,
+        serverXP: currentXP,
+        reason: 'System ready + Server confirms onboarding needed (Level 1-5)'
       });
       
       startOnboarding();
@@ -204,10 +208,9 @@ export default function ApprovalsScreen() {
     isSystemReady, // NEW: Proper system readiness check
     user?.id, 
     onboardingState.onboardingData.completed,
-    onboardingState.onboardingData.current_level,
-    onboardingState.onboardingData.total_xp,
+    currentXP,
     onboardingState.isActive,
-    getCurrentLevel,
+    currentLevel,
     startOnboarding,
     autoStartAttempted
   ]);
@@ -218,7 +221,7 @@ export default function ApprovalsScreen() {
     // This allows re-attempting auto-start if server state changes (like after reset)
     console.log('🔄 Resetting auto-start attempt due to server state change');
     setAutoStartAttempted(false);
-  }, [user?.id, onboardingState.onboardingData.completed, onboardingState.onboardingData.current_level]);
+  }, [user?.id, onboardingState.onboardingData.completed, currentLevel]);
 
   // OPTIMISTIC CLEANUP: Clear pending XP when server responds
   useEffect(() => {
@@ -227,8 +230,6 @@ export default function ApprovalsScreen() {
       console.log('🧹 CLEARING pending XP:', pendingXP, '→ 0 (server updated)');
       
       // LEVEL PROGRESSION FEEDBACK: Show progress toward next level
-      const currentLevel = getCurrentLevel();
-      const currentXP = onboardingState.onboardingData.total_xp;
       const levelRequirements: Record<number, number> = {
         1: 0, 2: 100, 3: 200, 4: 320, 5: 450, 6: 750, 7: 1100, 8: 1500
       };
@@ -245,12 +246,13 @@ export default function ApprovalsScreen() {
                    currentLevel === 2 ? 'Chat & Voice (Level 3)' :
                    currentLevel === 3 ? 'Analytics (Level 4)' :
                    currentLevel === 4 ? 'Profile & ALL CORE FEATURES (Level 5)' :
+                   currentLevel === 5 ? 'Onboarding Complete!' :
                    'Advanced Features'
       });
       
       setPendingXP(0);
     }
-  }, [onboardingState.onboardingData.total_xp, onboardingState.onboardingData.onboarding_xp, getCurrentLevel]);
+  }, [currentXP, onboardingState.onboardingData.onboarding_xp, currentLevel]);
 
   // Animation refs for each tab (SIMPLIFIED - no more glow effects)
   const scaleAnimations = useRef(
@@ -284,8 +286,8 @@ export default function ApprovalsScreen() {
     approval,
   });
 
-  // Check if onboarding should show
-  const shouldShowOnboarding = onboardingState.isActive && !onboardingState.onboardingData.completed && getCurrentLevel() < 5;
+  // Check if onboarding should show (stop at Level 5)
+  const shouldShowOnboarding = onboardingState.isActive && !onboardingState.onboardingData.completed && currentLevel < 5;
 
   // Get current items to display
   const getCurrentItems = useCallback((): Task[] => {
@@ -294,7 +296,7 @@ export default function ApprovalsScreen() {
     // Add regular approvals using helper function
     items.push(...approvals.map(approvalToTask));
 
-    // Add onboarding quote if active and before Level 5
+    // Add onboarding quote if active and before Level 5 (game starts at Level 5)
     if (shouldShowOnboarding) {
       const currentQuote = getCurrentQuote();
       if (currentQuote) {
@@ -316,69 +318,105 @@ export default function ApprovalsScreen() {
 
   const handleApprove = useCallback(async (task: Task) => {
     if (task.type === 'onboarding_quote' && task.quote) {
-      // OPTIMISTIC UPDATE: Match actual server XP amounts for accurate feedback
-      const expectedXP = 26; // Actual server amount (20 base + 5.5 engagement rounded up)
-      setPendingXP(prev => prev + expectedXP);
+      // Use unified XP system directly with proper constants
+      const baseXP = XP_REWARDS.QUOTE_APPROVAL; // 10 XP from constants
+      const engagementBonus = XP_REWARDS.QUOTE_INTERACTION; // 3 XP from constants  
+      const totalXP = baseXP + engagementBonus; // 13 XP total
+      
+      // OPTIMISTIC UPDATE: Match actual unified system amounts
+      setPendingXP(prev => prev + totalXP);
       
       // Trigger mascot cheering for approval
       triggerCheering(CheeringTrigger.TASK_COMPLETE);
       
-      // Handle onboarding quote approval silently
-      const timeSpent = Math.round(Math.random() * 3000 + 1000); // 1-4 seconds realistic time, rounded to integer
-      
+      // Award XP directly through unified system
       try {
+        await awardXP(totalXP, 'Quote Approval', 'onboarding');
+        console.log('✅ [Unified XP] Quote approval XP awarded:', totalXP);
+        
+        // Clear optimistic update since unified system handles real updates
+        setPendingXP(prev => Math.max(0, prev - totalXP));
+        
+        // Still record the quote response for tracking (without XP duplication)
+        const timeSpent = Math.round(Math.random() * 3000 + 1000);
+        // Note: recordQuoteResponse may also award XP, but unified system will handle deduplication
         await recordQuoteResponse(task.quote.quote_id, 'approve', timeSpent);
-        // Server response should trigger the useEffect that clears pending XP
-        console.log('✅ Approve response complete - pending XP should be cleared by useEffect');
+        
       } catch (error) {
         // Revert optimistic update on error
-        console.log('❌ Approve failed, reverting optimistic XP:', expectedXP);
-        setPendingXP(prev => Math.max(0, prev - expectedXP));
+        console.log('❌ Approve failed, reverting optimistic XP:', totalXP);
+        setPendingXP(prev => Math.max(0, prev - totalXP));
       }
       
-      // No popup - just let it flow naturally
     } else if (task.type === 'approval' && task.approval) {
-      // Handle regular approval silently - no ugly alert
+      // Handle regular approval - award XP for engagement
+      const approvalXP = 15; // Standard approval XP
+      
+      try {
+        await awardXP(approvalXP, 'Task Approval', 'productivity');
+        console.log('✅ [Unified XP] Task approval XP awarded:', approvalXP);
+      } catch (error) {
+        console.error('❌ Failed to award approval XP:', error);
+      }
+      
       // Remove from list immediately
       setApprovals(prev => prev.filter(a => a.id !== task.approval!.id));
       
       // Trigger mascot cheering for approval
       triggerCheering(CheeringTrigger.TASK_COMPLETE);
     }
-  }, [recordQuoteResponse, triggerCheering]);
+  }, [awardXP, recordQuoteResponse, triggerCheering]);
 
   const handleReject = useCallback(async (task: Task) => {
     if (task.type === 'onboarding_quote' && task.quote) {
-      // OPTIMISTIC UPDATE: Match actual server XP amounts for accurate feedback  
-      const expectedXP = 14; // Actual server amount (8 base + 5.5 engagement rounded up)
-      setPendingXP(prev => prev + expectedXP);
+      // Use unified XP system directly with proper constants
+      const baseXP = XP_REWARDS.QUOTE_DECLINE; // 5 XP from constants
+      const engagementBonus = XP_REWARDS.QUOTE_INTERACTION; // 3 XP from constants
+      const totalXP = baseXP + engagementBonus; // 8 XP total
+      
+      // OPTIMISTIC UPDATE: Match actual unified system amounts
+      setPendingXP(prev => prev + totalXP);
       
       // Trigger mascot cheering for reject (still positive engagement)
       triggerCheering(CheeringTrigger.TASK_COMPLETE);
       
-      // Handle onboarding quote rejection silently
-      const timeSpent = Math.round(Math.random() * 2000 + 800); // 0.8-2.8 seconds realistic time, rounded to integer
-      
+      // Award XP directly through unified system
       try {
+        await awardXP(totalXP, 'Quote Decline', 'onboarding');
+        console.log('✅ [Unified XP] Quote decline XP awarded:', totalXP);
+        
+        // Clear optimistic update since unified system handles real updates
+        setPendingXP(prev => Math.max(0, prev - totalXP));
+        
+        // Still record the quote response for tracking (without XP duplication)
+        const timeSpent = Math.round(Math.random() * 2000 + 800);
+        // Note: recordQuoteResponse may also award XP, but unified system will handle deduplication
         await recordQuoteResponse(task.quote.quote_id, 'decline', timeSpent);
-        // Server response should trigger the useEffect that clears pending XP
-        console.log('✅ Decline response complete - pending XP should be cleared by useEffect');
+        
       } catch (error) {
         // Revert optimistic update on error
-        console.log('❌ Decline failed, reverting optimistic XP:', expectedXP);
-        setPendingXP(prev => Math.max(0, prev - expectedXP));
+        console.log('❌ Decline failed, reverting optimistic XP:', totalXP);
+        setPendingXP(prev => Math.max(0, prev - totalXP));
       }
       
-      // No popup - just let it flow naturally
     } else if (task.type === 'approval' && task.approval) {
-      // Handle regular approval rejection silently - no ugly alert
+      // Handle regular approval rejection - still award some XP for engagement
+      const engagementXP = 5; // Small XP for engagement even when declining
+      
+      try {
+        await awardXP(engagementXP, 'Task Review', 'productivity');
+        console.log('✅ [Unified XP] Task decline XP awarded:', engagementXP);
+      } catch (error) {
+        console.error('❌ Failed to award decline XP:', error);
+      }
+      
       // Remove from list immediately
       setApprovals(prev => prev.filter(a => a.id !== task.approval!.id));
       
       // Trigger mascot cheering for engagement
       triggerCheering(CheeringTrigger.TASK_COMPLETE);
     }
-  }, [recordQuoteResponse, triggerCheering]);
+  }, [awardXP, recordQuoteResponse, triggerCheering]);
 
   const handleCelebrationComplete = () => {
     if (currentCelebration) {
@@ -390,6 +428,49 @@ export default function ApprovalsScreen() {
     }
     setShowCelebrationModal(false);
   };
+
+  // Discord CTA handler for Level 5
+  const handleDiscordCTA = useCallback(async () => {
+    const discordUrl = 'https://discord.gg/omnii';
+    // Award XP for joining Discord community
+    awardXP(25, 'Discord Community Join', 'social');
+    // Open Discord link
+    try {
+      const canOpen = await Linking.canOpenURL(discordUrl);
+      if (canOpen) {
+        await Linking.openURL(discordUrl);
+      }
+    } catch (error) {
+      console.log('❌ Failed to open Discord link:', error);
+    }
+    console.log('🎯 Discord CTA opened for Level 5 completion');
+  }, [awardXP]);
+
+  // Navigation CTA handler for newly unlocked features
+  const handleNavigationCTA = useCallback((level: number) => {
+    switch (level) {
+      case 2:
+        // Navigate to Achievements
+        router.push('/(tabs)/achievements');
+        break;
+      case 3:
+        // Navigate to Chat (when implemented)
+        console.log('🎯 Navigate to Chat (Level 3 unlock)');
+        // router.push('/(tabs)/chat');
+        break;
+      case 4:
+        // Navigate to Analytics (when implemented) 
+        console.log('🎯 Navigate to Analytics (Level 4 unlock)');
+        // router.push('/(tabs)/analytics');
+        break;
+      case 5:
+        // Navigate to Profile for Level 5 completion
+        router.push('/(tabs)/profile');
+        break;
+      default:
+        console.log('🎯 Level', level, 'celebration - no specific navigation');
+    }
+  }, [router]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -420,22 +501,71 @@ export default function ApprovalsScreen() {
     setSelectedFilter(tabKey);
   };
 
-  // Get current tasks and apply filters
+  // Get current tasks and apply AI-focused filters
   const currentTasks = getCurrentItems();
-  const filteredTasks = currentTasks.filter((task: Task) => {
-    if (selectedFilter === 'all') return true;
-    return task.priority === selectedFilter;
-  });
-
-  const stats = {
-    all: currentTasks.length,
-    high: currentTasks.filter((t: Task) => t.priority === 'high').length,
-    medium: currentTasks.filter((t: Task) => t.priority === 'medium').length,
-    low: currentTasks.filter((t: Task) => t.priority === 'low').length,
+  
+  // AI-powered filtering logic
+  const getAIFilteredTasks = (tasks: Task[], filter: string): Task[] => {
+    switch (filter) {
+      case 'priority':
+        // AI suggests high-impact items (high priority first, then by complexity)
+        return tasks
+          .sort((a, b) => {
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+          });
+          
+      case 'smart':
+        // AI-curated recommendations (mix of priorities, favor onboarding for learning)
+        return tasks
+          .sort((a, b) => {
+            // Prioritize onboarding quotes for learning + medium priority for balance
+            const getSmartScore = (task: Task): number => {
+              let score = 0;
+              if (task.type === 'onboarding_quote') score += 10; // Learning priority
+              if (task.priority === 'medium') score += 5; // Balanced difficulty
+              if (task.priority === 'high') score += 3; // Still important
+              return score;
+            };
+            return getSmartScore(b) - getSmartScore(a);
+          });
+          
+      case 'quick':
+        // Quick wins - prioritize low complexity items for momentum
+        return tasks
+          .filter(task => task.priority === 'low' || task.type === 'onboarding_quote')
+          .sort((a, b) => {
+            // Onboarding quotes are typically quicker decisions
+            if (a.type === 'onboarding_quote' && b.type !== 'onboarding_quote') return -1;
+            if (b.type === 'onboarding_quote' && a.type !== 'onboarding_quote') return 1;
+            return 0;
+          });
+          
+      case 'context':
+        // Items needing more context - high complexity or approval types
+        return tasks
+          .filter(task => task.priority === 'high' || task.type === 'approval')
+          .sort((a, b) => {
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+          });
+          
+      default:
+        return tasks;
+    }
   };
 
-  // REMOVED: Glow effects as requested - clean, professional design
-  // Enhanced Filter Tabs component
+  const filteredTasks = getAIFilteredTasks(currentTasks, selectedFilter);
+
+  // Updated stats for AI-focused tabs
+  const stats = {
+    priority: getAIFilteredTasks(currentTasks, 'priority').length,
+    smart: getAIFilteredTasks(currentTasks, 'smart').length,
+    quick: getAIFilteredTasks(currentTasks, 'quick').length,
+    context: getAIFilteredTasks(currentTasks, 'context').length,
+  };
+
+  // Enhanced Filter Tabs component with AI descriptions
   const FilterTabs = () => (
     <View className="flex-row px-5 pb-5 pt-2 gap-3">
       {approvalTabs.map((tab) => {
@@ -445,7 +575,7 @@ export default function ApprovalsScreen() {
         return (
           <TouchableOpacity
             key={tab.key}
-            className="flex-1 h-20 rounded-xl overflow-hidden"
+            className="flex-1 h-24 rounded-xl overflow-hidden" // Increased height for description
             style={[
               isActive && {
                 elevation: 4,
@@ -455,7 +585,7 @@ export default function ApprovalsScreen() {
                 shadowRadius: 8,
               }
             ]}
-            onPress={() => handleTabPress(tab.key as 'pending' | 'approved' | 'recent' | 'insights')}
+            onPress={() => handleTabPress(tab.key as 'priority' | 'smart' | 'quick' | 'context')}
           >
             <Animated.View
               className="flex-1 relative overflow-hidden rounded-xl"
@@ -483,9 +613,9 @@ export default function ApprovalsScreen() {
                   rx="12"
                 />
               </Svg>
-              <View className="absolute inset-0 flex-1 justify-center items-center" style={{ zIndex: 20 }}>
+              <View className="absolute inset-0 flex-1 justify-center items-center px-2" style={{ zIndex: 20 }}>
                 <Text 
-                  className="text-2xl font-bold mb-0.5"
+                  className="text-lg font-bold mb-0.5"
                   style={{ 
                     textShadowColor: 'rgba(0, 0, 0, 0.3)',
                     textShadowOffset: { width: 0, height: 1 },
@@ -503,6 +633,19 @@ export default function ApprovalsScreen() {
                   }}
                 >
                   {tab.label}
+                </Text>
+                {/* AI description */}
+                <Text 
+                  className="text-xs text-white/80 text-center mb-1 leading-tight"
+                  style={{ 
+                    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+                    textShadowOffset: { width: 0, height: 1 },
+                    textShadowRadius: 1,
+                    fontSize: 9,
+                  }}
+                  numberOfLines={2}
+                >
+                  {tab.description}
                 </Text>
                 {count !== undefined && (
                   <View className="bg-black bg-opacity-20 rounded-full px-2 py-0.5">
@@ -584,49 +727,27 @@ export default function ApprovalsScreen() {
               "text-3xl font-bold mb-1",
               isDark ? "text-white" : "text-gray-900"
             )}>⏳ Approvals</Text>
-            <Text className={cn(
-              "text-base",
-              isDark ? "text-slate-400" : "text-gray-600"
-            )}>Review and approve tasks</Text>
+            <XPProgressBar
+              variant="compact"
+              size="small"
+              showText={true}
+              showLevel={true}
+            />
           </View>
           
-          <View className="flex-row items-center gap-3">
-            {/* Debug Button - Only show in development */}
-            {__DEV__ && (
-              <TouchableOpacity
-                onPress={() => setShowDebugPanel(true)}
-                className={cn(
-                  "w-12 h-12 rounded-xl items-center justify-center border-2",
-                  isDark 
-                    ? "bg-slate-800 border-indigo-500/30" 
-                    : "bg-white border-indigo-200"
-                )}
-                style={{
-                  shadowColor: '#6366f1',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
-                  elevation: 2,
-                }}
-              >
-                <Text className="text-lg">🔧</Text>
-              </TouchableOpacity>
-            )}
-            
-            {/* Mascot in header */}
-            <MascotContainer position="header">
-              <Mascot
-                stage={mascotStage}
-                level={currentLevel}
-                size={MascotSize.STANDARD}
-                showLevel={true}
-                enableInteraction={true}
-                enableCheering={cheeringState.isActive}
-                cheeringTrigger={cheeringState.trigger}
-                onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
-              />
-            </MascotContainer>
-          </View>
+          {/* Mascot in header */}
+          <MascotContainer position="header">
+            <Mascot
+              stage={mascotStage}
+              level={currentLevel}
+              size={MascotSize.STANDARD}
+              showLevel={true}
+              enableInteraction={true}
+              enableCheering={cheeringState.isActive}
+              cheeringTrigger={cheeringState.trigger}
+              onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
+            />
+          </MascotContainer>
         </View>
       </View>
 
@@ -670,12 +791,36 @@ export default function ApprovalsScreen() {
         )}
       </View>
 
+      {/* Debug Button - Floating position for development */}
+      {__DEV__ && (
+        <TouchableOpacity
+          onPress={() => setShowDebugPanel(true)}
+          className={cn(
+            "absolute bottom-6 right-6 w-12 h-12 rounded-full items-center justify-center border-2 shadow-lg",
+            isDark 
+              ? "bg-slate-800 border-indigo-500/30" 
+              : "bg-white border-indigo-200"
+          )}
+          style={{
+            shadowColor: '#6366f1',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 6,
+            elevation: 4,
+          }}
+        >
+          <Text className="text-lg">🔧</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Level Celebration Modal */}
       {showCelebrationModal && currentCelebration && (
         <LevelCelebration
           visible={showCelebrationModal}
           levelProgression={currentCelebration}
           onComplete={handleCelebrationComplete}
+          onDiscordCTA={handleDiscordCTA}
+          onNavigationCTA={handleNavigationCTA}
         />
       )}
 

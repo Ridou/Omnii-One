@@ -1,105 +1,433 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Animated } from 'react-native';
 import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
+import { useXPSystem } from '~/hooks/useXPSystem';
+import { XPSystemUtils } from '~/constants/XPSystem';
 
-interface XPProgressBarProps {
-  currentXP: number;
-  currentLevel: number;
-  size?: 'compact' | 'standard';
+export interface XPProgressBarProps {
+  // Display variants
+  variant?: 'minimal' | 'compact' | 'standard' | 'detailed';
+  size?: 'micro' | 'small' | 'medium' | 'large';
+  
+  // Content options
   showText?: boolean;
+  showLevel?: boolean;
+  showProgress?: boolean;
+  showPending?: boolean;
+  
+  // Visual options
+  animated?: boolean;
+  showSegments?: boolean;
+  segmentCount?: number;
+  
+  // Styling
   className?: string;
+  
+  // Override props (for testing or custom usage)
+  overrideXP?: number;
+  overrideLevel?: number;
 }
 
-// Level requirements mapping (reusing existing system)
-const LEVEL_REQUIREMENTS: Record<number, number> = {
-  1: 0, 2: 100, 3: 200, 4: 320, 5: 450, 6: 750, 7: 1100, 8: 1500,
-  9: 1950, 10: 2500, 15: 5000, 20: 8000, 25: 12000, 30: 18000, 
-  40: 35000, 50: 60000
-};
-
+/**
+ * Enhanced XP Progress Bar Component
+ * Unified component for displaying XP progress across all screens
+ * Uses NativeWind V4 styling and real-time XP updates
+ */
 export const XPProgressBar: React.FC<XPProgressBarProps> = ({
-  currentXP,
-  currentLevel,
-  size = 'standard',
+  variant = 'standard',
+  size = 'medium',
   showText = true,
-  className = ''
+  showLevel = false,
+  showProgress = true,
+  showPending = true,
+  animated = true,
+  showSegments = true,
+  segmentCount = 10,
+  className = '',
+  overrideXP,
+  overrideLevel,
 }) => {
   const { isDark } = useTheme();
-
-  // Calculate progress data
-  const currentLevelXP = LEVEL_REQUIREMENTS[currentLevel] || 0;
-  const nextLevelXP = LEVEL_REQUIREMENTS[currentLevel + 1] || LEVEL_REQUIREMENTS[50] || 60000;
-  const xpInCurrentLevel = currentXP - currentLevelXP;
-  const xpNeededForLevel = nextLevelXP - currentLevelXP;
-  const progressPercentage = Math.min(100, Math.max(0, (xpInCurrentLevel / xpNeededForLevel) * 100));
-  const xpToNextLevel = nextLevelXP - currentXP;
+  const { xpProgress, isLoading, error, pendingXP, currentXP, currentLevel } = useXPSystem();
   
-  // Calculate filled segments (out of 10)
-  const filledSegments = Math.floor((progressPercentage / 100) * 10);
+  // Animation value for progress bar
+  const [progressAnim] = useState(new Animated.Value(xpProgress.progress_percentage || 0));
 
-  const sizeConfig = {
-    compact: {
+  // Use override values if provided, otherwise use hook data
+  const displayXP = overrideXP ?? currentXP;
+  const displayLevel = overrideLevel ?? currentLevel;
+  
+  // Recalculate progress with current data (ensuring real-time updates)
+  const actualProgress = overrideXP !== undefined || overrideLevel !== undefined ? 
+    XPSystemUtils.getProgressPercentage(displayXP, displayLevel) : 
+    xpProgress.progress_percentage;
+
+  const xpInLevel = overrideXP !== undefined || overrideLevel !== undefined ?
+    XPSystemUtils.getXPInCurrentLevel(displayXP, displayLevel) :
+    xpProgress.xp_in_current_level;
+
+  const nextLevelXP = overrideLevel !== undefined ?
+    XPSystemUtils.getNextLevelXP(displayLevel) :
+    xpProgress.next_level_xp;
+
+  // Log debug info for progress bar updates
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('🎯 [XPProgressBar] Progress Update:', {
+        displayXP,
+        displayLevel,
+        actualProgress,
+        xpInLevel,
+        nextLevelXP,
+        xpProgressData: xpProgress,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [displayXP, displayLevel, actualProgress, xpInLevel, nextLevelXP, xpProgress]);
+
+  // Animate progress bar when XP changes (with proper dependencies)
+  useEffect(() => {
+    if (animated) {
+      console.log(`🎬 [XPProgressBar] Animating to ${actualProgress}%`);
+      Animated.timing(progressAnim, {
+        toValue: actualProgress,
+        duration: 800,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      progressAnim.setValue(actualProgress);
+    }
+  }, [actualProgress, animated, progressAnim, displayXP, displayLevel]);
+
+  // Configuration based on variant and size
+  const config = getVariantConfig(variant, size);
+
+  // Show loading state
+  if (isLoading && !overrideXP) {
+    return (
+      <View className={cn("w-full", className)}>
+        <View className={cn(
+          "rounded-full",
+          config.barHeight,
+          isDark ? "bg-slate-700" : "bg-gray-200"
+        )}>
+          <View className={cn(
+            "h-full rounded-full bg-gradient-to-r from-indigo-500/50 to-purple-600/50 animate-pulse",
+            "w-1/3"
+          )} />
+        </View>
+        {showText && (
+          <Text className={cn(
+            "text-center mt-1",
+            config.textSize,
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>
+            Loading XP...
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  // Show error state
+  if (error && !overrideXP) {
+    return (
+      <View className={cn("w-full", className)}>
+        <View className={cn(
+          "rounded-full border border-red-300",
+          config.barHeight,
+          isDark ? "bg-red-900/20" : "bg-red-100"
+        )}>
+          <View className="h-full rounded-full bg-red-400 w-0" />
+        </View>
+        {showText && (
+          <Text className={cn(
+            "text-center mt-1 text-red-500",
+            config.textSize
+          )}>
+            XP Error
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View className={cn("w-full", className)}>
+      {/* Header Text */}
+      {variant === 'detailed' && (
+        <View className="flex-row justify-between items-center mb-2">
+          <Text className={cn(
+            "font-semibold",
+            config.textSize,
+            isDark ? "text-white" : "text-gray-900"
+          )}>
+            Level {displayLevel}
+          </Text>
+          <Text className={cn(
+            "font-medium",
+            config.secondaryTextSize,
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>
+            {xpInLevel} / {nextLevelXP} XP
+          </Text>
+        </View>
+      )}
+
+      {/* XP Text - Above progress bar */}
+      {showText && variant !== 'detailed' && variant !== 'minimal' && (
+        <Text className={cn(
+          "font-medium mb-1",
+          config.textSize,
+          config.spacing,
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>
+          {showLevel && `Level ${displayLevel} • `}
+          {displayXP.toLocaleString()} 
+          {nextLevelXP && ` / ${nextLevelXP.toLocaleString()}`} XP
+          {showPending && pendingXP > 0 && (
+            <Text className="text-yellow-500 font-semibold">
+              {` (+${pendingXP})`}
+            </Text>
+          )}
+        </Text>
+      )}
+
+      {/* Progress Bar */}
+      {showProgress && (
+        <View className="w-full">
+          {showSegments ? (
+            // Segmented progress bar
+            <View className={cn("flex-row", config.segmentGap)}>
+              {Array.from({ length: segmentCount }, (_, index) => {
+                const segmentThreshold = ((index + 1) / segmentCount) * 100;
+                const isActive = actualProgress >= segmentThreshold;
+                const isPartial = actualProgress > (index / segmentCount) * 100 && 
+                                actualProgress < segmentThreshold;
+                const partialProgress = isPartial ? 
+                  ((actualProgress - (index / segmentCount) * 100) / (100 / segmentCount)) : 0;
+                
+                // Debug logging for segment states
+                if (__DEV__ && index < 5) {
+                  console.log(`🔳 [XPProgressBar] Segment ${index}:`, {
+                    threshold: segmentThreshold,
+                    isActive,
+                    isPartial,
+                    partialProgress,
+                    actualProgress
+                  });
+                }
+                
+                return (
+                  <View
+                    key={index}
+                    className={cn(
+                      "flex-1 rounded-full overflow-hidden",
+                      config.barHeight,
+                      isDark ? "bg-slate-700" : "bg-gray-200"
+                    )}
+                  >
+                    {(isActive || isPartial) && (
+                      <View
+                        className={cn(
+                          "h-full rounded-full",
+                          getProgressGradient(variant, pendingXP > 0)
+                        )}
+                        style={{ 
+                          flex: isActive ? 1 : partialProgress,
+                          maxWidth: '100%'
+                        }}
+                      />
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            // Smooth progress bar
+            <View className={cn(
+              "w-full rounded-full overflow-hidden",
+              config.barHeight,
+              isDark ? "bg-slate-700" : "bg-gray-200"
+            )}>
+              <Animated.View
+                key={`xp-progress-${displayLevel}-${Math.floor(displayXP / 100)}`}
+                className={cn(
+                  "h-full rounded-full",
+                  getProgressGradient(variant, pendingXP > 0)
+                )}
+                style={{
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: ['0%', '100%'],
+                    extrapolate: 'clamp',
+                  }),
+                  transform: [{ translateX: 0 }],
+                }}
+              />
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Level Badge - For minimal variant */}
+      {variant === 'minimal' && showLevel && (
+        <View className={cn(
+          "self-end mt-1 px-2 py-0.5 rounded-full",
+          isDark ? "bg-indigo-900/40" : "bg-indigo-100"
+        )}>
+          <Text className={cn(
+            "font-bold",
+            config.secondaryTextSize,
+            isDark ? "text-indigo-400" : "text-indigo-700"
+          )}>
+            Lv.{displayLevel}
+          </Text>
+        </View>
+      )}
+
+      {/* Detailed Footer */}
+      {variant === 'detailed' && (
+        <View className="flex-row justify-between items-center mt-2">
+          <View className="items-center">
+            <Text className={cn(
+              "font-medium mb-1",
+              config.secondaryTextSize,
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Current XP</Text>
+            <View className={cn(
+              "px-2 py-1 rounded-full",
+              isDark ? "bg-indigo-900/40" : "bg-indigo-100"
+            )}>
+              <Text className={cn(
+                "font-bold",
+                config.secondaryTextSize,
+                isDark ? "text-indigo-400" : "text-indigo-700"
+              )}>
+                {xpInLevel}
+              </Text>
+            </View>
+          </View>
+          
+          <View className="items-center">
+            <Text className={cn(
+              "font-medium mb-1",
+              config.secondaryTextSize,
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Progress</Text>
+            <View className={cn(
+              "px-2 py-1 rounded-full",
+              isDark ? "bg-green-900/40" : "bg-green-100"
+            )}>
+              <Text className={cn(
+                "font-bold",
+                config.secondaryTextSize,
+                isDark ? "text-green-400" : "text-green-700"
+              )}>
+                {Math.round(actualProgress)}%
+              </Text>
+            </View>
+          </View>
+          
+          <View className="items-center">
+            <Text className={cn(
+              "font-medium mb-1",
+              config.secondaryTextSize,
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Next Level</Text>
+            <View className={cn(
+              "px-2 py-1 rounded-full",
+              isDark ? "bg-orange-900/40" : "bg-orange-100"
+            )}>
+              <Text className={cn(
+                "font-bold",
+                config.secondaryTextSize,
+                isDark ? "text-orange-400" : "text-orange-700"
+              )}>
+                {nextLevelXP || 'Max'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+};
+
+/**
+ * Get configuration based on variant and size
+ */
+function getVariantConfig(variant: string, size: string) {
+  const sizeConfigs = {
+    micro: {
+      barHeight: 'h-1',
+      segmentGap: 'gap-0.5',
+      textSize: 'text-xs',
+      secondaryTextSize: 'text-xs',
+      spacing: 'mb-0.5'
+    },
+    small: {
       barHeight: 'h-1.5',
       segmentGap: 'gap-0.5',
       textSize: 'text-xs',
+      secondaryTextSize: 'text-xs',
       spacing: 'mb-1'
     },
-    standard: {
+    medium: {
       barHeight: 'h-2',
       segmentGap: 'gap-1',
       textSize: 'text-sm',
+      secondaryTextSize: 'text-xs',
+      spacing: 'mb-1'
+    },
+    large: {
+      barHeight: 'h-3',
+      segmentGap: 'gap-1',
+      textSize: 'text-base',
+      secondaryTextSize: 'text-sm',
       spacing: 'mb-2'
     }
   };
 
-  const config = sizeConfig[size];
+  const baseConfig = sizeConfigs[size as keyof typeof sizeConfigs] || sizeConfigs.medium;
 
-  return (
-    <View className={cn("w-full", className)}>
-      {/* Progress Bar with 10 Segments */}
-      <View className={cn("flex-row", config.segmentGap, config.spacing)}>
-        {Array.from({ length: 10 }, (_, index) => {
-          const isActive = index < filledSegments;
-          const isPartial = index === filledSegments && progressPercentage % 10 > 0;
-          const partialProgress = isPartial ? (progressPercentage % 10) / 10 : 0;
-          
-          return (
-            <View
-              key={index}
-              className={cn(
-                "flex-1 rounded-full overflow-hidden",
-                config.barHeight,
-                isDark ? "bg-slate-700" : "bg-gray-200"
-              )}
-            >
-              {(isActive || isPartial) && (
-                <View
-                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600"
-                  style={{ 
-                    flex: isActive ? 1 : partialProgress,
-                    maxWidth: '100%'
-                  }}
-                />
-              )}
-            </View>
-          );
-        })}
-      </View>
+  // Variant-specific adjustments
+  if (variant === 'minimal') {
+    return {
+      ...baseConfig,
+      barHeight: 'h-1',
+      textSize: 'text-xs',
+    };
+  }
 
-      {/* XP Text */}
-      {showText && (
-        <Text className={cn(
-          "font-medium",
-          config.textSize,
-          isDark ? "text-slate-400" : "text-gray-600"
-        )}>
-          {currentXP.toLocaleString()} / {nextLevelXP.toLocaleString()} XP
-          {xpToNextLevel > 0 && (
-            <Text className="opacity-75"> • {xpToNextLevel.toLocaleString()} to go</Text>
-          )}
-        </Text>
-      )}
-    </View>
-  );
-}; 
+  if (variant === 'detailed') {
+    return {
+      ...baseConfig,
+      barHeight: size === 'large' ? 'h-4' : 'h-3',
+    };
+  }
+
+  return baseConfig;
+}
+
+/**
+ * Get progress gradient classes based on variant and pending state
+ */
+function getProgressGradient(variant: string, hasPending: boolean): string {
+  if (hasPending) {
+    // Simple solid color when pending (gradients might not work in RN)
+    return 'bg-yellow-500 animate-pulse';
+  }
+
+  switch (variant) {
+    case 'minimal':
+      return 'bg-indigo-500';
+    case 'detailed':
+      // Fallback to solid color instead of gradient
+      return 'bg-purple-600';
+    default:
+      // Fallback to solid color instead of gradient
+      return 'bg-indigo-600';
+  }
+} 

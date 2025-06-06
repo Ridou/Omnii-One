@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform, View, Text } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '~/context/AuthContext';
+import { XPProvider } from '~/context/XPContext';
 import { ProfileProvider } from '~/context/ProfileContext';
 import { OnboardingProvider } from '~/context/OnboardingContext';
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
@@ -55,13 +56,15 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SafeGestureProvider>
         <AuthProvider>
-          <ProfileProvider>
-            <ThemeProvider>
-              <OnboardingProvider>
-                <ThemedStack />
-              </OnboardingProvider>
-            </ThemeProvider>
-          </ProfileProvider>
+          <XPProvider>
+            <ProfileProvider>
+              <ThemeProvider>
+                <OnboardingProvider>
+                  <ThemedStack />
+                </OnboardingProvider>
+              </ThemeProvider>
+            </ProfileProvider>
+          </XPProvider>
         </AuthProvider>
       </SafeGestureProvider>
     </QueryClientProvider>

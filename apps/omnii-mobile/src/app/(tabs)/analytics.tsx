@@ -19,6 +19,7 @@ import { useFetchAnalytics } from '~/hooks/useFetchAnalytics';
 import MetricCard from '~/components/analytics/MetricCard';
 import AIInsightCard from '~/components/analytics/AIInsightCard';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
+import { XPProgressBar } from '~/components/common/XPProgressBar';
 import { 
   MascotStage, 
   MascotSize, 
@@ -62,7 +63,7 @@ const analyticsTabs: AnalyticsTabConfig[] = [
 export default function AnalyticsScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
-  const { getCurrentLevel, recordFeatureVisit } = useOnboardingContext();
+  const { getCurrentLevel, recordFeatureVisit, state: onboardingState } = useOnboardingContext();
   const { analytics, isLoading, refetch } = useFetchAnalytics();
   const router = useRouter();
   
@@ -726,10 +727,12 @@ export default function AnalyticsScreen() {
               "text-3xl font-bold mb-1",
               isDark ? "text-white" : "text-gray-900"
             )}>📊 Analytics</Text>
-            <Text className={cn(
-              "text-base",
-              isDark ? "text-slate-400" : "text-gray-600"
-            )}>Track your productivity patterns</Text>
+            <XPProgressBar
+              currentXP={onboardingState.onboardingData.total_xp}
+              currentLevel={currentLevel}
+              size="compact"
+              showText={true}
+            />
           </View>
           
           {/* Mascot in header */}

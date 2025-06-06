@@ -32,6 +32,8 @@ import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { ProfileTab, TabConfig } from '~/types/profile';
 import { cn } from '~/utils/cn';
 import { getMascotStageByLevel, CheeringTrigger, MascotSize } from '~/types/mascot';
+import { useXPSystem } from '~/hooks/useXPSystem';
+import { XPSystemUtils } from '~/constants/XPSystem';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -71,6 +73,7 @@ export default function ProfileScreen() {
     state: onboardingState,
     isOnboardingComplete
   } = useOnboardingContext();
+  const { xpProgress, currentLevel, currentXP } = useXPSystem();
   const router = useRouter();
   const { theme, isDark } = useTheme();
   
@@ -78,8 +81,7 @@ export default function ProfileScreen() {
   const { colorScheme: nativeWindColorScheme } = useColorScheme();
   
   // Get real user progression data
-  const level = getCurrentLevel();
-  const currentXP = onboardingState.onboardingData.total_xp;
+  const level = currentLevel;
   const mascotStage = getMascotStageByLevel(level);
   
   // Mascot cheering functionality
@@ -795,10 +797,10 @@ export default function ProfileScreen() {
               isDark ? "text-white" : "text-gray-900"
             )}>👤 Profile</Text>
             <XPProgressBar
-              currentXP={currentXP}
-              currentLevel={level}
-              size="compact"
+              variant="compact"
+              size="small"
               showText={true}
+              showLevel={true}
             />
           </View>
           

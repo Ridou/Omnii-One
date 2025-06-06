@@ -226,7 +226,7 @@ export const Mascot: React.FC<MascotProps> = ({
       {mascotState.cheeringMessage && (
         <Animated.View
           className={cn(
-            "absolute top-0 -left-80 z-20",
+            "absolute -top-6 -left-80 z-20",
             "px-4 py-2.5 rounded-lg shadow-xl",
             "border-l-4 border-l-emerald-400",
             "min-h-16",

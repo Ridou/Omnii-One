@@ -2,15 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { 
   View, 
   Text, 
-  StyleSheet, 
   Animated, 
   Dimensions, 
   Modal,
   TouchableOpacity,
   StatusBar 
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { AppColors } from '~/constants/Colors';
+import { cn } from '~/utils/cn';
+import { useTheme } from '~/context/ThemeContext';
 import type { LevelProgression } from '~/types/onboarding';
 
 const { width, height } = Dimensions.get('window');
@@ -20,14 +21,18 @@ interface LevelCelebrationProps {
   levelProgression: LevelProgression | null;
   onComplete: () => void;
   onDiscordCTA?: () => void;
+  onNavigationCTA?: (level: number) => void;
 }
 
 export default function LevelCelebration({
   visible,
   levelProgression,
   onComplete,
-  onDiscordCTA
+  onDiscordCTA,
+  onNavigationCTA
 }: LevelCelebrationProps) {
+  const { isDark } = useTheme();
+  const router = useRouter();
   const [animationPhase, setAnimationPhase] = useState<'entrance' | 'celebration' | 'features' | 'complete'>('entrance');
   
   // Animated values
@@ -163,32 +168,37 @@ export default function LevelCelebration({
         return [{
           icon: '🏆',
           title: 'Achievement System',
-          description: 'Track your progress and unlock milestones'
+          description: 'Track your progress and unlock milestones',
+          route: '/(tabs)/achievements'
         }];
       case 3:
         return [
           {
             icon: '💬',
             title: 'AI Chat Assistant',
-            description: 'Get personalized productivity guidance'
+            description: 'Get personalized productivity guidance',
+            route: '/(tabs)/chat' // When implemented
           },
           {
             icon: '🎤',
             title: 'Voice Commands',
-            description: 'Control OMNII with your voice'
+            description: 'Control OMNII with your voice',
+            route: null // System feature
           }
         ];
       case 4:
         return [{
           icon: '📊',
           title: 'Analytics Dashboard',
-          description: 'Deep insights into your productivity patterns'
+          description: 'Deep insights into your productivity patterns',
+          route: '/(tabs)/analytics' // When implemented
         }];
       case 5:
         return [{
           icon: '👤',
           title: 'Profile & Settings',
-          description: 'Customize your AI partnership experience'
+          description: 'Customize your AI partnership experience',
+          route: '/(tabs)/profile'
         }];
       default:
         return [];
@@ -223,6 +233,22 @@ export default function LevelCelebration({
     return { primary: '#FF7043', secondary: '#FF5722' }; // Transcendent Orange
   };
 
+  // Handle navigation to newly unlocked features
+  const handleNavigationCTA = (route: string | null) => {
+    if (route && onNavigationCTA && levelProgression) {
+      onNavigationCTA(levelProgression.to_level);
+      onComplete(); // Close the modal after navigation
+    }
+  };
+
+  // Handle Discord CTA with proper async/await
+  const handleDiscordCTA = async () => {
+    if (onDiscordCTA) {
+      await onDiscordCTA();
+    }
+    onComplete();
+  };
+
   if (!visible || !levelProgression) return null;
 
   const levelColors = getLevelColors(levelProgression.to_level);
@@ -237,15 +263,18 @@ export default function LevelCelebration({
   return (
     <Modal visible={visible} animationType="none" transparent>
       <StatusBar backgroundColor="rgba(0,0,0,0.9)" barStyle="light-content" />
-      <View style={styles.overlay}>
+      <View className={cn(
+        "flex-1 justify-center items-center",
+        "bg-black/95"
+      )}>
         <Animated.View
-          style={[
-            styles.container,
-            {
-              transform: [{ scale: scaleAnim }],
-              opacity: opacityAnim,
-            },
-          ]}
+          className={cn(
+            "w-[90%] max-w-md items-center py-10"
+          )}
+          style={{
+            transform: [{ scale: scaleAnim }],
+            opacity: opacityAnim,
+          }}
         >
           {/* Background Sparkles */}
           {particleAnimations.map((anim, index) => {
@@ -257,78 +286,116 @@ export default function LevelCelebration({
             return (
               <Animated.View
                 key={index}
-                style={[
-                  styles.particle,
-                  {
-                    transform: [
-                      { translateX: x },
-                      { translateY: y },
-                      { scale: anim },
-                      { rotate: sparkleRotate },
-                    ],
-                    opacity: anim,
-                  },
-                ]}
+                className="absolute top-20 left-1/2 -ml-2.5"
+                style={{
+                  transform: [
+                    { translateX: x },
+                    { translateY: y },
+                    { scale: anim },
+                    { rotate: sparkleRotate },
+                  ],
+                  opacity: anim,
+                }}
               >
-                <Text style={styles.sparkle}>✨</Text>
+                <Text className="text-xl text-center">✨</Text>
               </Animated.View>
             );
           })}
 
           {/* Main Content */}
-          <View style={styles.content}>
+          <View className="items-center w-full">
             {/* Level Badge */}
-            <View style={[styles.levelBadge, { backgroundColor: levelColors.primary }]}>
-              <Text style={styles.levelNumber}>{levelProgression.to_level}</Text>
+            <View 
+              className="w-20 h-20 rounded-full justify-center items-center mb-5 shadow-2xl"
+              style={{ 
+                backgroundColor: levelColors.primary,
+                shadowColor: levelColors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.4,
+                shadowRadius: 12,
+                elevation: 8,
+              }}
+            >
+              <Text className="text-3xl font-bold text-white">
+                {levelProgression.to_level}
+              </Text>
             </View>
 
             {/* Title */}
             <Animated.View
-              style={[
-                styles.titleContainer,
-                { transform: [{ scale: titleScale }] },
-              ]}
+              className="items-center mb-6"
+              style={{ transform: [{ scale: titleScale }] }}
             >
-              <Text style={[styles.levelTitle, { color: levelColors.primary }]}>
+              <Text 
+                className="text-2xl font-bold text-center tracking-wider mb-2"
+                style={{ 
+                  color: levelColors.primary,
+                  textShadowColor: 'rgba(0,0,0,0.3)',
+                  textShadowOffset: { width: 0, height: 2 },
+                  textShadowRadius: 4,
+                }}
+              >
                 {getLevelTitle(levelProgression.to_level)}
               </Text>
               {isLevel5 && (
-                <Text style={styles.subtitle}>
+                <Text className="text-base text-orange-400 text-center font-semibold">
                   🎉 ALL CORE FEATURES UNLOCKED! 🎉
                 </Text>
               )}
             </Animated.View>
 
             {/* XP Gained */}
-            <View style={styles.xpContainer}>
-              <Text style={styles.xpLabel}>XP GAINED</Text>
-              <Text style={[styles.xpAmount, { color: levelColors.primary }]}>
+            <View className="items-center mb-8">
+              <Text className={cn(
+                "text-xs tracking-widest mb-1",
+                isDark ? "text-gray-400" : "text-gray-500"
+              )}>
+                XP GAINED
+              </Text>
+              <Text 
+                className="text-4xl font-bold"
+                style={{ 
+                  color: levelColors.primary,
+                  textShadowColor: 'rgba(0,0,0,0.3)',
+                  textShadowOffset: { width: 0, height: 2 },
+                  textShadowRadius: 4,
+                }}
+              >
                 +{levelProgression.xp_at_level_up - (levelProgression.from_level * 100)}
               </Text>
             </View>
 
             {/* Unlocked Features */}
             {animationPhase === 'features' && unlockedFeatures.length > 0 && (
-              <View style={styles.featuresContainer}>
-                <Text style={styles.featuresTitle}>NEW FEATURES UNLOCKED</Text>
+              <View className="w-full items-center mb-6">
+                <Text className="text-sm text-white tracking-wide mb-4 text-center">
+                  NEW FEATURES UNLOCKED
+                </Text>
                 {unlockedFeatures.map((feature, index) => (
                   <Animated.View
                     key={index}
-                    style={[
-                      styles.featureCard,
-                      {
-                        transform: [{ translateX: featureSlideIns[index] || new Animated.Value(-width) }],
-                        backgroundColor: `${levelColors.primary}15`,
-                        borderColor: `${levelColors.primary}40`,
-                      },
-                    ]}
+                    className={cn(
+                      "flex-row items-center w-full p-4 rounded-xl border mb-3",
+                      isDark ? "bg-gray-800/50" : "bg-white/10"
+                    )}
+                    style={{
+                      transform: [{ translateX: featureSlideIns[index] || new Animated.Value(-width) }],
+                      backgroundColor: `${levelColors.primary}15`,
+                      borderColor: `${levelColors.primary}40`,
+                    }}
                   >
-                    <Text style={styles.featureIcon}>{feature.icon}</Text>
-                    <View style={styles.featureText}>
-                      <Text style={[styles.featureTitle, { color: levelColors.primary }]}>
+                    <Text className="text-2xl mr-3">{feature.icon}</Text>
+                    <View className="flex-1">
+                      <Text 
+                        className="text-base font-semibold mb-1"
+                        style={{ color: levelColors.primary }}
+                      >
                         {feature.title}
                       </Text>
-                      <Text style={styles.featureDescription}>
+                      <Text className={cn(
+                        "text-sm leading-5",
+                        isDark ? "text-gray-300" : "text-gray-200"
+                      )}>
                         {feature.description}
                       </Text>
                     </View>
@@ -339,17 +406,68 @@ export default function LevelCelebration({
 
             {/* Level 5 Discord CTA */}
             {isLevel5 && animationPhase === 'complete' && onDiscordCTA && (
-              <TouchableOpacity style={styles.discordButton} onPress={onDiscordCTA}>
-                <Text style={styles.discordText}>
+              <TouchableOpacity 
+                className="bg-[#5865F2] px-6 py-3 rounded-xl mb-4 shadow-lg active:scale-95"
+                onPress={handleDiscordCTA}
+                style={{
+                  shadowColor: '#5865F2',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 6,
+                }}
+              >
+                <Text className="text-white text-sm font-semibold text-center">
                   💬 Join our Discord for feedback & exclusive tips!
                 </Text>
               </TouchableOpacity>
             )}
 
+            {/* Navigation CTAs for unlocked features */}
+            {animationPhase === 'complete' && unlockedFeatures.length > 0 && (
+              <View className="w-full mb-4">
+                {unlockedFeatures.filter(f => f.route).map((feature, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    className={cn(
+                      "flex-row items-center justify-center py-3 px-6 rounded-xl mb-2 shadow-lg active:scale-95"
+                    )}
+                    style={{
+                      backgroundColor: levelColors.primary,
+                      shadowColor: levelColors.primary,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 6,
+                    }}
+                    onPress={() => handleNavigationCTA(feature.route)}
+                  >
+                    <Text className="text-white text-base font-semibold mr-2">
+                      Explore {feature.title}
+                    </Text>
+                    <Text className="text-white text-lg">→</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
             {/* Continue Button */}
             {animationPhase === 'complete' && (
-              <TouchableOpacity style={styles.continueButton} onPress={onComplete}>
-                <Text style={styles.continueText}>
+              <TouchableOpacity 
+                className={cn(
+                  "px-8 py-4 rounded-2xl shadow-xl active:scale-95",
+                  isLevel5 ? "bg-gradient-to-r from-red-500 to-red-600" : "bg-gradient-to-r from-indigo-500 to-purple-600"
+                )}
+                onPress={onComplete}
+                style={{
+                  shadowColor: isLevel5 ? '#FF3B30' : '#6366f1',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
+                  elevation: 8,
+                }}
+              >
+                <Text className="text-white text-lg font-semibold text-center">
                   {isLevel5 ? 'Begin Your Journey' : 'Continue'}
                 </Text>
               </TouchableOpacity>
@@ -359,156 +477,4 @@ export default function LevelCelebration({
       </View>
     </Modal>
   );
-}
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  container: {
-    width: width * 0.9,
-    maxWidth: 400,
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  particle: {
-    position: 'absolute',
-    top: 80,
-    left: '50%',
-    marginLeft: -10,
-  },
-  sparkle: {
-    fontSize: 20,
-    textAlign: 'center',
-  },
-  content: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  levelBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  levelNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  levelTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    letterSpacing: 2,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#FF7043',
-    textAlign: 'center',
-    marginTop: 8,
-    fontWeight: '600',
-  },
-  xpContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  xpLabel: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  xpAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  featuresContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  featuresTitle: {
-    fontSize: 14,
-    color: 'white',
-    letterSpacing: 1,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  featureCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  featureIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  featureText: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  featureDescription: {
-    fontSize: 13,
-    color: AppColors.textSecondary,
-    lineHeight: 18,
-  },
-  discordButton: {
-    backgroundColor: '#5865F2',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  discordText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  continueButton: {
-    backgroundColor: AppColors.aiGradientStart,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 16,
-    shadowColor: AppColors.aiGradientStart,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  continueText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-}); 
+} 

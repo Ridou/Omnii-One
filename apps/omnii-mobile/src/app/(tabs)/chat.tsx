@@ -23,6 +23,7 @@ import { PendingMessage } from '~/components/chat/PendingMessage';
 import { ConnectionError } from '~/components/chat/ConnectionError';
 import { WebSocketDebug } from '~/components/chat/WebSocketDebug';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
+import { XPProgressBar } from '~/components/common/XPProgressBar';
 import { 
   MascotStage, 
   MascotSize, 
@@ -72,7 +73,7 @@ const chatTabs: ChatTabConfig[] = [
 export default function ChatScreen() {
     const { user } = useAuth();
     const { isDark } = useTheme();
-    const { recordFeatureVisit, getCurrentLevel } = useOnboardingContext();
+    const { recordFeatureVisit, getCurrentLevel, state: onboardingState } = useOnboardingContext();
     const router = useRouter();
 
     // Mascot state management
@@ -973,10 +974,12 @@ export default function ChatScreen() {
                             "text-3xl font-bold mb-1",
                             isDark ? "text-white" : "text-gray-900"
                         )}>💬 Chat</Text>
-                        <Text className={cn(
-                            "text-base",
-                            isDark ? "text-slate-400" : "text-gray-600"
-                        )}>Your AI assistant for everything</Text>
+                        <XPProgressBar
+                            currentXP={onboardingState.onboardingData.total_xp}
+                            currentLevel={currentLevel}
+                            size="compact"
+                            showText={true}
+                        />
                     </View>
                     
                     {/* Mascot in header */}

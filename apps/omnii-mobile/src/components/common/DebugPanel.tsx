@@ -9,10 +9,10 @@ import {
   Alert,
   ScrollView
 } from 'react-native';
-import { useOnboardingContext } from '~/context/OnboardingContext';
+import { useXPSystem } from '~/hooks/useXPSystem';
 import { useAuth } from '~/context/AuthContext';
 import { AppColors } from '~/constants/Colors';
-import type { LevelProgression } from '~/types/onboarding';
+import { XPSystemUtils } from '~/constants/XPSystem';
 
 interface DebugPanelProps {
   visible: boolean;
@@ -22,213 +22,248 @@ interface DebugPanelProps {
 export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
   const { user } = useAuth();
   const { 
-    state, 
-    debugResetOnboarding,
-    awardXP,
-    triggerLevelUp,
-    getCurrentLevel,
-    getXPNeededForNextLevel,
-    getXPProgressToNextLevel,
-    completeOnboarding,
-    clearAllNudges
-  } = useOnboardingContext();
+    awardXP, 
+    currentXP, 
+    currentLevel, 
+    xpProgress, 
+    isLoading, 
+    error,
+    pendingXP,
+    refetchXP
+  } = useXPSystem();
 
-  const handleResetOnboarding = async () => {
-    // Direct action - no confirmation needed
-    await debugResetOnboarding();
-    onClose();
-    // Log success instead of showing alert
-    console.log('✅ Onboarding reset complete! Please restart the app.');
-  };
-
-  // Enhanced debugging with state logging
+  // Enhanced debugging with unified system logging
   const logCurrentState = () => {
-    const currentLevel = getCurrentLevel();
-    const currentXP = state.onboardingData?.total_xp || 0;
-    
-    console.log('🔍 [DEBUG] Current State Snapshot:', {
-      level: currentLevel,
-      currentXP: currentXP,
-      stateLevel: state.onboardingData?.current_level,
-      stateXP: state.onboardingData?.total_xp,
-      completed: state.onboardingData?.completed,
-      isActive: state.isActive,
-      unlockedFeatures: state.unlockedFeatures,
+    console.log('🔍 [DEBUG] Unified XP System State:', {
+      currentLevel,
+      currentXP,
+      xpInCurrentLevel: xpProgress.xp_in_current_level,
+      xpToNextLevel: xpProgress.xp_to_next_level,
+      progressPercentage: xpProgress.progress_percentage,
+      nextLevelXP: xpProgress.next_level_xp,
+      pendingXP,
+      isLoading,
+      error: error || 'None',
+      segmentsFilled: Math.floor((xpProgress.progress_percentage || 0) / 10),
       timestamp: new Date().toISOString()
     });
   };
 
-  const awardXPWithLogging = (amount: number, reason: string) => {
+  const awardXPWithLogging = async (amount: number, reason: string) => {
     console.log(`💰 [DEBUG] About to award ${amount} XP for: ${reason}`);
     logCurrentState();
     
-    awardXP(amount, reason, 'debug');
-    
-    // Log state after a brief delay
-    setTimeout(() => {
-      console.log(`✅ [DEBUG] After awarding ${amount} XP:`);
-      logCurrentState();
-    }, 100);
+    try {
+      await awardXP(amount, reason, 'debug');
+      
+      // Log state after awarding
+      setTimeout(() => {
+        console.log(`✅ [DEBUG] After awarding ${amount} XP:`);
+        logCurrentState();
+      }, 1000);
+    } catch (error) {
+      console.error('❌ Failed to award XP:', error);
+    }
   };
 
-  const handleLevelUp = () => {
-    const currentLevel = getCurrentLevel();
-    const xpNeeded = getXPNeededForNextLevel();
-    const nextLevel = currentLevel + 1;
-    
-    // Only advance ONE level at a time - no skipping levels
-    if (nextLevel > 50) {
+  const handleLevelUp = async () => {
+    if (currentLevel >= 50) {
       console.log('🏆 Already at max level!');
       return;
     }
     
+    const xpNeeded = xpProgress.xp_to_next_level || 0;
+    const nextLevel = currentLevel + 1;
+    
     console.log(`🚀 Leveling up from ${currentLevel} to ${nextLevel} (needs ${xpNeeded} XP)`);
     
-    // Award exactly the XP needed for the next level using proper server sync
-    awardXP(xpNeeded, 'Debug Level Up', 'debug');
-    
-    // Get milestone unlocks for the next level only
-    const getMilestoneUnlocks = (level: number) => {
-      switch (level) {
-        case 2: return ['achievements_full'];
-        case 3: return ['chat_full', 'voice_commands'];
-        case 4: return ['analytics_full'];
-        case 5: return ['profile_full', 'ALL_CORE_FEATURES'];
-        case 6: return ['advanced_insights', 'habit_tracking'];
-        case 10: return ['predictive_analytics', 'team_features'];
-        case 15: return ['automations', 'api_access'];
-        case 20: return ['mentor_mode', 'community_leadership'];
-        default: return [];
-      }
-    };
-    
-    // Create level progression for celebration (only for the next level)
-    const levelProgression: LevelProgression = {
-      id: `debug_${Date.now()}`,
-      user_id: user?.id || '',
-      from_level: currentLevel,
-      to_level: nextLevel, // Only advance to the next level
-      xp_at_level_up: state.onboardingData.total_xp + xpNeeded,
-      milestone_unlocks: getMilestoneUnlocks(nextLevel),
-      celebration_shown: false,
-      unlock_animations_played: [],
-      achieved_at: new Date().toISOString(),
-    };
-    
-    // Trigger level up celebration for the single level advancement
-    triggerLevelUp(levelProgression);
+    await awardXPWithLogging(xpNeeded, 'Debug Level Up');
   };
 
-  const handleJumpToLevel5 = () => {
-    const currentLevel = getCurrentLevel();
-    const currentXP = state.onboardingData.total_xp;
-    const targetXP = 450; // Level 5 requirement
-    
-    if (currentLevel >= 5) {
-      console.log('🏆 Already at or above Level 5!');
+  const handleJumpToLevel = async (targetLevel: number) => {
+    if (currentLevel >= targetLevel) {
+      console.log(`🏆 Already at or above Level ${targetLevel}!`);
       return;
     }
     
-    console.log(`🚀 Jumping from Level ${currentLevel} (${currentXP} XP) to Level 5 (${targetXP} XP)`);
+    const targetXP = XPSystemUtils.getXPForLevel(targetLevel);
+    const xpNeeded = Math.max(0, targetXP - currentXP);
     
-    // Award the XP needed to reach Level 5 using proper server sync
-    const xpNeeded = targetXP - currentXP;
+    console.log(`🚀 Jumping from Level ${currentLevel} (${currentXP} XP) to Level ${targetLevel} (${targetXP} XP)`);
+    console.log(`💰 Need ${xpNeeded} more XP`);
+    
     if (xpNeeded > 0) {
-      awardXP(xpNeeded, 'Debug Jump to Level 5', 'debug');
+      await awardXPWithLogging(xpNeeded, `Debug Jump to Level ${targetLevel}`);
     }
-    
-    // Trigger level-up progressions for each level we're skipping
-    const getMilestoneUnlocks = (level: number) => {
-      switch (level) {
-        case 2: return ['achievements_full'];
-        case 3: return ['chat_full', 'voice_commands'];
-        case 4: return ['analytics_full'];
-        case 5: return ['profile_full', 'ALL_CORE_FEATURES'];
-        case 6: return ['advanced_insights', 'habit_tracking'];
-        case 10: return ['predictive_analytics', 'team_features'];
-        case 15: return ['automations', 'api_access'];
-        case 20: return ['mentor_mode', 'community_leadership'];
-        default: return [];
-      }
-    };
-    
-    // Create level progression for each level we're jumping through
-    for (let level = currentLevel + 1; level <= 5; level++) {
-      const levelProgression: LevelProgression = {
-        id: `debug_jump_${Date.now()}_${level}`,
-        user_id: user?.id || '',
-        from_level: level - 1,
-        to_level: level,
-        xp_at_level_up: targetXP,
-        milestone_unlocks: getMilestoneUnlocks(level),
-        celebration_shown: false,
-        unlock_animations_played: [],
-        achieved_at: new Date().toISOString(),
-      };
-      
-      // Trigger each level up with a small delay to show celebrations
-      setTimeout(() => {
-        triggerLevelUp(levelProgression);
-        console.log(`🎉 Level ${level} unlocked!`);
-        
-        // Mark onboarding as complete when reaching Level 5
-        if (level === 5) {
-          completeOnboarding();
-          console.log('✅ Onboarding marked as complete!');
+  };
+
+  const handleRefresh = async () => {
+    console.log('🔄 Refreshing XP data...');
+    try {
+      await refetchXP();
+      console.log('✅ XP data refreshed!');
+    } catch (error) {
+      console.error('❌ Failed to refresh XP:', error);
+    }
+  };
+
+  const handleNuclearReset = async () => {
+    // Multiple confirmations for destructive action
+    Alert.alert(
+      '⚠️ NUCLEAR RESET WARNING',
+      'This will PERMANENTLY DELETE ALL XP DATA for ALL USERS and reset everyone to Level 1.\n\nThis action cannot be undone!\n\nAre you absolutely sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'I Understand - RESET ALL',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              '💀 FINAL CONFIRMATION',
+              'Last chance! This will:\n\n• Delete ALL xp_transactions\n• Delete ALL level_progressions\n• Reset ALL users to Level 1 (0 XP)\n• Clear ALL test data\n\nProceed with nuclear reset?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'YES - NUKE EVERYTHING',
+                  style: 'destructive',
+                  onPress: executeNuclearReset
+                }
+              ]
+            );
+          }
         }
-      }, (level - currentLevel - 1) * 500); // 500ms delay between each level
-    }
-    
-    console.log('✅ Jump to Level 5 complete! All core features unlocked!');
+      ]
+    );
   };
 
-  const handleClearNudges = async () => {
-    console.log('🧹 Clearing all nudges...');
+  const executeNuclearReset = async () => {
+    console.log('💥 [NUCLEAR RESET] Starting complete XP system reset...');
+    
     try {
-      // Clear nudges from context state
-      clearAllNudges();
-      console.log('✅ All nudges cleared!');
-    } catch (error) {
-      console.error('❌ Failed to clear nudges:', error);
-    }
-  };
+      // Initialize Supabase client for proper function calls
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.EXPO_PUBLIC_SUPABASE_URL!,
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+      );
 
-  const handleFixLevel = () => {
-    const currentXP = state.onboardingData?.total_xp || 0;
-    
-    // Level requirements
-    const levelRequirements: Record<number, number> = {
-      1: 0, 2: 100, 3: 200, 4: 320, 5: 450, 6: 750, 7: 1100, 8: 1500, 
-      9: 1950, 10: 2500, 15: 5000, 20: 8000, 25: 12000, 30: 18000, 40: 35000, 50: 60000
-    };
-    
-    // Calculate correct level based on XP
-    let correctLevel = 1;
-    for (let level = 50; level >= 1; level--) {
-      const levelXP = levelRequirements[level];
-      if (levelXP !== undefined && currentXP >= levelXP) {
-        correctLevel = level;
-        break;
+      console.log('🗑️ [NUCLEAR RESET] Deleting all XP transactions...');
+      
+      // Use proper database function calls instead of direct table access
+      // Delete all XP transactions (requires admin privileges)
+      const { error: xpError } = await supabase.rpc('sql', {
+        query: 'DELETE FROM xp_transactions;'
+      });
+      
+      if (xpError) {
+        console.warn('⚠️ [NUCLEAR RESET] Direct XP deletion failed, trying alternative approach:', xpError.message);
       }
-    }
-    
-    const currentLevel = getCurrentLevel();
-    
-    if (correctLevel === currentLevel) {
-      console.log('✅ Level is already correct!');
-      return;
-    }
-    
-    console.log(`🔧 Fixing level: ${currentLevel} → ${correctLevel} (${currentXP} XP)`);
-    
-    // Force a state reload by dispatching LOAD_STATE with current data
-    // This will trigger the level correction logic in the reducer
-    try {
-      // Manually dispatch LOAD_STATE to trigger correction
-      console.log('🔄 Triggering level correction...');
-      alert(`Level corrected: ${currentLevel} → ${correctLevel}`);
+
+      console.log('🗑️ [NUCLEAR RESET] Deleting all level progressions...');
+      
+      // Delete all level progressions (requires admin privileges)
+      const { error: levelError } = await supabase.rpc('sql', {
+        query: 'DELETE FROM level_progressions;'
+      });
+      
+      if (levelError) {
+        console.warn('⚠️ [NUCLEAR RESET] Direct level deletion failed, trying alternative approach:', levelError.message);
+      }
+
+      console.log('🔄 [NUCLEAR RESET] Resetting current user data...');
+      
+      // Reset current user's onboarding data using proper function
+      if (user?.id) {
+        const { error: resetError } = await supabase.rpc('reset_user_onboarding_complete', {
+          p_user_id: user.id
+        });
+        
+        if (resetError) {
+          console.warn('⚠️ [NUCLEAR RESET] User reset failed:', resetError.message);
+        } else {
+          console.log('✅ [NUCLEAR RESET] Current user reset successful');
+        }
+      }
+
+      // Refresh current user's XP data
+      await refetchXP();
+
+      console.log('✅ [NUCLEAR RESET] Complete! All XP data has been reset.');
+      
+      Alert.alert(
+        '💥 Nuclear Reset Complete!',
+        'XP system has been reset!\n\n• Current user reset to Level 1\n• Database cleanup attempted\n• Please refresh the app\n\nNote: Full database reset requires admin privileges.',
+        [{ text: 'OK' }]
+      );
+
+      // Close the debug panel
+      onClose();
+
     } catch (error) {
-      console.error('❌ Failed to fix level:', error);
+      console.error('❌ [NUCLEAR RESET] Failed:', error);
+      Alert.alert(
+        'Nuclear Reset Failed',
+        `Error: ${error instanceof Error ? error.message : String(error)}\n\nTrying personal reset instead...`,
+        [{ text: 'OK' }]
+      );
+      
+      // Fallback: Try personal reset
+      await handlePersonalReset();
+    }
+  };
+
+  const handlePersonalReset = async () => {
+    console.log('🔄 [PERSONAL RESET] Resetting current user only...');
+    
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.EXPO_PUBLIC_SUPABASE_URL!,
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      if (!user?.id) {
+        throw new Error('No user logged in');
+      }
+
+      // Reset current user's onboarding data
+      const { error: resetError } = await supabase.rpc('reset_user_onboarding_complete', {
+        p_user_id: user.id
+      });
+      
+      if (resetError) {
+        throw new Error(`Reset failed: ${resetError.message}`);
+      }
+
+      // Validate and fix any data integrity issues
+      const { data: validationData, error: validationError } = await supabase.rpc('validate_user_data_integrity', {
+        p_user_id: user.id
+      });
+      
+      if (validationError) {
+        console.warn('⚠️ Validation failed:', validationError.message);
+      } else {
+        console.log('✅ Data validation result:', validationData);
+      }
+
+      // Refresh XP data
+      await refetchXP();
+      
+      Alert.alert(
+        '✅ Personal Reset Complete!',
+        'Your account has been reset to Level 1!\n\n• All your XP data cleared\n• Level reset to 1\n• Onboarding will restart\n\nPlease refresh the app.',
+        [{ text: 'OK' }]
+      );
+
+      onClose();
+
+    } catch (error) {
+      console.error('❌ [PERSONAL RESET] Failed:', error);
+      Alert.alert(
+        'Personal Reset Failed',
+        `Error: ${error instanceof Error ? error.message : String(error)}`,
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -238,7 +273,7 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>🔧 Debug Panel</Text>
+          <Text style={styles.title}>🔧 Debug Panel (Unified XP)</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
@@ -252,168 +287,166 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
             <Text style={styles.infoText}>Email: {user?.email || 'None'}</Text>
           </View>
 
-          {/* Onboarding State */}
+          {/* Quick Actions */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Onboarding State</Text>
-            <Text style={styles.infoText}>Completed: {state.onboardingData.completed ? 'Yes' : 'No'}</Text>
-            <Text style={styles.infoText}>Level: {state.onboardingData.current_level}</Text>
-            <Text style={styles.infoText}>Total XP: {state.onboardingData.total_xp}</Text>
-            <Text style={styles.infoText}>XP to Next Level: {getXPNeededForNextLevel()}</Text>
-            <Text style={styles.infoText}>XP Progress: {getCurrentLevel() > 50 ? '100' : getXPProgressToNextLevel()}%</Text>
-            <Text style={styles.infoText}>Is Active: {state.isActive ? 'Yes' : 'No'}</Text>
-            <Text style={styles.infoText}>Current Quote: {state.currentQuoteIndex + 1}/{state.quotes.length}</Text>
-            <Text style={styles.infoText}>Unlocked Features: {state.unlockedFeatures.join(', ') || 'None'}</Text>
-          </View>
-
-          {/* XP Calculation Debug */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>XP Debug Info</Text>
-            <Text style={styles.infoText}>Current Level: {getCurrentLevel()}</Text>
-            <Text style={styles.infoText}>Next Level: {getCurrentLevel() + 1}</Text>
-            <Text style={styles.infoText}>Current Level Requirement: {
-              getCurrentLevel() === 1 ? 0 :
-              getCurrentLevel() === 2 ? 100 :
-              getCurrentLevel() === 3 ? 200 :
-              getCurrentLevel() === 4 ? 320 :
-              getCurrentLevel() === 5 ? 450 :
-              getCurrentLevel() === 6 ? 750 :
-              getCurrentLevel() === 7 ? 1100 :
-              `Level ${getCurrentLevel()}`
-            } XP</Text>
-            <Text style={styles.infoText}>Next Level Requirement: {
-              getCurrentLevel() + 1 === 2 ? 100 :
-              getCurrentLevel() + 1 === 3 ? 200 :
-              getCurrentLevel() + 1 === 4 ? 320 :
-              getCurrentLevel() + 1 === 5 ? 450 :
-              getCurrentLevel() + 1 === 6 ? 750 :
-              getCurrentLevel() + 1 === 7 ? 1100 :
-              `Level ${getCurrentLevel() + 1}`
-            } XP</Text>
-            <Text style={styles.infoText}>Segments that should be filled: {Math.floor(getXPProgressToNextLevel() / 10)}/10</Text>
-          </View>
-
-          {/* Level Unlock Guide */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Level Unlock Guide</Text>
-            <Text style={styles.infoText}>Level 2 (100 XP): 🏆 Achievements Full</Text>
-            <Text style={styles.infoText}>Level 3 (200 XP): 💬 Chat + Voice Commands</Text>
-            <Text style={styles.infoText}>Level 4 (320 XP): 📊 Analytics Dashboard</Text>
-            <Text style={styles.infoText}>Level 5 (450 XP): 👤 Profile + Settings (ALL CORE FEATURES)</Text>
-            <Text style={styles.infoText}>Level 6 (750 XP): ⚡ Advanced Insights + Habit Tracking</Text>
-            <Text style={styles.infoText}>Level 10 (2500 XP): 🔮 Predictive Analytics + Team Features</Text>
-          </View>
-
-          {/* Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Debug Actions</Text>
+            <Text style={styles.sectionTitle}>⚡ Quick Actions</Text>
             
-            <TouchableOpacity 
-              style={styles.actionButton} 
-              onPress={handleResetOnboarding}
-            >
-              <Text style={styles.actionButtonText}>🔄 Reset Onboarding</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#4ECDC4' }]} 
               onPress={handleLevelUp}
             >
-              <Text style={styles.actionButtonText}>🚀 Level Up (Server-Side)</Text>
+              <Text style={styles.actionButtonText}>🚀 Level Up (+{xpProgress.xp_to_next_level} XP)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#66D9EF' }]} 
               onPress={() => awardXPWithLogging(25, 'Debug +25 XP')}
             >
-              <Text style={styles.actionButtonText}>⭐ +25 XP (Server-Side)</Text>
+              <Text style={styles.actionButtonText}>⭐ +25 XP</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#66D9EF' }]} 
               onPress={() => awardXPWithLogging(100, 'Debug +100 XP')}
             >
-              <Text style={styles.actionButtonText}>⭐ +100 XP (Server-Side)</Text>
+              <Text style={styles.actionButtonText}>⭐ +100 XP</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#A6E22E' }]} 
-              onPress={handleJumpToLevel5}
+              onPress={() => handleJumpToLevel(2)}
             >
-              <Text style={styles.actionButtonText}>🎯 Jump to Level 5 (Server-Side)</Text>
+              <Text style={styles.actionButtonText}>🏆 Jump to Level 2</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#66D9EF' }]} 
-              onPress={() => {
-                const currentLevel = getCurrentLevel();
-                if (currentLevel >= 2) {
-                  console.log('🏆 Already at or above Level 2!');
-                  return;
-                }
-                
-                const xpNeeded = 100 - (state.onboardingData?.total_xp || 0);
-                if (xpNeeded > 0) {
-                  awardXP(xpNeeded, 'Debug Jump to Level 2', 'debug');
-                  console.log('🎉 Jumped to Level 2! Achievements unlocked!');
-                }
-              }}
+              style={[styles.actionButton, { backgroundColor: '#A6E22E' }]} 
+              onPress={() => handleJumpToLevel(5)}
             >
-              <Text style={styles.actionButtonText}>🏆 Jump to Level 2 (Server-Side)</Text>
+              <Text style={styles.actionButtonText}>🎯 Jump to Level 5</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#9B59B6' }]} 
-              onPress={() => {
-                const currentLevel = getCurrentLevel();
-                if (currentLevel >= 10) {
-                  console.log('🏆 Already at or above Level 10!');
-                  return;
-                }
-                
-                const xpNeeded = 2500 - (state.onboardingData?.total_xp || 0);
-                if (xpNeeded > 0) {
-                  const callsNeeded = Math.ceil(xpNeeded / 26);
-                  console.log(`📝 Making ${callsNeeded} server calls for Level 10`);
-                  
-                  for (let i = 0; i < callsNeeded; i++) {
-                    awardXP(26, `Jump to Level 10 (${i + 1}/${callsNeeded})`, 'debug');
-                    // Small delay between calls
-                    setTimeout(() => {}, 300);
-                  }
-                  console.log('✅ Jumped to Level 10! Expert features unlocked!');
-                }
-              }}
+              onPress={() => handleJumpToLevel(10)}
             >
-              <Text style={styles.actionButtonText}>🔮 Jump to Level 10 (Server-Side)</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#FD971F' }]} 
-              onPress={() => console.log('Current State:', state)}
-            >
-              <Text style={styles.actionButtonText}>📊 Log State to Console</Text>
+              <Text style={styles.actionButtonText}>🔮 Jump to Level 10</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#FD971F' }]} 
               onPress={logCurrentState}
             >
-              <Text style={styles.actionButtonText}>🔍 Check State & XP</Text>
+              <Text style={styles.actionButtonText}>🔍 Log Current State</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#FF6B47' }]} 
-              onPress={handleClearNudges}
+              style={[styles.actionButton, { backgroundColor: '#17A2B8' }]} 
+              onPress={handleRefresh}
             >
-              <Text style={styles.actionButtonText}>🧹 Clear Nudges</Text>
+              <Text style={styles.actionButtonText}>🔄 Refresh XP Data</Text>
             </TouchableOpacity>
+          </View>
 
+          {/* Small XP Amounts for Testing Progress */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🧪 Fine-Tune Progress (Small Amounts)</Text>
+            
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={[styles.smallButton, { backgroundColor: '#28A745' }]} 
+                onPress={() => awardXPWithLogging(5, 'Debug +5 XP')}
+              >
+                <Text style={styles.smallButtonText}>+5</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.smallButton, { backgroundColor: '#28A745' }]} 
+                onPress={() => awardXPWithLogging(10, 'Debug +10 XP')}
+              >
+                <Text style={styles.smallButtonText}>+10</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.smallButton, { backgroundColor: '#28A745' }]} 
+                onPress={() => awardXPWithLogging(20, 'Debug +20 XP')}
+              >
+                <Text style={styles.smallButtonText}>+20</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.smallButton, { backgroundColor: '#28A745' }]} 
+                onPress={() => awardXPWithLogging(50, 'Debug +50 XP')}
+              >
+                <Text style={styles.smallButtonText}>+50</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Nuclear Reset - Destructive Actions */}
+          <View style={[styles.section, { borderColor: '#FF0000', borderWidth: 2 }]}>
+            <Text style={[styles.sectionTitle, { color: '#FF0000' }]}>💀 DESTRUCTIVE ACTIONS</Text>
+            <Text style={[styles.infoText, { color: '#FF6B47', marginBottom: 12 }]}>
+              ⚠️ WARNING: These actions are PERMANENT!
+            </Text>
+            
             <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#FF6B47' }]} 
-              onPress={handleFixLevel}
+              style={[styles.actionButton, { backgroundColor: '#FD971F' }]} 
+              onPress={handlePersonalReset}
             >
-              <Text style={styles.actionButtonText}>🔧 Fix Level</Text>
+              <Text style={styles.actionButtonText}>🔄 RESET MY ACCOUNT - Back to Level 1</Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: '#FF0000' }]} 
+              onPress={handleNuclearReset}
+            >
+              <Text style={styles.actionButtonText}>💥 NUCLEAR RESET - WIPE ALL USERS</Text>
+            </TouchableOpacity>
+            
+            <Text style={[styles.infoText, { fontSize: 11, color: '#FF6B47', marginTop: 8, textAlign: 'center' }]}>
+              Personal Reset: Just your account • Nuclear Reset: ALL users (requires admin)
+            </Text>
+          </View>
+
+          {/* DIVIDER */}
+          <View style={[styles.section, { backgroundColor: 'transparent', borderWidth: 0, padding: 8, alignItems: 'center' }]}>
+            <Text style={[styles.sectionTitle, { color: '#888', fontSize: 14 }]}>📊 STATS & DEBUG INFO</Text>
+          </View>
+
+          {/* Unified XP System State */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📊 Unified XP System (Live Data)</Text>
+            <Text style={styles.infoText}>Level: {currentLevel}</Text>
+            <Text style={styles.infoText}>Total XP: {currentXP.toLocaleString()}</Text>
+            <Text style={styles.infoText}>XP in Current Level: {xpProgress.xp_in_current_level}</Text>
+            <Text style={styles.infoText}>XP to Next Level: {xpProgress.xp_to_next_level}</Text>
+            <Text style={styles.infoText}>Progress Percentage: {Math.round(xpProgress.progress_percentage || 0)}%</Text>
+            <Text style={styles.infoText}>Next Level XP: {xpProgress.next_level_xp?.toLocaleString() || 'Max Level'}</Text>
+            <Text style={styles.infoText}>Pending XP: {pendingXP}</Text>
+            <Text style={styles.infoText}>Loading: {isLoading ? 'Yes' : 'No'}</Text>
+            <Text style={styles.infoText}>Error: {error || 'None'}</Text>
+          </View>
+
+          {/* Visual Progress Info */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📊 Visual Progress Info</Text>
+            <Text style={styles.infoText}>Segments Filled: {Math.floor((xpProgress.progress_percentage || 0) / 10)}/10</Text>
+            <Text style={styles.infoText}>Progress Bar: {Math.round(xpProgress.progress_percentage || 0)}%</Text>
+            <Text style={styles.infoText}>Expected Segments: {Math.floor((xpProgress.progress_percentage || 0) / 10)} filled out of 10</Text>
+            <Text style={styles.infoText}>Visual Check: {Math.floor((xpProgress.progress_percentage || 0) / 10) === 2 ? '✅ 2 segments = 20%' : `❓ ${Math.floor((xpProgress.progress_percentage || 0) / 10)} segments`}</Text>
+          </View>
+
+          {/* Level Requirements Guide */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🎯 Level Requirements</Text>
+            <Text style={styles.infoText}>Level 1: 0 XP</Text>
+            <Text style={styles.infoText}>Level 2: 100 XP 🏆</Text>
+            <Text style={styles.infoText}>Level 3: 200 XP 💬</Text>
+            <Text style={styles.infoText}>Level 4: 320 XP 📊</Text>
+            <Text style={styles.infoText}>Level 5: 450 XP 👤 (All Core Features)</Text>
+            <Text style={styles.infoText}>Level 6: 750 XP ⚡</Text>
+            <Text style={styles.infoText}>Level 10: 2,500 XP 🔮</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -487,5 +520,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
     textAlign: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  smallButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  smallButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'white',
   },
 }); 

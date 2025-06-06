@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Animated, Platform } from 'react-native';
+import { View, Text, Dimensions, Animated, Platform } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import type { PanGestureHandlerStateChangeEvent } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { cn } from '~/utils/cn';
 
 const { width: screenWidth } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 150;
@@ -84,7 +85,21 @@ export default function SimpleSwipeCard({
   const getBackgroundColor = () => {
     return translateX.interpolate({
       inputRange: [-SWIPE_THRESHOLD, 0, SWIPE_THRESHOLD],
-      outputRange: ['rgba(255, 59, 48, 0.1)', 'transparent', 'rgba(52, 199, 89, 0.1)'],
+      outputRange: ['rgba(255, 59, 48, 0.05)', 'transparent', 'rgba(52, 199, 89, 0.05)'],
+      extrapolate: 'clamp',
+    });
+  };
+
+  const getOverlayColor = () => {
+    return translateX.interpolate({
+      inputRange: [-SWIPE_THRESHOLD * 0.7, -10, 0, 10, SWIPE_THRESHOLD * 0.7],
+      outputRange: [
+        'rgba(255, 59, 48, 0.4)',   // Red overlay for left swipe (decline) - increased opacity
+        'rgba(255, 59, 48, 0.08)',  // Light red
+        'rgba(0, 0, 0, 0)',         // Transparent at center
+        'rgba(52, 199, 89, 0.08)',  // Light green  
+        'rgba(52, 199, 89, 0.4)'    // Green overlay for right swipe (approve) - increased opacity
+      ],
       extrapolate: 'clamp',
     });
   };
@@ -97,6 +112,22 @@ export default function SimpleSwipeCard({
     });
   };
 
+  const getApproveOpacity = () => {
+    return translateX.interpolate({
+      inputRange: [10, SWIPE_THRESHOLD],
+      outputRange: [0, 1],
+      extrapolate: 'clamp',
+    });
+  };
+
+  const getDeclineOpacity = () => {
+    return translateX.interpolate({
+      inputRange: [-SWIPE_THRESHOLD, -10],
+      outputRange: [1, 0],
+      extrapolate: 'clamp',
+    });
+  };
+
   return (
     <PanGestureHandler
       onGestureEvent={handleGestureEvent}
@@ -105,32 +136,27 @@ export default function SimpleSwipeCard({
       enabled={!disabled}
     >
       <Animated.View
-        style={[
-          styles.container,
-          {
-            transform: [
-              { translateX },
-              { scale: getScale() },
-            ],
-            backgroundColor: getBackgroundColor(),
-          },
-        ]}
+        className={cn(
+          "rounded-2xl overflow-hidden will-change-transform",
+          disabled && "opacity-50"
+        )}
+        style={{
+          transform: [
+            { translateX },
+            { scale: getScale() },
+          ],
+          backgroundColor: getBackgroundColor(),
+        }}
       >
         {/* Approve Indicator - Shows on LEFT when swiping RIGHT */}
         <Animated.View
-          style={[
-            styles.swipeIndicator,
-            styles.leftIndicator,
-            {
-              opacity: translateX.interpolate({
-                inputRange: [10, SWIPE_THRESHOLD],
-                outputRange: [0, 1],
-                extrapolate: 'clamp',
-              }),
-            },
-          ]}
+          className="absolute top-1/2 left-5 z-10 w-20 h-10 -mt-5 will-change-transform"
+          style={{
+            opacity: getApproveOpacity(),
+          }}
         >
-          <Svg width="80" height="40" style={StyleSheet.absoluteFill}>
+          {/* SVG Background */}
+          <Svg width="80" height="40" className="absolute inset-0">
             <Defs>
               <LinearGradient id="approveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <Stop offset="0%" stopColor="#34C759" />
@@ -139,24 +165,29 @@ export default function SimpleSwipeCard({
             </Defs>
             <Rect width="80" height="40" fill="url(#approveGrad)" rx="20" />
           </Svg>
-          <Text style={styles.indicatorText}>Approve</Text>
+          {/* Text perfectly centered with exact pixel dimensions */}
+          <View 
+            className="absolute justify-center items-center"
+            style={{
+              top: 0,
+              left: 0,
+              width: 80,
+              height: 40,
+            }}
+          >
+            <Text className="text-white text-xs font-semibold">Approve</Text>
+          </View>
         </Animated.View>
 
         {/* Decline Indicator - Shows on RIGHT when swiping LEFT */}
         <Animated.View
-          style={[
-            styles.swipeIndicator,
-            styles.rightIndicator,
-            {
-              opacity: translateX.interpolate({
-                inputRange: [-SWIPE_THRESHOLD, -10],
-                outputRange: [1, 0],
-                extrapolate: 'clamp',
-              }),
-            },
-          ]}
+          className="absolute top-1/2 right-5 z-10 w-20 h-10 -mt-5 will-change-transform"
+          style={{
+            opacity: getDeclineOpacity(),
+          }}
         >
-          <Svg width="80" height="40" style={StyleSheet.absoluteFill}>
+          {/* SVG Background */}
+          <Svg width="80" height="40" className="absolute inset-0">
             <Defs>
               <LinearGradient id="declineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <Stop offset="0%" stopColor="#FF3B30" />
@@ -165,46 +196,33 @@ export default function SimpleSwipeCard({
             </Defs>
             <Rect width="80" height="40" fill="url(#declineGrad)" rx="20" />
           </Svg>
-          <Text style={styles.indicatorText}>Decline</Text>
+          {/* Text perfectly centered with exact pixel dimensions */}
+          <View 
+            className="absolute justify-center items-center"
+            style={{
+              top: 0,
+              left: 0,
+              width: 80,
+              height: 40,
+            }}
+          >
+            <Text className="text-white text-xs font-semibold">Decline</Text>
+          </View>
         </Animated.View>
 
         {/* Card Content */}
-        <View style={styles.content}>
+        <View className="flex-1 relative">
           {children}
+          
+          {/* Color Overlay - Shades the card content based on swipe direction */}
+          <Animated.View
+            className="absolute inset-0 rounded-2xl will-change-transform pointer-events-none"
+            style={{
+              backgroundColor: getOverlayColor(),
+            }}
+          />
         </View>
       </Animated.View>
     </PanGestureHandler>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  content: {
-    flex: 1,
-  },
-  swipeIndicator: {
-    position: 'absolute',
-    top: '50%',
-    zIndex: 1,
-    width: 80,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-    marginTop: -20,
-  },
-  leftIndicator: {
-    left: 20,
-  },
-  rightIndicator: {
-    right: 20,
-  },
-  indicatorText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-}); 
+} 

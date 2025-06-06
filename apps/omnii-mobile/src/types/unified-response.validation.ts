@@ -10,6 +10,47 @@ export enum ServiceType {
   GENERAL = 'general'
 }
 
+// ✅ XP SYSTEM SCHEMAS: Centralized XP data validation
+export const XPUpdateSchema = z.object({
+  xp_awarded: z.number().int().nonnegative(),
+  new_level: z.number().int().positive(),
+  level_up: z.boolean(),
+  milestone_unlocks: z.array(z.string()).optional(),
+  // Optional fields for extended validation
+  reason: z.string().optional(),
+  category: z.string().optional(),
+  timestamp: z.string().optional(),
+});
+
+export const XPProgressSchema = z.object({
+  current_level: z.number().int().positive(),
+  total_xp: z.number().int().nonnegative(),
+  xp_to_next_level: z.number().int().nonnegative(),
+  xp_in_current_level: z.number().int().nonnegative(),
+  xp_needed_for_level: z.number().int().positive(),
+  progress_percentage: z.number().min(0).max(100),
+  completed: z.boolean(),
+  next_level_xp: z.number().int().positive().optional(),
+});
+
+export const LevelProgressionSchema = z.object({
+  id: z.string(),
+  user_id: z.string().uuid(),
+  from_level: z.number().int().positive(),
+  to_level: z.number().int().positive(),
+  xp_at_level_up: z.number().int().nonnegative(),
+  milestone_unlocks: z.array(z.string()).optional(),
+  celebration_shown: z.boolean(),
+  unlock_animations_played: z.array(z.string()),
+  achieved_at: z.string(),
+});
+
+export const XPRealtimeUpdateSchema = z.object({
+  type: z.enum(['xp_awarded', 'level_up', 'milestone_unlocked']),
+  payload: z.union([XPUpdateSchema, LevelProgressionSchema]),
+  timestamp: z.string(),
+});
+
 // Core action schema
 export const UnifiedActionSchema = z.object({
   id: z.string(),
@@ -318,6 +359,12 @@ export type EmailData = z.infer<typeof EmailDataSchema>;
 export type EmailListData = z.infer<typeof EmailListDataSchema>;
 export type UnifiedAction = z.infer<typeof UnifiedActionSchema>;
 
+// ✅ XP SYSTEM TYPES: Zod-inferred for type safety
+export type XPUpdate = z.infer<typeof XPUpdateSchema>;
+export type XPProgress = z.infer<typeof XPProgressSchema>;
+export type LevelProgression = z.infer<typeof LevelProgressionSchema>;
+export type XPRealtimeUpdate = z.infer<typeof XPRealtimeUpdateSchema>;
+
 // ✅ TASK TYPES: Zod-inferred for type safety with external data
 export type TaskData = z.infer<typeof TaskDataSchema>;
 export type TaskList = z.infer<typeof TaskListSchema>;
@@ -435,4 +482,46 @@ export function isSingleContactData(data: any): data is SingleContactData {
 // ✅ GENERAL-SPECIFIC TYPE GUARDS: Static general data detection
 export function isGeneralData(data: any): data is GeneralData {
   return GeneralDataSchema.safeParse(data).success;
+}
+
+// ✅ XP-SPECIFIC TYPE GUARDS: Static XP data detection
+export function isValidXPUpdate(data: any): data is XPUpdate {
+  const result = XPUpdateSchema.safeParse(data);
+  if (result.success) {
+    console.log('[XPValidation] ✅ Valid XPUpdate detected');
+    return true;
+  }
+  console.log('[XPValidation] ❌ Invalid XPUpdate:', result.error.message);
+  return false;
+}
+
+export function isValidXPProgress(data: any): data is XPProgress {
+  return XPProgressSchema.safeParse(data).success;
+}
+
+export function isValidLevelProgression(data: any): data is LevelProgression {
+  return LevelProgressionSchema.safeParse(data).success;
+}
+
+export function isValidXPRealtimeUpdate(data: any): data is XPRealtimeUpdate {
+  return XPRealtimeUpdateSchema.safeParse(data).success;
+}
+
+export function validateXPUpdate(data: any): XPUpdate {
+  console.log('[XPValidation] 🔍 Validating XPUpdate with Zod...');
+  
+  try {
+    const validated = XPUpdateSchema.parse(data);
+    console.log('[XPValidation] ✅ XP validation successful:', {
+      newLevel: validated.new_level,
+      xpAwarded: validated.xp_awarded,
+      levelUp: validated.level_up,
+      milestoneUnlocks: validated.milestone_unlocks
+    });
+    
+    return validated;
+  } catch (error) {
+    console.error('[XPValidation] ❌ XP validation failed:', error);
+    throw error;
+  }
 } 
