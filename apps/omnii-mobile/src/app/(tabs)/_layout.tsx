@@ -1,4 +1,5 @@
 import { Tabs , useRouter } from 'expo-router';
+import { Trophy } from 'lucide-react-native';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
 import { useOnboardingContext } from '~/context/OnboardingContext';
@@ -6,10 +7,8 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { HeaderLogo } from '~/components/common/OmniiLogo';
 import { 
   AnalyticsIcon, 
-  AchievementsIcon, 
   ChatIcon, 
-  ProfileIcon, 
-  OmniiCenterIcon 
+  ProfileIcon 
 } from '~/components/common/TabIcons';
 import ContextualNudge from '~/components/common/ContextualNudge';
 import { Animated, View } from 'react-native';
@@ -219,10 +218,9 @@ export default function TabLayout() {
           title: 'Achievements',
           tabBarIcon: ({ color, size, focused }) => (
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('achievements') && isFeatureUnlocked('achievements')}>
-              <AchievementsIcon 
+              <Trophy 
                 size={size} 
                 color={isFeatureUnlocked('achievements') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
-                focused={focused}
               />
             </BreathingIcon>
           ),
@@ -241,11 +239,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="approvals"
         options={{
-          tabBarIcon: ({ color, size, focused }) => (
-            <OmniiCenterIcon 
-              size={size + 4} 
-              color={color}
-              focused={focused}
+          tabBarIcon: ({ color, size }) => (
+            <HeaderLogo 
+              style={{ 
+                transform: [{ scale: 0.8 }],
+                opacity: color === V4_COLORS.primary ? 1 : 0.6 
+              }} 
             />
           ),
           // Approvals is always available (onboarding happens here)
