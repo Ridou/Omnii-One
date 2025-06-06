@@ -242,7 +242,7 @@ export default function WorkingAITuning() {
           leftLabel="Interrupt"
           rightLabel="Respect"
           currentLabel={preferences.focusProtectionLabel}
-          color="#4ECDC4"
+          color="#FF7043"
         />
 
         <Tuner
@@ -298,7 +298,7 @@ export default function WorkingAITuning() {
           leftLabel="Calm"
           rightLabel="Energetic"
           currentLabel={preferences.enthusiasmLabel}
-          color="#FFB347"
+          color="#FF7043"
         />
 
         <Tuner

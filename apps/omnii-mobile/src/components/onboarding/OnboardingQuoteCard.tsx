@@ -67,9 +67,9 @@ export default function OnboardingQuoteCard({
         label: 'SPIRITUAL HEALTH',
       },
       social_wellbeing: {
-        color: '#FFB347',
+        color: '#FF7043',
         emoji: '🤝',
-        borderColor: '#FFB347',
+        borderColor: '#FF7043',
         label: 'SOCIAL WELLBEING',
       },
       activities: {
@@ -117,7 +117,7 @@ export default function OnboardingQuoteCard({
       case 'beginner':
         return { color: '#32CD32', label: 'BEGINNER' };
       case 'intermediate':
-        return { color: '#FFB347', label: 'INTERMEDIATE' };
+        return { color: '#FF7043', label: 'INTERMEDIATE' };
       case 'advanced':
         return { color: '#FF6B47', label: 'ADVANCED' };
       default:

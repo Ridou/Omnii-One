@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   completedContainer: {
     borderColor: AppColors.aiGradientStart,
     borderWidth: 2,
-    backgroundColor: `${AppColors.background}05`, // Slight tint
+    backgroundColor: '#FF704320',
   },
   header: {
     flexDirection: 'row',
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#C0C0C020',
   },
   tierGold: {
-    backgroundColor: '#FFD70020',
+    backgroundColor: '#FF704320',
   },
   tierPlatinum: {
     backgroundColor: '#E5E4E220',

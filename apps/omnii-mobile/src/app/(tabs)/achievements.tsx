@@ -30,13 +30,13 @@ const achievementTabs = [
     key: 'gallery',
     label: 'Gallery',
     icon: '🏆',
-    gradient: ['#FFB347', '#FFD700'] // Orange-gold gradient (position 3)
+    gradient: ['#FF7043', '#FF5722'] // NEW: Vibrant orange gradient (position 3)
   },
   {
     key: 'social',
     label: 'Social',
     icon: '👥',
-    gradient: ['#FF6B6B', '#EE5A24'] // Red-orange gradient (position 4)
+    gradient: ['#FF3B30', '#DC143C'] // NEW: Clean red gradient (position 4)
   }
 ];
 
@@ -146,7 +146,7 @@ export default function HomeScreen() {
                 "text-base font-semibold",
                 isDark ? "text-white" : "text-gray-900"
               )}>Level {currentLevel}</Text>
-              <Text className="text-sm text-yellow-500 font-semibold">
+              <Text className="text-sm text-orange-500 font-semibold">
                 {xpNeededForLevel} XP to next level
               </Text>
             </View>
@@ -185,7 +185,7 @@ export default function HomeScreen() {
                 "text-xs font-medium mb-1",
                 isDark ? "text-slate-400" : "text-gray-600"
               )}>Next Goal</Text>
-              <View className="bg-yellow-500 rounded-full px-2 py-1 mt-2">
+              <View className="bg-orange-500 rounded-full px-2 py-1 mt-2">
                 <Text className="text-white text-xs font-bold">{nextLevelXP || 'Max'}</Text>
               </View>
             </View>
@@ -253,13 +253,13 @@ export default function HomeScreen() {
               <View className={cn(
                 "rounded-full px-3 py-1",
                 achievement.difficulty === 'easy' ? "bg-blue-100" :
-                achievement.difficulty === 'medium' ? "bg-yellow-100" :
+                achievement.difficulty === 'medium' ? "bg-orange-100" :
                 achievement.difficulty === 'hard' ? "bg-red-100" : "bg-purple-100"
               )}>
                 <Text className={cn(
                   "text-xs font-semibold",
                   achievement.difficulty === 'easy' ? "text-blue-700" :
-                  achievement.difficulty === 'medium' ? "text-yellow-700" :
+                  achievement.difficulty === 'medium' ? "text-orange-700" :
                   achievement.difficulty === 'hard' ? "text-red-700" : "text-purple-700"
                 )}>
                   {achievement.difficulty.toUpperCase()}

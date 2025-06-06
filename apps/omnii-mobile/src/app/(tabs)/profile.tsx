@@ -50,13 +50,13 @@ const profileTabs: TabConfig[] = [
     key: 'ai',
     label: 'AI Tuning',
     icon: '🤖',
-    gradient: ['#FFB347', '#FFD700']
+    gradient: ['#FF7043', '#FF5722']
   },
   {
     key: 'settings',
     label: 'Settings',
     icon: '⚙️',
-    gradient: ['#FF6B6B', '#EE5A24']
+    gradient: ['#FF3B30', '#DC143C']
   }
 ];
 
@@ -306,9 +306,9 @@ export default function ProfileScreen() {
                 Connect your calendar to optimize scheduling and task management.
               </Text>
               <View className={cn("px-3 py-2 rounded-lg self-start", 
-                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                isDark ? "bg-orange-900/20" : "bg-orange-100")}>
                 <Text className={cn("text-xs font-semibold", 
-                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+                  isDark ? "text-orange-400" : "text-orange-700")}>Coming Soon</Text>
               </View>
             </View>
             
@@ -327,9 +327,9 @@ export default function ProfileScreen() {
                 Smart email processing and task extraction from your inbox.
               </Text>
               <View className={cn("px-3 py-2 rounded-lg self-start", 
-                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                isDark ? "bg-orange-900/20" : "bg-orange-100")}>
                 <Text className={cn("text-xs font-semibold", 
-                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+                  isDark ? "text-orange-400" : "text-orange-700")}>Coming Soon</Text>
               </View>
             </View>
             
@@ -348,9 +348,9 @@ export default function ProfileScreen() {
                 Seamlessly manage tasks and projects from your team workspace.
               </Text>
               <View className={cn("px-3 py-2 rounded-lg self-start", 
-                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                isDark ? "bg-orange-900/20" : "bg-orange-100")}>
                 <Text className={cn("text-xs font-semibold", 
-                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+                  isDark ? "text-orange-400" : "text-orange-700")}>Coming Soon</Text>
               </View>
             </View>
           </ScrollView>
@@ -367,7 +367,7 @@ export default function ProfileScreen() {
                   isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
                   <Text className="text-2xl">🧬</Text>
                 </View>
-                <View>
+                <View className="flex-1">
                   <Text className={cn("text-xl font-bold font-omnii-bold", 
                     isDark ? "text-white" : "text-gray-900")}>Your Productivity DNA</Text>
                   <Text className={cn("text-sm font-medium", 
@@ -461,11 +461,11 @@ export default function ProfileScreen() {
               )}
             </View>
             
-            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-yellow-500", 
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-orange-500", 
               isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
               <View className="flex-row items-center mb-3">
                 <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
-                  isDark ? "bg-yellow-900/30" : "bg-yellow-100")}>
+                  isDark ? "bg-orange-900/30" : "bg-orange-100")}>
                   <Text className="text-xl">⚡</Text>
                 </View>
                 <Text className={cn("text-lg font-bold font-omnii-bold", 
@@ -476,9 +476,9 @@ export default function ProfileScreen() {
                 Map your energy patterns to optimize your daily schedule.
               </Text>
               <View className={cn("px-3 py-2 rounded-lg self-start", 
-                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                isDark ? "bg-orange-900/20" : "bg-orange-100")}>
                 <Text className={cn("text-xs font-semibold", 
-                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+                  isDark ? "text-orange-400" : "text-orange-700")}>Coming Soon</Text>
               </View>
             </View>
             
@@ -497,9 +497,9 @@ export default function ProfileScreen() {
                 Set and prioritize your goals for maximum impact.
               </Text>
               <View className={cn("px-3 py-2 rounded-lg self-start", 
-                isDark ? "bg-amber-900/20" : "bg-amber-100")}>
+                isDark ? "bg-orange-900/20" : "bg-orange-100")}>
                 <Text className={cn("text-xs font-semibold", 
-                  isDark ? "text-amber-400" : "text-amber-700")}>Coming Soon</Text>
+                  isDark ? "text-orange-400" : "text-orange-700")}>Coming Soon</Text>
               </View>
             </View>
           </ScrollView>
@@ -516,7 +516,7 @@ export default function ProfileScreen() {
                   isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
                   <Text className="text-2xl">🤖</Text>
                 </View>
-                <View>
+                <View className="flex-1">
                   <Text className={cn("text-xl font-bold font-omnii-bold", 
                     isDark ? "text-white" : "text-gray-900")}>AI Persona</Text>
                   <Text className={cn("text-sm leading-6", 
@@ -575,7 +575,7 @@ export default function ProfileScreen() {
                     isDark ? "text-slate-400" : "text-gray-600")}>Reactive</Text>
                   <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
                     isDark ? "bg-slate-700" : "bg-gray-200")}>
-                    <View className="absolute top-0 left-0 bottom-0 bg-yellow-500 rounded-2xl" style={{ width: '80%' }} />
+                    <View className="absolute top-0 left-0 bottom-0 bg-orange-500 rounded-2xl" style={{ width: '80%' }} />
                     <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
                       isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '72%' }} />
                   </View>
@@ -595,7 +595,7 @@ export default function ProfileScreen() {
                   isDark ? "bg-green-900/30" : "bg-green-100")}>
                   <Text className="text-2xl">🔔</Text>
                 </View>
-                <View>
+                <View className="flex-1">
                   <Text className={cn("text-xl font-bold font-omnii-bold", 
                     isDark ? "text-white" : "text-gray-900")}>Notification Intelligence</Text>
                   <Text className={cn("text-sm leading-6", 
@@ -634,7 +634,7 @@ export default function ProfileScreen() {
                     isDark ? "text-slate-400" : "text-gray-600")}>Low</Text>
                   <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
                     isDark ? "bg-slate-700" : "bg-gray-200")}>
-                    <View className="absolute top-0 left-0 bottom-0 rounded-2xl" style={{ width: '60%', backgroundColor: '#FFB347' }} />
+                    <View className="absolute top-0 left-0 bottom-0 rounded-2xl" style={{ width: '60%', backgroundColor: '#FF7043' }} />
                     <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
                       isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '52%' }} />
                   </View>

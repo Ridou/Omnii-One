@@ -127,6 +127,19 @@
       ]
     },
     {
+      "source": "/(favicon\\.ico|favicon\\.svg|apple-touch-icon\\.png|icon-.*\\.png|logo\\.png|manifest\\.json)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {

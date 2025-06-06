@@ -70,13 +70,13 @@ const approvalTabs = [
     key: 'recent',
     label: 'Recent',
     icon: '📋',
-    gradient: ['#FFB347', '#FFD700'] // Orange-gold gradient  
+    gradient: ['#FF7043', '#FF5722'] // NEW: Vibrant orange gradient
   },
   {
     key: 'insights',
     label: 'Insights',
     icon: '📊',
-    gradient: ['#FF6B6B', '#EE5A24'] // Red-orange gradient
+    gradient: ['#FF3B30', '#DC143C'] // NEW: Clean red gradient
   }
 ];
 

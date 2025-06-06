@@ -211,16 +211,16 @@ export default function LevelCelebration({
 
   const getLevelColors = (level: number) => {
     if (level <= 2) return { primary: '#4ECDC4', secondary: '#44B3A8' };
-    if (level === 3) return { primary: '#FFD700', secondary: '#FFA500' }; // Golden
+    if (level === 3) return { primary: '#FF7043', secondary: '#FF5722' }; // Vibrant Orange
     if (level === 4) return { primary: '#00BFFF', secondary: '#1E90FF' }; // AI Blue
-    if (level === 5) return { primary: '#FF6B6B', secondary: '#FF4757' }; // Epic Red/Gold
+    if (level === 5) return { primary: '#FF3B30', secondary: '#DC143C' }; // Clean Red
     if (level <= 10) return { primary: '#9B59B6', secondary: '#8E44AD' }; // Purple
     if (level <= 15) return { primary: '#E74C3C', secondary: '#C0392B' }; // Red
     if (level <= 20) return { primary: '#F39C12', secondary: '#E67E22' }; // Orange
     if (level <= 25) return { primary: '#2ECC71', secondary: '#27AE60' }; // Green
     if (level <= 30) return { primary: '#3498DB', secondary: '#2980B9' }; // Blue
     if (level <= 40) return { primary: '#9B59B6', secondary: '#8E44AD' }; // Purple
-    return { primary: '#FFD700', secondary: '#FFA500' }; // Transcendent Gold
+    return { primary: '#FF7043', secondary: '#FF5722' }; // Transcendent Orange
   };
 
   if (!visible || !levelProgression) return null;
@@ -317,7 +317,7 @@ export default function LevelCelebration({
                     style={[
                       styles.featureCard,
                       {
-                        transform: [{ translateX: featureSlideIns[index] }],
+                        transform: [{ translateX: featureSlideIns[index] || new Animated.Value(-width) }],
                         backgroundColor: `${levelColors.primary}15`,
                         borderColor: `${levelColors.primary}40`,
                       },
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#FFD700',
+    color: '#FF7043',
     textAlign: 'center',
     marginTop: 8,
     fontWeight: '600',

@@ -1,11 +1,16 @@
 import { Tabs , useRouter } from 'expo-router';
-import { CircleUser as UserCircle, Chrome as Home, TrendingUp, MessageCircle, Trophy } from 'lucide-react-native';
-import { AppColors } from '~/constants/Colors';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
 import { useOnboardingContext } from '~/context/OnboardingContext';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { HeaderLogo } from '~/components/common/OmniiLogo';
+import { 
+  AnalyticsIcon, 
+  AchievementsIcon, 
+  ChatIcon, 
+  ProfileIcon, 
+  OmniiCenterIcon 
+} from '~/components/common/TabIcons';
 import ContextualNudge from '~/components/common/ContextualNudge';
 import { Animated, View } from 'react-native';
 
@@ -186,11 +191,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="analytics"
         options={{
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size, focused }) => (
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('analytics') && isFeatureUnlocked('analytics')}>
-              <TrendingUp 
+              <AnalyticsIcon 
                 size={size} 
                 color={isFeatureUnlocked('analytics') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
+                focused={focused}
               />
             </BreathingIcon>
           ),
@@ -211,11 +217,12 @@ export default function TabLayout() {
         name="achievements"
         options={{
           title: 'Achievements',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size, focused }) => (
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('achievements') && isFeatureUnlocked('achievements')}>
-              <Trophy 
+              <AchievementsIcon 
                 size={size} 
                 color={isFeatureUnlocked('achievements') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
+                focused={focused}
               />
             </BreathingIcon>
           ),
@@ -234,12 +241,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="approvals"
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <HeaderLogo 
-              style={{ 
-                transform: [{ scale: 0.8 }],
-                opacity: color === V4_COLORS.primary ? 1 : 0.6 
-              }} 
+          tabBarIcon: ({ color, size, focused }) => (
+            <OmniiCenterIcon 
+              size={size + 4} 
+              color={color}
+              focused={focused}
             />
           ),
           // Approvals is always available (onboarding happens here)
@@ -248,11 +254,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size, focused }) => (
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('chat') && isFeatureUnlocked('chat')}>
-              <MessageCircle 
+              <ChatIcon 
                 size={size} 
                 color={isFeatureUnlocked('chat') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
+                focused={focused}
               />
             </BreathingIcon>
           ),
@@ -271,11 +278,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size, focused }) => (
             <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('profile') && isFeatureUnlocked('profile')}>
-              <UserCircle 
+              <ProfileIcon 
                 size={size} 
                 color={isFeatureUnlocked('profile') ? color : (isDark ? V4_COLORS.dark.text.tertiary : V4_COLORS.text.secondary)}
+                focused={focused}
               />
             </BreathingIcon>
           ),

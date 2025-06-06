@@ -159,8 +159,8 @@ export default function SimpleSwipeCard({
           <Svg width="80" height="40" style={StyleSheet.absoluteFill}>
             <Defs>
               <LinearGradient id="declineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <Stop offset="0%" stopColor="#FF453A" />
-                <Stop offset="100%" stopColor="#FF6B6B" />
+                <Stop offset="0%" stopColor="#FF3B30" />
+                <Stop offset="100%" stopColor="#DC143C" />
               </LinearGradient>
             </Defs>
             <Rect width="80" height="40" fill="url(#declineGrad)" rx="20" />

@@ -41,13 +41,13 @@ const analyticsTabs: AnalyticsTabConfig[] = [
     key: 'trends',
     label: 'Trends',
     icon: '📈',
-    gradient: ['#FFB347', '#FFD700'] // Orange-gold gradient (position 3)
+    gradient: ['#FF7043', '#FF5722'] // NEW: Vibrant orange gradient (position 3)
   },
   {
     key: 'reports',
     label: 'Reports',
     icon: '📋',
-    gradient: ['#FF6B6B', '#EE5A24'] // Red-orange gradient (position 4)
+    gradient: ['#FF3B30', '#DC143C'] // NEW: Clean red gradient (position 4)
   }
 ];
 

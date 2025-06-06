@@ -51,13 +51,13 @@ const chatTabs: ChatTabConfig[] = [
         key: 'references',
         label: 'References',
         icon: '📚',
-        gradient: ['#FFB347', '#FFD700'] // Orange-gold gradient (position 3)
+        gradient: ['#FF7043', '#FF5722'] // NEW: Vibrant orange gradient (position 3)
     },
     {
         key: 'memory',
         label: 'Memory',
         icon: '🧠',
-        gradient: ['#FF6B6B', '#EE5A24'] // Red-orange gradient (position 4)
+        gradient: ['#FF3B30', '#DC143C'] // NEW: Clean red gradient (position 4)
     }
 ];
 
@@ -892,11 +892,11 @@ export default function ChatScreen() {
                         </View>
                         <View className={cn(
                             "px-3 py-2 rounded-lg self-start mt-4",
-                            isDark ? "bg-amber-900/20" : "bg-amber-100"
+                            isDark ? "bg-orange-900/20" : "bg-orange-100"
                         )}>
                             <Text className={cn(
                                 "text-xs font-semibold",
-                                isDark ? "text-amber-400" : "text-amber-700"
+                                isDark ? "text-orange-400" : "text-orange-700"
                             )}>Coming Soon</Text>
                         </View>
                     </View>

@@ -51,7 +51,7 @@ const showcaseTabs = [
     key: 'chat' as const,
     label: 'Chat',
     icon: '💬',
-    gradient: ['#FFB347', '#FFD700'] as [string, string],
+    gradient: ['#FF7043', '#FF5722'] as [string, string],
     title: 'Conversation that actually gets things done',
     description: 'Talk to AI that understands context, remembers conversations, and takes action.',
     features: [

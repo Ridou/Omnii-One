@@ -1,14 +1,25 @@
 {
   "name": "OMNII - AI Productivity Assistant",
   "short_name": "OMNII",
-  "description": "Your AI-powered productivity partner that evolves with you",
+  "description": "Your AI-powered productivity partner that evolves with you. Transform your daily workflow with intelligent task management, personalized insights, and adaptive AI assistance.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#007AFF",
+  "theme_color": "#667eea",
   "orientation": "portrait",
   "scope": "/",
   "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
@@ -20,13 +31,46 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "categories": [
     "productivity",
     "business",
-    "utilities"
+    "utilities",
+    "lifestyle",
+    "education"
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Daily Approvals",
+      "short_name": "Approvals",
+      "description": "Access your daily inspiration and task approvals",
+      "url": "/tabs/approvals",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Chat with AI",
+      "short_name": "Chat",
+      "description": "Start a conversation with your AI assistant",
+      "url": "/tabs/chat",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
   ],
   "lang": "en",
-  "dir": "ltr"
+  "dir": "ltr",
+  "prefer_related_applications": false
 }
