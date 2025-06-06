@@ -539,7 +539,7 @@ export const CERTIFICATE_PINS = {
     'sha256/KwccWaCgrnaw6tsrrSO61FgLacNgG2MMLq8GE6+oP5I=', // Google Trust Services LLC
     'sha256/FEzVOUp4dF3gI0ZVPRJhFbsd5E9TpOCRoNLsWLm6Ng0=', // GTS Root R1
   ],
-  'omnii.live': [
+  'omnii.net': [
     // Add your API server certificate pins here
     'sha256/YourAPIServerCertificatePin1',
     'sha256/YourAPIServerCertificatePin2',

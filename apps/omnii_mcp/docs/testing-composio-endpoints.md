@@ -113,8 +113,8 @@ To test authenticated endpoints:
 COMPOSIO_API_KEY=your_composio_api_key
 
 # For ngrok testing
-PUBLIC_URL=https://omnii.live
-BASE_URL=https://omnii.live
+PUBLIC_URL=https://omnii.net
+BASE_URL=https://omnii.net
 
 # Test configuration
 TEST_BASE_URL=http://localhost:8081  # Override test target

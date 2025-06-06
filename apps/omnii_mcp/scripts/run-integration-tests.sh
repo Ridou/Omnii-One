@@ -31,7 +31,7 @@ else
     echo "  bun run dev"
     echo ""
     echo "Or set TEST_BASE_URL to your server URL:"
-    echo "  export TEST_BASE_URL=https://omnii.live"
+    echo "  export TEST_BASE_URL=https://omnii.net"
     exit 1
 fi
 

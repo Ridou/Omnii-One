@@ -202,7 +202,7 @@ serve(async (req) => {
       }
 
       // 5. Anonymize customer data in Stripe (don't delete for compliance)
-      const anonymizedEmail = `deleted-user-${crypto.randomUUID().substring(0, 8)}@omnii.live`;
+      const anonymizedEmail = `deleted-user-${crypto.randomUUID().substring(0, 8)}@omnii.net`;
       const anonymizeResponse = await fetch(
         `https://api.stripe.com/v1/customers/${customerId}`,
         {

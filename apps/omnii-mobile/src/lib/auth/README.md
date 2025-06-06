@@ -12,7 +12,7 @@ Add these URLs to your Supabase project:
 
 ```
 https://omnii.net/auth/callback
-https://omnii.live/auth/callback  
+https://omnii.net/auth/callback  
 http://localhost:3000/auth/callback
 http://localhost:8081/auth/callback
 omnii-mobile://auth/callback
@@ -45,7 +45,7 @@ await handlePostOAuthNavigation();
 The system automatically detects:
 
 - **Production Web**: `omnii.net` → redirects to `/approvals`
-- **Staging Web**: `omnii.live` → redirects to `/approvals`  
+- **Staging Web**: `omnii.net` → redirects to `/approvals`  
 - **Local Web**: `localhost:*` → redirects to `/approvals`
 - **Mobile**: `omnii-mobile://` → handles internal routing
 
@@ -81,7 +81,7 @@ export enum OAuthEnvironment {
 ```typescript
 export const OAUTH_HOSTS = {
   PRODUCTION: 'omnii.net',
-  STAGING: 'omnii.live', 
+  STAGING: 'omnii.net', 
   LOCAL: 'localhost',
   MOBILE_SCHEME: 'omnii-mobile'
 } as const;

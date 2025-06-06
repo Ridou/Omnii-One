@@ -58,7 +58,7 @@ const routes = {
         
         <h2>6. Contact Information</h2>
         <p>If you have questions about this Privacy Policy or our data practices, please contact us:</p>
-        <p><strong>Email:</strong> <a href="mailto:privacy@omnii.live">privacy@omnii.live</a></p>
+        <p><strong>Email:</strong> <a href="mailto:privacy@omnii.net">privacy@omnii.net</a></p>
         
         <div class="footer-nav">
           <a href="/">← Back to Home</a> | <a href="/terms-of-service">Terms of Service</a>
@@ -100,7 +100,7 @@ const routes = {
         
         <h2>5. Contact Information</h2>
         <p>For questions about these Terms or the App, contact us at:</p>
-        <p><strong>Email:</strong> <a href="mailto:support@omnii.live">support@omnii.live</a></p>
+        <p><strong>Email:</strong> <a href="mailto:support@omnii.net">support@omnii.net</a></p>
         
         <div class="footer-nav">
           <a href="/">← Back to Home</a> | <a href="/privacy-policy">Privacy Policy</a>
@@ -157,8 +157,8 @@ const routes = {
         
         <h2>Contact Options</h2>
         <ul>
-          <li><strong>Support Email:</strong> <a href="mailto:support@omnii.live">support@omnii.live</a></li>
-          <li><strong>General Contact:</strong> <a href="mailto:contact@omnii.live">contact@omnii.live</a></li>
+          <li><strong>Support Email:</strong> <a href="mailto:support@omnii.net">support@omnii.net</a></li>
+          <li><strong>General Contact:</strong> <a href="mailto:contact@omnii.net">contact@omnii.net</a></li>
         </ul>
         
         <h2>Response Times</h2>
@@ -180,7 +180,7 @@ function generateStaticHTML(route, data) {
     "@type": "SoftwareApplication",
     "name": "OMNII",
     "description": "AI Productivity Assistant - Reclaim Your Humanity",
-    "url": "https://omnii.live",
+    "url": "https://omnii.net",
     "applicationCategory": "ProductivityApplication",
     "operatingSystem": ["iOS", "Android", "Web"],
     "offers": {
@@ -207,15 +207,15 @@ function generateStaticHTML(route, data) {
   <!-- Open Graph -->
   <meta property="og:title" content="${data.title}">
   <meta property="og:description" content="${data.description}">
-  <meta property="og:url" content="https://omnii.live${route}">
+  <meta property="og:url" content="https://omnii.net${route}">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://omnii.live/icon-512.png">
+  <meta property="og:image" content="https://omnii.net/icon-512.png">
   
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${data.title}">
   <meta name="twitter:description" content="${data.description}">
-  <meta name="twitter:image" content="https://omnii.live/icon-512.png">
+  <meta name="twitter:image" content="https://omnii.net/icon-512.png">
   
   <!-- Favicon -->
   <link rel="icon" href="/favicon.svg">
@@ -1216,9 +1216,9 @@ function generateLandingPageHTML() {
   <!-- Open Graph -->
   <meta property="og:title" content="OMNII - AI Productivity Assistant | Reclaim Your Humanity">
   <meta property="og:description" content="Let AI handle the rest. OMNII transforms chaos into clarity, insights into action, potential into progress with intelligent productivity assistance.">
-  <meta property="og:url" content="https://omnii.live/">
+  <meta property="og:url" content="https://omnii.net/">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://omnii.live/icon-512.png">
+  <meta property="og:image" content="https://omnii.net/icon-512.png">
   
   <style>
     /* OMNII Brand Colors */
@@ -1408,11 +1408,11 @@ console.log('ℹ️  Preserving React app index.html from Expo build');
 // Generate sitemap.xml in both locations
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://omnii.live/</loc><priority>1.0</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://omnii.live/privacy-policy</loc><priority>0.8</priority><changefreq>yearly</changefreq></url>
-  <url><loc>https://omnii.live/terms-of-service</loc><priority>0.8</priority><changefreq>yearly</changefreq></url>
-  <url><loc>https://omnii.live/about</loc><priority>0.6</priority><changefreq>quarterly</changefreq></url>
-  <url><loc>https://omnii.live/support</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://omnii.net/</loc><priority>1.0</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://omnii.net/privacy-policy</loc><priority>0.8</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://omnii.net/terms-of-service</loc><priority>0.8</priority><changefreq>yearly</changefreq></url>
+  <url><loc>https://omnii.net/about</loc><priority>0.6</priority><changefreq>quarterly</changefreq></url>
+  <url><loc>https://omnii.net/support</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
 </urlset>`;
 
 fs.writeFileSync(path.join(__dirname, '../public/sitemap.xml'), sitemap);

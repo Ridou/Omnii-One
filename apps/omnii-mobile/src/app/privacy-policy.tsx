@@ -29,11 +29,11 @@ export default function PrivacyPolicyScreen() {
   });
 
   const openEmail = () => {
-    Linking.openURL('mailto:privacy@omnii.live?subject=Privacy Policy Inquiry');
+    Linking.openURL('mailto:privacy@omnii.net?subject=Privacy Policy Inquiry');
   };
 
   const openDataDeletion = () => {
-    Linking.openURL('https://omnii.live/data-deletion');
+    Linking.openURL('https://omnii.net/data-deletion');
   };
 
   return (
@@ -42,10 +42,10 @@ export default function PrivacyPolicyScreen() {
         title="Privacy Policy - OMNII AI Productivity Assistant"
         description="OMNII Privacy Policy - Learn how we collect, use, and protect your information when you use our AI productivity assistant."
         keywords="privacy policy, data protection, OMNII, AI assistant, productivity app, GDPR, CCPA, data privacy"
-        canonical="https://omnii.live/privacy-policy"
+        canonical="https://omnii.net/privacy-policy"
         ogTitle="Privacy Policy - OMNII"
         ogDescription="Your privacy is important to us. Learn how OMNII protects and manages your data."
-        ogUrl="https://omnii.live/privacy-policy"
+        ogUrl="https://omnii.net/privacy-policy"
       />
       <SafeAreaView style={styles.container}>
         {/* Header */}
@@ -332,7 +332,7 @@ export default function PrivacyPolicyScreen() {
               <TouchableOpacity style={styles.contactButton} onPress={openEmail}>
                 <Mail size={20} color={BRAND_COLORS.primary} />
                 <BodyText style={[styles.contactText, { color: BRAND_COLORS.primary }]}>
-                  privacy@omnii.live
+                  privacy@omnii.net
                 </BodyText>
               </TouchableOpacity>
 
@@ -365,7 +365,7 @@ export default function PrivacyPolicyScreen() {
           <View style={styles.footer}>
             <CaptionText style={[styles.footerText, { color: BRAND_COLORS.secondaryText }]}>
               This Privacy Policy is effective as of the date listed above and supersedes any prior versions.
-              For the complete Privacy Policy, visit: https://omnii.live/privacy
+              For the complete Privacy Policy, visit: https://omnii.net/privacy
             </CaptionText>
           </View>
         </ScrollView>

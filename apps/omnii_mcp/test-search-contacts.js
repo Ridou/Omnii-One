@@ -51,7 +51,7 @@ async function testSearchContacts() {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      "https://omnii.live/auth/google/callback"
+      "https://omnii.net/auth/google/callback"
     );
 
     // Get auth code from user

@@ -315,7 +315,7 @@ export default function DataManagement({
   };
 
   const contactSupport = () => {
-    console.log('Contact support: email privacy@omnii.live');
+    console.log('Contact support: email privacy@omnii.net');
   };
 
   const DataSection = ({ title, children }: { title: string; children: React.ReactNode }) => (

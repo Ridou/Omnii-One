@@ -25,7 +25,7 @@ export function AppHead({
   ogTitle,
   ogDescription,
   ogUrl,
-  ogImage = 'https://omnii.live/icon-512.png',
+  ogImage = 'https://omnii.net/icon-512.png',
   ogType = 'website',
   twitterCard = 'summary_large_image',
   twitterTitle,

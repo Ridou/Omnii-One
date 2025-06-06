@@ -175,7 +175,7 @@ export default function AboutPage() {
   ];
 
   const openWebsite = () => {
-    Linking.openURL('https://omnii.live');
+    Linking.openURL('https://omnii.net');
   };
 
   return (
@@ -184,10 +184,10 @@ export default function AboutPage() {
         title="About OMNII - AI Productivity Assistant"
         description="Learn about OMNII's mission to reclaim humanity through AI-powered productivity assistance. Born in Kyoto, built for the world."
         keywords="about OMNII, AI productivity, company mission, productivity assistant, Kyoto, reclaim humanity"
-        canonical="https://omnii.live/about"
+        canonical="https://omnii.net/about"
         ogTitle="About OMNII - Reclaim Your Humanity"
         ogDescription="Born in the ancient temples of Kyoto, shaped by a vision of technology that serves humanity's highest potential."
-        ogUrl="https://omnii.live/about"
+        ogUrl="https://omnii.net/about"
       />
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>

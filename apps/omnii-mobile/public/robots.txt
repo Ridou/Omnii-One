@@ -5,4 +5,4 @@ Allow: /terms-of-service
 Allow: /about
 Allow: /support
 
-Sitemap: https://omnii.live/sitemap.xml 
+Sitemap: https://omnii.net/sitemap.xml 

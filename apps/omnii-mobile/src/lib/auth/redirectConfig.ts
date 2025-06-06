@@ -31,7 +31,7 @@ export enum OAuthPlatform {
 // Host configuration constants
 export const OAUTH_HOSTS = {
   PRODUCTION: 'omnii.net',
-  STAGING: 'omnii.live', 
+  STAGING: 'omnii.net', 
   LOCAL: 'localhost',
   MOBILE_SCHEME: 'omnii-mobile'
 } as const;
@@ -272,17 +272,14 @@ export const logSupabaseSetupInstructions = (): void => {
 export const getGoogleOAuthCallbackUrl = (): string => {
   const config = detectEnvironment();
   
-  switch (config.environment) {
-    case OAuthEnvironment.PRODUCTION:
-      return 'https://auth.omnii.net/auth/v1/callback';
-    case OAuthEnvironment.STAGING:
-      return 'https://auth.omnii.live/auth/v1/callback';
-    case OAuthEnvironment.LOCAL:
-      // For local development, you might use a different Supabase instance
-      return 'https://auth.omnii.net/auth/v1/callback';
-    default:
-      return 'https://auth.omnii.net/auth/v1/callback';
+  // Always use auth.omnii.net for both production and staging
+  // as per the requirement to use auth.omnii.net instead of auth.omnii.net
+  if (config.environment === OAuthEnvironment.LOCAL) {
+    // For local development, you might use a different Supabase instance
+    return 'https://auth.omnii.net/auth/v1/callback';
   }
+  
+  return 'https://auth.omnii.net/auth/v1/callback';
 };
 
 // Handle post-OAuth navigation (redirect to final destination)

@@ -43,10 +43,10 @@ export default function SMSConsentScreen() {
         title="SMS Consent - OMNII AI Productivity Assistant"
         description="SMS consent documentation for OMNII's two-factor authentication and security notifications."
         keywords="SMS consent, two-factor authentication, security, OMNII, text messages, TCPA compliance"
-        canonical="https://omnii.live/sms-consent"
+        canonical="https://omnii.net/sms-consent"
         ogTitle="SMS Consent - OMNII"
         ogDescription="Documentation of SMS consent collection for two-factor authentication and account security."
-        ogUrl="https://omnii.live/sms-consent"
+        ogUrl="https://omnii.net/sms-consent"
       />
       <SafeAreaView style={styles.container}>
         {/* Header */}
