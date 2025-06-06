@@ -1205,7 +1205,7 @@ function generateStaticHTML(route, data) {
 </html>`;
 }
 
-// Generate landing page HTML separate from React app - with original logo
+// Generate landing page HTML separate from React app -  with original logo
 function generateLandingPageHTML() {
   return `<!DOCTYPE html>
 <html lang="en">
