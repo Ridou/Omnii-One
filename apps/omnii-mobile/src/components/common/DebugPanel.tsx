@@ -41,6 +41,36 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     console.log('✅ Onboarding reset complete! Please restart the app.');
   };
 
+  // Enhanced debugging with state logging
+  const logCurrentState = () => {
+    const currentLevel = getCurrentLevel();
+    const currentXP = state.onboardingData?.total_xp || 0;
+    
+    console.log('🔍 [DEBUG] Current State Snapshot:', {
+      level: currentLevel,
+      currentXP: currentXP,
+      stateLevel: state.onboardingData?.current_level,
+      stateXP: state.onboardingData?.total_xp,
+      completed: state.onboardingData?.completed,
+      isActive: state.isActive,
+      unlockedFeatures: state.unlockedFeatures,
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  const awardXPWithLogging = (amount: number, reason: string) => {
+    console.log(`💰 [DEBUG] About to award ${amount} XP for: ${reason}`);
+    logCurrentState();
+    
+    awardXP(amount, reason, 'debug');
+    
+    // Log state after a brief delay
+    setTimeout(() => {
+      console.log(`✅ [DEBUG] After awarding ${amount} XP:`);
+      logCurrentState();
+    }, 100);
+  };
+
   const handleLevelUp = () => {
     const currentLevel = getCurrentLevel();
     const xpNeeded = getXPNeededForNextLevel();
@@ -52,7 +82,9 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
       return;
     }
     
-    // Award exactly the XP needed for the next level
+    console.log(`🚀 Leveling up from ${currentLevel} to ${nextLevel} (needs ${xpNeeded} XP)`);
+    
+    // Award exactly the XP needed for the next level using proper server sync
     awardXP(xpNeeded, 'Debug Level Up', 'debug');
     
     // Get milestone unlocks for the next level only
@@ -99,7 +131,7 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     
     console.log(`🚀 Jumping from Level ${currentLevel} (${currentXP} XP) to Level 5 (${targetXP} XP)`);
     
-    // Award the XP needed to reach Level 5
+    // Award the XP needed to reach Level 5 using proper server sync
     const xpNeeded = targetXP - currentXP;
     if (xpNeeded > 0) {
       awardXP(xpNeeded, 'Debug Jump to Level 5', 'debug');
@@ -162,7 +194,7 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
   };
 
   const handleFixLevel = () => {
-    const currentXP = state.onboardingData.total_xp;
+    const currentXP = state.onboardingData?.total_xp || 0;
     
     // Level requirements
     const levelRequirements: Record<number, number> = {
@@ -173,7 +205,8 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     // Calculate correct level based on XP
     let correctLevel = 1;
     for (let level = 50; level >= 1; level--) {
-      if (levelRequirements[level] !== undefined && currentXP >= levelRequirements[level]) {
+      const levelXP = levelRequirements[level];
+      if (levelXP !== undefined && currentXP >= levelXP) {
         correctLevel = level;
         break;
       }
@@ -285,124 +318,73 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
               style={[styles.actionButton, { backgroundColor: '#4ECDC4' }]} 
               onPress={handleLevelUp}
             >
-              <Text style={styles.actionButtonText}>🚀 Level Up</Text>
+              <Text style={styles.actionButtonText}>🚀 Level Up (Server-Side)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#66D9EF' }]} 
-              onPress={() => awardXP(25, 'Debug +25 XP', 'debug')}
+              onPress={() => awardXPWithLogging(25, 'Debug +25 XP')}
             >
-              <Text style={styles.actionButtonText}>⭐ +25 XP</Text>
+              <Text style={styles.actionButtonText}>⭐ +25 XP (Server-Side)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#66D9EF' }]} 
-              onPress={() => awardXP(100, 'Debug +100 XP', 'debug')}
+              onPress={() => awardXPWithLogging(100, 'Debug +100 XP')}
             >
-              <Text style={styles.actionButtonText}>⭐ +100 XP</Text>
+              <Text style={styles.actionButtonText}>⭐ +100 XP (Server-Side)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#A6E22E' }]} 
               onPress={handleJumpToLevel5}
             >
-              <Text style={styles.actionButtonText}>🎯 Jump to Level 5</Text>
+              <Text style={styles.actionButtonText}>🎯 Jump to Level 5 (Server-Side)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#66D9EF' }]} 
               onPress={() => {
                 const currentLevel = getCurrentLevel();
-                const currentXP = state.onboardingData.total_xp;
-                const targetLevel = 2;
-                const targetXP = 100;
-                
-                if (currentLevel >= targetLevel) {
-                  console.log(`🏆 Already at or above Level ${targetLevel}!`);
+                if (currentLevel >= 2) {
+                  console.log('🏆 Already at or above Level 2!');
                   return;
                 }
                 
-                const xpNeeded = targetXP - currentXP;
+                const xpNeeded = 100 - (state.onboardingData?.total_xp || 0);
                 if (xpNeeded > 0) {
-                  awardXP(xpNeeded, `Debug Jump to Level ${targetLevel}`, 'debug');
-                  
-                  const levelProgression: LevelProgression = {
-                    id: `debug_jump_${Date.now()}_${targetLevel}`,
-                    user_id: user?.id || '',
-                    from_level: currentLevel,
-                    to_level: targetLevel,
-                    xp_at_level_up: targetXP,
-                    milestone_unlocks: ['achievements_full'],
-                    celebration_shown: false,
-                    unlock_animations_played: [],
-                    achieved_at: new Date().toISOString(),
-                  };
-                  
-                  setTimeout(() => triggerLevelUp(levelProgression), 100);
-                  console.log(`🎉 Jumped to Level ${targetLevel}! Achievements unlocked!`);
+                  awardXP(xpNeeded, 'Debug Jump to Level 2', 'debug');
+                  console.log('🎉 Jumped to Level 2! Achievements unlocked!');
                 }
               }}
             >
-              <Text style={styles.actionButtonText}>🏆 Jump to Level 2 (Achievements)</Text>
+              <Text style={styles.actionButtonText}>🏆 Jump to Level 2 (Server-Side)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#9B59B6' }]} 
               onPress={() => {
                 const currentLevel = getCurrentLevel();
-                const currentXP = state.onboardingData.total_xp;
-                const targetLevel = 10;
-                const targetXP = 2500;
-                
-                if (currentLevel >= targetLevel) {
-                  console.log(`🏆 Already at or above Level ${targetLevel}!`);
+                if (currentLevel >= 10) {
+                  console.log('🏆 Already at or above Level 10!');
                   return;
                 }
                 
-                const xpNeeded = targetXP - currentXP;
+                const xpNeeded = 2500 - (state.onboardingData?.total_xp || 0);
                 if (xpNeeded > 0) {
-                  awardXP(xpNeeded, `Debug Jump to Level ${targetLevel}`, 'debug');
+                  const callsNeeded = Math.ceil(xpNeeded / 26);
+                  console.log(`📝 Making ${callsNeeded} server calls for Level 10`);
                   
-                  // Create progressions for all intermediate levels
-                  const levels = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-                  const getMilestoneUnlocks = (level: number) => {
-                    switch (level) {
-                      case 2: return ['achievements_full'];
-                      case 3: return ['chat_full', 'voice_commands'];
-                      case 4: return ['analytics_full'];
-                      case 5: return ['profile_full', 'ALL_CORE_FEATURES'];
-                      case 6: return ['advanced_insights', 'habit_tracking'];
-                      case 10: return ['predictive_analytics', 'team_features'];
-                      default: return [];
-                    }
-                  };
-                  
-                  levels.forEach((level, index) => {
-                    if (level > currentLevel) {
-                      const levelProgression: LevelProgression = {
-                        id: `debug_jump_${Date.now()}_${level}`,
-                        user_id: user?.id || '',
-                        from_level: level - 1,
-                        to_level: level,
-                        xp_at_level_up: targetXP,
-                        milestone_unlocks: getMilestoneUnlocks(level),
-                        celebration_shown: false,
-                        unlock_animations_played: [],
-                        achieved_at: new Date().toISOString(),
-                      };
-                      
-                      setTimeout(() => {
-                        triggerLevelUp(levelProgression);
-                        console.log(`🎉 Level ${level} unlocked!`);
-                      }, index * 300); // 300ms delay between each level
-                    }
-                  });
-                  
-                  console.log(`✅ Jumped to Level ${targetLevel}! Expert features unlocked!`);
+                  for (let i = 0; i < callsNeeded; i++) {
+                    awardXP(26, `Jump to Level 10 (${i + 1}/${callsNeeded})`, 'debug');
+                    // Small delay between calls
+                    setTimeout(() => {}, 300);
+                  }
+                  console.log('✅ Jumped to Level 10! Expert features unlocked!');
                 }
               }}
             >
-              <Text style={styles.actionButtonText}>🔮 Jump to Level 10 (Expert)</Text>
+              <Text style={styles.actionButtonText}>🔮 Jump to Level 10 (Server-Side)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -410,6 +392,13 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
               onPress={() => console.log('Current State:', state)}
             >
               <Text style={styles.actionButtonText}>📊 Log State to Console</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: '#FD971F' }]} 
+              onPress={logCurrentState}
+            >
+              <Text style={styles.actionButtonText}>🔍 Check State & XP</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
