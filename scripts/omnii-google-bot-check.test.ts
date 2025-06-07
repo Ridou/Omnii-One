@@ -6,7 +6,7 @@ const USER_AGENT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.c
 async function http200(url: string) {
   const res = await fetch(url, { method: "GET", headers: { "User-Agent": USER_AGENT } });
   const text = await res.text();
-  console.log('text',text);
+  console.log('text length',text.length);
   console.log('status',res.status);
   return res.status === 200;
 }
@@ -21,6 +21,14 @@ async function dnsTxtContainsGoogleVerification(domain: string) {
     "@8.8.8.8"
   ]);
   const output = proc.stdout.toString();
+  
+  console.log("=== DNS TXT Debug ===");
+  console.log("Exit code:", proc.exitCode);
+  console.log("Stdout:", JSON.stringify(output));
+  console.log("Output length:", output.length);
+  console.log("Contains google-site-verification:", output.toLowerCase().includes("google-site-verification"));
+  console.log("=====================");
+  
   return output.toLowerCase().includes("google-site-verification");
 }
 
@@ -31,6 +39,14 @@ async function htmlMetaContainsGoogleVerification(url: string) {
     "-s", url
   ]);
   const html = proc.stdout.toString();
+  
+  console.log("=== HTML Meta Debug ===");
+  console.log("URL:", url);
+  console.log("HTML length:", html.length);
+  console.log("First 500 chars:", html.substring(0, 500));
+  console.log("Contains google-site-verification:", /google-site-verification/i.test(html));
+  console.log("========================");
+  
   return /google-site-verification/i.test(html);
 }
 
@@ -41,6 +57,14 @@ async function homepageContainsPrivacyLink(url: string) {
     "-s", url
   ]);
   const html = proc.stdout.toString();
+  
+  console.log("=== Privacy Link Debug ===");
+  console.log("URL:", url);
+  console.log("HTML length:", html.length);
+  console.log("Contains privacy-policy:", /href[^>]*["/]privacy[-]?policy[">/]/i.test(html));
+  console.log("Privacy matches:", html.match(/href[^>]*privacy[^>]*>/gi));
+  console.log("===========================");
+  
   // Check for links to privacy policy
   return /href[^>]*["/]privacy[-]?policy[">/]/i.test(html);
 }
@@ -52,6 +76,14 @@ async function homepageContainsTermsLink(url: string) {
     "-s", url
   ]);
   const html = proc.stdout.toString();
+  
+  console.log("=== Terms Link Debug ===");
+  console.log("URL:", url);
+  console.log("HTML length:", html.length);
+  console.log("Contains terms-of-service:", /href[^>]*["/]terms[-]?of[-]?service[">/]/i.test(html));
+  console.log("Terms matches:", html.match(/href[^>]*terms[^>]*>/gi));
+  console.log("=========================");
+  
   // Check for links to terms of service
   return /href[^>]*["/]terms[-]?of[-]?service[">/]/i.test(html);
 }
