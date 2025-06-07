@@ -182,18 +182,22 @@ const StandaloneWebLandingPage: React.FC = () => {
               >
                 <Text style={webStyles.footerLinkText}>About</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <a
+                href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
                 style={webStyles.footerLink}
-                onPress={() => router.push('/privacy-policy')}
               >
-                <Text style={webStyles.footerLinkText}>Privacy Policy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
+                <span style={webStyles.footerLinkText}>Privacy Policy</span>
+              </a>
+              <a
+                href="/terms-of-service"
+                target="_blank"
+                rel="noopener noreferrer"
                 style={webStyles.footerLink}
-                onPress={() => router.push('/terms-of-service')}
               >
-                <Text style={webStyles.footerLinkText}>Terms of Service</Text>
-              </TouchableOpacity>
+                <span style={webStyles.footerLinkText}>Terms of Service</span>
+              </a>
               <TouchableOpacity 
                 style={webStyles.footerLink}
                 onPress={() => router.push('/sms-consent')}
