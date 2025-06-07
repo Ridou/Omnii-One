@@ -6,7 +6,8 @@ import {
   type AchievementData,
   type AchievementProgressResult,
   type AchievementStats,
-  validateAchievementProgressResult
+  validateAchievementProgressResult,
+  validateAchievementStats
 } from '~/types/unified-response.validation';
 
 /**
@@ -198,8 +199,8 @@ export const achievementService = {
         };
       }
       
-      // Validate with Zod schema
-      const stats = AchievementStatsSchema.parse(data[0]);
+      // Use the new validation function with fallback behavior
+      const stats = validateAchievementStats(data[0]);
       
       console.log('✅ [AchievementService] Stats retrieved:', {
         totalAchievements: stats.total_achievements,

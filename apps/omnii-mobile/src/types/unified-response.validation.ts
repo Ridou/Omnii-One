@@ -55,17 +55,17 @@ export const XPRealtimeUpdateSchema = z.object({
 export const AchievementDataSchema = z.object({
   achievement_id: z.string(),
   title: z.string(),
-  description: z.string(),
+  description: z.string().optional().default(''),
   category: z.string(),
   difficulty: z.string(),
-  xp_reward: z.number(),
-  icon: z.string(),
-  max_progress: z.number(),
-  current_progress: z.number(),
-  completed: z.boolean(),
-  completed_at: z.string().nullable(),
-  can_unlock: z.boolean(),
-  progress_percentage: z.number()
+  xp_reward: z.number().nonnegative().default(0),
+  icon: z.string().optional().default('🏆'),
+  max_progress: z.number().positive().default(1),
+  current_progress: z.number().nonnegative().default(0),
+  completed: z.boolean().default(false),
+  completed_at: z.string().nullable().optional(),
+  can_unlock: z.boolean().default(true),
+  progress_percentage: z.number().min(0).max(100).default(0)
 });
 
 export const AchievementProgressResultSchema = z.object({
@@ -86,10 +86,10 @@ export const AchievementStatsSchema = z.object({
   longest_streak: z.number(),
   recent_unlocks: z.array(z.object({
     achievement_id: z.string(),
-    title: z.string(),
-    xp_awarded: z.number(),
-    unlocked_at: z.string()
-  }))
+    title: z.string().optional().nullable(),
+    xp_awarded: z.number().optional().default(0),
+    unlocked_at: z.string().optional().nullable()
+  })).default([])
 });
 
 // Core action schema
@@ -626,5 +626,35 @@ export function validateAchievementProgressResult(data: any): AchievementProgres
   } catch (error) {
     console.error('[AchievementValidation] ❌ Achievement progress validation failed:', error);
     throw error;
+  }
+}
+
+export function validateAchievementStats(data: any): AchievementStats {
+  console.log('[AchievementValidation] 🔍 Validating AchievementStats with Zod...');
+  
+  try {
+    const validated = AchievementStatsSchema.parse(data);
+    console.log('[AchievementValidation] ✅ Achievement stats validation successful:', {
+      totalAchievements: validated.total_achievements,
+      completedAchievements: validated.completed_achievements,
+      completionPercentage: validated.completion_percentage,
+      recentUnlocksCount: validated.recent_unlocks.length
+    });
+    
+    return validated;
+  } catch (error) {
+    console.error('[AchievementValidation] ❌ Achievement stats validation failed:', error);
+    
+    // Provide fallback stats on validation failure
+    console.log('[AchievementValidation] 🔄 Returning fallback stats');
+    return {
+      total_achievements: 0,
+      completed_achievements: 0,
+      completion_percentage: 0,
+      total_xp_from_achievements: 0,
+      current_streak: 0,
+      longest_streak: 0,
+      recent_unlocks: []
+    };
   }
 } 

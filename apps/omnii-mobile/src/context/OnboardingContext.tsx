@@ -182,7 +182,12 @@ interface OnboardingContextValue {
   
   // Core onboarding actions
   startOnboarding: () => Promise<void>;
-  recordQuoteResponse: (quoteId: string, action: 'approve' | 'decline', timeSpent: number) => Promise<void>;
+  recordQuoteResponse: (quoteId: string, action: 'approve' | 'decline', timeSpent: number) => Promise<{
+    xp_awarded: number;
+    level_up: boolean;
+    new_level: number;
+    milestone_unlocks: string[];
+  } | null>;
   advanceToNextQuote: () => void;
   completeOnboarding: () => Promise<void>;
   
@@ -214,7 +219,7 @@ interface OnboardingProviderProps {
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { user } = useAuth();
-  const { currentLevel, isFeatureUnlocked } = useXPContext(); // Use XPContext for level/feature data
+  const { currentLevel, isFeatureUnlocked } = useXPContext(); // Remove awardXP - keep OnboardingContext pure
   const [state, dispatch] = useReducer(onboardingReducer, initialState);
   const onboardingHook = useOnboarding();
   const initializationCompletedRef = useRef(false);
@@ -328,6 +333,30 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     syncWithServer
   ]);
 
+  // Update onboarding data based on XPContext level changes
+  useEffect(() => {
+    if (state.onboardingData && currentLevel !== state.onboardingData.current_level) {
+      console.log('🔄 [OnboardingContext] Syncing with XPContext level change:', {
+        onboardingLevel: state.onboardingData.current_level,
+        xpContextLevel: currentLevel,
+        action: 'Updating onboarding state to match XPContext'
+      });
+      
+      // Update onboarding data to match XPContext level immediately
+      dispatch({
+        type: 'LOAD_STATE',
+        payload: {
+          onboardingData: {
+            ...state.onboardingData,
+            current_level: currentLevel, // Sync with XPContext
+            completed: currentLevel >= 5, // Onboarding completes at level 5
+          },
+          holisticPreferences: state.holisticPreferences,
+        },
+      });
+    }
+  }, [currentLevel, state.onboardingData, state.holisticPreferences]);
+
   // Context value implementation - simplified to onboarding only
   const value: OnboardingContextValue = {
     state,
@@ -400,11 +429,12 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         const result = await onboardingHook.recordQuoteResponse(quoteId, action, timeSpent);
         
         if (result) {
-          // XP awarding is now handled by XPContext through the unified system
-          console.log('💰 [OnboardingContext] Quote response recorded, XP handled by XPContext:', {
-            amount: result.xp_awarded,
-            reason: `Quote ${action}`,
-            category: 'onboarding'
+          console.log('✅ [OnboardingContext] Quote response recorded:', {
+            quoteId,
+            action,
+            xpAwarded: result.xp_awarded,
+            levelUp: result.level_up,
+            newLevel: result.new_level
           });
         }
 
@@ -422,8 +452,12 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
           });
         }
 
+        // Return result so calling component can handle XP awarding
+        return result;
+
       } catch (error) {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to record response' });
+        throw error; // Re-throw so calling component can handle
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }

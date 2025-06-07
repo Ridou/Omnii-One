@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '~/context/AuthContext';
 import { supabase } from '~/lib/supabase';
 import { XPSystemUtils } from '~/constants/XPSystem';
@@ -13,6 +14,38 @@ import type {
   ContextualNudge,
   FeatureExploration
 } from '~/types/onboarding';
+
+// ✅ ASYNCSTORAGE KEYS: User-specific keys for celebration tracking
+const CELEBRATION_STORAGE_KEY = (userId: string) => `@omnii_celebrations_${userId}`;
+
+// ✅ ASYNCSTORAGE FUNCTIONS: Persistent celebration tracking
+const loadShownCelebrations = async (userId: string): Promise<Set<number>> => {
+  try {
+    const stored = await AsyncStorage.getItem(CELEBRATION_STORAGE_KEY(userId));
+    console.log('🔍 [DEBUG] AsyncStorage key:', CELEBRATION_STORAGE_KEY(userId));
+    console.log('🔍 [DEBUG] AsyncStorage raw value:', stored);
+    if (stored) {
+      const levels = JSON.parse(stored) as number[];
+      console.log('📱 [XPContext] Loaded shown celebrations from AsyncStorage:', levels);
+      return new Set(levels);
+    } else {
+      console.log('📱 [XPContext] No stored celebrations found in AsyncStorage');
+    }
+  } catch (error) {
+    console.warn('⚠️ [XPContext] Failed to load shown celebrations:', error);
+  }
+  return new Set();
+};
+
+const saveShownCelebrations = async (userId: string, shownLevels: Set<number>): Promise<void> => {
+  try {
+    const levels = Array.from(shownLevels);
+    await AsyncStorage.setItem(CELEBRATION_STORAGE_KEY(userId), JSON.stringify(levels));
+    console.log('💾 [XPContext] Saved shown celebrations to AsyncStorage:', levels);
+  } catch (error) {
+    console.warn('⚠️ [XPContext] Failed to save shown celebrations:', error);
+  }
+};
 
 // Level up callback type
 export type LevelUpCallback = (fromLevel: number, toLevel: number, totalXP: number) => void;
@@ -134,6 +167,9 @@ interface XPContextState {
   
   // Level up callbacks
   setOnLevelUp: (callback: LevelUpCallback | null) => void;
+  
+  // ✅ TESTING HELPER: Clear celebration storage for debugging
+  clearCelebrationStorage: () => Promise<void>;
 }
 
 const XPContext = createContext<XPContextState | undefined>(undefined);
@@ -177,6 +213,12 @@ export function XPProvider({ children }: XPProviderProps) {
   const recentXPAwards = useRef<Map<string, number>>(new Map());
   const xpAwardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // ✅ ASYNCSTORAGE TRACKING: Prevent race conditions
+  const hasLoadedCelebrations = useRef(false);
+  
+  // ✅ INITIAL SYNC TRACKING: Prevent false celebrations on app startup when server level > default level 1
+  const isInitialServerSync = useRef(true);
+  
   // Refs for real-time subscription cleanup (SINGLETON PATTERN)
   const subscriptionRef = useRef<any>(null);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -192,7 +234,21 @@ export function XPProvider({ children }: XPProviderProps) {
 
   // Helper function to trigger level up celebrations
   const triggerLevelUpIfNeeded = useCallback((oldLevel: number, newLevel: number, newTotalXP: number) => {
-    if (newLevel <= oldLevel || !user?.id) return;
+    console.log('🔍 [DEBUG] triggerLevelUpIfNeeded called:', {
+      oldLevel,
+      newLevel,
+      newTotalXP,
+      userId: user?.id,
+      isInitialSync: isInitialServerSync.current,
+      shownCelebrationLevelsSize: shownCelebrationLevels.size,
+      shownCelebrationLevelsArray: Array.from(shownCelebrationLevels),
+      celebrationQueueLength: celebrationQueue.length
+    });
+
+    if (newLevel <= oldLevel || !user?.id) {
+      console.log('🔍 [DEBUG] Early exit - no level up or no user:', { newLevel, oldLevel, hasUser: !!user?.id });
+      return;
+    }
 
     console.log('🎉 [XPContext] Level up detected!', {
       fromLevel: oldLevel,
@@ -228,6 +284,12 @@ export function XPProvider({ children }: XPProviderProps) {
     setShownCelebrationLevels(prev => {
       const newSet = new Set(prev);
       levelsToProcess.forEach(level => newSet.add(level));
+      
+      // ✅ FIX: Save to AsyncStorage for persistence across app restarts
+      if (user?.id) {
+        saveShownCelebrations(user.id, newSet);
+      }
+      
       return newSet;
     });
 
@@ -512,10 +574,52 @@ export function XPProvider({ children }: XPProviderProps) {
         const levelDifference = Math.abs(newLevel - currentLevel);
         const xpDifference = Math.abs(newXP - currentXP);
         
+        // ✅ NEW: Detect level reset (when new level is significantly lower)
+        const isLevelReset = newLevel < currentLevel && levelDifference > 1;
+
+        // ✅ INITIAL SYNC: Prevent false celebrations on app startup
+        if (isInitialServerSync.current && !hasInitialLoad.current) {
+          console.log('🚀 [XPContext] Initial server sync - setting baseline level without celebrations:', {
+            serverLevel: newLevel,
+            currentLocalLevel: currentLevel,
+            preventing: `false celebrations for levels 1-${newLevel}`
+          });
+          
+          // Set the server level as baseline without triggering celebrations
+          setCurrentXP(newXP);
+          setCurrentLevel(newLevel);
+          setUnlockedFeatures(getUnlockedFeaturesForLevel(newLevel));
+          setLastUpdated(now);
+          setPendingXP(0);
+          setError(null);
+          lastFetchTime.current = now;
+          hasInitialLoad.current = true;
+          isInitialServerSync.current = false; // Mark initial sync as complete
+          
+          console.log('✅ [XPContext] Initial sync complete - future level-ups will trigger celebrations');
+          return; // Exit early, no level-up processing
+        }
+
         if ((levelDifference > 2 || xpDifference > 200) && celebrationQueue.length > 0) {
           console.log('🧹 [XPContext] Clearing stale celebrations due to significant state change');
           setCelebrationQueue([]);
-          setShownCelebrationLevels(new Set([newLevel])); // Mark current level as "shown" to prevent false celebrations
+          
+          // ✅ FIX: If it's a level reset, completely clear celebration tracking
+          if (isLevelReset) {
+            console.log('🔄 [XPContext] Level reset detected - clearing ALL celebration tracking');
+            setShownCelebrationLevels(new Set());
+            // ✅ SAVE TO ASYNCSTORAGE: Persist reset celebration tracking
+            if (user?.id) {
+              saveShownCelebrations(user.id, new Set());
+            }
+          } else {
+            const currentLevelSet = new Set([newLevel]);
+            setShownCelebrationLevels(currentLevelSet);
+            // ✅ SAVE TO ASYNCSTORAGE: Persist current level as shown
+            if (user?.id) {
+              saveShownCelebrations(user.id, currentLevelSet);
+            }
+          }
         }
         
         // Check for level up (only if it's a reasonable progression)
@@ -527,14 +631,33 @@ export function XPProvider({ children }: XPProviderProps) {
             to: newLevel,
             difference: levelDifference
           });
-          // Just mark all intermediate levels as shown to prevent celebrations
-          setShownCelebrationLevels(prev => {
-            const newSet = new Set(prev);
-            for (let level = currentLevel + 1; level <= newLevel; level++) {
-              newSet.add(level);
+          
+          // ✅ FIX: For large jumps, only mark levels as shown if it's NOT a reset
+          if (!isLevelReset) {
+            // Just mark all intermediate levels as shown to prevent celebrations
+            setShownCelebrationLevels(prev => {
+              const newSet = new Set(prev);
+              for (let level = currentLevel + 1; level <= newLevel; level++) {
+                newSet.add(level);
+              }
+              
+              // ✅ SAVE TO ASYNCSTORAGE: Persist large jump celebration tracking
+              if (user?.id) {
+                saveShownCelebrations(user.id, newSet);
+              }
+              
+              return newSet;
+            });
+          } else {
+            // For resets, clear everything
+            console.log('🔄 [XPContext] Large level reset detected - clearing ALL celebration tracking');
+            const emptySetReset = new Set<number>();
+            setShownCelebrationLevels(emptySetReset);
+            // ✅ SAVE TO ASYNCSTORAGE: Persist reset celebration tracking
+            if (user?.id) {
+              saveShownCelebrations(user.id, emptySetReset);
             }
-            return newSet;
-          });
+          }
         }
         
         setCurrentXP(newXP);
@@ -545,6 +668,11 @@ export function XPProvider({ children }: XPProviderProps) {
         setError(null);
         lastFetchTime.current = now;
         hasInitialLoad.current = true;
+
+        // ✅ FIX: Immediately update unlocked features for instant unlock
+        setUnlockedFeatures(getUnlockedFeaturesForLevel(newLevel));
+        
+        triggerLevelUpIfNeeded(currentLevel, newLevel, newXP);
 
         console.log('✅ [XPContext] XP data synced from server:', {
           totalXP: newXP,
@@ -671,6 +799,9 @@ export function XPProvider({ children }: XPProviderProps) {
           setLastUpdated(new Date());
           setPendingXP(0);
           
+          // ✅ FIX: Immediately update unlocked features for instant unlock
+          setUnlockedFeatures(getUnlockedFeaturesForLevel(newLevel));
+          
           triggerLevelUpIfNeeded(currentLevel, newLevel, newTotalXP);
           
           // Return mock response matching expected format
@@ -712,6 +843,9 @@ export function XPProvider({ children }: XPProviderProps) {
           setLastUpdated(new Date());
           setPendingXP(0);
           
+          // ✅ FIX: Immediately update unlocked features for instant unlock
+          setUnlockedFeatures(getUnlockedFeaturesForLevel(newLevel));
+          
           triggerLevelUpIfNeeded(currentLevel, newLevel, newTotalXP);
           
           return validatedUpdate;
@@ -728,6 +862,9 @@ export function XPProvider({ children }: XPProviderProps) {
       setCurrentLevel(newLevel);
       setLastUpdated(new Date());
       setPendingXP(0);
+      
+      // ✅ FIX: Immediately update unlocked features for instant unlock
+      setUnlockedFeatures(getUnlockedFeaturesForLevel(newLevel));
       
       triggerLevelUpIfNeeded(currentLevel, newLevel, newTotalXP);
       
@@ -752,6 +889,9 @@ export function XPProvider({ children }: XPProviderProps) {
         setCurrentLevel(newLevel);
         setLastUpdated(new Date());
         setPendingXP(0);
+        
+        // ✅ FIX: Immediately update unlocked features for instant unlock
+        setUnlockedFeatures(getUnlockedFeaturesForLevel(newLevel));
         
         console.log('💰 [XPContext] Offline XP awarded:', {
           amount,
@@ -932,6 +1072,8 @@ export function XPProvider({ children }: XPProviderProps) {
       setLastUpdated(null);
       lastFetchTime.current = null;
       hasInitialLoad.current = false;
+      hasLoadedCelebrations.current = false; // ✅ RESET: AsyncStorage loaded state
+      isInitialServerSync.current = true; // ✅ RESET: Initial sync flag for next user
       cleanupSubscription();
       cleanupTimeouts();
     }
@@ -941,6 +1083,33 @@ export function XPProvider({ children }: XPProviderProps) {
       cleanupTimeouts();
     };
   }, [user?.id, fetchXPData, setupRealtimeSubscription, cleanupSubscription, cleanupTimeouts]);
+
+  // ✅ ASYNCSTORAGE INITIALIZATION: Load celebration tracking on app start
+  useEffect(() => {
+    const loadCelebrations = async () => {
+      if (!user?.id) return;
+      
+      console.log('📱 [XPContext] Loading celebration tracking from AsyncStorage...');
+      
+      try {
+        const storedCelebrations = await loadShownCelebrations(user.id);
+        
+        if (storedCelebrations.size > 0) {
+          setShownCelebrationLevels(storedCelebrations);
+          console.log('✅ [XPContext] Loaded', storedCelebrations.size, 'celebrated levels from AsyncStorage');
+          console.log('🧪 [DEBUG] To manually clear: Call clearCelebrationStorage() from XPContext');
+        }
+        
+        // ✅ MARK ASYNCSTORAGE AS LOADED: Prevent race conditions
+        hasLoadedCelebrations.current = true;
+      } catch (error) {
+        console.warn('⚠️ [XPContext] Failed to load celebrations from AsyncStorage:', error);
+        hasLoadedCelebrations.current = true; // Mark as loaded even on error
+      }
+    };
+    
+    loadCelebrations();
+  }, [user?.id, currentLevel]); // Added currentLevel dependency
 
   // Periodic sync fallback (much less aggressive to prevent spam)
   useEffect(() => {
@@ -954,6 +1123,19 @@ export function XPProvider({ children }: XPProviderProps) {
 
     return () => clearInterval(interval);
   }, [user?.id, isConnected, fetchXPData]);
+
+  // ✅ MANUAL ASYNCSTORAGE CLEAR: For testing/debugging purposes
+  const clearCelebrationStorage = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      await AsyncStorage.removeItem(CELEBRATION_STORAGE_KEY(user.id));
+      setShownCelebrationLevels(new Set());
+      console.log('🧹 [XPContext] Manually cleared celebration AsyncStorage');
+    } catch (error) {
+      console.warn('⚠️ [XPContext] Failed to clear celebration storage:', error);
+    }
+  }, [user?.id]);
 
   const contextValue: XPContextState = {
     currentXP,
@@ -993,6 +1175,9 @@ export function XPProvider({ children }: XPProviderProps) {
     pendingXP,
     setPendingXP,
     setOnLevelUp,
+    
+    // ✅ TESTING HELPER: Clear celebration storage for debugging
+    clearCelebrationStorage,
   };
 
   return (

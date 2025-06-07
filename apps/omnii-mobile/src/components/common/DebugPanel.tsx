@@ -31,13 +31,13 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     isLoading, 
     error,
     pendingXP,
-    refetchXP
+    refetchXP,
+    clearCelebrationStorage
   } = useXPSystem();
   
   const {
     state: onboardingState,
     completeOnboarding,
-    triggerLevelUp,
     isOnboardingComplete
   } = useOnboardingContext();
 
@@ -79,7 +79,7 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     }
   };
 
-  const handleLevelUp = async () => {
+  const handleJumpOneLevel = async () => {
     if (currentLevel >= 50) {
       console.log('🏆 Already at max level!');
       return;
@@ -88,11 +88,10 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
     const xpNeeded = xpProgress.xp_to_next_level || 0;
     const nextLevel = currentLevel + 1;
     
-    console.log(`🚀 Leveling up from ${currentLevel} to ${nextLevel} (needs ${xpNeeded} XP)`);
+    console.log(`🚀 Jumping up one level from ${currentLevel} to ${nextLevel} (needs ${xpNeeded} XP)`);
     
-    await awardXPWithLogging(xpNeeded, 'Debug Level Up');
+    await awardXPWithLogging(xpNeeded, 'Debug Jump One Level');
     
-    // Let the unified XP system handle level progression and celebrations naturally
     console.log('✅ [DEBUG] XP awarded, letting unified system handle level progression naturally');
   };
 
@@ -246,6 +245,10 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
         throw new Error('No user logged in');
       }
 
+      // ✅ CLEAR CELEBRATION STORAGE: Remove cached celebrations
+      console.log('🧹 [PERSONAL RESET] Clearing celebration cache...');
+      await clearCelebrationStorage();
+
       // Reset current user's onboarding data
       const { error: resetError } = await supabase.rpc('reset_user_onboarding_complete', {
         p_user_id: user.id
@@ -271,7 +274,7 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
       
       Alert.alert(
         '✅ Personal Reset Complete!',
-        'Your account has been reset to Level 1!\n\n• All your XP data cleared\n• Level reset to 1\n• Onboarding will restart\n\nPlease refresh the app.',
+        'Your account has been reset to Level 1!\n\n• All your XP data cleared\n• Level reset to 1\n• Celebration cache cleared\n• Onboarding will restart\n\nPlease refresh the app.',
         [{ text: 'OK' }]
       );
 
@@ -313,37 +316,9 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
             
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#4ECDC4' }]} 
-              onPress={handleLevelUp}
+              onPress={handleJumpOneLevel}
             >
-              <Text style={styles.actionButtonText}>🚀 Level Up (+{xpProgress.xp_to_next_level} XP)</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#66D9EF' }]} 
-              onPress={() => awardXPWithLogging(25, 'Debug +25 XP')}
-            >
-              <Text style={styles.actionButtonText}>⭐ +25 XP</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#66D9EF' }]} 
-              onPress={() => awardXPWithLogging(100, 'Debug +100 XP')}
-            >
-              <Text style={styles.actionButtonText}>⭐ +100 XP</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#A6E22E' }]} 
-              onPress={() => handleJumpToLevel(2)}
-            >
-              <Text style={styles.actionButtonText}>🏆 Jump to Level 2</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#A6E22E' }]} 
-              onPress={() => handleJumpToLevel(5)}
-            >
-              <Text style={styles.actionButtonText}>🎯 Jump to Level 5</Text>
+              <Text style={styles.actionButtonText}>🚀 Jump a Level (+{xpProgress.xp_to_next_level} XP)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -366,41 +341,6 @@ export default function DebugPanel({ visible, onClose }: DebugPanelProps) {
             >
               <Text style={styles.actionButtonText}>🔄 Refresh XP Data</Text>
             </TouchableOpacity>
-          </View>
-
-          {/* Small XP Amounts for Testing Progress */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🧪 Fine-Tune Progress (Small Amounts)</Text>
-            
-            <View style={styles.buttonRow}>
-              <TouchableOpacity 
-                style={[styles.smallButton, { backgroundColor: '#28A745' }]} 
-                onPress={() => awardXPWithLogging(5, 'Debug +5 XP')}
-              >
-                <Text style={styles.smallButtonText}>+5</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.smallButton, { backgroundColor: '#28A745' }]} 
-                onPress={() => awardXPWithLogging(10, 'Debug +10 XP')}
-              >
-                <Text style={styles.smallButtonText}>+10</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.smallButton, { backgroundColor: '#28A745' }]} 
-                onPress={() => awardXPWithLogging(20, 'Debug +20 XP')}
-              >
-                <Text style={styles.smallButtonText}>+20</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.smallButton, { backgroundColor: '#28A745' }]} 
-                onPress={() => awardXPWithLogging(50, 'Debug +50 XP')}
-              >
-                <Text style={styles.smallButtonText}>+50</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* Nuclear Reset - Destructive Actions */}

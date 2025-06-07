@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '~/context/AuthContext';
+import { useXPContext } from '~/context/XPContext';
 import { supabase } from '~/lib/supabase';
 import type { 
   OnboardingQuote, 
@@ -28,10 +29,8 @@ interface OnboardingHook {
   } | null>;
   completeOnboarding: () => Promise<void>;
   
-  // Utilities
-  getCurrentLevel: () => number;
+  // Onboarding-specific utilities (gets level from XPContext)
   getUnlockedFeatures: (level: number) => string[];
-  calculateLevelFromXP: (xp: number) => number;
   
   // State
   isLoading: boolean;
@@ -40,6 +39,7 @@ interface OnboardingHook {
 
 export function useOnboarding(): OnboardingHook {
   const { user } = useAuth();
+  const { currentLevel } = useXPContext(); // Get level from XPContext
   const [quotes, setQuotes] = useState<OnboardingQuote[]>([]);
   const [currentSession, setCurrentSession] = useState<OnboardingSession>();
   const [onboardingData, setOnboardingData] = useState<OnboardingData>();
@@ -47,23 +47,7 @@ export function useOnboarding(): OnboardingHook {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Calculate level from XP using exponential curve
-  const calculateLevelFromXP = useCallback((totalXP: number): number => {
-    const levels = [0, 100, 200, 320, 450, 750, 1100, 1500, 1950, 2500, 
-                   3500, 5000, 8000, 12000, 18000, 25000, 35000, 60000];
-    
-    let level = 1;
-    for (let i = 0; i < levels.length; i++) {
-      if (totalXP >= levels[i]) {
-        level = i + 1;
-      } else {
-        break;
-      }
-    }
-    return level;
-  }, []);
-
-  // Get unlocked features for a given level
+  // ✅ ONBOARDING RESPONSIBILITY: Feature unlocking (but gets level from XPContext)
   const getUnlockedFeatures = useCallback((level: number): string[] => {
     const features: string[] = ['approvals']; // Always available
     
@@ -77,16 +61,11 @@ export function useOnboarding(): OnboardingHook {
     return features;
   }, []);
 
-  // Get current level from onboarding data
-  const getCurrentLevel = useCallback((): number => {
-    return onboardingData?.current_level || 1;
-  }, [onboardingData?.current_level]);
-
   // Load quotes from database (only run once per user)
   useEffect(() => {
     const loadQuotes = async () => {
       console.log('🎯 useOnboarding: loadQuotes called', {
-        user: user ? `${user.email} (${user.id})` : 'null',
+        user: user ? `${user.email || 'no-email'} (${user.id || 'no-id'})` : 'null',
         quotesLength: quotes.length,
         shouldLoad: !!(user && quotes.length === 0)
       });
@@ -173,8 +152,8 @@ export function useOnboarding(): OnboardingHook {
       order_index: 1,
       active: true,
       psychological_markers: ['action-oriented', 'positive'],
-      expected_resonance: 'high',
-      life_domain: 'productivity'
+      expected_resonance: 0.8,
+      life_domain: 'work'
     },
     {
       id: 'fallback_2',
@@ -186,8 +165,8 @@ export function useOnboarding(): OnboardingHook {
       order_index: 2,
       active: true,
       psychological_markers: ['leadership', 'innovation'],
-      expected_resonance: 'medium',
-      life_domain: 'professional'
+      expected_resonance: 0.7,
+      life_domain: 'work'
     },
     {
       id: 'fallback_3',
@@ -199,8 +178,8 @@ export function useOnboarding(): OnboardingHook {
       order_index: 3,
       active: true,
       psychological_markers: ['optimistic', 'future-focused'],
-      expected_resonance: 'high',
-      life_domain: 'personal'
+      expected_resonance: 0.8,
+      life_domain: 'personal_growth'
     },
     {
       id: 'fallback_4',
@@ -212,8 +191,8 @@ export function useOnboarding(): OnboardingHook {
       order_index: 4,
       active: true,
       psychological_markers: ['resilient', 'hope'],
-      expected_resonance: 'medium',
-      life_domain: 'emotional'
+      expected_resonance: 0.7,
+      life_domain: 'health'
     },
     {
       id: 'fallback_5',
@@ -225,8 +204,8 @@ export function useOnboarding(): OnboardingHook {
       order_index: 5,
       active: true,
       psychological_markers: ['persistent', 'courageous'],
-      expected_resonance: 'medium',
-      life_domain: 'achievement'
+      expected_resonance: 0.7,
+      life_domain: 'personal_growth'
     }
   ];
 
@@ -239,7 +218,7 @@ export function useOnboarding(): OnboardingHook {
         const { data, error } = await supabase
           .from('user_settings')
           .select('settings')
-          .eq('user_id', user.id)
+          .eq('user_id', user?.id)
           .single();
 
         if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
@@ -257,7 +236,7 @@ export function useOnboarding(): OnboardingHook {
     };
 
     loadOnboardingData();
-  }, [user?.id]); // Only depend on user ID
+  }, [user?.id, onboardingData?.current_level]); // Fix: Add null check to dependencies
 
   // Start onboarding session
   const startOnboarding = useCallback(async (): Promise<string | null> => {
@@ -300,78 +279,23 @@ export function useOnboarding(): OnboardingHook {
 
     setIsLoading(true);
     try {
-      // Try to call the database function to record response and award XP
-      const { data, error } = await supabase.rpc('record_quote_response', {
-        p_user_id: user.id,
-        p_quote_id: quoteId,
-        p_action: action,
-        p_time_spent_ms: timeSpent,
-        p_session_id: currentSession?.id || 'fallback_session',
+      // ✅ SIMPLIFIED: Just calculate XP without updating level state
+      const isFallbackQuote = quoteId.startsWith('fallback_');
+      
+      // Standard XP calculation for all quote responses
+      const baseXP = action === 'approve' ? 10 : 5; // Quote approval: 10 XP, decline: 5 XP
+      const engagementBonus = 3; // Engagement bonus
+      const totalXP = baseXP + engagementBonus;
+      
+      console.log('✅ useOnboarding: Quote response processed:', {
+        quoteId,
+        action,
+        xpAwarded: totalXP,
+        isFallback: isFallbackQuote,
+        note: 'Level calculations handled by XPContext'
       });
-
-      if (error) {
-        // Check if it's a function not found error or network error
-        if (error.message?.includes('function') || error.code === '42883' || 
-            error.message?.includes('Network request failed') || error.message?.includes('fetch')) {
-          console.warn('⚠️ useOnboarding: record_quote_response function not found or network error, using local calculation');
-          
-          // Local XP calculation fallback
-          const baseXP = action === 'approve' ? 10 : 5; // Quote approval: 10 XP, decline: 5 XP
-          const engagementBonus = 3; // Engagement bonus
-          const totalXP = baseXP + engagementBonus;
-          
-          const currentLevel = onboardingData?.current_level || 1;
-          const currentTotalXP = onboardingData?.total_xp || 0;
-          const newTotalXP = currentTotalXP + totalXP;
-          const newLevel = calculateLevelFromXP(newTotalXP);
-          const levelUp = newLevel > currentLevel;
-          
-          console.log('🔄 useOnboarding: Local quote response calculation:', {
-            quoteId,
-            action,
-            xpAwarded: totalXP,
-            newTotal: newTotalXP,
-            newLevel: newLevel,
-            levelUp: levelUp,
-            reason: 'Server function not available'
-          });
-          
-          // Update session counts locally if we have a session
-          if (currentSession) {
-            const updatedSession = {
-              ...currentSession,
-              quotes_approved: action === 'approve' ? currentSession.quotes_approved + 1 : currentSession.quotes_approved,
-              quotes_declined: action === 'decline' ? currentSession.quotes_declined + 1 : currentSession.quotes_declined,
-            };
-            setCurrentSession(updatedSession);
-          }
-
-          // Update onboarding data locally
-          setOnboardingData(prev => ({
-            current_level: newLevel,
-            total_xp: newTotalXP,
-            onboarding_xp: (prev?.onboarding_xp || 0) + totalXP,
-            completed: prev?.completed || false,
-            level_5_achieved_at: prev?.level_5_achieved_at,
-            feature_exploration: prev?.feature_exploration || {},
-            active_nudges: prev?.active_nudges || [],
-            preferences: prev?.preferences || {},
-            ai_personality: prev?.ai_personality || {},
-            celebration_queue: prev?.celebration_queue || []
-          }));
-          
-          // Return mock response matching expected format
-          return {
-            xp_awarded: totalXP,
-            level_up: levelUp,
-            new_level: newLevel,
-            milestone_unlocks: levelUp ? [`level_${newLevel}`] : []
-          };
-        }
-        throw error;
-      }
-
-      // Server response handling
+      
+      // Update session counts locally if we have a session
       if (currentSession) {
         const updatedSession = {
           ...currentSession,
@@ -381,64 +305,23 @@ export function useOnboarding(): OnboardingHook {
         setCurrentSession(updatedSession);
       }
 
-      // Update onboarding data if level changed
-      if (data?.[0]?.level_up) {
-        setOnboardingData(prev => prev ? {
-          ...prev,
-          current_level: data[0].new_level,
-          total_xp: (prev.total_xp || 0) + data[0].xp_awarded,
-          onboarding_xp: (prev.onboarding_xp || 0) + data[0].xp_awarded,
-        } : undefined);
-      }
+      // ✅ FIX: Don't update level/XP state - let XPContext be the single source of truth
+      // Just return the XP data for the calling component to process through XPContext
+      return {
+        xp_awarded: totalXP,
+        level_up: false, // XPContext will determine this when it processes the XP
+        new_level: currentLevel, // Get current level from XPContext
+        milestone_unlocks: [] // XPContext will determine unlocks
+      };
 
-      return data?.[0] || null;
     } catch (err: any) {
       console.error('Error recording quote response:', err);
-      
-      // Final fallback for any other errors
-      if (err.message?.includes('Network request failed') || err.message?.includes('fetch')) {
-        console.warn('🌐 useOnboarding: Network error during quote response, using local calculation');
-        
-        const baseXP = action === 'approve' ? 10 : 5;
-        const engagementBonus = 3;
-        const totalXP = baseXP + engagementBonus;
-        
-        const currentLevel = onboardingData?.current_level || 1;
-        const currentTotalXP = onboardingData?.total_xp || 0;
-        const newTotalXP = currentTotalXP + totalXP;
-        const newLevel = calculateLevelFromXP(newTotalXP);
-        const levelUp = newLevel > currentLevel;
-        
-        // Update local state
-        setOnboardingData(prev => ({
-          current_level: newLevel,
-          total_xp: newTotalXP,
-          onboarding_xp: (prev?.onboarding_xp || 0) + totalXP,
-          completed: prev?.completed || false,
-          level_5_achieved_at: prev?.level_5_achieved_at,
-          feature_exploration: prev?.feature_exploration || {},
-          active_nudges: prev?.active_nudges || [],
-          preferences: prev?.preferences || {},
-          ai_personality: prev?.ai_personality || {},
-          celebration_queue: prev?.celebration_queue || []
-        }));
-        
-        setError(null); // Clear error state for offline mode
-        
-        return {
-          xp_awarded: totalXP,
-          level_up: levelUp,
-          new_level: newLevel,
-          milestone_unlocks: levelUp ? [`level_${newLevel}`] : []
-        };
-      }
-      
       setError('Failed to record response');
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, currentSession, onboardingData, calculateLevelFromXP]); // Include all dependencies
+  }, [user?.id, currentSession, currentLevel]); // Use XPContext level instead of onboarding data
 
   // Complete onboarding
   const completeOnboarding = useCallback(async (): Promise<void> => {
@@ -488,7 +371,7 @@ export function useOnboarding(): OnboardingHook {
       console.error('Error completing onboarding:', err);
       setError('Failed to complete onboarding');
     }
-  }, [user?.id, currentSession?.id, onboardingData?.current_level]); // Stable dependencies
+  }, [user?.id, currentSession?.id, currentLevel]); // Use XPContext level instead of onboarding data
 
   return {
     // Data
@@ -502,10 +385,8 @@ export function useOnboarding(): OnboardingHook {
     recordQuoteResponse,
     completeOnboarding,
     
-    // Utilities
-    getCurrentLevel,
+    // Onboarding-specific utilities (gets level from XPContext)
     getUnlockedFeatures,
-    calculateLevelFromXP,
     
     // State
     isLoading,

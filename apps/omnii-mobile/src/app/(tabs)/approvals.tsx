@@ -307,34 +307,25 @@ export default function ApprovalsScreen() {
 
   const handleApprove = useCallback(async (task: Task) => {
     if (task.type === 'onboarding_quote' && task.quote) {
-      // Use unified XP system directly with proper constants
-      const baseXP = XP_REWARDS.QUOTE_APPROVAL; // 10 XP from constants
-      const engagementBonus = XP_REWARDS.QUOTE_INTERACTION; // 3 XP from constants  
-      const totalXP = baseXP + engagementBonus; // 13 XP total
-      
-      // OPTIMISTIC UPDATE: Match actual unified system amounts
-      setPendingXP(prev => prev + totalXP);
+      // ✅ CLEAN ARCHITECTURE: Coordinate between onboarding and XP systems
       
       // Trigger mascot cheering for approval
       triggerCheering(CheeringTrigger.TASK_COMPLETE);
       
-      // Award XP directly through unified system
+      // Step 1: Record the quote response (OnboardingContext handles onboarding flow)
       try {
-        await awardXP(totalXP, 'Quote Approval', 'onboarding');
-        console.log('✅ [Unified XP] Quote approval XP awarded:', totalXP);
-        
-        // Clear optimistic update since unified system handles real updates
-        setPendingXP(prev => Math.max(0, prev - totalXP));
-        
-        // Still record the quote response for tracking (without XP duplication)
         const timeSpent = Math.round(Math.random() * 3000 + 1000);
-        // Note: recordQuoteResponse may also award XP, but unified system will handle deduplication
-        await recordQuoteResponse(task.quote.quote_id, 'approve', timeSpent);
+        const result = await recordQuoteResponse(task.quote.quote_id, 'approve', timeSpent);
+        console.log('✅ [Onboarding] Quote response recorded');
+        
+        // Step 2: Award XP through unified system (XPContext handles XP and celebrations)
+        if (result && result.xp_awarded) {
+          await awardXP(result.xp_awarded, `Quote ${task.quote.quote_id.substring(0, 20)}...`, 'onboarding');
+          console.log('✅ [XP System] XP awarded and celebrations triggered:', result.xp_awarded);
+        }
         
       } catch (error) {
-        // Revert optimistic update on error
-        console.log('❌ Approve failed, reverting optimistic XP:', totalXP);
-        setPendingXP(prev => Math.max(0, prev - totalXP));
+        console.error('❌ Failed to process quote approval:', error);
       }
       
     } else if (task.type === 'approval' && task.approval) {
@@ -354,38 +345,29 @@ export default function ApprovalsScreen() {
       // Trigger mascot cheering for approval
       triggerCheering(CheeringTrigger.TASK_COMPLETE);
     }
-  }, [awardXP, recordQuoteResponse, triggerCheering]);
+  }, [recordQuoteResponse, awardXP, triggerCheering]);
 
   const handleReject = useCallback(async (task: Task) => {
     if (task.type === 'onboarding_quote' && task.quote) {
-      // Use unified XP system directly with proper constants
-      const baseXP = XP_REWARDS.QUOTE_DECLINE; // 5 XP from constants
-      const engagementBonus = XP_REWARDS.QUOTE_INTERACTION; // 3 XP from constants
-      const totalXP = baseXP + engagementBonus; // 8 XP total
-      
-      // OPTIMISTIC UPDATE: Match actual unified system amounts
-      setPendingXP(prev => prev + totalXP);
+      // ✅ CLEAN ARCHITECTURE: Coordinate between onboarding and XP systems
       
       // Trigger mascot cheering for reject (still positive engagement)
       triggerCheering(CheeringTrigger.TASK_COMPLETE);
       
-      // Award XP directly through unified system
+      // Step 1: Record the quote response (OnboardingContext handles onboarding flow)
       try {
-        await awardXP(totalXP, 'Quote Decline', 'onboarding');
-        console.log('✅ [Unified XP] Quote decline XP awarded:', totalXP);
-        
-        // Clear optimistic update since unified system handles real updates
-        setPendingXP(prev => Math.max(0, prev - totalXP));
-        
-        // Still record the quote response for tracking (without XP duplication)
         const timeSpent = Math.round(Math.random() * 2000 + 800);
-        // Note: recordQuoteResponse may also award XP, but unified system will handle deduplication
-        await recordQuoteResponse(task.quote.quote_id, 'decline', timeSpent);
+        const result = await recordQuoteResponse(task.quote.quote_id, 'decline', timeSpent);
+        console.log('✅ [Onboarding] Quote response recorded');
+        
+        // Step 2: Award XP through unified system (XPContext handles XP and celebrations)
+        if (result && result.xp_awarded) {
+          await awardXP(result.xp_awarded, `Quote ${task.quote.quote_id.substring(0, 20)}...`, 'onboarding');
+          console.log('✅ [XP System] XP awarded and celebrations triggered:', result.xp_awarded);
+        }
         
       } catch (error) {
-        // Revert optimistic update on error
-        console.log('❌ Decline failed, reverting optimistic XP:', totalXP);
-        setPendingXP(prev => Math.max(0, prev - totalXP));
+        console.error('❌ Failed to process quote decline:', error);
       }
       
     } else if (task.type === 'approval' && task.approval) {
@@ -405,7 +387,7 @@ export default function ApprovalsScreen() {
       // Trigger mascot cheering for engagement
       triggerCheering(CheeringTrigger.TASK_COMPLETE);
     }
-  }, [awardXP, recordQuoteResponse, triggerCheering]);
+  }, [recordQuoteResponse, awardXP, triggerCheering]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
