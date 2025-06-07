@@ -1,9 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-// Get current directory for CommonJS
-const __filename = require.main ? require.main.filename : __filename;
-const __dirname = path.dirname(__filename);
+// Note: __dirname and __filename are built-in in CommonJS
+/* eslint-disable no-undef */
 
 const routes = {
   '/privacy-policy': {
