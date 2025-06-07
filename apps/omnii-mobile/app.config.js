@@ -22,7 +22,7 @@ export default {
       googleServicesFile: './GoogleService-Info.plist',
       icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
       infoPlist: {
-        ITSAppUsesNonExemptEncryption: true,
+        ITSAppUsesNonExemptEncryption: false,
         CFBundleURLTypes: [
           {
             CFBundleURLName: 'omnii-mobile',
