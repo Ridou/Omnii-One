@@ -68,7 +68,7 @@ export default function LandingPage() {
     );
   }
 
-  // Always show landing page content with SEO metadata
+  // Always show landing page content with SEO metadata 
   return (
     <>
       <AppHead
