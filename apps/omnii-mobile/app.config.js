@@ -23,7 +23,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: 'com.omnii.mobile',
       icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
-      googleServicesFile: './ios/OMNII/GoogleService-Info.plist',
+      googleServicesFile: './GoogleService-Info.plist',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         CFBundleURLTypes: [
