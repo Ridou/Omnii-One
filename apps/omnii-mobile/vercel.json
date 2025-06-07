@@ -38,7 +38,29 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(bot|crawler|spider|crawling|Googlebot|Bingbot|facebookexternalhit|twitterbot|whatsapp|telegram|slurp).*"
+          "value": "(?i).*bot.*"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "destination": "/landing.html",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent", 
+          "value": "(?i).*crawler.*"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "destination": "/landing.html",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*spider.*"
         }
       ]
     },
