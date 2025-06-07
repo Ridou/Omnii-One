@@ -36,3 +36,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Add this line to apps/omnii-mobile/.gitignore
+private-keys/

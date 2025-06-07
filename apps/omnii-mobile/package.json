@@ -24,7 +24,8 @@
     "generate:ios": "cd scripts && node generate-assets.js --ios",
     "generate:android": "cd scripts && node generate-assets.js --android",
     "generate:web": "cd scripts && node generate-assets.js --web",
-    "generate:help": "cd scripts && node generate-assets.js --help"
+    "generate:help": "cd scripts && node generate-assets.js --help",
+    "screenshots:resize": "node scripts/resize-screenshots.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",

@@ -79,18 +79,7 @@
   "submit": {
     "production": {
       "ios": {
-        "ascApiKeyPath": "./private-keys/AuthKey.p8",
-        "ascApiKeyIssuerId": "$ASC_API_KEY_ISSUER_ID",
-        "ascApiKeyId": "$ASC_API_KEY_ID",
-        "appleId": "$APPLE_ID",
-        "ascAppId": "$ASC_APP_ID",
-        "appleTeamId": "$APPLE_TEAM_ID"
-      },
-      "android": {
-        "serviceAccountKeyPath": "./private-keys/google-service-account.json",
-        "track": "production",
-        "releaseStatus": "completed",
-        "changesNotSentForReview": false
+        "ascAppId": "6746954860"
       }
     }
   }

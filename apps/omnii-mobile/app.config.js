@@ -5,7 +5,7 @@ export default {
     name: 'OMNII',
     slug: 'omnii',
     owner: 'omnii',
-    version: '1.0.0',
+    version: '1.0.1',
     orientation: 'portrait',
     icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
     userInterfaceStyle: 'light',
@@ -19,7 +19,21 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.omnii.mobile',
+      googleServicesFile: './ios/Omnii/GoogleService-Info.plist',
       icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: true,
+        CFBundleURLTypes: [
+          {
+            CFBundleURLName: 'omnii-mobile',
+            CFBundleURLSchemes: ['omnii-mobile']
+          },
+          {
+            CFBundleURLName: 'google-oauth',
+            CFBundleURLSchemes: ['com.googleusercontent.apps.904371950268-abund19lqsma5d4rhfkkv212e5j7hv5e']
+          }
+        ]
+      }
     },
     android: {
       package: "com.omnii.mobile",
