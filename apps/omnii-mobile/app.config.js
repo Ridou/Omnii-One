@@ -1,4 +1,3 @@
-import 'react-native-get-random-values';
 import 'dotenv/config';
 
 export default {
