@@ -1359,6 +1359,19 @@ function generateLandingPageHTML() {
     </div>
   </main>
   
+  <!-- Footer with required links for Google OAuth verification -->
+  <footer style="background: #F5F5F7; padding: 32px 24px; text-align: center; border-top: 1px solid #E0E0E0;">
+    <div style="max-width: 600px; margin: 0 auto;">
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; margin-bottom: 16px;">
+        <a href="/privacy-policy" style="color: #666666; text-decoration: none; font-size: 14px; transition: color 0.2s ease;">Privacy Policy</a>
+        <a href="/terms-of-service" style="color: #666666; text-decoration: none; font-size: 14px; transition: color 0.2s ease;">Terms of Service</a>
+        <a href="/about" style="color: #666666; text-decoration: none; font-size: 14px; transition: color 0.2s ease;">About</a>
+        <a href="/support" style="color: #666666; text-decoration: none; font-size: 14px; transition: color 0.2s ease;">Support</a>
+      </div>
+      <p style="font-size: 12px; color: #999999; margin: 0;">© 2025 Omnii Net LLC. All rights reserved.</p>
+    </div>
+  </footer>
+  
   <script>
     // Redirect to React app for OAuth
     document.addEventListener('DOMContentLoaded', function() {
