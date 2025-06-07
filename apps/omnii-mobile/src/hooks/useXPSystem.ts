@@ -23,9 +23,6 @@ export interface XPSystemHook {
   // Optimistic updates
   pendingXP: number;
   setPendingXP: (amount: number) => void;
-  
-  // ✅ TESTING HELPER: Clear celebration storage for debugging
-  clearCelebrationStorage: () => Promise<void>;
 }
 
 /**
