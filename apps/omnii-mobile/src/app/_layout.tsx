@@ -1,17 +1,11 @@
-// IMPORTANT: Import polyfills FIRST, before any other imports
-import 'react-native-get-random-values';
 import 'react-native-url-polyfill/auto';
 import { Buffer } from 'buffer';
+import '../styles/global.css';
+
+// Add process polyfill globally
 import process from 'process';
 
-// Make polyfills available globally BEFORE any other imports
-global.Buffer = Buffer;
-if (typeof global.process === 'undefined') {
-  global.process = process;
-}
 
-// Now import everything else
-import '../styles/global.css';
 import React, { useState, useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -24,6 +18,12 @@ import { OnboardingProvider } from '~/context/OnboardingContext';
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
 import { useFrameworkReady } from '~/hooks/useFrameworkReady';
 import { queryClient } from '~/utils/api';
+
+// Make Buffer available globally
+global.Buffer = Buffer;
+if (typeof global.process === 'undefined') {
+  global.process = process;
+}
 
 // Safe gesture provider that loads GestureProvider after hydration
 function SafeGestureProvider({ children }: { children: React.ReactNode }) {

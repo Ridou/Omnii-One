@@ -10,9 +10,6 @@ export default {
     icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
     userInterfaceStyle: 'light',
     scheme: 'omnii-mobile',
-    newArchEnabled: false,
-    platforms: ["ios", "android", "web"],
-    jsEngine: "jsc",
     splash: {
       image: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
       resizeMode: 'contain',
@@ -23,20 +20,6 @@ export default {
       supportsTablet: true,
       bundleIdentifier: 'com.omnii.mobile',
       icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
-      googleServicesFile: './GoogleService-Info.plist',
-      infoPlist: {
-        ITSAppUsesNonExemptEncryption: false,
-        CFBundleURLTypes: [
-          {
-            CFBundleURLName: "omnii-mobile",
-            CFBundleURLSchemes: ["omnii-mobile"]
-          },
-          {
-            CFBundleURLName: "google-oauth",
-            CFBundleURLSchemes: ["com.googleusercontent.apps.904371950268-abund19lqsma5d4rhfkkv212e5j7hv5e"]
-          }
-        ]
-      },
     },
     android: {
       package: "com.omnii.mobile",
@@ -112,14 +95,12 @@ export default {
     plugins: [
       'expo-font',
       'expo-secure-store',
-      'expo-dev-client',
       ['expo-router', { origin: 'https://omnii.net' }],
     ],
     extra: {
       eas: {
         projectId: "320277da-e364-485f-9098-82c908f7b327"
       },
-      router: {},
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
       googleClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '',
