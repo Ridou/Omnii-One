@@ -36,15 +36,19 @@ async function htmlMetaContainsGoogleVerification(url: string) {
   const proc = Bun.spawnSync([
     "curl",
     "-A", USER_AGENT,
-    "-s", url
+    "-s", url,
+    "-H", "Accept: text/html"
   ]);
   const html = proc.stdout.toString();
   
   console.log("=== HTML Meta Debug ===");
   console.log("URL:", url);
+  console.log("User-Agent:", USER_AGENT);
   console.log("HTML length:", html.length);
   console.log("First 500 chars:", html.substring(0, 500));
+  console.log("Contains data-rh (React Helmet):", html.includes('data-rh="true"'));
   console.log("Contains google-site-verification:", /google-site-verification/i.test(html));
+  console.log("Is React app?:", html.includes('data-rh="true"') || html.includes('<div id="root">'));
   console.log("========================");
   
   return /google-site-verification/i.test(html);
@@ -114,4 +118,23 @@ test("Homepage contains link to Privacy Policy", async () => {
 
 test("Homepage contains link to Terms of Service", async () => {
   expect(await homepageContainsTermsLink(`https://${DOMAIN}/`)).toBe(true);
+});
+
+test("Direct access to landing.html works", async () => {
+  const proc = Bun.spawnSync([
+    "curl",
+    "-A", USER_AGENT,
+    "-s", `https://${DOMAIN}/landing.html`
+  ]);
+  const html = proc.stdout.toString();
+  
+  console.log("=== Direct landing.html Test ===");
+  console.log("HTML length:", html.length);
+  console.log("Contains google-site-verification:", /google-site-verification/i.test(html));
+  console.log("Contains privacy-policy link:", /href[^>]*privacy-policy/i.test(html));
+  console.log("Contains terms-of-service link:", /href[^>]*terms-of-service/i.test(html));
+  console.log("Is React app?:", html.includes('data-rh="true"'));
+  console.log("================================");
+  
+  expect(/google-site-verification/i.test(html)).toBe(true);
 }); 

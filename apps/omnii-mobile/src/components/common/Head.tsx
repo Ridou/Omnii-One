@@ -46,6 +46,9 @@ export function AppHead({
       <meta name="keywords" content={keywords} />
       {canonical && <link rel="canonical" href={canonical} />}
       
+      {/* Google Site Verification */}
+      <meta name="google-site-verification" content="ts5_mpKNxYK_HPwsxsgLMcU8M2KcXOm7xI886yxq52Y" />
+      
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={ogType} />
       <meta property="og:title" content={finalOgTitle} />

@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
+// Get current directory for CommonJS
+const __filename = require.main ? require.main.filename : __filename;
+const __dirname = path.dirname(__filename);
+
 const routes = {
   '/privacy-policy': {
     title: 'Privacy Policy - OMNII AI Productivity Assistant',
@@ -1392,37 +1396,31 @@ function generateLandingPageHTML() {
 // Generate files - IMPORTANT: Don't overwrite index.html
 Object.entries(routes).forEach(([route, data]) => {
   const filename = `${route.substring(1)}.html`;
-  const publicPath = path.join(__dirname, '../public', filename);
   const distPath = path.join(__dirname, '../dist-static', filename);
   
-  // Ensure directories exist
-  const publicDir = path.join(__dirname, '../public');
+  // Ensure dist-static directory exists
   const distDir = path.join(__dirname, '../dist-static');
   
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
-  }
   if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir, { recursive: true });
   }
   
   const htmlContent = generateStaticHTML(route, data);
   
-  // Write to both public and dist-static  
-  fs.writeFileSync(publicPath, htmlContent);
+  // Write only to dist-static (what Vercel deploys)
   fs.writeFileSync(distPath, htmlContent);
-  console.log(`✅ Generated: ${filename} (public + dist-static)`);
+  console.log(`✅ Generated: ${filename} (dist-static)`);
 });
 
 // Generate special landing page for crawlers (but keep React app index.html)
 const landingPageContent = generateLandingPageHTML();
-fs.writeFileSync(path.join(__dirname, '../public/landing.html'), landingPageContent);
+fs.writeFileSync(path.join(__dirname, '../dist-static/landing.html'), landingPageContent);
 console.log('✅ Generated: landing.html for crawlers');
 
 // DON'T overwrite the React app index.html - let Expo build handle that
 console.log('ℹ️  Preserving React app index.html from Expo build');
 
-// Generate sitemap.xml in both locations
+// Generate sitemap.xml in dist-static only
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://omnii.net/</loc><priority>1.0</priority><changefreq>monthly</changefreq></url>
@@ -1432,15 +1430,25 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://omnii.net/support</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
 </urlset>`;
 
-fs.writeFileSync(path.join(__dirname, '../public/sitemap.xml'), sitemap);
 fs.writeFileSync(path.join(__dirname, '../dist-static/sitemap.xml'), sitemap);
-console.log('✅ Generated: sitemap.xml (public + dist-static)');
+console.log('✅ Generated: sitemap.xml (dist-static)');
 
-// Copy robots.txt to dist-static as well
-const robotsPath = path.join(__dirname, '../public/robots.txt');
-if (fs.existsSync(robotsPath)) {
-  fs.copyFileSync(robotsPath, path.join(__dirname, '../dist-static/robots.txt'));
-  console.log('✅ Copied: robots.txt to dist-static');
+// Copy static assets from public to dist-static
+const publicDir = path.join(__dirname, '../public');
+const staticAssets = ['robots.txt', 'favicon.ico', 'favicon.svg', 'apple-touch-icon.png'];
+
+if (fs.existsSync(publicDir)) {
+  staticAssets.forEach(asset => {
+    const sourcePath = path.join(publicDir, asset);
+    const destPath = path.join(__dirname, '../dist-static', asset);
+    
+    if (fs.existsSync(sourcePath)) {
+      fs.copyFileSync(sourcePath, destPath);
+      console.log(`✅ Copied: ${asset} from public to dist-static`);
+    }
+  });
+} else {
+  console.log('ℹ️  No public directory found');
 }
 
 console.log('🎉 All static HTML files generated for Google crawlers!'); 
