@@ -13,7 +13,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.omnii.mobile",
-      "googleServicesFile": "./ios/Omnii/GoogleService-Info.plist",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": true,
         "CFBundleURLTypes": [
