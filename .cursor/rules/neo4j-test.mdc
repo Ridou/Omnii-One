@@ -1,0 +1,902 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Neo4j Brain Memory System - Test Implementation Plan
+
+## 🎯 **Test-Driven Development Strategy**
+
+This document outlines a comprehensive testing strategy for the Neo4j brain-like memory implementation using **Bun test framework**. The testing approach ensures 100% functional coverage and pristine implementation quality.
+
+## 📋 **Testing Architecture Overview**
+
+### **Test Categories**
+```typescript
+// Test Structure
+tests/
+├── unit/                    // Individual method testing
+├── integration/             // Complete flow testing
+├── database/               // Neo4j operations testing
+├── memory/                 // Brain-like memory testing
+├── composio/               // Composio integration testing
+├── performance/            // Load and performance testing
+├── api/                    // HTTP request testing
+└── e2e/                    // End-to-end scenarios
+```
+
+### **Testing Stack**
+- **Framework**: Bun Test (fast, TypeScript native)
+- **Database**: Neo4j Test Container / Embedded Neo4j
+- **Mocking**: Bun's built-in mocking
+- **HTTP Testing**: Bun's fetch API
+- **Assertions**: Bun's expect API
+- **Coverage**: Bun's coverage reporting
+
+## 🧪 **Unit Tests Implementation Plan**
+
+### **1. Core Memory Classes**
+
+#### **BrainConversationManager Unit Tests**
+```typescript
+// tests/unit/brain-conversation-manager.test.ts
+describe('BrainConversationManager', () => {
+  let manager: BrainConversationManager;
+  let mockDriver: any;
+  let mockSession: any;
+
+  beforeEach(() => {
+    // Setup mocks and test instance
+  });
+
+  describe('storeSMSConversation', () => {
+    test('should store SMS conversation with brain properties', async () => {
+      // Test conversation storage with all brain-like properties
+    });
+
+    test('should handle missing optional fields gracefully', async () => {
+      // Test with minimal required data
+    });
+
+    test('should create proper Neo4j relationships', async () => {
+      // Verify OWNS, HAS_MEMORY, MENTIONS, HAS_TAG relationships
+    });
+
+    test('should set correct timestamps and modification tracking', async () => {
+      // Verify last_modified, modification_reason, timestamp
+    });
+  });
+
+  describe('storeChatConversation', () => {
+    test('should store chat conversation with real-time context', async () => {
+      // Test chat-specific properties and metadata
+    });
+
+    test('should handle group chat participants correctly', async () => {
+      // Test group chat linking and participant relationships
+    });
+
+    test('should support WebSocket session tracking', async () => {
+      // Test WebSocket-specific metadata
+    });
+  });
+
+  describe('getBrainMemoryContext', () => {
+    test('should retrieve 3-week time window correctly', async () => {
+      // Test previous/current/next week categorization
+    });
+
+    test('should identify recently modified messages', async () => {
+      // Test last_modified detection and pulling back to working memory
+    });
+
+    test('should calculate memory strength accurately', async () => {
+      // Test time-based memory strength calculation
+    });
+
+    test('should handle empty memory gracefully', async () => {
+      // Test with no existing conversations
+    });
+
+    test('should respect working memory size limits', async () => {
+      // Test memory size constraints
+    });
+  });
+
+  describe('executeComposioToolWithMemory', () => {
+    test('should enhance tool parameters with memory context', async () => {
+      // Test parameter enhancement for different tool types
+    });
+
+    test('should execute Composio tools with custom auth', async () => {
+      // Test OAuth integration and tool execution
+    });
+
+    test('should store tool results in memory', async () => {
+      // Test tool execution memory storage
+    });
+
+    test('should fallback to standard execution on memory failure', async () => {
+      // Test graceful degradation
+    });
+  });
+});
+```
+
+#### **Time-Based Memory Helper Tests**
+```typescript
+// tests/unit/time-based-memory.test.ts
+describe('Time-Based Memory Helpers', () => {
+  describe('calculateTimeBasedMemoryStrength', () => {
+    test('should calculate strength with all components', async () => {
+      // Test memory strength calculation formula
+    });
+
+    test('should apply time balance bonus correctly', async () => {
+      // Test entropy-based time distribution bonus
+    });
+
+    test('should cap memory strength at 1.0', async () => {
+      // Test upper bound constraint
+    });
+  });
+
+  describe('calculateTimeBalance', () => {
+    test('should reward balanced time distribution', async () => {
+      // Test entropy calculation for balanced weeks
+    });
+
+    test('should penalize skewed time distribution', async () => {
+      // Test low entropy for unbalanced weeks
+    });
+
+    test('should handle empty time windows', async () => {
+      // Test zero case
+    });
+  });
+
+  describe('nodeToEnhancedChatMessage', () => {
+    test('should convert Neo4j node to schema correctly', async () => {
+      // Test node property mapping
+    });
+
+    test('should parse JSON metadata fields', async () => {
+      // Test SMS/chat metadata parsing
+    });
+
+    test('should handle missing optional fields', async () => {
+      // Test graceful handling of undefined properties
+    });
+  });
+});
+```
+
+### **2. Memory Enhancement Functions**
+
+#### **Tool Parameter Enhancement Tests**
+```typescript
+// tests/unit/tool-enhancement.test.ts
+describe('Tool Parameter Enhancement', () => {
+  describe('enhanceCalendarToolWithMemory', () => {
+    test('should set smart time ranges based on memory', async () => {
+      // Test calendar time range enhancement
+    });
+
+    test('should add related concepts to event descriptions', async () => {
+      // Test semantic memory integration
+    });
+
+    test('should preserve existing parameters', async () => {
+      // Test parameter preservation
+    });
+  });
+
+  describe('enhanceTasksToolWithMemory', () => {
+    test('should add task patterns from episodic memory', async () => {
+      // Test task pattern extraction
+    });
+
+    test('should avoid duplicate task creation', async () => {
+      // Test duplicate detection
+    });
+
+    test('should suggest related tasks', async () => {
+      // Test task relationship suggestions
+    });
+  });
+
+  describe('enhanceEmailToolWithMemory', () => {
+    test('should enhance recipients with contact memory', async () => {
+      // Test contact suggestion enhancement
+    });
+
+    test('should add contextual information to email body', async () => {
+      // Test email context enhancement
+    });
+  });
+
+  describe('enhanceContactsToolWithMemory', () => {
+    test('should enhance search queries with memory', async () => {
+      // Test contact search enhancement
+    });
+
+    test('should suggest contact relationships', async () => {
+      // Test relationship suggestions
+    });
+  });
+});
+```
+
+## 🔗 **Integration Tests Implementation Plan**
+
+### **1. Complete Memory Flow Tests**
+
+#### **SMS-to-Memory-to-Response Flow**
+```typescript
+// tests/integration/sms-memory-flow.test.ts
+describe('SMS Memory Integration Flow', () => {
+  let testDb: Neo4jContainer;
+  let manager: BrainConversationManager;
+
+  beforeAll(async () => {
+    // Setup test Neo4j container
+    testDb = await startNeo4jContainer();
+  });
+
+  afterAll(async () => {
+    await testDb.stop();
+  });
+
+  test('should process complete SMS conversation flow', async () => {
+    // 1. Store incoming SMS
+    const incomingMessage = await manager.storeSMSConversation({
+      user_id: 'test-user',
+      content: 'Schedule a meeting for tomorrow',
+      phone_number: '+1234567890',
+      is_incoming: true
+    });
+
+    // 2. Retrieve memory context
+    const memoryContext = await manager.getBrainMemoryContext(
+      'test-user',
+      'Schedule a meeting for tomorrow',
+      'sms',
+      '+1234567890'
+    );
+
+    // 3. Verify memory structure
+    expect(memoryContext.working_memory.recent_messages).toHaveLength(1);
+    expect(memoryContext.working_memory.time_window_stats.current_week_count).toBe(1);
+
+    // 4. Test Composio tool enhancement
+    const mockToolCall = {
+      function: {
+        name: 'GOOGLECALENDAR_CREATE_EVENT',
+        arguments: JSON.stringify({ summary: 'Meeting' })
+      }
+    };
+
+    const toolResult = await manager.executeComposioToolWithMemory(
+      'test-user',
+      mockToolCall,
+      mockComposio,
+      memoryContext,
+      'sms',
+      '+1234567890'
+    );
+
+    // 5. Verify tool enhancement
+    expect(toolResult.memoryEnhanced).toBe(true);
+    expect(toolResult.memoryInsights).toBeDefined();
+
+    // 6. Store outgoing response
+    const responseMessage = await manager.storeSMSConversation({
+      user_id: 'test-user',
+      content: 'Meeting scheduled for tomorrow at 2 PM',
+      phone_number: '+1234567890',
+      is_incoming: false
+    });
+
+    // 7. Verify conversation linking
+    const updatedContext = await manager.getBrainMemoryContext(
+      'test-user',
+      'Meeting scheduled for tomorrow at 2 PM',
+      'sms',
+      '+1234567890'
+    );
+
+    expect(updatedContext.working_memory.recent_messages).toHaveLength(2);
+  });
+
+  test('should handle cross-channel memory correlation', async () => {
+    // Test SMS + Chat memory correlation
+  });
+
+  test('should maintain memory consistency across sessions', async () => {
+    // Test memory persistence and retrieval
+  });
+});
+```
+
+### **2. Chat Memory Integration Tests**
+
+#### **WebSocket-to-Memory Flow**
+```typescript
+// tests/integration/chat-memory-flow.test.ts
+describe('Chat Memory Integration Flow', () => {
+  test('should process real-time chat with memory enhancement', async () => {
+    // Test WebSocket message → memory → enhanced response flow
+  });
+
+  test('should handle group chat participant memory', async () => {
+    // Test group chat memory and participant tracking
+  });
+
+  test('should support thread-aware memory context', async () => {
+    // Test chat threading with memory context
+  });
+});
+```
+
+### **3. Composio Integration Tests**
+
+#### **Google Services with Memory**
+```typescript
+// tests/integration/composio-memory.test.ts
+describe('Composio Memory Integration', () => {
+  test('should enhance Google Calendar operations with memory', async () => {
+    // Test calendar operations with memory context
+  });
+
+  test('should enhance Google Tasks operations with memory', async () => {
+    // Test task operations with memory context
+  });
+
+  test('should enhance Gmail operations with memory', async () => {
+    // Test email operations with memory context
+  });
+
+  test('should enhance Google Contacts operations with memory', async () => {
+    // Test contact operations with memory context
+  });
+
+  test('should handle OAuth failures gracefully', async () => {
+    // Test OAuth error scenarios
+  });
+});
+```
+
+## 🗄️ **Database Tests Implementation Plan**
+
+### **1. Neo4j Operations Tests**
+
+#### **Schema and Relationship Tests**
+```typescript
+// tests/database/neo4j-operations.test.ts
+describe('Neo4j Database Operations', () => {
+  let driver: Driver;
+  let session: Session;
+
+  beforeEach(async () => {
+    // Setup test database with clean state
+  });
+
+  describe('Node Creation', () => {
+    test('should create ChatMessage nodes with all properties', async () => {
+      // Test node creation with schema validation
+    });
+
+    test('should create Memory nodes with correct types', async () => {
+      // Test Memory node types and properties
+    });
+
+    test('should create Concept nodes with activation tracking', async () => {
+      // Test Concept node creation and updates
+    });
+
+    test('should create Tag nodes with usage tracking', async () => {
+      // Test Tag node creation and metadata
+    });
+  });
+
+  describe('Relationship Creation', () => {
+    test('should create OWNS relationships correctly', async () => {
+      // Test User-ChatMessage ownership
+    });
+
+    test('should create HAS_MEMORY relationships with metadata', async () => {
+      // Test ChatMessage-Memory linking
+    });
+
+    test('should create MENTIONS relationships with concepts', async () => {
+      // Test ChatMessage-Concept linking
+    });
+
+    test('should create HAS_TAG relationships with tags', async () => {
+      // Test ChatMessage-Tag linking
+    });
+
+    test('should create RELATED_TO relationships with strength', async () => {
+      // Test associative memory relationships
+    });
+  });
+
+  describe('Time-Based Queries', () => {
+    test('should query 3-week time window correctly', async () => {
+      // Test time-based memory retrieval
+    });
+
+    test('should categorize messages by week accurately', async () => {
+      // Test week categorization logic
+    });
+
+    test('should identify recently modified messages', async () => {
+      // Test last_modified queries
+    });
+  });
+
+  describe('Memory Consolidation', () => {
+    test('should consolidate fresh memories to long-term storage', async () => {
+      // Test memory consolidation process
+    });
+
+    test('should implement memory decay correctly', async () => {
+      // Test relationship strength decay
+    });
+
+    test('should archive old memories properly', async () => {
+      // Test memory archival process
+    });
+  });
+});
+```
+
+### **2. Database Performance Tests**
+
+#### **Query Performance Tests**
+```typescript
+// tests/database/performance.test.ts
+describe('Database Performance', () => {
+  test('should handle large conversation histories efficiently', async () => {
+    // Test with 10k+ messages
+  });
+
+  test('should maintain query performance with complex relationships', async () => {
+    // Test with dense relationship graphs
+  });
+
+  test('should scale time-based queries linearly', async () => {
+    // Test time window query performance
+  });
+});
+```
+
+## 🧠 **Memory System Tests Implementation Plan**
+
+### **1. Brain-Like Functionality Tests**
+
+#### **Working Memory Tests**
+```typescript
+// tests/memory/working-memory.test.ts
+describe('Working Memory System', () => {
+  test('should maintain 3-week time window', async () => {
+    // Test time window boundaries
+  });
+
+  test('should pull recently modified messages back to working memory', async () => {
+    // Test dynamic memory reactivation
+  });
+
+  test('should calculate memory strength accurately', async () => {
+    // Test memory strength algorithm
+  });
+
+  test('should respect Miller\'s magic number for recent items', async () => {
+    // Test working memory size limits
+  });
+});
+```
+
+#### **Episodic Memory Tests**
+```typescript
+// tests/memory/episodic-memory.test.ts
+describe('Episodic Memory System', () => {
+  test('should create conversation episodes correctly', async () => {
+    // Test episode creation and linking
+  });
+
+  test('should link related episodes through semantic connections', async () => {
+    // Test episode relationship building
+  });
+
+  test('should retrieve relevant episodes for context', async () => {
+    // Test episode retrieval and ranking
+  });
+});
+```
+
+#### **Semantic Memory Tests**
+```typescript
+// tests/memory/semantic-memory.test.ts
+describe('Semantic Memory System', () => {
+  test('should activate concepts based on conversation content', async () => {
+    // Test concept activation
+  });
+
+  test('should create concept associations through co-occurrence', async () => {
+    // Test concept relationship building
+  });
+
+  test('should spread activation through concept networks', async () => {
+    // Test activation spreading algorithm
+  });
+
+  test('should strengthen concepts through repeated usage', async () => {
+    // Test concept learning and strengthening
+  });
+});
+```
+
+### **2. Memory Consolidation Tests**
+
+#### **Sleep-Like Consolidation Tests**
+```typescript
+// tests/memory/consolidation.test.ts
+describe('Memory Consolidation System', () => {
+  test('should identify important memories for consolidation', async () => {
+    // Test importance scoring and selection
+  });
+
+  test('should create consolidated memory summaries', async () => {
+    // Test memory summarization
+  });
+
+  test('should maintain access to consolidated memories', async () => {
+    // Test consolidated memory retrieval
+  });
+
+  test('should run consolidation as background process', async () => {
+    // Test background consolidation execution
+  });
+});
+```
+
+## 🔌 **HTTP API Tests Implementation Plan**
+
+### **1. SMS API Integration Tests**
+
+#### **SMS Endpoint Tests**
+```typescript
+// tests/api/sms-api.test.ts
+describe('SMS API with Memory', () => {
+  let server: any;
+
+  beforeAll(async () => {
+    // Start test server
+  });
+
+  test('should process SMS with memory enhancement', async () => {
+    const response = await fetch('http://localhost:3000/api/sms/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phoneNumber: '+1234567890',
+        message: 'Schedule a meeting for tomorrow',
+        userId: 'test-user'
+      })
+    });
+
+    const result = await response.json();
+    
+    expect(response.status).toBe(200);
+    expect(result.success).toBe(true);
+    expect(result.memory_enhanced).toBe(true);
+    expect(result.brain_insights).toBeDefined();
+  });
+
+  test('should handle intervention with memory context', async () => {
+    // Test intervention logic with memory
+  });
+
+  test('should fallback gracefully on memory errors', async () => {
+    // Test error handling and fallback
+  });
+});
+```
+
+### **2. Chat API Integration Tests**
+
+#### **WebSocket API Tests**
+```typescript
+// tests/api/chat-api.test.ts
+describe('Chat WebSocket API with Memory', () => {
+  test('should establish WebSocket connection with memory context', async () => {
+    // Test WebSocket connection and memory integration
+  });
+
+  test('should process chat messages with memory enhancement', async () => {
+    // Test real-time chat with memory
+  });
+
+  test('should handle group chat memory correctly', async () => {
+    // Test group chat memory features
+  });
+});
+```
+
+### **3. Google Services API Tests**
+
+#### **Composio OAuth Tests**
+```typescript
+// tests/api/google-services.test.ts
+describe('Google Services API with Memory', () => {
+  test('should authenticate with Google services', async () => {
+    // Test OAuth flow
+  });
+
+  test('should execute calendar operations with memory', async () => {
+    // Test calendar API calls with memory enhancement
+  });
+
+  test('should execute task operations with memory', async () => {
+    // Test tasks API calls with memory enhancement
+  });
+
+  test('should handle API rate limits gracefully', async () => {
+    // Test rate limiting and retries
+  });
+});
+```
+
+## ⚡ **Performance Tests Implementation Plan**
+
+### **1. Load Testing**
+
+#### **High-Volume Message Processing**
+```typescript
+// tests/performance/load-testing.test.ts
+describe('Performance Load Testing', () => {
+  test('should handle 1000 concurrent SMS messages', async () => {
+    // Test high-volume SMS processing
+  });
+
+  test('should maintain memory performance under load', async () => {
+    // Test memory system performance
+  });
+
+  test('should scale Neo4j queries efficiently', async () => {
+    // Test database query performance
+  });
+});
+```
+
+### **2. Memory Efficiency Tests**
+
+#### **Memory Usage Testing**
+```typescript
+// tests/performance/memory-efficiency.test.ts
+describe('Memory Efficiency', () => {
+  test('should maintain constant memory usage for working memory', async () => {
+    // Test memory bounds and cleanup
+  });
+
+  test('should efficiently cache memory contexts', async () => {
+    // Test Redis caching performance
+  });
+
+  test('should handle large conversation histories', async () => {
+    // Test scalability with large datasets
+  });
+});
+```
+
+## 🎪 **End-to-End Tests Implementation Plan**
+
+### **1. Complete User Scenarios**
+
+#### **Full Conversation Lifecycle**
+```typescript
+// tests/e2e/conversation-lifecycle.test.ts
+describe('Complete Conversation Lifecycle', () => {
+  test('should handle week-long conversation with memory', async () => {
+    // Test complete user journey across multiple weeks
+    
+    // Week 1: Initial conversations
+    // Week 2: Build memory and context
+    // Week 3: Advanced memory-enhanced interactions
+    
+    // Verify memory evolution and learning
+  });
+
+  test('should maintain context across channel switches', async () => {
+    // SMS → Chat → SMS with memory continuity
+  });
+
+  test('should learn user preferences over time', async () => {
+    // Test preference learning and application
+  });
+});
+```
+
+## 🛠️ **Test Infrastructure Setup**
+
+### **1. Bun Test Configuration**
+
+#### **Base Test Setup**
+```typescript
+// tests/setup/test-config.ts
+import { beforeAll, afterAll, beforeEach, afterEach } from 'bun:test';
+
+// Global test configuration
+export const testConfig = {
+  neo4j: {
+    uri: 'bolt://localhost:7687',
+    user: 'neo4j',
+    password: 'test-password'
+  },
+  redis: {
+    host: 'localhost',
+    port: 6379,
+    db: 15 // Test database
+  },
+  timeouts: {
+    database: 5000,
+    api: 3000,
+    memory: 2000
+  }
+};
+
+// Test database setup
+export async function setupTestDatabase() {
+  // Initialize test Neo4j instance
+  // Clear existing data
+  // Setup test schema
+}
+
+export async function teardownTestDatabase() {
+  // Clean up test data
+  // Close connections
+}
+```
+
+### **2. Mock Services**
+
+#### **Composio Mock Service**
+```typescript
+// tests/mocks/composio-mock.ts
+export class MockComposioService {
+  async executeAction(params: any) {
+    // Mock Composio tool execution
+  }
+
+  async getTools(actions: string[]) {
+    // Mock tool definitions
+  }
+}
+```
+
+#### **OpenAI Mock Service**
+```typescript
+// tests/mocks/openai-mock.ts
+export class MockOpenAIService {
+  async chat.completions.create(params: any) {
+    // Mock OpenAI responses for testing
+  }
+}
+```
+
+### **3. Test Utilities**
+
+#### **Memory Test Helpers**
+```typescript
+// tests/utils/memory-helpers.ts
+export class MemoryTestHelpers {
+  static async createTestConversation(days: number) {
+    // Create test conversations with specific timestamps
+  }
+
+  static async simulateTimePassage(hours: number) {
+    // Simulate time passage for testing
+  }
+
+  static async verifyMemoryStrength(expected: number, actual: number) {
+    // Helper for memory strength assertions
+  }
+}
+```
+
+## 📊 **Test Coverage Requirements**
+
+### **Minimum Coverage Targets**
+- **Unit Tests**: 95% code coverage
+- **Integration Tests**: 100% critical path coverage
+- **Database Tests**: 100% query coverage
+- **Memory Tests**: 100% brain function coverage
+- **API Tests**: 100% endpoint coverage
+
+### **Coverage Reporting**
+```bash
+# Run tests with coverage
+bun test --coverage
+
+# Generate coverage reports
+bun test --coverage --coverage-reporter=html
+bun test --coverage --coverage-reporter=lcov
+```
+
+## 🚀 **Test Execution Plan**
+
+### **Development Workflow**
+1. **Red**: Write failing test first
+2. **Green**: Implement minimal code to pass
+3. **Refactor**: Improve code while keeping tests green
+4. **Repeat**: Continue for each feature
+
+### **Test Categories by Development Phase**
+
+#### **Phase 1: Core Memory System**
+- Unit tests for `BrainConversationManager`
+- Database tests for Neo4j operations
+- Memory system tests for working memory
+
+#### **Phase 2: Composio Integration** 
+- Integration tests for tool enhancement
+- API tests for Google services
+- Performance tests for tool execution
+
+#### **Phase 3: Advanced Memory Features**
+- Memory consolidation tests
+- Cross-channel memory tests
+- End-to-end scenario tests
+
+#### **Phase 4: Production Readiness**
+- Load testing and performance
+- Error handling and edge cases
+- Security and data integrity tests
+
+### **Continuous Integration Setup**
+```yaml
+# .github/workflows/test.yml
+name: Neo4j Memory System Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      neo4j:
+        image: neo4j:5.0
+        env:
+          NEO4J_AUTH: neo4j/test-password
+      redis:
+        image: redis:7
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v1
+      - run: bun install
+      - run: bun test:unit
+      - run: bun test:integration  
+      - run: bun test:e2e
+      - run: bun test:coverage
+```
+
+## 🎯 **Success Criteria**
+
+### **Test Quality Gates**
+- ✅ All tests pass consistently
+- ✅ 95%+ code coverage achieved
+- ✅ No flaky tests
+- ✅ Performance benchmarks met
+- ✅ Memory leaks eliminated
+- ✅ Error scenarios handled gracefully
+
+### **Memory System Validation**
+- ✅ 3-week time window works correctly
+- ✅ Recently modified nodes are pulled back to working memory
+- ✅ Memory strength calculation is accurate
+- ✅ Composio tool enhancement improves responses
+- ✅ Cross-channel memory correlation functions
+- ✅ Memory consolidation preserves important information
+
+This comprehensive test plan ensures that every aspect of the brain-like memory system is thoroughly validated, from individual functions to complete user scenarios. The test-driven approach will catch issues early and ensure the implementation is robust and reliable.

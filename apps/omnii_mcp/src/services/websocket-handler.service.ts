@@ -12,6 +12,7 @@ import {
   ExecutionContext,
   PlanState,
   ExecutionContextType,
+  BrainMemoryContext,
 } from "../types/action-planning.types";
 import { TimezoneManager } from "./timezone-manager";
 import { UnifiedGoogleManager } from "./unified-google-manager";
@@ -19,7 +20,7 @@ import { InterventionManager } from "./intervention-manager";
 import { randomBytes } from "crypto";
 import responseManager from "./response-manager";
 import { getObjectStructure, logObjectStructure } from "../utils/object-structure";
-import { isValidUnifiedToolResponse } from "@omnii/validators";
+import { isValidUnifiedToolResponse } from "../types/unified-response.validation";
 
 // Use Elysia's WebSocket type
 interface ElysiaWebSocket {
@@ -49,6 +50,8 @@ export class WebSocketHandlerService {
     this.interventionManager = new InterventionManager(this);
     this.actionPlanner = new ActionPlanner(this.interventionManager);
     this.entityManager = new EntityManager();
+    
+    console.log('🧠 WebSocketHandlerService initialized with brain memory integration');
   }
 
   /**
@@ -294,7 +297,7 @@ export class WebSocketHandlerService {
   }
 
   /**
-   * Handle message with action planner (same flow as SMS AI)
+   * Handle message with action planner (enhanced with brain memory)
    */
   private async handleWithActionPlanner(
     message: string,
@@ -306,8 +309,14 @@ export class WebSocketHandlerService {
     error?: string;
     authRequired: boolean;
     authUrl: string | null;
+    // NEW: Brain memory insights
+    brainMemoryUsed?: boolean;
+    memoryStrength?: number;
+    relatedConversations?: number;
   } | any> {
     try {
+      console.log(`[WebSocket] 🧠 Processing chat message with brain memory: "${message}" for user: ${userId}`);
+      
       // Generate session ID for this interaction
       const sessionId = randomBytes(16).toString("hex");
 
@@ -318,6 +327,29 @@ export class WebSocketHandlerService {
       console.log(
         `[WebSocket] 📍 Using timezone: ${userTimezone} for user: ${userId}`
       );
+
+      // NEW: Get brain memory context before processing
+      let brainMemoryContext: BrainMemoryContext | null = null;
+      let brainMemoryUsed = false;
+      
+      try {
+        console.log(`[WebSocket] 🧠 Retrieving brain memory context for chat user: ${userId}`);
+        brainMemoryContext = await productionBrainService.getBrainMemoryContext(
+          userId,
+          message,
+          'chat',
+          `chat_${userId}`, // Use chat ID format
+          {
+            prioritizeRecent: false, // Chat can use longer context
+            timeoutMs: 200 // Slightly more time for chat
+          }
+        );
+        brainMemoryUsed = true;
+        console.log(`[WebSocket] ✅ Brain memory retrieved: strength ${brainMemoryContext.consolidation_metadata.memory_strength.toFixed(2)}, ${brainMemoryContext.working_memory.recent_messages.length} recent messages`);
+      } catch (error) {
+        console.warn(`[WebSocket] ⚠️ Brain memory retrieval failed, continuing without context:`, error);
+        brainMemoryUsed = false;
+      }
 
       // Extract and resolve entities
       console.log(`[WebSocket] 🔍 Extracting entities from: "${message}"`);
@@ -345,7 +377,7 @@ export class WebSocketHandlerService {
         });
       }
 
-      // Create execution context
+      // Create execution context with brain memory enhancement
       const context: ExecutionContext = {
         entityId: userId,
         phoneNumber: userId, // Use userId as phoneNumber for WebSocket context
@@ -357,9 +389,19 @@ export class WebSocketHandlerService {
         sessionId,
         planState: PlanState.PENDING,
         context: ExecutionContextType.WEBSOCKET,
+        // NEW: Add brain memory context
+        brainMemoryContext: brainMemoryContext || undefined,
+        // NEW: Communication channel awareness
+        communicationChannel: 'chat',
+        // Chat metadata for brain memory
+        chatMetadata: {
+          chatId: `chat_${userId}`,
+          isGroupChat: false,
+          participants: [userId]
+        }
       };
 
-      // Create and execute plan
+      // Create and execute plan (ActionPlanner will use brain memory context if available)
       console.log(`[WebSocket] 🎯 Creating action plan...`);
       const plan = await this.actionPlanner.createPlan(
         message,
@@ -376,6 +418,18 @@ export class WebSocketHandlerService {
           result.success ? "completed" : "failed"
         }`
       );
+
+      // NEW: Store this chat conversation in brain memory (async, don't block response)
+      this.storeChatInBrainMemory(
+        userId,
+        message,
+        `chat_${userId}`,
+        true, // is_incoming = true for user messages
+        localDatetime,
+        result.success
+      ).catch((error: any) => {
+        console.warn(`[WebSocket] ⚠️ Failed to store chat in brain memory:`, error);
+      });
 
       // ✅ CRITICAL DEBUG: What did ActionPlanner return?
       console.log(`[WebSocket] 🔍 *** ACTIONPLANNER RESULT ANALYSIS ***`);
@@ -467,6 +521,38 @@ export class WebSocketHandlerService {
    */
   getConnectedUsers(): string[] {
     return Array.from(this.connections.keys());
+  }
+
+  /**
+   * NEW: Store chat conversation in brain memory (async)
+   */
+  private async storeChatInBrainMemory(
+    userId: string,
+    content: string,
+    chatId: string,
+    isIncoming: boolean,
+    localDatetime?: string,
+    success?: boolean
+  ): Promise<void> {
+    try {
+      await productionBrainService.manager.storeChatConversation({
+        user_id: userId,
+        content: content,
+        chat_id: chatId,
+        is_incoming: isIncoming,
+        websocket_session_id: this.connections.get(userId)?.id,
+        is_group_chat: false,
+        participants: [userId],
+        google_service_context: success ? {
+          service_type: 'tasks', // Default for chat processing
+          operation: 'chat_processed',
+          entity_ids: [userId]
+        } : undefined
+      });
+      console.log(`[WebSocket] 🧠💾 Stored chat in brain memory for ${chatId}`);
+    } catch (error) {
+      console.error(`[WebSocket] ❌ Brain memory storage failed:`, error);
+    }
   }
 
   /**

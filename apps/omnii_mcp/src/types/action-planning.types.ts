@@ -246,9 +246,13 @@ export interface EnhancedWorkflowDraft extends WorkflowDraft {
 }
 
 import { CachedEntity } from "./entity.types";
+import { BrainMemoryContext } from "./brain-memory-schemas";
+
+// Re-export for consistency across the application
+export { BrainMemoryContext } from "./brain-memory-schemas";
 
 /**
- * Execution context
+ * Execution context (enhanced with brain memory support)
  */
 export interface ExecutionContext {
   entityId: string;
@@ -261,6 +265,17 @@ export interface ExecutionContext {
   sessionId: string;
   planState: PlanState;
   context?: ExecutionContextType; // Use enum instead of string literals
+  
+  // NEW: Brain-like memory context (uses existing schema)
+  brainMemoryContext?: BrainMemoryContext;
+  // NEW: Communication channel awareness
+  communicationChannel?: 'sms' | 'chat' | 'websocket';
+  // Simplified chat context (maps to existing ChatMessage properties)
+  chatMetadata?: {
+    chatId: string;
+    isGroupChat?: boolean;
+    participants?: string[];
+  };
 }
 
 /**

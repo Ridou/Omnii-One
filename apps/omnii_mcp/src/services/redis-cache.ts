@@ -19,7 +19,7 @@ class RedisCache {
     }
 
     // Use public Railway Redis URL for both local and production
-    const redisUrl = process.env.REDIS_URL || "redis://default:udnAmLnQiUKdYkNFYIlrOpJmKzTtYlpm@redis-production-7aec.up.railway.app:6379";
+    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
     try {
       this.client = createClient({

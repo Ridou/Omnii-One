@@ -10,6 +10,8 @@ import {
   ExecutionContextType,
 } from "../types/action-planning.types";
 import { InterventionManager } from "./intervention-manager";
+import { productionBrainService } from "./memory/production-brain-service";
+import { BrainMemoryContext } from "../types/brain-memory-schemas";
 
 export class SimpleSMSAI {
   private openai: OpenAI;
@@ -33,6 +35,8 @@ export class SimpleSMSAI {
     this.interventionManager = new InterventionManager(); // No WebSocket handler for SMS
     this.actionPlanner = new ActionPlanner(this.interventionManager);
     this.entityManager = new EntityManager();
+
+    console.log('🧠 SimpleSMSAI initialized with brain memory integration');
   }
 
   async processMessage(
@@ -43,9 +47,12 @@ export class SimpleSMSAI {
     success: boolean;
     message: string;
     error?: string;
+    brainMemoryUsed?: boolean;
+    memoryStrength?: number;
+    relatedConversations?: number;
   }> {
     try {
-      console.log(`[SimpleSMSAI] Processing: "${message}" from ${phoneNumber}`);
+      console.log(`[SimpleSMSAI] 🧠 Processing with brain memory: "${message}" from ${phoneNumber}`);
 
       // Log the timezone info if provided
       if (localDatetime) {
@@ -86,15 +93,58 @@ export class SimpleSMSAI {
         );
       }
 
-      // Removed TasksMemoryManager for simplicity - was causing infinite loops
+      // NEW: Get brain memory context before processing
+      let brainMemoryContext: BrainMemoryContext | null = null;
+      let brainMemoryUsed = false;
+      
+      try {
+        console.log(`[SimpleSMSAI] 🧠 Retrieving brain memory context for ${phoneNumber}`);
+        brainMemoryContext = await productionBrainService.getBrainMemoryContext(
+          entityId,
+          message,
+          'sms',
+          phoneNumber,
+          {
+            prioritizeRecent: true, // SMS needs recent context
+            timeoutMs: 150 // Faster for SMS
+          }
+        );
+        brainMemoryUsed = true;
+        console.log(`[SimpleSMSAI] ✅ Brain memory retrieved: strength ${brainMemoryContext.consolidation_metadata.memory_strength.toFixed(2)}, ${brainMemoryContext.working_memory.recent_messages.length} recent messages`);
+      } catch (error) {
+        console.warn(`[SimpleSMSAI] ⚠️ Brain memory retrieval failed, continuing without context:`, error);
+        brainMemoryUsed = false;
+      }
 
-      // Use action planner for all messages
-      return await this.handleWithActionPlanner(
+      // Use action planner with brain memory enhancement
+      const result = await this.handleWithActionPlanner(
         message,
         phoneNumber,
         entityId,
-        localDatetime
+        localDatetime,
+        brainMemoryContext // Pass brain context to action planner
       );
+
+      // NEW: Store this SMS conversation in brain memory (async, don't block response)
+      this.storeSMSInBrainMemory(
+        entityId,
+        message,
+        phoneNumber,
+        true, // is_incoming = true for user messages
+        localDatetime,
+        result.success
+      ).catch(error => {
+        console.warn(`[SimpleSMSAI] ⚠️ Failed to store SMS in brain memory:`, error);
+      });
+
+      // Enhance response with brain memory insights
+      return {
+        ...result,
+        brainMemoryUsed,
+        memoryStrength: brainMemoryContext?.consolidation_metadata.memory_strength,
+        relatedConversations: brainMemoryContext?.working_memory.recent_messages.length || 0
+      };
+
     } catch (error) {
       console.error(`[SimpleSMSAI] Error:`, error);
       return {
@@ -102,6 +152,36 @@ export class SimpleSMSAI {
         message: "Sorry, I'm having trouble right now. Please try again later.",
         error: error instanceof Error ? error.message : "Unknown error",
       };
+    }
+  }
+
+  /**
+   * NEW: Store SMS conversation in brain memory (async)
+   */
+  private async storeSMSInBrainMemory(
+    userId: string,
+    content: string,
+    phoneNumber: string,
+    isIncoming: boolean,
+    localDatetime?: string,
+    success?: boolean
+  ): Promise<void> {
+    try {
+      await productionBrainService.manager.storeSMSConversation({
+        user_id: userId,
+        content: content,
+        phone_number: phoneNumber,
+        is_incoming: isIncoming,
+        local_datetime: localDatetime,
+        google_service_context: success ? {
+          service_type: 'tasks', // Default for SMS processing
+          operation: 'message_processed',
+          entity_ids: [userId]
+        } : undefined
+      });
+      console.log(`[SimpleSMSAI] 🧠💾 Stored SMS in brain memory for ${phoneNumber}`);
+    } catch (error) {
+      console.error(`[SimpleSMSAI] ❌ Brain memory storage failed:`, error);
     }
   }
 
@@ -194,13 +274,14 @@ export class SimpleSMSAI {
   }
 
   /**
-   * Handle messages using action planner
+   * Handle messages using action planner (enhanced with brain memory)
    */
   private async handleWithActionPlanner(
     message: string,
     phoneNumber: string,
     entityId: string,
-    localDatetime?: string
+    localDatetime?: string,
+    brainMemoryContext?: BrainMemoryContext | null // NEW: Brain memory context
   ): Promise<{
     success: boolean;
     message: string;
@@ -219,14 +300,13 @@ export class SimpleSMSAI {
         "America/Los_Angeles";
 
       // Extract and resolve entities
-
       const resolvedEntities = await this.entityManager.resolveEntities(
         message,
         ExecutionContextType.SMS
       );
       console.log(`[SimpleSMSAI] Resolved entities:`, resolvedEntities);
 
-      // Create execution context
+      // Create execution context with brain memory enhancement
       const context: ExecutionContext = {
         entityId,
         phoneNumber,
@@ -238,9 +318,11 @@ export class SimpleSMSAI {
         sessionId,
         planState: PlanState.PENDING,
         context: ExecutionContextType.SMS,
+        brainMemoryContext: brainMemoryContext || undefined,
+        communicationChannel: 'sms'
       };
 
-      // Create and execute plan
+      // Create and execute plan (ActionPlanner will use brain memory context if available)
       const plan = await this.actionPlanner.createPlan(
         message,
         resolvedEntities
