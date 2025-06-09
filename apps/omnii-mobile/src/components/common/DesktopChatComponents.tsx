@@ -27,17 +27,17 @@ export const ResponsiveChatInput: React.FC<ResponsiveChatInputProps> = ({
   const responsive = useResponsiveDesign();
   const { isDark } = useTheme();
   
-  if (responsive.isDesktop) {
+  if (responsive.effectiveIsDesktop) {
     return (
       <View className={cn(
-        "p-6 border-t",
+        "p-6 border-t flex justify-center",
         isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
       )}>
-        <View className="flex-row items-end space-x-4 max-w-4xl">
+        <View className="flex-row items-end space-x-4 max-w-3xl w-full">
           <View className="flex-1">
             <TextInput
               className={cn(
-                "rounded-2xl px-6 py-4 text-base border min-h-[52px] max-h-32",
+                "rounded-2xl px-6 py-4 text-base border min-h-[52px] max-h-32 shadow-sm",
                 isDark 
                   ? "bg-slate-800 border-slate-600 text-white placeholder:text-slate-400" 
                   : "bg-white border-gray-200 text-gray-900 placeholder:text-gray-500"
@@ -46,7 +46,7 @@ export const ResponsiveChatInput: React.FC<ResponsiveChatInputProps> = ({
               value={messageInput}
               onChangeText={setMessageInput}
               multiline
-              maxLength={1000} // Increased for desktop
+              maxLength={1000}
               editable={!isTyping && !pendingAction}
               style={{ fontSize: 16 }}
               placeholderTextColor={isDark ? '#94a3b8' : '#6b7280'}
@@ -54,7 +54,7 @@ export const ResponsiveChatInput: React.FC<ResponsiveChatInputProps> = ({
           </View>
           <TouchableOpacity
             className={cn(
-              "w-12 h-12 rounded-xl items-center justify-center",
+              "w-12 h-12 rounded-xl items-center justify-center shadow-sm",
               getSendButtonState() === 'enabled' 
                 ? "bg-indigo-600 hover:bg-indigo-700" 
                 : isDark ? "bg-slate-700" : "bg-gray-200"
@@ -72,7 +72,7 @@ export const ResponsiveChatInput: React.FC<ResponsiveChatInputProps> = ({
     );
   }
   
-  if (responsive.isTablet) {
+  if (responsive.effectiveIsTablet) {
     return (
       <View className={cn(
         "px-6 py-5 border-t",
@@ -172,7 +172,7 @@ export const DesktopQuickActions: React.FC = () => {
   );
 };
 
-// Desktop Chat Content with Split Layout
+// Enhanced Desktop Chat Content with Centered Layout
 interface DesktopChatContentProps {
   selectedTab: string;
   renderTabContent: () => React.ReactNode;
@@ -187,17 +187,21 @@ export const DesktopChatContent: React.FC<DesktopChatContentProps> = ({
   flatListRef
 }) => {
   const responsive = useResponsiveDesign();
+  const { isDark } = useTheme();
   
   if (selectedTab === 'conversation') {
     return (
-      <View className="flex-row h-full gap-6">
-        {/* Main chat area */}
-        <View className="flex-1">
+      <View className="flex-row h-full">
+        {/* Main chat area (center) - no unnecessary empty column */}
+        <View className="flex-1 flex flex-col">
           {renderTabContent()}
         </View>
         
-        {/* Sidebar with quick actions */}
-        <View className="w-80 border-l border-gray-200 dark:border-slate-600 pl-6">
+        {/* Right sidebar - Quick Actions */}
+        <View className={cn(
+          "w-80 border-l p-6",
+          isDark ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"
+        )}>
           <DesktopQuickActions />
         </View>
       </View>
@@ -206,8 +210,7 @@ export const DesktopChatContent: React.FC<DesktopChatContentProps> = ({
   
   if (selectedTab === 'actions') {
     return (
-      <View className="grid grid-cols-2 gap-6 h-full">
-        {/* Grid layout for actions */}
+      <View className="grid grid-cols-2 gap-6 h-full p-6">
         <View className="col-span-2">
           {renderTabContent()}
         </View>
@@ -216,11 +219,13 @@ export const DesktopChatContent: React.FC<DesktopChatContentProps> = ({
   }
   
   return (
-    <View style={{ maxWidth: 1200, width: '100%' }}>
+    <View style={{ maxWidth: 1200, width: '100%', padding: 24 }}>
       {renderTabContent()}
     </View>
   );
 };
+
+
 
 // Tablet optimized content wrapper
 export const TabletChatContent: React.FC<{

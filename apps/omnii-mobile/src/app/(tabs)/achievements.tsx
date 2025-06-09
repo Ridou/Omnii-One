@@ -441,11 +441,11 @@ export default function HomeScreen() {
     );
   }
 
-  // Only use responsive layout for tablet and desktop
-  if (responsive.isTablet || responsive.isDesktop) {
+  // Use responsive layout for browsers (including mobile) and larger screens
+  if (responsive.shouldUseResponsiveLayout) {
     // Enhanced content rendering for tablet/desktop only
     const renderResponsiveContent = () => {
-      if (responsive.isDesktop) {
+      if (responsive.effectiveIsDesktop) {
         return (
           <DesktopAchievementsContent 
             selectedTab={selectedTab}
@@ -457,7 +457,7 @@ export default function HomeScreen() {
         );
       }
       
-      if (responsive.isTablet) {
+      if (responsive.effectiveIsTablet) {
         return (
           <TabletAchievementsContent 
             selectedTab={selectedTab}

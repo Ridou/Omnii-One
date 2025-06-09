@@ -1,4 +1,4 @@
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 
 export const ResponsiveBreakpoints = {
   mobile: {
@@ -29,6 +29,17 @@ export const useResponsiveDesign = () => {
   const isDesktop = windowWidth >= ResponsiveBreakpoints.desktop.small;
   const isLargeDesktop = windowWidth >= ResponsiveBreakpoints.desktop.large;
   
+  // Detect browser environment (web vs native)
+  const isBrowser = Platform.OS === 'web';
+  const isNative = !isBrowser;
+  
+  // Enhanced responsive logic - use responsive layouts for web or larger screens
+  const shouldUseResponsiveLayout = isBrowser || isTablet || isDesktop;
+  
+  // Treat mobile browsers as tablets for enhanced layouts
+  const effectiveIsTablet = isTablet || (isBrowser && isMobile);
+  const effectiveIsDesktop = isDesktop;
+  
   return {
     windowWidth,
     windowHeight,
@@ -38,6 +49,11 @@ export const useResponsiveDesign = () => {
     isTablet,
     isDesktop,
     isLargeDesktop,
+    isBrowser,
+    isNative,
+    shouldUseResponsiveLayout,
+    effectiveIsTablet,
+    effectiveIsDesktop,
     
     // Mobile-optimized spacing following existing SACRED_SPACING pattern
     spacing: {

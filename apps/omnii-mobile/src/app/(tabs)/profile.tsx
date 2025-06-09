@@ -786,11 +786,11 @@ export default function ProfileScreen() {
     }
   };
 
-  // Only use responsive layout for tablet and desktop
-  if (responsive.isTablet || responsive.isDesktop) {
+  // Use responsive layout for browsers (including mobile) and larger screens
+  if (responsive.shouldUseResponsiveLayout) {
     // Enhanced content rendering for tablet/desktop only
     const renderResponsiveContent = () => {
-      if (responsive.isDesktop) {
+      if (responsive.effectiveIsDesktop) {
         return (
           <DesktopProfileContent 
             selectedTab={selectedTab}
@@ -805,7 +805,7 @@ export default function ProfileScreen() {
         );
       }
       
-      if (responsive.isTablet) {
+      if (responsive.effectiveIsTablet) {
         return (
           <TabletProfileContent 
             selectedTab={selectedTab}

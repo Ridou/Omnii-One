@@ -960,11 +960,11 @@ export default function ChatScreen() {
         );
     };
 
-    // Only use responsive layout for tablet and desktop
-    if (responsive.isTablet || responsive.isDesktop) {
+      // Use responsive layout for browsers (including mobile) and larger screens
+  if (responsive.shouldUseResponsiveLayout) {
         // Enhanced content rendering for tablet/desktop only
         const renderResponsiveContent = () => {
-            if (responsive.isDesktop) {
+            if (responsive.effectiveIsDesktop) {
                 return (
                     <DesktopChatContent 
                         selectedTab={selectedTab}
@@ -975,7 +975,7 @@ export default function ChatScreen() {
                 );
             }
             
-            if (responsive.isTablet) {
+            if (responsive.effectiveIsTablet) {
                 return (
                     <TabletChatContent 
                         selectedTab={selectedTab}
@@ -1040,6 +1040,7 @@ export default function ChatScreen() {
                 header={<ChatHeader />}
                 renderTabContent={renderResponsiveContent}
                 inputArea={chatInputArea}
+                inputInMainArea={true}
             />
         );
     }

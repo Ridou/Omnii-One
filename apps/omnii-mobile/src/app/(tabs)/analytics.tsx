@@ -713,11 +713,11 @@ export default function AnalyticsScreen() {
     );
   }
 
-  // Only use responsive layout for tablet and desktop
-  if (responsive.isTablet || responsive.isDesktop) {
+  // Use responsive layout for browsers (including mobile) and larger screens
+  if (responsive.shouldUseResponsiveLayout) {
     // Enhanced content rendering for tablet/desktop only
     const renderResponsiveContent = () => {
-      if (responsive.isDesktop) {
+      if (responsive.effectiveIsDesktop) {
         return (
           <DesktopAnalyticsContent 
             selectedTab={selectedTab}
@@ -727,7 +727,7 @@ export default function AnalyticsScreen() {
         );
       }
       
-      if (responsive.isTablet) {
+      if (responsive.effectiveIsTablet) {
         return (
           <TabletAnalyticsContent 
             selectedTab={selectedTab}

@@ -21,6 +21,7 @@ interface ResponsiveTabLayoutProps<T = string> {
   header?: React.ReactNode;
   renderTabContent: () => React.ReactNode;
   inputArea?: React.ReactNode;
+  inputInMainArea?: boolean; // For chat: put input in main content area, not sidebar
   className?: string;
 }
 
@@ -32,6 +33,7 @@ export const ResponsiveTabLayout = <T = string>({
   header,
   renderTabContent,
   inputArea,
+  inputInMainArea = false,
   className
 }: ResponsiveTabLayoutProps<T>) => {
   const responsive = useResponsiveDesign();
@@ -91,7 +93,7 @@ export const ResponsiveTabLayout = <T = string>({
   }
 
   // Desktop layout with sidebar
-  if (responsive.isDesktop) {
+  if (responsive.effectiveIsDesktop) {
     return (
       <SafeAreaView className={cn(
         "flex-1 flex-row",
@@ -126,7 +128,7 @@ export const ResponsiveTabLayout = <T = string>({
             </View>
           </ScrollView>
 
-          {inputArea && (
+          {inputArea && !inputInMainArea && (
             <View className={cn(
               "p-4 border-t",
               isDark ? "border-slate-600" : "border-gray-200"
@@ -141,6 +143,12 @@ export const ResponsiveTabLayout = <T = string>({
           <DesktopContentArea>
             {renderTabContent()}
           </DesktopContentArea>
+          
+          {inputArea && inputInMainArea && (
+            <View>
+              {inputArea}
+            </View>
+          )}
         </View>
       </SafeAreaView>
     );

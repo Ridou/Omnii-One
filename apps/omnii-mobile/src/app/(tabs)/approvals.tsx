@@ -576,7 +576,7 @@ export default function ApprovalsScreen() {
 
   // Enhanced content rendering for desktop
   const renderResponsiveContent = () => {
-    if (responsive.isDesktop) {
+    if (responsive.effectiveIsDesktop) {
       return (
         <DesktopApprovalsContent
           filteredTasks={filteredTasks}
@@ -588,7 +588,7 @@ export default function ApprovalsScreen() {
       );
     }
     
-    if (responsive.isTablet) {
+    if (responsive.effectiveIsTablet) {
       return (
         <TabletApprovalsContent
           filteredTasks={filteredTasks}
@@ -688,8 +688,8 @@ export default function ApprovalsScreen() {
     );
   }
 
-  // Only use responsive layout for tablet and desktop
-  if (responsive.isTablet || responsive.isDesktop) {
+  // Use responsive layout for browsers (including mobile) and larger screens
+  if (responsive.shouldUseResponsiveLayout) {
     // Header component for tablet/desktop
     const ApprovalsHeader = () => (
       <View className="flex-row items-start justify-between">
