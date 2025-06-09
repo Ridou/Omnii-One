@@ -21,6 +21,7 @@ import { randomBytes } from "crypto";
 import responseManager from "./response-manager";
 import { getObjectStructure, logObjectStructure } from "../utils/object-structure";
 import { isValidUnifiedToolResponse } from "../types/unified-response.validation";
+import { productionBrainService } from "./memory/production-brain-service";
 
 // Use Elysia's WebSocket type
 interface ElysiaWebSocket {
