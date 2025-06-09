@@ -142,7 +142,7 @@ alwaysApply: false
 
 - ✅ **AI Analysis Results** (Real production data)
   ```
-  "Schedule a meeting for tomorrow" → intent: "calendar", sentiment: 0.1, importance: 0.7
+   "Schedule a meeting for tomorrow" → intent: "calendar", sentiment: 0.1, importance: 0.7
   "Can you help me find my contacts?" → intent: "request", sentiment: 0.2, importance: 0.7
   "Send an email to the team" → intent: "task", sentiment: 0.2, importance: 0.8
   "I love this new feature!" → intent: "info", sentiment: 0.8, importance: 0.6
