@@ -4,7 +4,7 @@ import {
   ContactListData, 
   ContactDataSchema,
   ContactListDataSchema 
-} from "../../types/unified-response.validation";
+} from "@omnii/validators";
 import { UnifiedResponseBuilder, UnifiedToolResponse } from "../../types/unified-response.types";
 
 // ✅ Use Unified Schemas from Frontend (Single Source of Truth)

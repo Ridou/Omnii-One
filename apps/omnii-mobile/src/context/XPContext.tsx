@@ -7,7 +7,7 @@ import {
   XPProgress, 
   validateXPUpdate,
   isValidXPUpdate
-} from '~/types/unified-response.validation';
+} from '@omnii/validators';
 import type { 
   LevelProgression,
   ContextualNudge,

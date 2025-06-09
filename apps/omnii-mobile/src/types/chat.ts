@@ -1,4 +1,20 @@
-// Chat System Types - Following analytics.ts pattern
+// Chat System Types - Using unified validators from @omnii/validators
+
+import type {
+  UnifiedToolResponse,
+  EmailData,
+  EmailListData,
+  SingleEmailData,
+  CalendarData,
+  CalendarListData,
+  ContactData,
+  ContactListData,
+  SingleContactData,
+  TaskData,
+  GeneralData,
+  UnifiedAction,
+  ServiceType
+} from '@omnii/validators';
 
 export interface ChatMessage {
   id: string;
@@ -17,11 +33,11 @@ export interface ChatMessage {
     category?: string; // Response category
     result?: string; // Action result
     
-    // NEW: Component data for rich rendering (building off existing structure)
+    // Component data for rich rendering (using unified types)
     componentData?: ComponentData;
     componentActions?: ComponentAction[];
     
-    // NEW: Server-side unified response (complete structured data)
+    // Server-side unified response (using unified type)
     unifiedResponse?: UnifiedToolResponse;
     
     // EXISTING: Keep for backward compatibility
@@ -31,7 +47,7 @@ export interface ChatMessage {
       resultEmoji: string;
       resultName: string;
       hasResponse: boolean;
-      // NEW: Enhanced display data from server
+      // Enhanced display data from server
       title?: string;
       subtitle?: string;
       actions?: ComponentAction[];
@@ -113,128 +129,19 @@ export interface ChatState {
   error: string | null;
 }
 
-// NEW: Component data types (aligned with MessageComponents.tsx)
+// Component data types (using unified types from validators)
 export type ComponentData = 
   | SingleEmailData 
   | EmailListData 
-  | CalendarEventData 
+  | CalendarData 
   | CalendarListData
   | ContactData 
+  | ContactListData
+  | SingleContactData
   | TaskData 
   | GeneralData;
 
-// NEW: Email list for multiple emails (extending existing EmailData pattern)
-export interface EmailListData {
-  emails: EmailData[];
-  totalCount: number;
-  unreadCount: number;
-  query?: string;
-  hasMore?: boolean;
-}
-
-// NEW: Enhanced EmailData (aligned with MessageComponents.tsx)
-export interface EmailData {
-  id?: string;
-  subject: string;
-  from: string;
-  to: string[];
-  body: string;
-  // NEW: Enhanced fields from raw Gmail data
-  messageText?: string; // Full message content from raw.data.messages[].messageText
-  preview?: string;     // Email preview/snippet from raw.data.messages[].preview
-  sender?: string;      // Detailed sender info from raw.data.messages[].sender
-  date?: string;
-  isRead?: boolean;
-  isDraft?: boolean;
-  threadId?: string;
-  // NEW: Additional Gmail-specific fields
-  messageId?: string;   // Gmail message ID from raw.data.messages[].messageId
-  messageTimestamp?: string; // Timestamp from raw.data.messages[].messageTimestamp
-  labelIds?: string[];  // Gmail label IDs from raw.data.messages[].labelIds
-  attachments?: {
-    name: string;
-    type: string;
-    size: number;
-    downloadUrl?: string;
-  }[];
-}
-
-// NEW: Single email wrapper for consistency
-export interface SingleEmailData {
-  email: EmailData;
-}
-
-// NEW: Calendar event data (aligned with MessageComponents.tsx)
-export interface CalendarEventData {
-  id?: string;
-  title: string;
-  start: string; // ISO string
-  end: string;   // ISO string
-  attendees: {
-    email: string;
-    name?: string;
-    status?: 'accepted' | 'declined' | 'pending';
-  }[];
-  location?: string;
-  description?: string;
-  meetingLink?: string;
-}
-
-// NEW: Calendar list for multiple events
-export interface CalendarListData {
-  events: CalendarEventData[];
-  totalCount: number;
-  dateRange?: {
-    start: string;
-    end: string;
-  };
-}
-
-// NEW: Enhanced ContactData (aligned with MessageComponents.tsx)
-export interface ContactData {
-  id?: string;
-  name: string;
-  firstName?: string;
-  lastName?: string;
-  emails: {
-    address: string;
-    type: 'work' | 'personal' | 'other';
-  }[];
-  phones: {
-    number: string;
-    type: 'work' | 'mobile' | 'home' | 'other';
-  }[];
-  company?: string;
-  title?: string;
-  photoUrl?: string;
-}
-
-// NEW: Enhanced TaskData (aligned with MessageComponents.tsx)
-export interface TaskData {
-  id?: string;
-  title: string;
-  description?: string;
-  dueDate?: string; // ISO string
-  status: 'completed' | 'pending' | 'in_progress';
-  priority?: 'high' | 'medium' | 'low';
-  list: string;
-  listId?: string;
-  completedDate?: string;
-}
-
-// NEW: General data for non-specific responses
-export interface GeneralData {
-  content: string;
-  summary?: string;
-  suggestions?: string[];
-  references?: {
-    title: string;
-    url?: string;
-    type: string;
-  }[];
-}
-
-// NEW: Component actions (aligned with server UnifiedAction)
+// Component actions (aligned with unified UnifiedAction)
 export interface ComponentAction {
   id: string;
   label: string;
@@ -243,31 +150,19 @@ export interface ComponentAction {
   command?: string;
 }
 
-// NEW: Server unified response interface (aligned with server types)
-export interface UnifiedToolResponse {
-  type: 'email' | 'calendar' | 'contact' | 'task' | 'general';
-  success: boolean;
-  data: {
-    ui: {
-      title: string;
-      subtitle?: string;
-      content: string;
-      icon: string;
-      actions: ComponentAction[];
-      metadata: {
-        category: string;
-        confidence: number;
-        timestamp: string;
-        source?: string;
-      };
-    };
-    structured?: ComponentData;
-    raw?: any;
-  };
-  message: string;
-  authRequired?: boolean;
-  authUrl?: string;
-  timestamp: string;
-  id: string;
-  userId: string;
-}
+// Re-export unified types for convenience
+export type {
+  UnifiedToolResponse,
+  EmailData,
+  EmailListData,
+  SingleEmailData,
+  CalendarData,
+  CalendarListData,
+  ContactData,
+  ContactListData,
+  SingleContactData,
+  TaskData,
+  GeneralData,
+  UnifiedAction,
+  ServiceType
+};

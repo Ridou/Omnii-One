@@ -12,7 +12,7 @@ import {
   isCompleteTaskOverview,
   isContactListData,
   isCalendarListData
-} from '~/types/unified-response.validation';
+} from '@omnii/validators';
 
 interface ChatMessageProps {
   message: ChatMessageType;

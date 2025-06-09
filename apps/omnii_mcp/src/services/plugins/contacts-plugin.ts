@@ -11,7 +11,7 @@ import { ComposioApp, GoogleContactsAction } from "../../types/composio-enums";
 import { ExecutionContextType } from "../../types/action-planning.types";
 import {
   ContactData, ServiceType
-} from "../../types/unified-response.validation";
+} from "@omnii/validators";
 import { UnifiedResponseBuilder, UnifiedToolResponse } from "../../types/unified-response.types";
 import {
   GoogleContactSchema,

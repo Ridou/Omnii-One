@@ -35,6 +35,16 @@ import { BRAND_COLORS } from '~/lib/assets';
 import { cn } from '~/utils/cn';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { ChatTab, ChatTabConfig, ChatMessage as ChatMessageType } from '~/types/chat';
+import type { 
+  UnifiedToolResponse,
+  EmailData,
+  EmailListData,
+  CalendarData,
+  CalendarListData,
+  ContactData,
+  TaskData,
+  GeneralData
+} from '@omnii/validators';
 import { UpArrowIcon, RightArrowIcon, CalendarIcon, GmailIcon, ContactsIcon, TasksIcon } from '~/icons/ChatIcons';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { ResponsiveChatInput, DesktopChatContent, TabletChatContent } from '~/components/common/DesktopChatComponents';

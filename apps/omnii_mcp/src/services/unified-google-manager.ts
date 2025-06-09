@@ -8,7 +8,7 @@ import { ContactsPlugin } from "./plugins/contacts-plugin";
 import { EmailPlugin } from "./plugins/email-plugin";
 import { ExecutionContextType } from "../types/action-planning.types";
 import { UnifiedToolResponse } from "../types/unified-response.types";
-import { isValidUnifiedToolResponse, validateUnifiedToolResponse } from "../types/unified-response.validation";
+import { isValidUnifiedToolResponse, validateUnifiedToolResponse } from "@omnii/validators";
 import {
   GoogleServiceType, getGoogleServiceConfig
 } from "../types/composio-enums";

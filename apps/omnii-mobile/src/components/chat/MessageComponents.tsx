@@ -18,7 +18,7 @@ import type {
   CalendarListData,
   ContactData,
   ContactListData,
-} from '~/types/unified-response.validation';
+} from '@omnii/validators';
 
 // ✅ RUNTIME IMPORTS: Import type guards and enums as regular imports for runtime usage
 import {
@@ -28,7 +28,7 @@ import {
   isTaskListsData,
   isTaskListWithTasks,
   isCompleteTaskOverview,
-} from '~/types/unified-response.validation';
+} from '@omnii/validators';
 
 // Base component props (enhanced)
 interface BaseComponentProps {

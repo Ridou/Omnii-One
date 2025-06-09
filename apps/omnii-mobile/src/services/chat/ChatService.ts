@@ -31,7 +31,7 @@ import {
   type CompleteTaskOverview,
   type TaskListWithTasks,
   type TaskData
-} from '~/types/unified-response.validation';
+} from '@omnii/validators';
 
 // Also import from chat types for complete EmailData definition
 import type { 
@@ -322,22 +322,7 @@ export class ChatService {
         console.log('[ChatService] - Has more emails:', emailList.hasMore);
         
         if (emailList.emails && emailList.emails.length > 0) {
-          console.log('[ChatService] - First email keys:', Object.keys(emailList.emails[0]));
-          console.log('[ChatService] - Sample email data:', {
-            subject: emailList.emails[0].subject,
-            from: emailList.emails[0].from,
-            sender: (emailList.emails[0] as any).sender,
-            isRead: emailList.emails[0].isRead,
-            date: emailList.emails[0].date,
-            messageTimestamp: (emailList.emails[0] as any).messageTimestamp,
-            hasMessageText: !!(emailList.emails[0] as any).messageText,
-            messageTextLength: (emailList.emails[0] as any).messageText?.length || 0,
-            hasPreview: !!(emailList.emails[0] as any).preview,
-            previewLength: (emailList.emails[0] as any).preview?.length || 0,
-            hasLabelIds: !!(emailList.emails[0] as any).labelIds,
-            labelIdsCount: (emailList.emails[0] as any).labelIds?.length || 0,
-            labelIds: (emailList.emails[0] as any).labelIds
-          });
+        
           
           // ✅ NEW: Enhanced field statistics
           const enhancedStats = {

@@ -16,7 +16,7 @@ import {
 } from "../../types/unified-response.types";
 import {
   ServiceType,
-} from "../../types/unified-response.validation";
+} from "@omnii/validators";
 import * as path from 'path';
 
 /**

@@ -14,7 +14,7 @@ import {
   isValidUnifiedToolResponse, 
   validateUnifiedToolResponse,
   safeParseUnifiedToolResponse
-} from "./types/unified-response.validation";
+} from "@omnii/validators";
 import { logObjectStructure } from "./utils/object-structure";
 
 // RAILWAY DEBUGGING - Add this at the very start

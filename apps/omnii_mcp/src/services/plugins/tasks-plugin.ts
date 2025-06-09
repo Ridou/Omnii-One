@@ -10,20 +10,21 @@ import { GoogleTasksAction } from "../../types/composio-enums";
 import {
   UnifiedToolResponse,
   UnifiedResponseBuilder,
-  TaskData, TaskListData,
-  TaskListsData,
-  UnifiedAction,
-  TaskListWithTasks,
-  CompleteTaskOverview
 } from "../../types/unified-response.types";
 import {
   ServiceType,
+  TaskData, 
+  TaskListData,
+  TaskListsData,
+  UnifiedAction,
+  TaskListWithTasks,
+  CompleteTaskOverview,
   TaskListsDataSchema,
   TaskListDataSchema,
   TaskDataSchema,
   TaskListWithTasksSchema,
   CompleteTaskOverviewSchema
-} from "../../types/unified-response.validation";
+} from "@omnii/validators";
 import { getObjectStructure } from "../../utils/object-structure";
 
 export class TasksPlugin implements GoogleServicePlugin {

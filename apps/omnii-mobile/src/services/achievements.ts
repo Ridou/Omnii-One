@@ -8,7 +8,7 @@ import {
   type AchievementStats,
   validateAchievementProgressResult,
   validateAchievementStats
-} from '~/types/unified-response.validation';
+} from '@omnii/validators';
 
 /**
  * Achievement Service

@@ -19,7 +19,7 @@ import { InterventionManager } from "./intervention-manager";
 import { randomBytes } from "crypto";
 import responseManager from "./response-manager";
 import { getObjectStructure, logObjectStructure } from "../utils/object-structure";
-import { isValidUnifiedToolResponse } from "../types/unified-response.validation";
+import { isValidUnifiedToolResponse } from "@omnii/validators";
 
 // Use Elysia's WebSocket type
 interface ElysiaWebSocket {

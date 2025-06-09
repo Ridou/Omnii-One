@@ -36,7 +36,7 @@ import {
   ENTITY_PLACEHOLDER,
   slugify,
 } from "./action-planner/action-planner-utils";
-import { isValidUnifiedToolResponse, validateUnifiedToolResponse } from "../types/unified-response.validation";
+import { isValidUnifiedToolResponse, validateUnifiedToolResponse } from "@omnii/validators";
 import { getObjectStructure, logObjectStructure } from '../utils/object-structure';
 import { EmailStepExecutor } from './action-planner/step-executors/email-step-executor';
 import { CalendarStepExecutor } from './action-planner/step-executors/calendar-step-executor';

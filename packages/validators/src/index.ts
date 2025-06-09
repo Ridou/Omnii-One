@@ -1,8 +1,11 @@
-import { z } from "zod/v4";
-
-export const unused = z.string().describe(
-  `This lib is currently not used as we use drizzle-zod for simple schemas
-   But as your application grows and you need other validators to share
-   with back and frontend, you can put them in here
-  `,
-);
+// Main exports for all unified schemas
+export * from './schemas/task';
+export * from './schemas/email';
+export * from './schemas/calendar';
+export * from './schemas/contact';
+export * from './schemas/xp';
+export * from './schemas/achievement';
+export * from './schemas/general';
+export * from './schemas/unified-response';
+export * from './types';
+export * from './guards';

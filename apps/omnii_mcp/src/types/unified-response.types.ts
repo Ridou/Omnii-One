@@ -1,4 +1,4 @@
-// ✅ PHASE 1: Import types from Zod validation schemas
+// ✅ PHASE 1: Import types from unified validators package
 import { 
   UnifiedToolResponse,
   EmailData,
@@ -18,7 +18,7 @@ import {
   TaskListWithTasks,
   CompleteTaskOverview,
   ServiceType,
-} from './unified-response.validation';
+} from '@omnii/validators';
 
 // Re-export the Zod-inferred types for backward compatibility
 export type {

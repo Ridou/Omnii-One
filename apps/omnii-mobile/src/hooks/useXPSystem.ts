@@ -1,5 +1,5 @@
 import { useXPContext } from '~/context/XPContext';
-import { XPUpdate, XPProgress } from '~/types/unified-response.validation';
+import { XPUpdate, XPProgress } from '@omnii/validators';
 
 export interface XPSystemHook {
   // Current XP state
