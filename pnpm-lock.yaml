@@ -274,6 +274,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.12.0
         version: 1.12.1
+      '@omnii/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@omnii/validators':
         specifier: workspace:*
         version: link:../../packages/validators

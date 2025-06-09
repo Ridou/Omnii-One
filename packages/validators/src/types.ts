@@ -1,56 +1,57 @@
-import { z } from 'zod';
-import {
-  // Task schemas
-  ServiceType,
-  UnifiedActionSchema,
-  TaskDataSchema,
-  TaskListSchema,
-  TaskListDataSchema,
-  TaskListsDataSchema,
-  TaskListWithTasksSchema,
-  CompleteTaskOverviewSchema,
-  LegacyTaskDataSchema,
-} from './schemas/task';
-import {
-  // Email schemas
-  EmailDataSchema,
-  EmailListDataSchema,
-  SingleEmailDataSchema,
-} from './schemas/email';
-import {
-  // Calendar schemas
-  CalendarDataSchema,
-  CalendarListDataSchema,
-} from './schemas/calendar';
-import {
-  // Contact schemas
-  ContactDataSchema,
-  ContactListDataSchema,
-  SingleContactDataSchema,
-} from './schemas/contact';
-import {
-  // XP schemas
-  XPUpdateSchema,
-  XPProgressSchema,
-  LevelProgressionSchema,
-  XPRealtimeUpdateSchema,
-} from './schemas/xp';
+import { z } from "zod/v4";
+
 import {
   // Achievement schemas
   AchievementDataSchema,
   AchievementProgressResultSchema,
   AchievementStatsSchema,
-} from './schemas/achievement';
+} from "./schemas/achievement";
+import {
+  // Calendar schemas
+  CalendarDataSchema,
+  CalendarListDataSchema,
+} from "./schemas/calendar";
+import {
+  // Contact schemas
+  ContactDataSchema,
+  ContactListDataSchema,
+  SingleContactDataSchema,
+} from "./schemas/contact";
+import {
+  // Email schemas
+  EmailDataSchema,
+  EmailListDataSchema,
+  SingleEmailDataSchema,
+} from "./schemas/email";
 import {
   // General schemas
   GeneralDataSchema,
-  UIMetadataSchema,
   UIDataSchema,
-} from './schemas/general';
+  UIMetadataSchema,
+} from "./schemas/general";
+import {
+  CompleteTaskOverviewSchema,
+  LegacyTaskDataSchema,
+  // Task schemas
+  ServiceType,
+  TaskDataSchema,
+  TaskListDataSchema,
+  TaskListSchema,
+  TaskListsDataSchema,
+  TaskListWithTasksSchema,
+  UnifiedActionSchema,
+} from "./schemas/task";
 import {
   // Unified response schema
   UnifiedToolResponseSchema,
-} from './schemas/unified-response';
+} from "./schemas/unified-response";
+import {
+  LevelProgressionSchema,
+  XPProgressSchema,
+  XPRealtimeUpdateSchema,
+  // XP schemas
+  XPUpdateSchema,
+} from "./schemas/xp";
 
 // ✅ TASK TYPES: Zod-inferred for type safety
 export type TaskData = z.infer<typeof TaskDataSchema>;
@@ -70,7 +71,7 @@ export type SingleEmailData = z.infer<typeof SingleEmailDataSchema>;
 export type CalendarData = z.infer<typeof CalendarDataSchema>;
 export type CalendarListData = z.infer<typeof CalendarListDataSchema>;
 
-// ✅ CONTACT TYPES: Zod-inferred for type safety  
+// ✅ CONTACT TYPES: Zod-inferred for type safety
 export type ContactData = z.infer<typeof ContactDataSchema>;
 export type ContactListData = z.infer<typeof ContactListDataSchema>;
 export type SingleContactData = z.infer<typeof SingleContactDataSchema>;
@@ -83,7 +84,9 @@ export type XPRealtimeUpdate = z.infer<typeof XPRealtimeUpdateSchema>;
 
 // ✅ ACHIEVEMENT SYSTEM TYPES: Zod-inferred for type safety
 export type AchievementData = z.infer<typeof AchievementDataSchema>;
-export type AchievementProgressResult = z.infer<typeof AchievementProgressResultSchema>;
+export type AchievementProgressResult = z.infer<
+  typeof AchievementProgressResultSchema
+>;
 export type AchievementStats = z.infer<typeof AchievementStatsSchema>;
 
 // ✅ GENERAL TYPES: Zod-inferred for type safety
@@ -96,4 +99,4 @@ export type UnifiedToolResponse = z.infer<typeof UnifiedToolResponseSchema>;
 
 // ✅ SHARED TYPES
 export type UnifiedAction = z.infer<typeof UnifiedActionSchema>;
-export { ServiceType }; 
+export { ServiceType };

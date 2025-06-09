@@ -21,5 +21,5 @@ export const getBaseUrl = () => {
     // For static export or production, use production domain
     return "https://omnii.net";
   }
-  return `http://${localhost}:3000`;
+     return `http://${localhost}:8000`;
 };

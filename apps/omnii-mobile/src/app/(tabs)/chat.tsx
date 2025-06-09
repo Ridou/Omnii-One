@@ -51,8 +51,8 @@ import { ResponsiveChatInput, DesktopChatContent, TabletChatContent } from '~/co
 import { useResponsiveDesign } from '~/utils/responsive';
 
 import { trpc } from '~/utils/api';
-import { useQuery } from "@tanstack/react-query";
 import { useXPContext } from '~/context/XPContext';
+import { useTasks, useTaskStats } from '~/hooks/useTasks';
 
 
 // Updated tab configuration following profile.tsx pattern
@@ -96,12 +96,29 @@ export default function ChatScreen() {
     const { cheeringState, triggerCheering } = useMascotCheering();
     const mascotStage = getMascotStageByLevel(currentLevel);
 
-    const { data } = useQuery({
-        queryKey: ['hello', 'test'],
-        queryFn: () => trpc.hello.test,
-        enabled: !!user // Only run when user is available
-    });
-    // console.log('trpc data:',JSON.stringify(data, null, 2))
+    // ✅ ACTUAL tRPC TASKS INTEGRATION:
+    const { 
+        tasksOverview, 
+        isLoading: tasksLoading, 
+        hasError: tasksError,
+        totalTasks,
+        totalLists,
+        totalCompleted,
+        totalPending,
+        totalOverdue,
+        refetch: refetchTasks
+    } = useTasks();
+    
+    const { stats: taskStats } = useTaskStats();
+    
+    // Log tasks data when available (for debugging)
+    if (tasksOverview) {
+        console.log(`📋 Tasks loaded via tRPC: ${totalTasks} tasks across ${totalLists} lists`);
+        console.log(`✅ Completed: ${totalCompleted}, ⏳ Pending: ${totalPending}, ⚠️ Overdue: ${totalOverdue}`);
+        if (taskStats) {
+            console.log(`📊 Completion rate: ${taskStats.completion_rate}%`);
+        }
+    }
 
 
 
@@ -570,6 +587,122 @@ export default function ChatScreen() {
                     "text-base mb-6",
                     isDark ? "text-slate-400" : "text-gray-600"
                 )}>Tap to execute common tasks</Text>
+
+                {/* ✅ REAL tRPC TASKS DATA DISPLAY */}
+                {tasksOverview && (
+                    <View className={cn(
+                        "rounded-2xl p-4 mb-6 border",
+                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                    )}>
+                        <View className="flex-row items-center mb-3">
+                            <TasksIcon size={24} />
+                            <Text className={cn(
+                                "text-lg font-bold ml-2",
+                                isDark ? "text-white" : "text-gray-900"
+                            )}>📋 Your Tasks (via tRPC)</Text>
+                        </View>
+                        
+                        <View className="gap-2">
+                            <View className="flex-row justify-between">
+                                <Text className={cn(
+                                    "text-sm",
+                                    isDark ? "text-slate-300" : "text-gray-600"
+                                )}>Total Tasks:</Text>
+                                <Text className={cn(
+                                    "text-sm font-bold",
+                                    isDark ? "text-white" : "text-gray-900"
+                                )}>{totalTasks}</Text>
+                            </View>
+                            
+                            <View className="flex-row justify-between">
+                                <Text className={cn(
+                                    "text-sm",
+                                    isDark ? "text-slate-300" : "text-gray-600"
+                                )}>Completed:</Text>
+                                <Text className="text-sm font-bold text-green-500">
+                                    {totalCompleted}
+                                </Text>
+                            </View>
+                            
+                            <View className="flex-row justify-between">
+                                <Text className={cn(
+                                    "text-sm",
+                                    isDark ? "text-slate-300" : "text-gray-600"
+                                )}>Pending:</Text>
+                                <Text className="text-sm font-bold text-blue-500">
+                                    {totalPending}
+                                </Text>
+                            </View>
+                            
+                            {totalOverdue > 0 && (
+                                <View className="flex-row justify-between">
+                                    <Text className={cn(
+                                        "text-sm",
+                                        isDark ? "text-slate-300" : "text-gray-600"
+                                    )}>Overdue:</Text>
+                                    <Text className="text-sm font-bold text-red-500">
+                                        {totalOverdue}
+                                    </Text>
+                                </View>
+                            )}
+                            
+                            {taskStats && (
+                                <View className="flex-row justify-between pt-2 mt-2 border-t border-gray-300 dark:border-slate-600">
+                                    <Text className={cn(
+                                        "text-sm",
+                                        isDark ? "text-slate-300" : "text-gray-600"
+                                    )}>Completion Rate:</Text>
+                                    <Text className={cn(
+                                        "text-sm font-bold",
+                                        taskStats.completion_rate >= 80 ? "text-green-500" :
+                                        taskStats.completion_rate >= 60 ? "text-yellow-500" : "text-red-500"
+                                    )}>{taskStats.completion_rate}%</Text>
+                                </View>
+                            )}
+                        </View>
+                        
+                        <TouchableOpacity 
+                            className="mt-3 p-2 bg-blue-500 rounded-lg"
+                            onPress={() => refetchTasks()}
+                            disabled={tasksLoading}
+                        >
+                            <Text className="text-white text-center font-semibold">
+                                {tasksLoading ? "Refreshing..." : "🔄 Refresh Tasks"}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {tasksLoading && !tasksOverview && (
+                    <View className={cn(
+                        "rounded-2xl p-4 mb-6 border",
+                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                    )}>
+                        <Text className={cn(
+                            "text-center text-sm",
+                            isDark ? "text-slate-400" : "text-gray-600"
+                        )}>🔄 Loading tasks via tRPC...</Text>
+                    </View>
+                )}
+
+                {tasksError && (
+                    <View className={cn(
+                        "rounded-2xl p-4 mb-6 border border-red-500",
+                        isDark ? "bg-red-900/20" : "bg-red-50"
+                    )}>
+                        <Text className="text-red-500 text-center text-sm">
+                            ❌ Failed to load tasks via tRPC
+                        </Text>
+                        <TouchableOpacity 
+                            className="mt-2 p-2 bg-red-500 rounded-lg"
+                            onPress={() => refetchTasks()}
+                        >
+                            <Text className="text-white text-center font-semibold">
+                                🔄 Retry
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
                 
                 <View className="gap-3">
                     {quickActions.map((action) => (

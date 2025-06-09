@@ -33,11 +33,7 @@ import {
   type TaskData
 } from '@omnii/validators';
 
-// Also import from chat types for complete EmailData definition
-import type { 
-  EmailData as EnhancedEmailData,
-  EmailListData as EnhancedEmailListData 
-} from '~/types/chat';
+
 
 // ✅ TODO: Will import from local Zod validation file
 
@@ -1000,5 +996,118 @@ export class ChatService {
   isSingleContactMessage(message: any): boolean {
     return message.metadata?.category === ResponseCategory.CONTACT_SINGLE && 
            !!this.getSingleContactFromMessage(message);
+  }
+
+  // ✅ NEW: tRPC Integration helpers
+  
+  /**
+   * Send a direct tRPC command for tasks overview
+   * This bypasses WebSocket and calls tRPC directly
+   * Usage: const result = await chatService.sendTasksOverviewCommand();
+   */
+  async sendTasksOverviewCommand(): Promise<void> {
+    // This would integrate with tRPC client directly
+    // For now, send through WebSocket with special command
+    await this.sendMessage('show my complete task overview', {
+      command_type: 'direct_trpc',
+      trpc_procedure: 'tasks.getCompleteOverview',
+      bypass_websocket: false // Keep false to go through WebSocket for consistency
+    });
+  }
+
+  /**
+   * Check if a message should trigger a tRPC call
+   * Usage: if (chatService.shouldUseTrpcForMessage(content)) { ... }
+   */
+  shouldUseTrpcForMessage(content: string): boolean {
+    const taskKeywords = ['tasks', 'todo', 'task list', 'complete overview'];
+    return taskKeywords.some(keyword => 
+      content.toLowerCase().includes(keyword)
+    );
+  }
+
+  // ✅ ENHANCED tRPC Integration Methods
+  
+  /**
+   * Add a message to chat indicating tRPC fetch is happening
+   * Usage: chatService.notifyTRPCFetchStarted('tasks');
+   */
+  notifyTRPCFetchStarted(dataType: string): void {
+    const message = {
+      id: this.generateId(),
+      content: `🔄 Fetching your ${dataType} via tRPC (direct API)...`,
+      sender: 'ai' as const,
+      timestamp: new Date().toISOString(),
+      type: 'text' as const,
+      metadata: {
+        source: 'trpc',
+        action: `${dataType}_fetch_initiated`,
+        category: ResponseCategory.GENERAL
+      }
+    };
+    
+    this.addMessage(message);
+  }
+
+  /**
+   * Add a success message when tRPC data is loaded
+   * Usage: chatService.notifyTRPCDataLoaded('tasks', tasksOverview);
+   */
+  notifyTRPCDataLoaded(dataType: string, data: any): void {
+    let summary = '';
+    
+    if (dataType === 'tasks' && data) {
+      summary = `📊 **Summary:**\n• Total Tasks: ${data.totalTasks || 0}\n• Completed: ${data.totalCompleted || 0}\n• Pending: ${data.totalPending || 0}\n• Lists: ${data.totalLists || 0}`;
+      
+      if (data.totalOverdue > 0) {
+        summary += `\n• ⚠️ Overdue: ${data.totalOverdue}`;
+      }
+    }
+    
+    const message = {
+      id: this.generateId(),
+      content: `✅ ${dataType.charAt(0).toUpperCase() + dataType.slice(1)} loaded successfully via tRPC!\n\n${summary}`,
+      sender: 'ai' as const,
+      timestamp: new Date().toISOString(),
+      type: 'text' as const,
+      metadata: {
+        source: 'trpc',
+        action: `${dataType}_loaded`,
+        data: data,
+        category: ResponseCategory.GENERAL
+      }
+    };
+    
+    this.addMessage(message);
+  }
+
+  /**
+   * Add an error message when tRPC fetch fails
+   * Usage: chatService.notifyTRPCError('tasks', error);
+   */
+  notifyTRPCError(dataType: string, error: any): void {
+    const message = {
+      id: this.generateId(),
+      content: `❌ Failed to load ${dataType} via tRPC: ${error.message || 'Unknown error'}`,
+      sender: 'ai' as const,
+      timestamp: new Date().toISOString(),
+      type: 'text' as const,
+      metadata: {
+        source: 'trpc',
+        action: `${dataType}_error`,
+        error: error,
+        category: ResponseCategory.ERROR
+      }
+    };
+    
+    this.addMessage(message);
+  }
+
+  /**
+   * Add a message to the chat
+   * Usage: chatService.addMessage(message);
+   */
+  private addMessage(message: any): void {
+    this.emit('message', message);
   }
 }

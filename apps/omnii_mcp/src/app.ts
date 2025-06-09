@@ -596,4 +596,6 @@ app.onError(({ code, set }) => {
   }
 });
 
+console.log('app',app)
+
 // export default app;
