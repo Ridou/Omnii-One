@@ -15,22 +15,22 @@ import { Animated, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlobalCelebrationProvider } from '~/components/common/GlobalCelebrationProvider';
 
-// V4 Color System - consistent with global.css
-const V4_COLORS = {
+// V4 Color System - theme-aware colors
+const getV4Colors = (isDark: boolean) => ({
   // Primary OMNII Purple
   primary: '#6366f1',
   
-  // Tab States - consistent with global theme
-  tabActive: '#ffffff',
-  tabInactive: '#9ca3af',
+  // Tab States - theme aware
+  tabActive: isDark ? '#ffffff' : '#1f2937',
+  tabInactive: isDark ? '#9ca3af' : '#6b7280',
   
-  // Backgrounds
-  tabBarBg: '#1f2937',  // gray-800
+  // Backgrounds - theme aware
+  tabBarBg: isDark ? '#1f2937' : '#ffffff',  // dark: gray-800, light: white
   
   // System colors from theme
   accent: '#3b82f6',
-  muted: '#6b7280',
-} as const;
+  muted: isDark ? '#6b7280' : '#9ca3af',
+});
 
 // Breathing animation component for newly unlocked tabs - DISABLED to prevent visual artifacts
 function BreathingIcon({ children, isNewlyUnlocked }: { 
@@ -50,6 +50,9 @@ export default function TabLayout() {
   const { theme, isDark } = useTheme();
   const router = useRouter();
   
+  // Get theme-aware colors
+  const V4_COLORS = getV4Colors(isDark);
+  
   // Use XPContext for all level/feature management
   const { 
     currentLevel, 
@@ -62,6 +65,7 @@ export default function TabLayout() {
   } = useXPContext();
   
   const [newlyUnlockedTabs, setNewlyUnlockedTabs] = useState<Set<string>>(new Set());
+  const [visitedFeatures, setVisitedFeatures] = useState<Set<string>>(new Set());
   
   // Check if user is authenticated
   const isAuthenticated = !!(user && session);
@@ -86,14 +90,37 @@ export default function TabLayout() {
     return () => clearTimeout(clearTimer);
   }, [currentLevel, isFeatureUnlocked]);
 
+  // Reset visited features when user changes
+  useEffect(() => {
+    if (user?.id) {
+      setVisitedFeatures(new Set());
+      console.log('🔄 [TabLayout] Reset visited features for user:', user.email);
+    }
+  }, [user?.id]);
+
   // Award exploration XP when users visit newly unlocked features
   const awardExplorationXP = async (feature: string) => {
     if (isFeatureUnlocked(feature)) {
+      // ✅ CLIENT-SIDE PROTECTION: Check if we've already visited this feature
+      if (visitedFeatures.has(feature)) {
+        console.log(`⚡ [TabLayout] Already visited ${feature}, skipping XP award`);
+        return;
+      }
+
       try {
+        // Mark as visited BEFORE the server call to prevent race conditions
+        setVisitedFeatures(prev => new Set(prev).add(feature));
+        
         await recordFeatureVisit(feature);
-        console.log(`✨ [TabLayout] Recorded visit to ${feature}`);
+        console.log(`✨ [TabLayout] Recorded first visit to ${feature}`);
       } catch (error) {
         console.error(`❌ [TabLayout] Failed to record visit to ${feature}:`, error);
+        // On error, remove from visited set to allow retry
+        setVisitedFeatures(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(feature);
+          return newSet;
+        });
       }
     }
   };

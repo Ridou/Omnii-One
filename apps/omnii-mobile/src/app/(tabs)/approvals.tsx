@@ -140,7 +140,7 @@ export default function ApprovalsScreen() {
     isSystemReady,
   } = useOnboardingContext();
   const { xpProgress, currentLevel, currentXP, awardXP } = useXPSystem();
-  const { recordFeatureVisit, getNextCelebration, showCelebration } = useXPContext();
+  const { getNextCelebration, showCelebration } = useXPContext();
   
   // Mascot state management
   const { cheeringState, triggerCheering } = useMascotCheering();
@@ -156,10 +156,7 @@ export default function ApprovalsScreen() {
   const [autoStartAttempted, setAutoStartAttempted] = useState(false);
   const router = useRouter();
 
-  // Record feature visit for exploration tracking
-  useEffect(() => {
-    recordFeatureVisit('approvals');
-  }, []);
+
 
   // AUTO-START ONBOARDING: Start onboarding when system is ready and conditions are met
   useEffect(() => {

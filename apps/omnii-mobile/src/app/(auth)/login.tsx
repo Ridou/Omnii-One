@@ -161,9 +161,65 @@ export default function LoginScreen() {
   const [isAttempting, setIsAttempting] = useState(false);
   const [showRetryOption, setShowRetryOption] = useState(false);
   
-  // Add missing debug state variables
-  const [isDebugging, setIsDebugging] = useState(false);
-  const [debugResults, setDebugResults] = useState<string | null>(null);
+  // Add animated logo state (from landing page)
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+  const logoRotateAnim = useRef(new Animated.Value(0)).current;
+  const logoScaleAnim = useRef(new Animated.Value(1)).current;
+  
+  // Add animation effects (copied from landing page)
+  useEffect(() => {
+    const startBounceAnimation = () => {
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -10, // Slightly smaller bounce for login page
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Repeat the animation after a delay
+        setTimeout(startBounceAnimation, 4000); // Slightly longer delay
+      });
+    };
+
+    // Logo rotation animation (continuous)
+    Animated.loop(
+      Animated.timing(logoRotateAnim, {
+        toValue: 1,
+        duration: 10000, // Slightly slower rotation
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Logo scale/glow animation (continuous)
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoScaleAnim, {
+          toValue: 1.03, // Slightly smaller scale
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoScaleAnim, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+    
+    // Start the bounce animation after a short delay
+    setTimeout(startBounceAnimation, 1500);
+  }, [bounceAnim, logoRotateAnim, logoScaleAnim]);
+
+  // Interpolate rotation value
+  const logoRotation = logoRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const handleGoogleLogin = async () => {
     setError('');
@@ -237,71 +293,6 @@ export default function LoginScreen() {
       setError(errorMessage);
     } finally {
       setIsAttempting(false);
-    }
-  };
-
-  // Add missing debug handler functions
-  const handleRunDiagnostics = async () => {
-    setIsDebugging(true);
-    setDebugResults(null);
-    
-    try {
-      console.log('🔍 Running OAuth diagnostics...');
-      const results = await runOAuthDiagnostics();
-      setDebugResults(`Diagnostics completed: ${JSON.stringify(results, null, 2)}`);
-    } catch (err) {
-      console.error('🚫 Diagnostics failed:', err);
-      setDebugResults(`Diagnostics failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setIsDebugging(false);
-    }
-  };
-
-  const handleTestMinimalOAuth = async () => {
-    setIsDebugging(true);
-    setDebugResults(null);
-    
-    try {
-      console.log('🧪 Testing minimal OAuth...');
-      const results = await testOAuthWithMinimalScopes();
-      setDebugResults(`Minimal OAuth test: ${JSON.stringify(results, null, 2)}`);
-    } catch (err) {
-      console.error('🚫 Minimal OAuth test failed:', err);
-      setDebugResults(`Minimal OAuth test failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setIsDebugging(false);
-    }
-  };
-
-  const handleTestEnvironment = async () => {
-    setIsDebugging(true);
-    setDebugResults(null);
-    
-    try {
-      console.log('🌍 Testing environment detection...');
-      const results = await testEnvironmentDetection();
-      setDebugResults(`Environment test: ${JSON.stringify(results, null, 2)}`);
-    } catch (err) {
-      console.error('🚫 Environment test failed:', err);
-      setDebugResults(`Environment test failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setIsDebugging(false);
-    }
-  };
-
-  const handleTestScopes = async () => {
-    setIsDebugging(true);
-    setDebugResults(null);
-    
-    try {
-      console.log('🔧 Testing scope configuration...');
-      const results = await getCurrentScopeInfo();
-      setDebugResults(`Scope test: ${JSON.stringify(results, null, 2)}`);
-    } catch (err) {
-      console.error('🚫 Scope test failed:', err);
-      setDebugResults(`Scope test failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setIsDebugging(false);
     }
   };
 
@@ -444,46 +435,6 @@ export default function LoginScreen() {
     retryButtonText: {
       textAlign: 'center',
     },
-    // Add missing debug styles
-    debugContainer: {
-      marginTop: 32,
-      width: '100%',
-      maxWidth: 320,
-      backgroundColor: '#f8f9fa',
-      borderRadius: 16,
-      padding: 20,
-      borderWidth: 1,
-      borderColor: '#e9ecef',
-    },
-    debugTitle: {
-      marginBottom: 12,
-      alignSelf: 'flex-start',
-    },
-    debugButton: {
-      backgroundColor: '#FFFFFF',
-      borderWidth: 1,
-      borderColor: '#e9ecef',
-      borderRadius: 8,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      marginBottom: 8,
-      alignItems: 'center',
-      minHeight: 44,
-      justifyContent: 'center',
-    },
-    debugButtonDisabled: {
-      opacity: 0.6,
-      backgroundColor: '#f8f9fa',
-    },
-    debugResults: {
-      marginTop: 12,
-      backgroundColor: '#FFFFFF',
-      borderRadius: 8,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: '#e9ecef',
-      maxHeight: 200,
-    },
   });
 
   return (
@@ -508,11 +459,21 @@ export default function LoginScreen() {
 
       {/* Main content */}
       <View style={styles.content}>
-        {/* Logo and app branding */}
+        {/* Logo and app branding with animation */}
         <View style={styles.logoContainer}>
-          <View style={{ transform: [{ scale: 1.3 }] }}>
-            <AppLogo />
-          </View>
+          <Animated.View
+            style={{
+              transform: [
+                { translateY: bounceAnim },
+                { rotate: logoRotation },
+                { scale: logoScaleAnim },
+              ],
+            }}
+          >
+            <View style={{ transform: [{ scale: 1.3 }] }}>
+              <AppLogo />
+            </View>
+          </Animated.View>
           <BrandText size="medium" style={{ marginTop: 12 }}>OMNII</BrandText>
           <BodyText style={{ ...styles.subtitle, color: "#666666" }}>Your AI-Powered Task Assistant</BodyText>
         </View>
@@ -560,7 +521,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Benefits section */}
+        {/* Benefits section with updated Google services */}
         <View style={styles.benefitsContainer}>
           <BodyText style={styles.benefitsTitle}>🔗 Why Google Login?</BodyText>
           
@@ -569,7 +530,7 @@ export default function LoginScreen() {
               <Text style={styles.checkmarkText}>✓</Text>
             </View>
             <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
-              Seamless integration with Gmail, Calendar & Drive
+              Seamless integration with Gmail, Calendar, Tasks, and Contacts
             </CaptionText>
           </View>
 
@@ -600,67 +561,6 @@ export default function LoginScreen() {
             </CaptionText>
           </View>
         </View>
-
-        {/* Debug section - only visible in development */}
-        {__DEV__ && (
-          <View style={styles.debugContainer}>
-            <BodyText style={styles.debugTitle}>🔧 Debug Tools</BodyText>
-            
-            <TouchableOpacity 
-              style={[styles.debugButton, isDebugging && styles.debugButtonDisabled]}
-              onPress={handleRunDiagnostics}
-              disabled={isDebugging}
-            >
-              {isDebugging ? (
-                <ActivityIndicator size="small" color="#666666" />
-              ) : (
-                <CaptionText style={{ color: "#666666" }}>Run OAuth Diagnostics</CaptionText>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.debugButton, isDebugging && styles.debugButtonDisabled]}
-              onPress={handleTestMinimalOAuth}
-              disabled={isDebugging}
-            >
-              {isDebugging ? (
-                <ActivityIndicator size="small" color="#666666" />
-              ) : (
-                <CaptionText style={{ color: "#666666" }}>Test Minimal OAuth</CaptionText>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.debugButton, isDebugging && styles.debugButtonDisabled]}
-              onPress={handleTestEnvironment}
-              disabled={isDebugging}
-            >
-              {isDebugging ? (
-                <ActivityIndicator size="small" color="#666666" />
-              ) : (
-                <CaptionText style={{ color: "#666666" }}>Test Environment Detection</CaptionText>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.debugButton, isDebugging && styles.debugButtonDisabled]}
-              onPress={handleTestScopes}
-              disabled={isDebugging}
-            >
-              {isDebugging ? (
-                <ActivityIndicator size="small" color="#666666" />
-              ) : (
-                <CaptionText style={{ color: "#666666" }}>Test Scope Configuration</CaptionText>
-              )}
-            </TouchableOpacity>
-
-            {debugResults ? (
-              <View style={styles.debugResults}>
-                <CaptionText style={{ color: "#666666" }}>{debugResults}</CaptionText>
-              </View>
-            ) : null}
-          </View>
-        )}
       </View>
     </SafeAreaView>
   );

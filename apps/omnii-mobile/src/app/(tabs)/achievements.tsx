@@ -57,7 +57,7 @@ export default function HomeScreen() {
   const { user, session, isInitialized } = useAuth();
   const { isDark } = useTheme();
   const { data: achievementData, loading, error } = useFetchAchievements();
-  const { recordFeatureVisit } = useXPContext();
+
   const { xpProgress, currentLevel, currentXP, awardXP } = useXPSystem();
   const router = useRouter();
   
@@ -110,10 +110,7 @@ export default function HomeScreen() {
     setSelectedTab(tab);
   };
 
-  // Record feature visit for exploration tracking
-  useEffect(() => {
-    recordFeatureVisit('achievements');
-  }, []);
+
 
   // Show landing page for non-authenticated users
   if (!isAuthenticated) {

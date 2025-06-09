@@ -74,7 +74,7 @@ const chatTabs: ChatTabConfig[] = [
 export default function ChatScreen() {
     const { user } = useAuth();
     const { isDark } = useTheme();
-    const { recordFeatureVisit } = useXPContext();
+  
     const { currentLevel, currentXP } = useXPContext();
     const router = useRouter();
 
@@ -91,10 +91,7 @@ export default function ChatScreen() {
 
 
 
-    // Record feature visit for exploration tracking
-    useEffect(() => {
-        recordFeatureVisit('chat');
-    }, []);
+    
 
     // Use WebSocket chat hook instead of mock data
     const {

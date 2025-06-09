@@ -64,7 +64,7 @@ const analyticsTabs: AnalyticsTabConfig[] = [
 export default function AnalyticsScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
-  const { recordFeatureVisit } = useXPContext();
+
   const { currentLevel } = useXPContext();
   const { analytics, isLoading, refetch } = useFetchAnalytics();
   const router = useRouter();
@@ -76,10 +76,7 @@ export default function AnalyticsScreen() {
   const [selectedTab, setSelectedTab] = useState<AnalyticsTab>('dashboard');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Record feature visit for exploration tracking
-  useEffect(() => {
-    recordFeatureVisit('analytics');
-  }, []);
+
 
   // Animation refs (SIMPLIFIED - no more glow effects)
   const scaleAnimations = useRef(

@@ -1,0 +1,1355 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Neo4j Memory & Conversation Management Implementation (Integrated)
+
+## 🎯 **Executive Summary**
+
+This plan details a **Neo4j-based conversation memory system** that integrates seamlessly with the existing Omnii **SMS and Chat** infrastructure, Google services plugins, and Zod validation schemas. The implementation enhances existing services without disrupting current functionality and provides unified memory across all communication channels.
+
+## 🚨 **CRITICAL INTEGRATION RECOMMENDATIONS (Added After Codebase Review)**
+
+### **✅ ExecutionContext Extension Required**
+The existing `ExecutionContext` interface in `action-planning.types.ts` needs to be extended:
+
+```typescript
+// apps/omnii_mcp/src/types/action-planning.types.ts (Enhanced)
+export interface ExecutionContext {
+  entityId: string;
+  phoneNumber: string;
+  userTimezone: string;
+  localDatetime?: string;
+  stepResults: Map<string, StepResult>;
+  currentStepIndex: 0;
+  entities: CachedEntity[];
+  sessionId: string;
+  planState: PlanState;
+  context?: ExecutionContextType;
+  // NEW: Memory context integration
+  memoryContext?: MemoryContext;
+  // NEW: Communication channel support
+  communicationChannel?: 'sms' | 'chat' | 'websocket';
+  chatContext?: {
+    chatId: string;
+    threadId?: string;
+    isGroupChat?: boolean;
+    participants?: string[];
+  };
+}
+```
+
+### **✅ SimpleSMSAI Integration Points Validated**
+Your existing `SimpleSMSAI.processMessage()` has perfect integration points:
+- ✅ Phone-to-email mapping is already implemented
+- ✅ Intervention handling works perfectly with memory
+- ✅ Entity resolution and action planning are compatible
+- ✅ Redis session tracking can be enhanced with conversation IDs
+
+### **✅ Chat Integration Strategy**
+Perfect integration points for chat messages:
+- ✅ WebSocket message handlers can be enhanced with memory storage
+- ✅ Chat message processing can follow SMS patterns
+- ✅ Unified memory context works across SMS and chat
+- ✅ Cross-channel conversation threading supported
+
+## 🔍 **Codebase Integration Analysis**
+
+### **Existing Infrastructure We're Building Upon**
+- ✅ `SimpleSMSAI` - Complete SMS processing pipeline  
+- ✅ **Chat/WebSocket Infrastructure** - Real-time messaging system
+- ✅ `UnifiedGoogleManager` - Plugin-based Google services architecture  
+- ✅ `unified-response.validation.ts` - Comprehensive Zod validation schemas
+- ✅ `neo4j-service.ts` - Basic Neo4j service foundation
+- ✅ `ActionPlanner` - Multi-step operation orchestration
+- ✅ `TwilioService` - SMS communication management
+
+### **Integration Strategy**
+- **Extend** existing services without breaking changes
+- **Enhance** current SMS and Chat flows with memory context
+- **Integrate** with Google services plugins for comprehensive tracking
+- **Build upon** existing Zod validation patterns
+- **Unify** memory across SMS and Chat channels
+
+## 📊 **Enhanced Zod Validation Schemas (Extending Existing)**
+
+### **Memory Schemas Extension with Chat Support**
+
+```typescript
+// apps/omnii-mobile/src/types/memory-schemas.ts
+import { z } from 'zod';
+import { UnifiedToolResponseSchema, ServiceType } from './unified-response.validation';
+
+// Base conversation schema integrated with existing SMS and Chat flows
+export const ConversationSchema = z.object({
+  id: z.string().uuid("Conversation ID must be valid UUID"),
+  user_id: z.string().min(1, "User ID required"),
+  type: z.enum(['sms', 'chat', 'websocket', 'email', 'tool_execution', 'voice', 'system'], {
+    errorMap: () => ({ message: "Invalid conversation type" })
+  }),
+  content: z.string().min(1).max(50000, "Content too long"),
+  intent: z.string().optional(),
+  sentiment: z.number().min(-1).max(1).optional(),
+  entities_extracted: z.array(z.object({
+    text: z.string(),
+    type: z.string(),
+    confidence: z.number().min(0).max(1),
+    start_offset: z.number().optional(),
+    end_offset: z.number().optional()
+  })).default([]),
+  timestamp: z.string().datetime("Invalid timestamp format"),
+  source: z.string().min(1, "Source required"), // Phone number for SMS, chat ID for chat
+  thread_id: z.string().uuid("Thread ID must be valid UUID"),
+  processing_status: z.enum(['pending', 'processed', 'error', 'archived']).default('pending'),
+  ai_summary: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  requires_response: z.boolean().default(false),
+  response_deadline: z.string().datetime().optional(),
+  // Integration with existing Google services
+  google_service_context: z.object({
+    service_type: z.enum(['calendar', 'tasks', 'contacts', 'email']).optional(),
+    operation: z.string().optional(),
+    entity_ids: z.array(z.string()).optional(),
+    success: z.boolean().optional()
+  }).optional(),
+  // NEW: Chat-specific context
+  chat_context: z.object({
+    chat_id: z.string().optional(),
+    is_group_chat: z.boolean().default(false),
+    participants: z.array(z.string()).default([]),
+    websocket_session_id: z.string().optional(),
+    message_sequence: z.number().optional(),
+    reply_to_message_id: z.string().optional()
+  }).optional(),
+  // NEW: Cross-channel context
+  channel_context: z.object({
+    primary_channel: z.enum(['sms', 'chat', 'websocket']),
+    related_channels: z.array(z.enum(['sms', 'chat', 'websocket', 'email'])).default([]),
+    user_preference: z.enum(['sms', 'chat', 'websocket']).optional()
+  }).optional()
+});
+
+// Enhanced semantic tag schema with chat support
+export const SemanticTagSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100).regex(/^[a-z0-9_-]+$/, "Tag name must be lowercase alphanumeric"),
+  display_name: z.string().min(1).max(100),
+  category: z.enum(['entity', 'topic', 'action', 'emotion', 'temporal', 'location', 'person', 'event', 'google_service', 'chat_context']),
+  usage_count: z.number().int().min(0).default(0),
+  confidence: z.number().min(0).max(1),
+  semantic_weight: z.number().min(0).max(1),
+  created_at: z.string().datetime(),
+  last_used: z.string().datetime(),
+  user_id: z.string().min(1),
+  synonyms: z.array(z.string()).default([]),
+  related_concepts: z.array(z.string().uuid()).default([]),
+  auto_generated: z.boolean().default(true),
+  user_validated: z.boolean().default(false),
+  deprecation_date: z.string().datetime().optional(),
+  parent_tag: z.string().uuid().optional(),
+  // Integration with Google services
+  google_service_metadata: z.object({
+    service_type: z.enum(['calendar', 'tasks', 'contacts', 'email']).optional(),
+    operation_type: z.string().optional(),
+    frequency: z.number().optional()
+  }).optional(),
+  // NEW: Chat-specific metadata
+  chat_metadata: z.object({
+    channel_origin: z.enum(['sms', 'chat', 'websocket']).optional(),
+    frequency_in_chat: z.number().optional(),
+    group_chat_relevance: z.number().min(0).max(1).optional()
+  }).optional()
+});
+
+// Memory context schema optimized for SMS and Chat
+export const MemoryContextSchema = z.object({
+  conversations: z.array(z.object({
+    conversation: ConversationSchema,
+    tags: z.array(z.string()),
+    relevance: z.number().min(0).max(1),
+    concepts: z.array(z.any()).default([]),
+    thread_context: z.array(z.any()).default([]),
+    channel_context: z.object({
+      channel: z.enum(['sms', 'chat', 'websocket']),
+      channel_weight: z.number().min(0).max(1).default(1.0)
+    }).optional()
+  })).default([]),
+  concepts: z.array(z.any()).default([]),
+  tags: z.array(SemanticTagSchema).default([]),
+  contextStrength: z.number().min(0).max(1),
+  retrievalTimestamp: z.string().datetime(),
+  queryMetadata: z.object({
+    tagNames: z.array(z.string()),
+    timeWindow: z.number().optional(),
+    maxResults: z.number().default(10),
+    includeArchived: z.boolean().default(false),
+    channels: z.array(z.enum(['sms', 'chat', 'websocket'])).default(['sms', 'chat'])
+  }),
+  // SMS-specific optimizations
+  sms_optimization: z.object({
+    character_budget: z.number().default(1500),
+    priority_conversations: z.array(z.string().uuid()),
+    suggested_response_length: z.enum(['brief', 'normal', 'detailed']).default('normal')
+  }).optional(),
+  // NEW: Chat-specific optimizations
+  chat_optimization: z.object({
+    max_message_length: z.number().default(4000),
+    supports_rich_content: z.boolean().default(true),
+    real_time_context: z.boolean().default(true),
+    thread_aware: z.boolean().default(true),
+    suggested_interaction_style: z.enum(['formal', 'casual', 'technical']).default('casual')
+  }).optional(),
+  // Google services context integration
+  google_services_context: z.object({
+    recent_calendar_events: z.array(z.any()).default([]),
+    active_tasks: z.array(z.any()).default([]),
+    relevant_contacts: z.array(z.any()).default([])
+  }).optional(),
+  // NEW: Cross-channel insights
+  cross_channel_insights: z.object({
+    preferred_channel: z.enum(['sms', 'chat', 'websocket']).optional(),
+    conversation_continuity: z.array(z.object({
+      from_channel: z.enum(['sms', 'chat', 'websocket']),
+      to_channel: z.enum(['sms', 'chat', 'websocket']),
+      context_preserved: z.boolean(),
+      conversation_ids: z.array(z.string().uuid())
+    })).default([]),
+    unified_topics: z.array(z.string()).default([])
+  }).optional()
+});
+
+// Google service event tracking
+export const GoogleServiceEventSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().min(1),
+  service_type: z.enum(['calendar', 'tasks', 'contacts', 'email']),
+  operation: z.string().min(1),
+  entity_id: z.string().optional(),
+  conversation_id: z.string().uuid().optional(),
+  timestamp: z.string().datetime(),
+  metadata: z.record(z.any()).default({}),
+  success: z.boolean(),
+  // NEW: Channel context for service events
+  triggered_from_channel: z.enum(['sms', 'chat', 'websocket']).optional()
+});
+
+// SMS conversation enhancement
+export const SMSConversationEnhancementSchema = z.object({
+  phone_number: z.string().min(1),
+  conversation_id: z.string().uuid(),
+  context_used: z.boolean(),
+  memory_strength: z.number().min(0).max(1),
+  response_optimization: z.object({
+    original_length: z.number(),
+    optimized_length: z.number(),
+    compression_ratio: z.number(),
+    key_points_preserved: z.array(z.string())
+  }).optional(),
+  google_services_referenced: z.array(z.enum(['calendar', 'tasks', 'contacts', 'email'])).default([]),
+  // NEW: Cross-channel context
+  related_chat_conversations: z.array(z.string().uuid()).default([])
+});
+
+// NEW: Chat conversation enhancement
+export const ChatConversationEnhancementSchema = z.object({
+  chat_id: z.string().min(1),
+  conversation_id: z.string().uuid(),
+  context_used: z.boolean(),
+  memory_strength: z.number().min(0).max(1),
+  real_time_context: z.object({
+    active_thread: z.boolean(),
+    thread_participants: z.array(z.string()),
+    last_activity: z.string().datetime(),
+    conversation_velocity: z.number() // messages per minute
+  }).optional(),
+  rich_content_support: z.object({
+    supports_formatting: z.boolean(),
+    supports_attachments: z.boolean(),
+    supports_reactions: z.boolean()
+  }).optional(),
+  google_services_referenced: z.array(z.enum(['calendar', 'tasks', 'contacts', 'email'])).default([]),
+  related_sms_conversations: z.array(z.string().uuid()).default([])
+});
+
+// NEW: Unified conversation enhancement (cross-channel)
+export const UnifiedConversationEnhancementSchema = z.object({
+  user_id: z.string().min(1),
+  primary_conversation_id: z.string().uuid(),
+  related_conversations: z.array(z.object({
+    conversation_id: z.string().uuid(),
+    channel: z.enum(['sms', 'chat', 'websocket']),
+    relevance_score: z.number().min(0).max(1)
+  })),
+  unified_context_strength: z.number().min(0).max(1),
+  channel_preferences: z.object({
+    preferred_channel: z.enum(['sms', 'chat', 'websocket']),
+    backup_channels: z.array(z.enum(['sms', 'chat', 'websocket'])),
+    context_sharing_enabled: z.boolean().default(true)
+  }),
+  cross_channel_insights: z.object({
+    topic_continuity: z.array(z.string()),
+    sentiment_evolution: z.number().min(-1).max(1),
+    urgency_indicators: z.array(z.string())
+  })
+});
+
+// Inferred types
+export type Conversation = z.infer<typeof ConversationSchema>;
+export type SemanticTag = z.infer<typeof SemanticTagSchema>;
+export type MemoryContext = z.infer<typeof MemoryContextSchema>;
+export type GoogleServiceEvent = z.infer<typeof GoogleServiceEventSchema>;
+export type SMSConversationEnhancement = z.infer<typeof SMSConversationEnhancementSchema>;
+export type ChatConversationEnhancement = z.infer<typeof ChatConversationEnhancementSchema>;
+export type UnifiedConversationEnhancement = z.infer<typeof UnifiedConversationEnhancementSchema>;
+```
+
+## 🏗️ **Enhanced ConversationManager (Integrated)**
+
+### **Core Conversation Manager with SMS and Chat Integration**
+
+```typescript
+// apps/omnii_mcp/src/services/memory/conversation-manager.ts
+import neo4j, { Driver, Session, Transaction } from 'neo4j-driver';
+import { v4 as uuidv4 } from 'uuid';
+import { 
+  Conversation, 
+  ConversationSchema, 
+  MemoryContext, 
+  MemoryContextSchema,
+  GoogleServiceEvent,
+  GoogleServiceEventSchema,
+  SMSConversationEnhancement,
+  SMSConversationEnhancementSchema,
+  ChatConversationEnhancement,
+  ChatConversationEnhancementSchema,
+  UnifiedConversationEnhancement,
+  UnifiedConversationEnhancementSchema
+} from '../../types/memory-schemas';
+import { redisCache } from '../redis-cache';
+import { OpenAI } from 'openai';
+
+export class ConversationManager {
+  private driver: Driver;
+  private openai: OpenAI;
+  private readonly CACHE_TTL = 3600; // 1 hour
+  private readonly BATCH_SIZE = 100;
+
+  constructor() {
+    // Use existing Neo4j configuration pattern
+    this.driver = neo4j.driver(
+      process.env.NEO4J_URI || 'bolt://localhost:7687',
+      neo4j.auth.basic(
+        process.env.NEO4J_USER || 'neo4j',
+        process.env.NEO4J_PASSWORD || 'password'
+      )
+    );
+
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+
+    console.log('✅ ConversationManager initialized with Neo4j and OpenAI');
+  }
+
+  /**
+   * Store SMS conversation with automatic semantic analysis and Google services context
+   * Integrates seamlessly with existing SMS flows
+   */
+  async storeSMSConversation(data: {
+    user_id: string;
+    content: string;
+    phone_number: string;
+    is_incoming: boolean;
+    local_datetime?: string;
+    google_service_context?: {
+      service_type?: 'calendar' | 'tasks' | 'contacts' | 'email';
+      operation?: string;
+      entity_ids?: string[];
+    };
+  }): Promise<Conversation> {
+    console.log(`[ConversationManager] 💾 Storing SMS conversation for user: ${data.user_id}`);
+    
+    try {
+      const conversationId = uuidv4();
+      const threadId = await this.determineSMSThreadId(data);
+      
+      // AI analysis of conversation content
+      const insights = await this.analyzeConversationContent(data.content, data.is_incoming, 'sms');
+      
+      const conversationData: Conversation = ConversationSchema.parse({
+        id: conversationId,
+        user_id: data.user_id,
+        type: 'sms',
+        content: data.content,
+        intent: insights.intent,
+        sentiment: insights.sentiment,
+        entities_extracted: insights.entities,
+        timestamp: new Date().toISOString(),
+        source: data.phone_number,
+        thread_id: threadId,
+        processing_status: 'processed',
+        ai_summary: insights.summary,
+        metadata: {
+          is_incoming: data.is_incoming,
+          local_datetime: data.local_datetime,
+          phone_number: data.phone_number,
+          character_count: data.content.length,
+          channel: 'sms'
+        },
+        priority: insights.priority,
+        requires_response: data.is_incoming && insights.requiresResponse,
+        google_service_context: data.google_service_context,
+        channel_context: {
+          primary_channel: 'sms',
+          related_channels: [],
+          user_preference: 'sms'
+        }
+      });
+
+      const session = this.driver.session();
+      const tx = session.beginTransaction();
+
+      try {
+        // Store conversation node
+        await this.createConversationNode(tx, conversationData);
+        
+        // Extract and create semantic tags optimized for SMS
+        const tags = await this.extractSemanticTags(data.content, data.user_id, {
+          conversationId,
+          channel: 'sms',
+          isIncoming: data.is_incoming,
+          phoneNumber: data.phone_number
+        });
+        
+        await this.linkConversationToTags(tx, conversationId, tags);
+        
+        // Establish conversation threading for context continuity
+        await this.establishSMSThreading(tx, conversationData, data.phone_number);
+        
+        // Update user SMS patterns
+        await this.updateChannelPatterns(tx, data.user_id, conversationData, 'sms');
+        
+        // Link to Google services if relevant
+        if (data.google_service_context) {
+          await this.linkToGoogleServices(tx, conversationId, data.google_service_context);
+        }
+        
+        // Link to related chat conversations if any
+        await this.linkCrossChannelConversations(tx, conversationId, data.user_id, 'sms');
+        
+        await tx.commit();
+        
+        // Update cache for fast retrieval
+        await this.updateConversationCache(conversationData);
+        
+        console.log(`[ConversationManager] ✅ Stored SMS conversation: ${conversationId}`);
+        return conversationData;
+
+      } catch (error) {
+        await tx.rollback();
+        throw error;
+      } finally {
+        await session.close();
+      }
+    } catch (error) {
+      console.error(`[ConversationManager] ❌ Failed to store SMS conversation:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * NEW: Store chat conversation with real-time context and threading
+   * Integrates with WebSocket and chat infrastructure
+   */
+  async storeChatConversation(data: {
+    user_id: string;
+    content: string;
+    chat_id: string;
+    is_incoming: boolean;
+    websocket_session_id?: string;
+    thread_id?: string;
+    is_group_chat?: boolean;
+    participants?: string[];
+    reply_to_message_id?: string;
+    message_sequence?: number;
+    google_service_context?: {
+      service_type?: 'calendar' | 'tasks' | 'contacts' | 'email';
+      operation?: string;
+      entity_ids?: string[];
+    };
+  }): Promise<Conversation> {
+    console.log(`[ConversationManager] 💬 Storing chat conversation for user: ${data.user_id}`);
+    
+    try {
+      const conversationId = uuidv4();
+      const threadId = data.thread_id || await this.determineChatThreadId(data);
+      
+      // AI analysis optimized for chat context
+      const insights = await this.analyzeConversationContent(data.content, data.is_incoming, 'chat', {
+        isGroupChat: data.is_group_chat,
+        participants: data.participants
+      });
+      
+      const conversationData: Conversation = ConversationSchema.parse({
+        id: conversationId,
+        user_id: data.user_id,
+        type: 'chat',
+        content: data.content,
+        intent: insights.intent,
+        sentiment: insights.sentiment,
+        entities_extracted: insights.entities,
+        timestamp: new Date().toISOString(),
+        source: data.chat_id,
+        thread_id: threadId,
+        processing_status: 'processed',
+        ai_summary: insights.summary,
+        metadata: {
+          is_incoming: data.is_incoming,
+          chat_id: data.chat_id,
+          websocket_session_id: data.websocket_session_id,
+          character_count: data.content.length,
+          channel: 'chat',
+          is_group_chat: data.is_group_chat,
+          participants_count: data.participants?.length || 1
+        },
+        priority: insights.priority,
+        requires_response: data.is_incoming && insights.requiresResponse,
+        google_service_context: data.google_service_context,
+        chat_context: {
+          chat_id: data.chat_id,
+          is_group_chat: data.is_group_chat || false,
+          participants: data.participants || [],
+          websocket_session_id: data.websocket_session_id,
+          message_sequence: data.message_sequence,
+          reply_to_message_id: data.reply_to_message_id
+        },
+        channel_context: {
+          primary_channel: 'chat',
+          related_channels: [],
+          user_preference: 'chat'
+        }
+      });
+
+      const session = this.driver.session();
+      const tx = session.beginTransaction();
+
+      try {
+        // Store conversation node
+        await this.createConversationNode(tx, conversationData);
+        
+        // Extract and create semantic tags optimized for chat
+        const tags = await this.extractSemanticTags(data.content, data.user_id, {
+          conversationId,
+          channel: 'chat',
+          isIncoming: data.is_incoming,
+          chatId: data.chat_id,
+          isGroupChat: data.is_group_chat,
+          participants: data.participants
+        });
+        
+        await this.linkConversationToTags(tx, conversationId, tags);
+        
+        // Establish chat threading with real-time context
+        await this.establishChatThreading(tx, conversationData, data.chat_id, data.thread_id);
+        
+        // Update user chat patterns and preferences
+        await this.updateChannelPatterns(tx, data.user_id, conversationData, 'chat');
+        
+        // Link to Google services if relevant
+        if (data.google_service_context) {
+          await this.linkToGoogleServices(tx, conversationId, data.google_service_context);
+        }
+        
+        // Link to related SMS conversations if any
+        await this.linkCrossChannelConversations(tx, conversationId, data.user_id, 'chat');
+        
+        // Handle group chat participant relationships
+        if (data.is_group_chat && data.participants?.length) {
+          await this.linkGroupChatParticipants(tx, conversationId, data.participants);
+        }
+        
+        await tx.commit();
+        
+        // Update cache for fast retrieval
+        await this.updateConversationCache(conversationData);
+        
+        console.log(`[ConversationManager] ✅ Stored chat conversation: ${conversationId}`);
+        return conversationData;
+
+      } catch (error) {
+        await tx.rollback();
+        throw error;
+      } finally {
+        await session.close();
+      }
+    } catch (error) {
+      console.error(`[ConversationManager] ❌ Failed to store chat conversation:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get memory context optimized for SMS responses
+   * Integrates with existing SimpleSMSAI flow
+   */
+  async getSMSMemoryContext(
+    phoneNumber: string,
+    userId: string,
+    currentMessage: string,
+    options: {
+      timeWindow?: number; // hours for SMS (shorter than email)
+      maxResults?: number;
+      includeGoogleServices?: boolean;
+      includeChatContext?: boolean; // NEW: Include related chat conversations
+    } = {}
+  ): Promise<MemoryContext> {
+    const {
+      timeWindow = 72, // 3 days for SMS context
+      maxResults = 5,   // Smaller for SMS
+      includeGoogleServices = true,
+      includeChatContext = true
+    } = options;
+
+    const cacheKey = `sms_memory_context:${userId}:${phoneNumber}:${JSON.stringify(options)}`;
+    
+    // Check cache first
+    const cached = await redisCache.get(cacheKey);
+    if (cached) {
+      console.log(`[ConversationManager] 📋 SMS cache hit for ${phoneNumber}`);
+      return MemoryContextSchema.parse(cached);
+    }
+
+    console.log(`[ConversationManager] 🔍 Building SMS memory context for ${phoneNumber}`);
+    
+    // Extract relevant topics from current message
+    const currentTopics = await this.extractQuickTopics(currentMessage);
+    
+    const session = this.driver.session();
+    
+    try {
+      // Enhanced query optimized for SMS conversations with cross-channel support
+      const result = await session.run(
+        `
+        // Find recent SMS conversations with this user
+        MATCH (c:Conversation)
+        WHERE c.user_id = $userId 
+        AND c.type = 'sms'
+        AND c.source = $phoneNumber
+        AND c.processing_status = 'processed'
+        AND c.timestamp > datetime() - duration("PT" + $timeWindow + "H")
+        
+        // Calculate relevance with SMS-specific scoring
+        WITH c,
+             duration.between(c.timestamp, datetime()).hours as hoursAgo,
+             CASE 
+               WHEN c.metadata.is_incoming = true THEN 1.2  // Incoming messages more relevant
+               ELSE 1.0
+             END as directionWeight,
+             CASE c.priority
+               WHEN 'urgent' THEN 1.0
+               WHEN 'high' THEN 0.8
+               WHEN 'normal' THEN 0.6
+               ELSE 0.4
+             END as priorityWeight
+        
+        // Apply SMS temporal decay (faster decay than email)
+        WITH c,
+             directionWeight * priorityWeight * (1.0 / (1.0 + 0.3 * hoursAgo)) as baseRelevance
+        
+        // Get semantic tags for topic matching
+        OPTIONAL MATCH (c)-[m:MENTIONS]->(t:Tag)
+        WHERE t.user_id = $userId
+        
+        // Topic relevance bonus for current message topics
+        WITH c, baseRelevance,
+             collect(t.name) as conversationTags,
+             CASE 
+               WHEN any(topic IN $currentTopics WHERE topic IN collect(t.name)) THEN 1.5
+               ELSE 1.0
+             END as topicBonus
+        
+        // Get related concepts
+        OPTIONAL MATCH (concept:Concept)-[:TAGGED_WITH]->(tag:Tag)
+        WHERE tag.name IN conversationTags AND concept.user_id = $userId
+        
+        WITH c, conversationTags, (baseRelevance * topicBonus) as finalRelevance,
+             collect(DISTINCT concept) as relatedConcepts
+        
+        // Get conversation thread context (SMS threads)
+        OPTIONAL MATCH (c)-[:FOLLOWS*1..3]-(threadConv:Conversation)
+        WHERE threadConv.user_id = $userId 
+        AND threadConv.type = 'sms'
+        AND threadConv.source = $phoneNumber
+        
+        // NEW: Get related chat conversations if enabled
+        OPTIONAL MATCH (c)-[:RELATED_TO]-(chatConv:Conversation)
+        WHERE chatConv.user_id = $userId 
+        AND chatConv.type = 'chat'
+        AND $includeChatContext = true
+        
+        RETURN c, conversationTags, finalRelevance, relatedConcepts,
+               collect(DISTINCT threadConv)[0..2] as threadContext,
+               collect(DISTINCT chatConv)[0..2] as relatedChatContext
+        ORDER BY finalRelevance DESC
+        LIMIT $maxResults
+        `,
+        { 
+          userId, 
+          phoneNumber,
+          timeWindow: timeWindow.toString(),
+          maxResults,
+          currentTopics,
+          includeChatContext
+        }
+      );
+
+      const conversations = result.records.map(record => ({
+        conversation: this.hydrateConversation(record.get('c').properties),
+        tags: record.get('conversationTags') || [],
+        relevance: record.get('finalRelevance') || 0,
+        concepts: (record.get('relatedConcepts') || []).map((c: any) => c?.properties).filter(Boolean),
+        thread_context: (record.get('threadContext') || []).map((tc: any) => tc?.properties).filter(Boolean),
+        channel_context: {
+          channel: 'sms' as const,
+          channel_weight: 1.0
+        }
+      }));
+
+      // Add related chat conversations if enabled
+      let relatedChatConversations = [];
+      if (includeChatContext) {
+        relatedChatConversations = await this.getRelatedChatConversations(userId, currentTopics, timeWindow);
+      }
+
+      // Build SMS-optimized memory context
+      let memoryContext: MemoryContext = MemoryContextSchema.parse({
+        conversations: [...conversations, ...relatedChatConversations],
+        concepts: this.extractUniqueConcepts([...conversations, ...relatedChatConversations]),
+        tags: await this.getRelevantTags(currentTopics, userId),
+        contextStrength: this.calculateUnifiedContextStrength([...conversations, ...relatedChatConversations]),
+        retrievalTimestamp: new Date().toISOString(),
+        queryMetadata: {
+          tagNames: currentTopics,
+          timeWindow,
+          maxResults,
+          includeArchived: false,
+          channels: includeChatContext ? ['sms', 'chat'] : ['sms']
+        },
+        sms_optimization: {
+          character_budget: 1500, // SMS-friendly response length
+          priority_conversations: conversations.slice(0, 2).map(c => c.conversation.id),
+          suggested_response_length: conversations.length > 2 ? 'brief' : 'normal'
+        },
+        cross_channel_insights: includeChatContext ? {
+          preferred_channel: await this.getUserPreferredChannel(userId),
+          conversation_continuity: await this.getCrossChannelContinuity(userId, 'sms'),
+          unified_topics: this.extractUnifiedTopics([...conversations, ...relatedChatConversations])
+        } : undefined
+      });
+
+      // Add Google services context if requested and available
+      if (includeGoogleServices) {
+        memoryContext.google_services_context = await this.getGoogleServicesContext(userId, currentTopics);
+      }
+
+      // Cache with shorter TTL for SMS (more dynamic)
+      await redisCache.setex(cacheKey, 1800, JSON.stringify(memoryContext)); // 30 min
+
+      console.log(`[ConversationManager] ✅ Built SMS memory context: ${conversations.length} SMS + ${relatedChatConversations.length} chat conversations, strength: ${memoryContext.contextStrength.toFixed(2)}`);
+      return memoryContext;
+
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * NEW: Get memory context optimized for chat responses
+   * Supports real-time context and thread awareness
+   */
+  async getChatMemoryContext(
+    chatId: string,
+    userId: string,
+    currentMessage: string,
+    options: {
+      timeWindow?: number; // hours for chat (can be longer than SMS)
+      maxResults?: number;
+      includeGoogleServices?: boolean;
+      includeSMSContext?: boolean; // Include related SMS conversations
+      threadId?: string; // For thread-specific context
+      isGroupChat?: boolean;
+      participants?: string[];
+    } = {}
+  ): Promise<MemoryContext> {
+    const {
+      timeWindow = 168, // 7 days for chat context (longer than SMS)
+      maxResults = 10,   // More for chat
+      includeGoogleServices = true,
+      includeSMSContext = true,
+      threadId,
+      isGroupChat = false,
+      participants = []
+    } = options;
+
+    const cacheKey = `chat_memory_context:${userId}:${chatId}:${JSON.stringify(options)}`;
+    
+    // Check cache first (shorter TTL for chat due to real-time nature)
+    const cached = await redisCache.get(cacheKey);
+    if (cached) {
+      console.log(`[ConversationManager] 💬 Chat cache hit for ${chatId}`);
+      return MemoryContextSchema.parse(cached);
+    }
+
+    console.log(`[ConversationManager] 🔍 Building chat memory context for ${chatId}`);
+    
+    // Extract relevant topics from current message
+    const currentTopics = await this.extractQuickTopics(currentMessage);
+    
+    const session = this.driver.session();
+    
+    try {
+      // Enhanced query optimized for chat conversations with threading
+      const result = await session.run(
+        `
+        // Find recent chat conversations with this user
+        MATCH (c:Conversation)
+        WHERE c.user_id = $userId 
+        AND c.type = 'chat'
+        AND (c.source = $chatId OR ($threadId IS NOT NULL AND c.thread_id = $threadId))
+        AND c.processing_status = 'processed'
+        AND c.timestamp > datetime() - duration("PT" + $timeWindow + "H")
+        
+        // Calculate relevance with chat-specific scoring
+        WITH c,
+             duration.between(c.timestamp, datetime()).hours as hoursAgo,
+             CASE 
+               WHEN c.metadata.is_incoming = true THEN 1.1  // Slight preference for incoming
+               ELSE 1.0
+             END as directionWeight,
+             CASE c.priority
+               WHEN 'urgent' THEN 1.0
+               WHEN 'high' THEN 0.8
+               WHEN 'normal' THEN 0.6
+               ELSE 0.4
+             END as priorityWeight,
+             CASE 
+               WHEN $threadId IS NOT NULL AND c.thread_id = $threadId THEN 1.5  // Thread relevance boost
+               WHEN $isGroupChat = true AND c.chat_context.is_group_chat = true THEN 1.2  // Group chat context
+               ELSE 1.0
+             END as contextWeight
+        
+        // Apply chat temporal decay (slower decay than SMS for threading)
+        WITH c,
+             directionWeight * priorityWeight * contextWeight * (1.0 / (1.0 + 0.1 * hoursAgo)) as baseRelevance
+        
+        // Get semantic tags for topic matching
+        OPTIONAL MATCH (c)-[m:MENTIONS]->(t:Tag)
+        WHERE t.user_id = $userId
+        
+        // Topic relevance bonus for current message topics
+        WITH c, baseRelevance,
+             collect(t.name) as conversationTags,
+             CASE 
+               WHEN any(topic IN $currentTopics WHERE topic IN collect(t.name)) THEN 1.5
+               ELSE 1.0
+             END as topicBonus
+        
+        // Get related concepts
+        OPTIONAL MATCH (concept:Concept)-[:TAGGED_WITH]->(tag:Tag)
+        WHERE tag.name IN conversationTags AND concept.user_id = $userId
+        
+        WITH c, conversationTags, (baseRelevance * topicBonus) as finalRelevance,
+             collect(DISTINCT concept) as relatedConcepts
+        
+        // Get conversation thread context (chat threads)
+        OPTIONAL MATCH (c)-[:FOLLOWS*1..5]-(threadConv:Conversation)
+        WHERE threadConv.user_id = $userId 
+        AND threadConv.type = 'chat'
+        AND (threadConv.source = $chatId OR threadConv.thread_id = $threadId)
+        
+        // NEW: Get related SMS conversations if enabled
+        OPTIONAL MATCH (c)-[:RELATED_TO]-(smsConv:Conversation)
+        WHERE smsConv.user_id = $userId 
+        AND smsConv.type = 'sms'
+        AND $includeSMSContext = true
+        
+        RETURN c, conversationTags, finalRelevance, relatedConcepts,
+               collect(DISTINCT threadConv)[0..3] as threadContext,
+               collect(DISTINCT smsConv)[0..2] as relatedSMSContext
+        ORDER BY finalRelevance DESC
+        LIMIT $maxResults
+        `,
+        { 
+          userId, 
+          chatId,
+          threadId,
+          timeWindow: timeWindow.toString(),
+          maxResults,
+          currentTopics,
+          includeSMSContext,
+          isGroupChat
+        }
+      );
+
+      const conversations = result.records.map(record => ({
+        conversation: this.hydrateConversation(record.get('c').properties),
+        tags: record.get('conversationTags') || [],
+        relevance: record.get('finalRelevance') || 0,
+        concepts: (record.get('relatedConcepts') || []).map((c: any) => c?.properties).filter(Boolean),
+        thread_context: (record.get('threadContext') || []).map((tc: any) => tc?.properties).filter(Boolean),
+        channel_context: {
+          channel: 'chat' as const,
+          channel_weight: 1.0
+        }
+      }));
+
+      // Add related SMS conversations if enabled
+      let relatedSMSConversations = [];
+      if (includeSMSContext) {
+        relatedSMSConversations = await this.getRelatedSMSConversations(userId, currentTopics, timeWindow);
+      }
+
+      // Build chat-optimized memory context
+      let memoryContext: MemoryContext = MemoryContextSchema.parse({
+        conversations: [...conversations, ...relatedSMSConversations],
+        concepts: this.extractUniqueConcepts([...conversations, ...relatedSMSConversations]),
+        tags: await this.getRelevantTags(currentTopics, userId),
+        contextStrength: this.calculateUnifiedContextStrength([...conversations, ...relatedSMSConversations]),
+        retrievalTimestamp: new Date().toISOString(),
+        queryMetadata: {
+          tagNames: currentTopics,
+          timeWindow,
+          maxResults,
+          includeArchived: false,
+          channels: includeSMSContext ? ['chat', 'sms'] : ['chat']
+        },
+        chat_optimization: {
+          max_message_length: 4000,
+          supports_rich_content: true,
+          real_time_context: true,
+          thread_aware: !!threadId,
+          suggested_interaction_style: isGroupChat ? 'casual' : 'formal'
+        },
+        cross_channel_insights: includeSMSContext ? {
+          preferred_channel: await this.getUserPreferredChannel(userId),
+          conversation_continuity: await this.getCrossChannelContinuity(userId, 'chat'),
+          unified_topics: this.extractUnifiedTopics([...conversations, ...relatedSMSConversations])
+        } : undefined
+      });
+
+      // Add Google services context if requested and available
+      if (includeGoogleServices) {
+        memoryContext.google_services_context = await this.getGoogleServicesContext(userId, currentTopics);
+      }
+
+      // Cache with shorter TTL for chat (real-time nature)
+      await redisCache.setex(cacheKey, 900, JSON.stringify(memoryContext)); // 15 min
+
+      console.log(`[ConversationManager] ✅ Built chat memory context: ${conversations.length} chat + ${relatedSMSConversations.length} SMS conversations, strength: ${memoryContext.contextStrength.toFixed(2)}`);
+      return memoryContext;
+
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * NEW: Get unified memory context across all channels
+   * Perfect for users who switch between SMS and chat
+   */
+  async getUnifiedMemoryContext(
+    userId: string,
+    currentMessage: string,
+    primaryChannel: 'sms' | 'chat',
+    channelIdentifier: string, // phone number or chat ID
+    options: {
+      timeWindow?: number;
+      maxResults?: number;
+      includeGoogleServices?: boolean;
+      channelWeights?: { sms: number; chat: number };
+    } = {}
+  ): Promise<MemoryContext> {
+    const {
+      timeWindow = 120, // 5 days unified
+      maxResults = 15,
+      includeGoogleServices = true,
+      channelWeights = { sms: 1.0, chat: 1.0 }
+    } = options;
+
+    console.log(`[ConversationManager] 🔄 Building unified memory context for user: ${userId}`);
+    
+    // Get context from both channels
+    const [smsContext, chatContext] = await Promise.all([
+      primaryChannel === 'sms' 
+        ? this.getSMSMemoryContext(channelIdentifier, userId, currentMessage, { 
+            timeWindow, 
+            maxResults: Math.ceil(maxResults * channelWeights.sms),
+            includeGoogleServices,
+            includeChatContext: true
+          })
+        : this.getRelatedChannelContext(userId, 'sms', currentMessage, timeWindow),
+      primaryChannel === 'chat'
+        ? this.getChatMemoryContext(channelIdentifier, userId, currentMessage, {
+            timeWindow,
+            maxResults: Math.ceil(maxResults * channelWeights.chat),
+            includeGoogleServices,
+            includeSMSContext: true
+          })
+        : this.getRelatedChannelContext(userId, 'chat', currentMessage, timeWindow)
+    ]);
+
+    // Merge and unify the contexts
+    const unifiedConversations = [
+      ...smsContext.conversations.map(c => ({
+        ...c,
+        channel_context: { 
+          ...c.channel_context, 
+          channel_weight: channelWeights.sms 
+        }
+      })),
+      ...chatContext.conversations.map(c => ({
+        ...c,
+        channel_context: { 
+          ...c.channel_context, 
+          channel_weight: channelWeights.chat 
+        }
+      }))
+    ]
+    .sort((a, b) => b.relevance - a.relevance)
+    .slice(0, maxResults);
+
+    const unifiedContext: MemoryContext = MemoryContextSchema.parse({
+      conversations: unifiedConversations,
+      concepts: this.extractUniqueConcepts(unifiedConversations),
+      tags: [...smsContext.tags, ...chatContext.tags].filter((tag, index, self) => 
+        index === self.findIndex(t => t.id === tag.id)
+      ),
+      contextStrength: this.calculateUnifiedContextStrength(unifiedConversations),
+      retrievalTimestamp: new Date().toISOString(),
+      queryMetadata: {
+        tagNames: await this.extractQuickTopics(currentMessage),
+        timeWindow,
+        maxResults,
+        includeArchived: false,
+        channels: ['sms', 'chat']
+      },
+      sms_optimization: primaryChannel === 'sms' ? smsContext.sms_optimization : undefined,
+      chat_optimization: primaryChannel === 'chat' ? chatContext.chat_optimization : undefined,
+      google_services_context: smsContext.google_services_context || chatContext.google_services_context,
+      cross_channel_insights: {
+        preferred_channel: await this.getUserPreferredChannel(userId),
+        conversation_continuity: await this.getCrossChannelContinuity(userId, primaryChannel),
+        unified_topics: this.extractUnifiedTopics(unifiedConversations)
+      }
+    });
+
+    console.log(`[ConversationManager] ✅ Built unified memory context: ${unifiedConversations.length} total conversations across channels`);
+    return unifiedContext;
+  }
+
+  /**
+   * Track Google services interactions for memory context
+   * Integrates with calendar-manager.ts, task-manager.ts etc.
+   */
+  async recordGoogleServiceInteraction(data: {
+    user_id: string;
+    service_type: 'calendar' | 'tasks' | 'contacts' | 'email';
+    operation: string;
+    entity_id?: string;
+    conversation_id?: string;
+    success: boolean;
+    metadata?: Record<string, any>;
+    triggered_from_channel?: 'sms' | 'chat' | 'websocket';
+  }): Promise<GoogleServiceEvent> {
+    console.log(`[ConversationManager] 📝 Recording ${data.service_type} interaction: ${data.operation} from ${data.triggered_from_channel || 'unknown'}`);
+
+    const eventData: GoogleServiceEvent = GoogleServiceEventSchema.parse({
+      id: uuidv4(),
+      user_id: data.user_id,
+      service_type: data.service_type,
+      operation: data.operation,
+      entity_id: data.entity_id,
+      conversation_id: data.conversation_id,
+      timestamp: new Date().toISOString(),
+      metadata: data.metadata || {},
+      success: data.success,
+      triggered_from_channel: data.triggered_from_channel
+    });
+
+    const session = this.driver.session();
+    
+    try {
+      await session.run(
+        `
+        CREATE (event:GoogleServiceEvent {
+          id: $id,
+          user_id: $user_id,
+          service_type: $service_type,
+          operation: $operation,
+          entity_id: $entity_id,
+          conversation_id: $conversation_id,
+          timestamp: datetime($timestamp),
+          metadata: $metadata,
+          success: $success,
+          triggered_from_channel: $triggered_from_channel,
+          created_at: datetime()
+        })
+        
+        // Link to conversation if provided
+        WITH event
+        WHERE $conversation_id IS NOT NULL
+        MATCH (c:Conversation {id: $conversation_id})
+        CREATE (c)-[:TRIGGERED_SERVICE]->(event)
+        `,
+        {
+          ...eventData,
+          metadata: JSON.stringify(eventData.metadata)
+        }
+      );
+
+      // Update conversation with Google service context
+      if (data.conversation_id) {
+        await this.updateConversationGoogleContext(data.conversation_id, eventData);
+      }
+
+      console.log(`[ConversationManager] ✅ Recorded Google service event: ${eventData.id}`);
+      return eventData;
+
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Enhanced SMS response optimization
+   * Integrates with existing SMS message length constraints
+   */
+  async optimizeSMSResponse(
+    originalResponse: string,
+    memoryContext: MemoryContext,
+    phoneNumber: string
+  ): Promise<SMSConversationEnhancement> {
+    console.log(`[ConversationManager] 📱 Optimizing SMS response for ${phoneNumber}`);
+
+    const maxLength = memoryContext.sms_optimization?.character_budget || 1500;
+    
+    if (originalResponse.length <= maxLength) {
+      return SMSConversationEnhancementSchema.parse({
+        phone_number: phoneNumber,
+        conversation_id: memoryContext.conversations[0]?.conversation.id || uuidv4(),
+        context_used: memoryContext.conversations.length > 0,
+        memory_strength: memoryContext.contextStrength,
+        google_services_referenced: this.extractGoogleServicesFromResponse(originalResponse),
+        related_chat_conversations: memoryContext.conversations
+          .filter(c => c.conversation.type === 'chat')
+          .map(c => c.conversation.id)
+      });
+    }
+
+    // AI-powered response compression for SMS
+    const optimizedResponse = await this.compressResponseForSMS(originalResponse, maxLength, memoryContext);
+
+    return SMSConversationEnhancementSchema.parse({
+      phone_number: phoneNumber,
+      conversation_id: memoryContext.conversations[0]?.conversation.id || uuidv4(),
+      context_used: memoryContext.conversations.length > 0,
+      memory_strength: memoryContext.contextStrength,
+      response_optimization: {
+        original_length: originalResponse.length,
+        optimized_length: optimizedResponse.length,
+        compression_ratio: optimizedResponse.length / originalResponse.length,
+        key_points_preserved: this.extractKeyPoints(optimizedResponse)
+      },
+      google_services_referenced: this.extractGoogleServicesFromResponse(optimizedResponse),
+      related_chat_conversations: memoryContext.conversations
+        .filter(c => c.conversation.type === 'chat')
+        .map(c => c.conversation.id)
+    });
+  }
+
+  /**
+   * NEW: Chat response optimization
+   * Optimizes responses for chat with rich content support
+   */
+  async optimizeChatResponse(
+    originalResponse: string,
+    memoryContext: MemoryContext,
+    chatId: string,
+    threadId?: string
+  ): Promise<ChatConversationEnhancement> {
+    console.log(`[ConversationManager] 💬 Optimizing chat response for ${chatId}`);
+
+    return ChatConversationEnhancementSchema.parse({
+      chat_id: chatId,
+      conversation_id: memoryContext.conversations[0]?.conversation.id || uuidv4(),
+      context_used: memoryContext.conversations.length > 0,
+      memory_strength: memoryContext.contextStrength,
+      real_time_context: {
+        active_thread: !!threadId,
+        thread_participants: memoryContext.conversations
+          .filter(c => c.conversation.type === 'chat')
+          .flatMap(c => c.conversation.chat_context?.participants || [])
+          .filter((p, i, arr) => arr.indexOf(p) === i), // unique participants
+        last_activity: new Date().toISOString(),
+        conversation_velocity: this.calculateConversationVelocity(memoryContext.conversations)
+      },
+      rich_content_support: {
+        supports_formatting: memoryContext.chat_optimization?.supports_rich_content || true,
+        supports_attachments: memoryContext.chat_optimization?.supports_rich_content || true,
+        supports_reactions: memoryContext.chat_optimization?.supports_rich_content || true
+      },
+      google_services_referenced: this.extractGoogleServicesFromResponse(originalResponse),
+      related_sms_conversations: memoryContext.conversations
+        .filter(c => c.conversation.type === 'sms')
+        .map(c => c.conversation.id)
+    });
+  }
+
+  // ============================================================================
+  // PRIVATE HELPER METHODS (Enhanced with Chat Support)
+  // ============================================================================
+
+  private async analyzeConversationContent(
+    content: string, 
+    isIncoming: boolean, 
+    channel: 'sms' | 'chat',
+    context?: {
+      isGroupChat?: boolean;
+      participants?: string[];
+    }
+  ): Promise<{
+    intent: string;
+    sentiment: number;
+    entities: any[];
+    summary: string;
+    priority: 'low' | 'normal' | 'high' | 'urgent';
+    requiresResponse: boolean;
+  }> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'user',
+          content: `Analyze this ${channel} message:
+"${content}"
+
+Direction: ${isIncoming ? 'Incoming' : 'Outgoing'}
+Channel: ${channel}
+${context?.isGroupChat ? `Group chat with ${context.participants?.length || 0} participants` : 'Individual conversation'}
+
+Return JSON with:
+- intent: main intent (question, request, info, greeting, etc.)
+- sentiment: number -1 to 1
+- entities: array of {text, type, confidence}
+- summary: brief summary (max 50 chars)
+- priority: low/normal/high/urgent
+- requiresResponse: boolean`
+        }],
+        response_format: { type: 'json_object' },
+        max_tokens: 300
+      });
+
+      return JSON.parse(response.choices[0].message.content || '{}');
+    } catch (error) {
+      console.warn(`[ConversationManager] AI analysis failed, using defaults:`, error);
+      return {
+        intent: 'unknown',
+        sentiment: 0,
+        entities: [],
+        summary: content.substring(0, 50),
+        priority: 'normal',
+        requiresResponse: isIncoming
+      };
+    }
+  }
+
+  private async determineSMSThreadId(data: { user_id: string; phone_number: string }): Promise<string> {
+    // SMS threads are typically per phone number per user
+    return `sms_${data.user_id}_${data.phone_number}`;
+  }
+
+  private async determineChatThreadId(data: { 
+    chat_id: string; 
+    websocket_session_id?: string; 
+    thread_id?: string; 
+    is_group_chat?: boolean; 
+    participants?: string[] 
+  }): Promise<string> {
+    // Chat threads are typically per chat ID per user
+    const participants = data.participants?.sort().join('_') || '';
+    return `chat_${data.chat_id}_${data.websocket_session_id || ''}_${data.thread_id || ''}_${data.is_group_chat ? 'group' : 'individual'}_${participants}`;
+  }
+
+  private async extractQuickTopics(message: string): Promise<string[]> {
+    // Quick keyword extraction for SMS and Chat context
+    const keywords = message.toLowerCase()
+      .split(/\s+/)
+      .filter(word => word.length > 3)
+      .filter(word => !['this', 'that', 'with', 'have', 'been', 'they', 'them', 'will', 'from', 'your'].includes(word))
+      .slice(0, 5); // Limit for performance
+
+    return keywords;
+  }
+
+  private calculateUnifiedContextStrength(conversations: any[]): number {
+    if (conversations.length === 0) return 0;
+    
+    const avgRelevance = conversations.reduce((sum, conv) => sum + (conv.relevance || 0), 0) / conversations.length;
+    const countFactor = Math.min(conversations.length / 10, 1); // Unified has more conversations
+    
+    // Channel diversity bonus
+    const channels = new Set(conversations.map(c => c.conversation.type));
+    const diversityBonus = channels.size > 1 ? 1.2 : 1.0;
+    
+    // Recent activity factor
+    const recencyFactor = conversations.some(c => 
+      new Date(c.conversation.timestamp) > new Date(Date.now() - 6 * 60 * 60 * 1000) // 6 hours
+    ) ? 1.3 : 1.0;
+    
+    return Math.min(avgRelevance * countFactor * diversityBonus * recencyFactor, 1);
+  }
+
+  private extractGoogleServicesFromResponse(response: string): ('calendar' | 'tasks' | 'contacts' | 'email')[] {
+    const services: ('calendar' | 'tasks' | 'contacts' | 'email')[] = [];
+    const lower = response.toLowerCase();
+    
+    if (lower.includes('calendar') || lower.includes('meeting') || lower.includes('event')) {
+      services.push('calendar');
+    }
+    if (lower.includes('task') || lower.includes('todo') || lower.includes('reminder')) {
+      services.push('tasks');
+    }
+    if (lower.includes('contact') || lower.includes('phone') || lower.includes('email')) {
+      services.push('contacts');
+    }
+    if (lower.includes('email') || lower.includes('gmail') || lower.includes('message')) {
+      services.push('email');
+    }
+    
+    return services;
+  }
+
+  // Additional helper methods for unified conversation management...
+  private calculateConversationVelocity(conversations: any[]): number {
+    if (conversations.length < 2) return 0;
+    
+    const recentConversations = conversations
+      .filter(c => new Date(c.conversation.timestamp) > new Date(Date.now() - 60 * 60 * 1000)) // Last hour
+      .sort((a, b) => new Date(b.conversation.timestamp).getTime() - new Date(a.conversation.timestamp).getTime());
+    
+    if (recentConversations.length < 2) return 0;
+    
+    const timeSpan = new Date(recentConversations[0].conversation.timestamp).getTime() - 
+                    new Date(recentConversations[recentConversations.length - 1].conversation.timestamp).getTime();
+    
+    return recentConversations.length / (timeSpan / (1000 * 60)); // messages per minute
+  }
+
+  async close(): Promise<void> {
+    await this.driver.close();
+  }
+}
+
+export const conversationManager = new ConversationManager();
