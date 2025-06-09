@@ -37,6 +37,8 @@ import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { OnboardingQuote, LevelProgression } from '~/types/onboarding';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { XPSystemUtils, XP_REWARDS } from '~/constants/XPSystem';
+import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
+import { useResponsiveDesign } from '~/utils/responsive';
 
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -130,6 +132,7 @@ const mockApprovals: Approval[] = [
 export default function ApprovalsScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
+  const responsive = useResponsiveDesign();
   const {
     state: onboardingState,
     startOnboarding,
@@ -570,6 +573,103 @@ export default function ApprovalsScreen() {
     </View>
   );
 
+  // Enhanced content rendering for desktop
+  const renderResponsiveContent = () => {
+    if (responsive.isDesktop) {
+      return (
+        <View className="px-8">
+          <View className="max-w-4xl mx-auto">
+            {filteredTasks.length === 0 ? (
+              <View className="flex-1 justify-center items-center py-16">
+                <View className={cn(
+                  "rounded-xl p-8 items-center border max-w-md",
+                  isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                )}>
+                  <Text className="text-4xl mb-3">✅</Text>
+                  <Text className={cn(
+                    "font-semibold text-lg mb-2 text-center",
+                    isDark ? "text-white" : "text-gray-900"
+                  )}>All Caught Up!</Text>
+                  <Text className={cn(
+                    "text-sm text-center",
+                    isDark ? "text-slate-400" : "text-gray-600"
+                  )}>No pending approvals at the moment. Great work!</Text>
+                </View>
+              </View>
+            ) : (
+              <View className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {filteredTasks.map((item) => (
+                  <View key={item.id} className="mb-4">
+                    <SimpleSwipeCard
+                      onSwipeLeft={() => handleReject(item)}
+                      onSwipeRight={() => handleApprove(item)}
+                    >
+                      <StreamlinedApprovalCard
+                        approval={item.approval || {
+                          id: item.id,
+                          title: item.title,
+                          description: item.description,
+                          priority: item.priority,
+                          created_at: item.created_at,
+                          requested_by: item.requested_by,
+                          type: item.type,
+                        }} 
+                        onPress={() => {
+                          if (item.type === 'approval') {
+                            console.log('Navigating to task details:', item.id);
+                            router.push(`/request/${item.id}`);
+                          }
+                        }}
+                      />
+                    </SimpleSwipeCard>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+      );
+    }
+    
+    return (
+      <View className="flex-1">
+        {filteredTasks.length === 0 ? (
+          <View className="flex-1 justify-center items-center px-5">
+            <View className={cn(
+              "rounded-xl p-8 items-center border max-w-sm",
+              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+            )}>
+              <Text className="text-4xl mb-3">✅</Text>
+              <Text className={cn(
+                "font-semibold text-lg mb-2 text-center",
+                isDark ? "text-white" : "text-gray-900"
+              )}>All Caught Up!</Text>
+              <Text className={cn(
+                "text-sm text-center",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>No pending approvals at the moment. Great work!</Text>
+            </View>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredTasks}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 20 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={isDark ? '#94a3b8' : '#6b7280'}
+              />
+            }
+          />
+        )}
+      </View>
+    );
+  };
+
   const renderItem = ({ item }: { item: Task }) => (
     <View className="mb-2">
       <SimpleSwipeCard
@@ -621,6 +721,52 @@ export default function ApprovalsScreen() {
     );
   }
 
+  // Only use responsive layout for tablet and desktop
+  if (responsive.isTablet || responsive.isDesktop) {
+    // Header component for tablet/desktop
+    const ApprovalsHeader = () => (
+      <View className="flex-row items-start justify-between">
+        <View className="flex-1">
+          <Text className={cn(
+            "text-3xl font-bold mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>⏳ Approvals</Text>
+          <XPProgressBar
+            variant="compact"
+            size="small"
+            showText={true}
+            showLevel={true}
+          />
+        </View>
+        
+        <MascotContainer position="header">
+          <Mascot
+            stage={mascotStage}
+            level={currentLevel}
+            size={MascotSize.STANDARD}
+            showLevel={true}
+            enableInteraction={true}
+            enableCheering={cheeringState.isActive}
+            cheeringTrigger={cheeringState.trigger}
+            onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
+          />
+        </MascotContainer>
+      </View>
+    );
+
+    return (
+      <ResponsiveTabLayout
+        tabs={approvalTabs}
+        selectedTab={selectedFilter}
+        onTabPress={handleTabPress}
+        scaleAnimations={scaleAnimations}
+        header={<ApprovalsHeader />}
+        renderTabContent={renderResponsiveContent}
+      />
+    );
+  }
+
+  // MOBILE: Keep original layout exactly as it was
   return (
     <SafeAreaView className={cn(
       "flex-1",

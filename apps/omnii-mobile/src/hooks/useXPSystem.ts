@@ -15,6 +15,7 @@ export interface XPSystemHook {
   awardXP: (amount: number, reason: string, category: string) => Promise<XPUpdate | null>;
   syncXP: () => Promise<void>;
   refetchXP: () => Promise<void>;
+  clearCelebrationStorage: () => Promise<void>;
   
   // Real-time updates
   isConnected: boolean;

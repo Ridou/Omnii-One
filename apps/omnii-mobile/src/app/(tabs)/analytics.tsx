@@ -30,6 +30,9 @@ import { AppColors } from '~/constants/Colors';
 import Svg, { Defs, LinearGradient, Stop, Rect, Line, Circle } from 'react-native-svg';
 import type { AnalyticsTab, AnalyticsTabConfig } from '~/types/analytics';
 import { useXPContext } from '~/context/XPContext';
+import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
+import { DesktopAnalyticsContent, TabletAnalyticsContent } from '~/components/common/DesktopAnalyticsComponents';
+import { useResponsiveDesign } from '~/utils/responsive';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -64,6 +67,7 @@ const analyticsTabs: AnalyticsTabConfig[] = [
 export default function AnalyticsScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
+  const responsive = useResponsiveDesign();
 
   const { currentLevel } = useXPContext();
   const { analytics, isLoading, refetch } = useFetchAnalytics();
@@ -709,6 +713,77 @@ export default function AnalyticsScreen() {
     );
   }
 
+  // Only use responsive layout for tablet and desktop
+  if (responsive.isTablet || responsive.isDesktop) {
+    // Enhanced content rendering for tablet/desktop only
+    const renderResponsiveContent = () => {
+      if (responsive.isDesktop) {
+        return (
+          <DesktopAnalyticsContent 
+            selectedTab={selectedTab}
+            analytics={analytics}
+            renderTabContent={renderTabContent}
+          />
+        );
+      }
+      
+      if (responsive.isTablet) {
+        return (
+          <TabletAnalyticsContent 
+            selectedTab={selectedTab}
+            analytics={analytics}
+            renderTabContent={renderTabContent}
+          />
+        );
+      }
+      
+      return renderTabContent();
+    };
+
+    // Header component for tablet/desktop
+    const AnalyticsHeader = () => (
+      <View className="flex-row items-start justify-between">
+        <View className="flex-1">
+          <Text className={cn(
+            "text-3xl font-bold mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>📊 Analytics</Text>
+          <XPProgressBar 
+            variant="compact"
+            size="small" 
+            showText={true} 
+            showLevel={true}
+          />
+        </View>
+        
+        <MascotContainer position="header">
+          <Mascot
+            stage={mascotStage}
+            level={currentLevel}
+            size={MascotSize.STANDARD}
+            showLevel={true}
+            enableInteraction={true}
+            enableCheering={cheeringState.isActive}
+            cheeringTrigger={cheeringState.trigger}
+            onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
+          />
+        </MascotContainer>
+      </View>
+    );
+
+    return (
+      <ResponsiveTabLayout
+        tabs={analyticsTabs}
+        selectedTab={selectedTab}
+        onTabPress={handleTabPress}
+        scaleAnimations={scaleAnimations}
+        header={<AnalyticsHeader />}
+        renderTabContent={renderResponsiveContent}
+      />
+    );
+  }
+
+  // MOBILE: Keep original layout exactly as it was
   return (
     <SafeAreaView className={cn(
       "flex-1",
@@ -726,8 +801,10 @@ export default function AnalyticsScreen() {
               isDark ? "text-white" : "text-gray-900"
             )}>📊 Analytics</Text>
             <XPProgressBar
+              variant="compact"
               size="small"
               showText={true}
+              showLevel={true}
             />
           </View>
           

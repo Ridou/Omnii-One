@@ -105,6 +105,7 @@ interface XPContextState {
   celebrationQueue: LevelProgression[];
   getNextCelebration: () => LevelProgression | null;
   showCelebration: (celebrationId: string) => void;
+  clearCelebrationStorage: () => Promise<void>;
   
   // Feature exploration
   featureExploration: { [feature: string]: FeatureExploration };
@@ -189,23 +190,46 @@ export function XPProvider({ children }: XPProviderProps) {
     onLevelUpRef.current = callback;
   }, []);
 
-  // Helper function to trigger level up celebrations - simplified server-based approach
+  // Helper function to trigger level up celebrations - CREATE ACTUAL CELEBRATIONS
   const triggerLevelUpIfNeeded = useCallback((oldLevel: number, newLevel: number, newTotalXP: number) => {
     if (newLevel <= oldLevel || !user?.id) {
       return;
     }
 
-    console.log('🎉 [XPContext] Level up detected - server will handle celebrations:', {
+    console.log('🎉 [XPContext] Level up detected - creating celebrations:', {
       fromLevel: oldLevel,
       toLevel: newLevel,
       totalXP: newTotalXP
     });
 
-    // Process each new level for feature unlocks
+    // CREATE ACTUAL CELEBRATIONS: Add level progressions to the queue for each level gained
+    const newCelebrations: LevelProgression[] = [];
+    
     for (let level = oldLevel + 1; level <= newLevel; level++) {
+      // Create a celebration for each level gained
+      const celebration: LevelProgression = {
+        id: `level_${level}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Unique ID
+        user_id: user.id,
+        from_level: level - 1,
+        to_level: level,
+        xp_at_level_up: newTotalXP,
+        milestone_unlocks: [], // Will be populated with features if needed
+        celebration_shown: false,
+        celebration_shown_at: undefined,
+        unlock_animations_played: [],
+        achieved_at: new Date().toISOString(),
+      };
+
+      // Add milestone unlocks based on level
       const oldLevelFeatures = getUnlockedFeaturesForLevel(level - 1);
       const newLevelFeatures = getUnlockedFeaturesForLevel(level);
       const justUnlocked = newLevelFeatures.filter(feature => !oldLevelFeatures.includes(feature));
+      
+      if (justUnlocked.length > 0) {
+        celebration.milestone_unlocks = justUnlocked;
+      }
+
+      newCelebrations.push(celebration);
 
       // Create nudges for newly unlocked features
       const newNudges = justUnlocked
@@ -215,6 +239,24 @@ export function XPProvider({ children }: XPProviderProps) {
       if (newNudges.length > 0) {
         setActiveNudges(prev => [...prev, ...newNudges]);
       }
+
+      console.log('🎊 [XPContext] Created celebration for level:', {
+        level,
+        fromLevel: level - 1,
+        toLevel: level,
+        unlockedFeatures: justUnlocked,
+        celebrationId: celebration.id
+      });
+    }
+
+    // ADD CELEBRATIONS TO QUEUE: This is what was missing!
+    if (newCelebrations.length > 0) {
+      setCelebrationQueue(prev => [...prev, ...newCelebrations]);
+      console.log('🎉 [XPContext] Added celebrations to queue:', {
+        count: newCelebrations.length,
+        levels: newCelebrations.map(c => c.to_level),
+        queueLength: newCelebrations.length
+      });
     }
 
     // Trigger callback if set
@@ -253,6 +295,12 @@ export function XPProvider({ children }: XPProviderProps) {
 
   const showCelebration = useCallback((celebrationId: string) => {
     setCelebrationQueue(prev => prev.filter(c => c.id !== celebrationId));
+  }, []);
+
+  const clearCelebrationStorage = useCallback(async () => {
+    console.log('🧹 [XPContext] Clearing celebration cache...');
+    setCelebrationQueue([]);
+    console.log('✅ [XPContext] Celebration cache cleared');
   }, []);
 
   // Feature exploration functions
@@ -921,6 +969,7 @@ export function XPProvider({ children }: XPProviderProps) {
     celebrationQueue,
     getNextCelebration,
     showCelebration,
+    clearCelebrationStorage,
     
     // Feature exploration
     featureExploration,

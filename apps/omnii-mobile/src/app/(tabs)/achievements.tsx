@@ -22,6 +22,9 @@ import { useXPContext } from '~/context/XPContext';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { XPSystemUtils } from '~/constants/XPSystem';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
+import { DesktopAchievementsContent, TabletAchievementsContent } from '~/components/common/DesktopAchievementsComponents';
+import { useResponsiveDesign } from '~/utils/responsive';
 
 // Tab configuration following EXACT profile.tsx pattern
 const achievementTabs = [
@@ -56,6 +59,7 @@ type AchievementTab = 'evolve' | 'discover' | 'gallery' | 'social';
 export default function HomeScreen() {
   const { user, session, isInitialized } = useAuth();
   const { isDark } = useTheme();
+  const responsive = useResponsiveDesign();
   const { data: achievementData, loading, error } = useFetchAchievements();
 
   const { xpProgress, currentLevel, currentXP, awardXP } = useXPSystem();
@@ -437,6 +441,81 @@ export default function HomeScreen() {
     );
   }
 
+  // Only use responsive layout for tablet and desktop
+  if (responsive.isTablet || responsive.isDesktop) {
+    // Enhanced content rendering for tablet/desktop only
+    const renderResponsiveContent = () => {
+      if (responsive.isDesktop) {
+        return (
+          <DesktopAchievementsContent 
+            selectedTab={selectedTab}
+            achievementData={achievementData}
+            xpProgress={xpProgress}
+            currentLevel={currentLevel}
+            renderTabContent={renderTabContent}
+          />
+        );
+      }
+      
+      if (responsive.isTablet) {
+        return (
+          <TabletAchievementsContent 
+            selectedTab={selectedTab}
+            achievementData={achievementData}
+            renderTabContent={renderTabContent}
+          />
+        );
+      }
+      
+      return renderTabContent();
+    };
+
+    // Header component for tablet/desktop
+    const AchievementsHeader = () => (
+      <View className="flex-row items-start justify-between">
+        <View className="flex-1">
+          <Text className={cn(
+            "text-3xl font-bold mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🏆 Achievements</Text>
+          <XPProgressBar
+            variant="compact"
+            size="small"
+            showText={true}
+            showLevel={true}
+          />
+        </View>
+        
+        <MascotContainer position="header">
+          <Mascot
+            stage={mascotStage}
+            level={currentLevel}
+            size={MascotSize.STANDARD}
+            showLevel={true}
+            enableInteraction={true}
+            enableCheering={cheeringState.isActive}
+            cheeringTrigger={cheeringState.trigger}
+            onTap={() => triggerCheering(CheeringTrigger.ACHIEVEMENT_UNLOCK)}
+          />
+        </MascotContainer>
+      </View>
+    );
+
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ResponsiveTabLayout
+          tabs={achievementTabs}
+          selectedTab={selectedTab}
+          onTabPress={handleTabPress}
+          scaleAnimations={scaleAnimations}
+          header={<AchievementsHeader />}
+          renderTabContent={renderResponsiveContent}
+        />
+      </GestureHandlerRootView>
+    );
+  }
+
+  // MOBILE: Keep original layout exactly as it was
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView className={cn(

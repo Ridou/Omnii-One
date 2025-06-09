@@ -36,6 +36,9 @@ import { cn } from '~/utils/cn';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import type { ChatTab, ChatTabConfig, ChatMessage as ChatMessageType } from '~/types/chat';
 import { UpArrowIcon, RightArrowIcon, CalendarIcon, GmailIcon, ContactsIcon, TasksIcon } from '~/icons/ChatIcons';
+import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
+import { ResponsiveChatInput, DesktopChatContent, TabletChatContent } from '~/components/common/DesktopChatComponents';
+import { useResponsiveDesign } from '~/utils/responsive';
 
 import { trpc } from '~/utils/api';
 import { useQuery } from "@tanstack/react-query";
@@ -74,6 +77,7 @@ const chatTabs: ChatTabConfig[] = [
 export default function ChatScreen() {
     const { user } = useAuth();
     const { isDark } = useTheme();
+    const responsive = useResponsiveDesign();
   
     const { currentLevel, currentXP } = useXPContext();
     const router = useRouter();
@@ -956,6 +960,91 @@ export default function ChatScreen() {
         );
     };
 
+    // Only use responsive layout for tablet and desktop
+    if (responsive.isTablet || responsive.isDesktop) {
+        // Enhanced content rendering for tablet/desktop only
+        const renderResponsiveContent = () => {
+            if (responsive.isDesktop) {
+                return (
+                    <DesktopChatContent 
+                        selectedTab={selectedTab}
+                        renderTabContent={renderTabContent}
+                        messages={messages}
+                        flatListRef={flatListRef}
+                    />
+                );
+            }
+            
+            if (responsive.isTablet) {
+                return (
+                    <TabletChatContent 
+                        selectedTab={selectedTab}
+                        renderTabContent={renderTabContent}
+                    />
+                );
+            }
+            
+            return renderTabContent();
+        };
+
+        // Header component for tablet/desktop
+        const ChatHeader = () => (
+            <View className="flex-row items-start justify-between">
+                <View className="flex-1">
+                    <Text className={cn(
+                        "text-3xl font-bold mb-1",
+                        isDark ? "text-white" : "text-gray-900"
+                    )}>💬 Chat</Text>
+                    <XPProgressBar 
+                        variant="compact"
+                        size="small" 
+                        showText={true} 
+                        showLevel={true}
+                    />
+                </View>
+                
+                <MascotContainer position="header">
+                    <Mascot
+                        stage={mascotStage}
+                        level={currentLevel}
+                        size={MascotSize.STANDARD}
+                        showLevel={true}
+                        enableInteraction={true}
+                        enableCheering={cheeringState.isActive}
+                        cheeringTrigger={cheeringState.trigger}
+                        onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
+                    />
+                </MascotContainer>
+            </View>
+        );
+
+        // Input area for tablet/desktop
+        const chatInputArea = selectedTab === 'conversation' ? (
+            <ResponsiveChatInput 
+                messageInput={messageInput}
+                setMessageInput={setMessageInput}
+                onSend={handleSendMessage}
+                getSendButtonState={getSendButtonState}
+                getPlaceholder={getPlaceholder}
+                isTyping={isTyping}
+                pendingAction={pendingAction}
+            />
+        ) : undefined;
+
+        return (
+            <ResponsiveTabLayout
+                tabs={chatTabs}
+                selectedTab={selectedTab}
+                onTabPress={handleTabPress}
+                scaleAnimations={scaleAnimations}
+                header={<ChatHeader />}
+                renderTabContent={renderResponsiveContent}
+                inputArea={chatInputArea}
+            />
+        );
+    }
+
+    // MOBILE: Keep original layout exactly as it was
     return (
         <SafeAreaView className={cn(
             "flex-1",
@@ -973,8 +1062,10 @@ export default function ChatScreen() {
                             isDark ? "text-white" : "text-gray-900"
                         )}>💬 Chat</Text>
                         <XPProgressBar
+                            variant="compact"
                             size="small"
                             showText={true}
+                            showLevel={true}
                         />
                     </View>
                     

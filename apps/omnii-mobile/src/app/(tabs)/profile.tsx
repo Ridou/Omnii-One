@@ -34,6 +34,9 @@ import { cn } from '~/utils/cn';
 import { getMascotStageByLevel, CheeringTrigger, MascotSize } from '~/types/mascot';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { XPSystemUtils } from '~/constants/XPSystem';
+import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
+import { DesktopProfileContent, TabletProfileContent } from '~/components/common/DesktopProfileComponents';
+import { useResponsiveDesign } from '~/utils/responsive';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -69,13 +72,13 @@ export default function ProfileScreen() {
   const { user, signOut, isLoading } = useAuth();
   const { state, updateTheme } = useProfile();
   const { 
-    getCurrentLevel, 
     state: onboardingState,
     isOnboardingComplete
   } = useOnboardingContext();
   const { xpProgress, currentLevel, currentXP } = useXPSystem();
   const router = useRouter();
   const { theme, isDark } = useTheme();
+  const responsive = useResponsiveDesign();
   
   // Add NativeWind's useColorScheme to force re-renders when theme changes
   const { colorScheme: nativeWindColorScheme } = useColorScheme();
@@ -783,6 +786,81 @@ export default function ProfileScreen() {
     }
   };
 
+  // Only use responsive layout for tablet and desktop
+  if (responsive.isTablet || responsive.isDesktop) {
+    // Enhanced content rendering for tablet/desktop only
+    const renderResponsiveContent = () => {
+      if (responsive.isDesktop) {
+        return (
+          <DesktopProfileContent 
+            selectedTab={selectedTab}
+            level={level}
+            user={user}
+            state={state}
+            currentXP={currentXP}
+            updateTheme={updateTheme}
+            handleLogout={handleLogout}
+            renderTabContent={renderTabContent}
+          />
+        );
+      }
+      
+      if (responsive.isTablet) {
+        return (
+          <TabletProfileContent 
+            selectedTab={selectedTab}
+            renderTabContent={renderTabContent}
+          />
+        );
+      }
+      
+      return renderTabContent();
+    };
+
+    // Header component for tablet/desktop
+    const ProfileHeader = () => (
+      <View className="flex-row items-start justify-between">
+        <View className="flex-1">
+          <Text className={cn(
+            "text-3xl font-bold mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>👤 Profile</Text>
+          <XPProgressBar
+            variant="compact"
+            size="small"
+            showText={true}
+            showLevel={true}
+          />
+        </View>
+        
+        <MascotContainer position="header">
+          <Mascot
+            stage={mascotStage}
+            level={level}
+            size={MascotSize.STANDARD}
+            showLevel={true}
+            enableInteraction={true}
+            enableCheering={cheeringState.isActive}
+            cheeringTrigger={cheeringState.trigger}
+            onTap={handleMascotTap}
+          />
+        </MascotContainer>
+      </View>
+    );
+
+    return (
+      <ResponsiveTabLayout
+        tabs={profileTabs}
+        selectedTab={selectedTab}
+        onTabPress={handleTabPress}
+        scaleAnimations={scaleAnimations}
+        header={<ProfileHeader />}
+        renderTabContent={renderResponsiveContent}
+      />
+    );
+  }
+
+  // MOBILE: Keep original layout exactly as it was
   return (
     <SafeAreaView className={cn("flex-1", isDark ? "bg-slate-900" : "bg-white")} key={`profile-theme-${isDark}`}>
       {/* Header */}
