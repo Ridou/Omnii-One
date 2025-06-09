@@ -38,6 +38,7 @@ import type { OnboardingQuote, LevelProgression } from '~/types/onboarding';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { XPSystemUtils, XP_REWARDS } from '~/constants/XPSystem';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
+import { DesktopApprovalsContent, TabletApprovalsContent } from '~/components/common/DesktopApprovalsComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
 
 
@@ -577,57 +578,23 @@ export default function ApprovalsScreen() {
   const renderResponsiveContent = () => {
     if (responsive.isDesktop) {
       return (
-        <View className="px-8">
-          <View className="max-w-4xl mx-auto">
-            {filteredTasks.length === 0 ? (
-              <View className="flex-1 justify-center items-center py-16">
-                <View className={cn(
-                  "rounded-xl p-8 items-center border max-w-md",
-                  isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                )}>
-                  <Text className="text-4xl mb-3">✅</Text>
-                  <Text className={cn(
-                    "font-semibold text-lg mb-2 text-center",
-                    isDark ? "text-white" : "text-gray-900"
-                  )}>All Caught Up!</Text>
-                  <Text className={cn(
-                    "text-sm text-center",
-                    isDark ? "text-slate-400" : "text-gray-600"
-                  )}>No pending approvals at the moment. Great work!</Text>
-                </View>
-              </View>
-            ) : (
-              <View className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {filteredTasks.map((item) => (
-                  <View key={item.id} className="mb-4">
-                    <SimpleSwipeCard
-                      onSwipeLeft={() => handleReject(item)}
-                      onSwipeRight={() => handleApprove(item)}
-                    >
-                      <StreamlinedApprovalCard
-                        approval={item.approval || {
-                          id: item.id,
-                          title: item.title,
-                          description: item.description,
-                          priority: item.priority,
-                          created_at: item.created_at,
-                          requested_by: item.requested_by,
-                          type: item.type,
-                        }} 
-                        onPress={() => {
-                          if (item.type === 'approval') {
-                            console.log('Navigating to task details:', item.id);
-                            router.push(`/request/${item.id}`);
-                          }
-                        }}
-                      />
-                    </SimpleSwipeCard>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
+        <DesktopApprovalsContent
+          filteredTasks={filteredTasks}
+          handleApprove={handleApprove}
+          handleReject={handleReject}
+          selectedFilter={selectedFilter}
+          stats={stats}
+        />
+      );
+    }
+    
+    if (responsive.isTablet) {
+      return (
+        <TabletApprovalsContent
+          filteredTasks={filteredTasks}
+          handleApprove={handleApprove}
+          handleReject={handleReject}
+        />
       );
     }
     
