@@ -372,6 +372,68 @@ const GoogleServicesConnectionPrompt: React.FC<{
 export const createTaskComponent = (taskData: any, props: any) => {
   console.log('[TaskComponentFactory] Detecting task data type:', typeof taskData, taskData);
   console.log('[TaskComponentFactory] Data keys:', Object.keys(taskData || {}));
+  
+  // ✅ FIRST: Check if Google services are connected
+  // This handles the case where Composio doesn't have access tokens
+  if (taskData && typeof taskData === 'object') {
+    // Check for specific auth failure indicators in the data
+    const hasAuthFailure = (
+      // Explicit sync failure
+      (taskData.syncSuccess === false) ||
+      // Has partial failures with auth-related errors
+      (taskData.partialFailures && taskData.partialFailures.length > 0 && 
+       taskData.partialFailures.some((failure: any) => {
+         const errorMsg = failure.error?.toLowerCase() || '';
+         return (
+           errorMsg.includes('access') || 
+           errorMsg.includes('token') || 
+           errorMsg.includes('auth') ||
+           errorMsg.includes('credential') ||
+           errorMsg.includes('permission') ||
+           errorMsg.includes('401') ||
+           errorMsg.includes('403') ||
+           errorMsg.includes('unauthorized') ||
+           errorMsg.includes('invalid_grant') ||
+           errorMsg.includes('scope')
+         );
+       })) ||
+      // Task lists exist but all failed to fetch with auth errors  
+      (taskData.taskLists && Array.isArray(taskData.taskLists) && 
+       taskData.taskLists.length > 0 && 
+       taskData.taskLists.every((list: any) => {
+         return !list.fetchSuccess && list.fetchError && (
+           list.fetchError.toLowerCase().includes('auth') ||
+           list.fetchError.toLowerCase().includes('token') ||
+           list.fetchError.toLowerCase().includes('access') ||
+           list.fetchError.toLowerCase().includes('permission')
+         );
+       })) ||
+      // Empty response with no data (likely auth issue)
+      (taskData.totalLists === 0 && taskData.totalTasks === 0 && 
+       (!taskData.taskLists || taskData.taskLists.length === 0))
+    );
+    
+    if (hasAuthFailure) {
+      console.warn('[TaskComponentFactory] Google services authentication issue detected:', {
+        syncSuccess: taskData.syncSuccess,
+        partialFailuresCount: taskData.partialFailures?.length || 0,
+        totalLists: taskData.totalLists,
+        totalTasks: taskData.totalTasks,
+        hasTaskLists: !!taskData.taskLists,
+        taskListsLength: taskData.taskLists?.length || 0,
+        // TEMP DEBUG: Log complete structure to understand the exact problem
+        fullTaskData: JSON.stringify(taskData, null, 2)
+      });
+      return <GoogleServicesConnectionPrompt onAction={props.onAction} />;
+    }
+  }
+  
+  // If no taskData at all, assume connection issue
+  if (!taskData) {
+    console.warn('[TaskComponentFactory] No task data provided, showing Google connection prompt');
+    return <GoogleServicesConnectionPrompt onAction={props.onAction} />;
+  }
+  
   console.log('[TaskComponentFactory] Has taskLists?', 'taskLists' in (taskData || {}));
   console.log('[TaskComponentFactory] taskLists is array?', Array.isArray(taskData?.taskLists));
   console.log('[TaskComponentFactory] Has totalTasks?', 'totalTasks' in (taskData || {}));
@@ -427,8 +489,8 @@ export const createTaskComponent = (taskData: any, props: any) => {
     );
   }
   
-  // Fallback: show debug info
-  console.warn('[TaskComponentFactory] Unknown task data type, rendering debug info');
+  // Fallback: show Google connection prompt for unknown data types
+  console.warn('[TaskComponentFactory] Unknown task data type, rendering Google connection prompt');
   return <GoogleServicesConnectionPrompt onAction={props.onAction} />;
 };
 
