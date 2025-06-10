@@ -7,6 +7,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '~/context/AuthContext';
 import { signInWithGoogleImmediate , testOAuthWithMinimalScopes } from '~/lib/auth/googleAuth';
 import { AppLogo } from '~/components/common/OmniiLogo';
+import { AppleSignInButton } from '~/components/auth/AppleSignInButton';
 import { 
   BrandText, 
   DisplayText, 
@@ -155,7 +156,8 @@ const GoogleLoginButton = ({
 };
 
 export default function LoginScreen() {
-  const { signInWithGoogle, isLoading } = useAuth();
+  const { signInWithGoogle, signInWithApple, isAppleSignInAvailable, isLoading } = useAuth();
+  
   const router = useRouter();
   const [error, setError] = useState('');
   const [isAttempting, setIsAttempting] = useState(false);
@@ -227,16 +229,9 @@ export default function LoginScreen() {
     setShowRetryOption(false);
     
     try {
-      // Provide immediate feedback
-      console.log('🚀 Starting Google authentication...');
-      
       await signInWithGoogle();
-      
-      // Success - redirect will be handled by auth context
-      console.log('✅ Authentication successful!');
       router.replace('/(tabs)/approvals');
     } catch (err) {
-      console.error('🚫 Authentication failed:', err);
       
       let errorMessage = 'Failed to sign in with Google';
       let shouldShowRetry = false;
@@ -269,20 +264,49 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAppleLogin = async () => {
+    setError('');
+    setIsAttempting(true);
+    setShowRetryOption(false);
+    
+    try {
+      await signInWithApple();
+      
+      router.replace('/(tabs)/approvals');
+    } catch (err) {
+      
+      let errorMessage = 'Failed to sign in with Apple';
+      
+      if (err instanceof Error) {
+        const message = err.message.toLowerCase();
+        
+        if (message.includes('cancelled') || message.includes('dismissed')) {
+          errorMessage = 'Apple sign in was cancelled. Please try again.';
+        } else if (message.includes('not available') || message.includes('ios')) {
+          errorMessage = 'Apple Sign In is only available on iOS devices.';
+        } else if (message.includes('network') || message.includes('timeout')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = err.message.length < 100 ? err.message : errorMessage;
+        }
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setIsAttempting(false);
+    }
+  };
+
   const handleRetryImmediate = async () => {
     setError('');
     setIsAttempting(true);
     setShowRetryOption(false);
     
     try {
-      console.log('🔄 Trying immediate authentication approach...');
-      
       await signInWithGoogleImmediate();
       
-      console.log('✅ Immediate authentication successful!');
       router.replace('/(tabs)/approvals');
     } catch (err) {
-      console.error('🚫 Immediate authentication failed:', err);
       
       let errorMessage = 'Alternative login method also failed';
       
@@ -479,9 +503,9 @@ export default function LoginScreen() {
         </View>
 
         {/* Main call to action */}
-        <H2 style={styles.mainTitle}>Continue with Google</H2>
+        <H2 style={styles.mainTitle}>Sign in to OMNII</H2>
         <BodyText style={{ ...styles.description, color: "#666666" }}>
-          Sign in to access your AI assistant and seamlessly integrate with your Google workspace.
+          Choose your preferred sign-in method to access your AI assistant.
         </BodyText>
 
         {/* Error message */}
@@ -500,6 +524,15 @@ export default function LoginScreen() {
             )}
           </View>
         ) : null}
+
+        {/* Apple Sign In button (iOS only) */}
+        {isAppleSignInAvailable && (
+          <AppleSignInButton
+            onPress={handleAppleLogin}
+            disabled={isLoading || isAttempting}
+            style={{ marginBottom: 16, width: '100%', maxWidth: 280 }}
+          />
+        )}
 
         {/* Google sign-in button */}
         <GoogleLoginButton 
@@ -521,16 +554,27 @@ export default function LoginScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Benefits section with updated Google services */}
+        {/* Benefits section */}
         <View style={styles.benefitsContainer}>
-          <BodyText style={styles.benefitsTitle}>🔗 Why Google Login?</BodyText>
+          <BodyText style={styles.benefitsTitle}>🔐 Secure Authentication</BodyText>
           
+          {isAppleSignInAvailable && (
+            <View style={styles.benefitItem}>
+              <View style={styles.checkmark}>
+                <Text style={styles.checkmarkText}>🍎</Text>
+              </View>
+              <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
+                <Text style={{ fontWeight: '600' }}>Apple Sign In:</Text> Private, secure authentication with Apple ID
+              </CaptionText>
+            </View>
+          )}
+
           <View style={styles.benefitItem}>
             <View style={styles.checkmark}>
-              <Text style={styles.checkmarkText}>✓</Text>
+              <Text style={styles.checkmarkText}>🔗</Text>
             </View>
             <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
-              Seamless integration with Gmail, Calendar, Tasks, and Contacts
+              <Text style={{ fontWeight: '600' }}>Google Sign In:</Text> Full workspace integration (Gmail, Calendar, Tasks)
             </CaptionText>
           </View>
 
@@ -539,7 +583,7 @@ export default function LoginScreen() {
               <Text style={styles.checkmarkText}>✓</Text>
             </View>
             <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
-              AI accesses your data securely with your permission
+              Enterprise-grade security with OAuth 2.0
             </CaptionText>
           </View>
 
@@ -548,16 +592,7 @@ export default function LoginScreen() {
               <Text style={styles.checkmarkText}>✓</Text>
             </View>
             <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
-              One login for all your productivity needs
-            </CaptionText>
-          </View>
-
-          <View style={styles.benefitItem}>
-            <View style={styles.checkmark}>
-              <Text style={styles.checkmarkText}>✓</Text>
-            </View>
-            <CaptionText style={{ ...styles.benefitText, color: "#5F6368" }}>
-              Enhanced task automation across Google services
+              Your data stays private and under your control
             </CaptionText>
           </View>
         </View>

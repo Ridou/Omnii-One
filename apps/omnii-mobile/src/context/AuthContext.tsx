@@ -4,6 +4,7 @@ import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { supabase } from '~/lib/supabase';
 import { signInWithGoogle } from '~/lib/auth/googleAuth';
+import { signInWithApple, isAppleSignInAvailable } from '~/lib/auth/appleAuth';
 import { 
   signInWithEmail, 
   signUpWithEmail, 
@@ -25,16 +26,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isAppleSignInAvailableState, setIsAppleSignInAvailableState] = useState(false);
   const router = useRouter();
 
   // Initialize auth state and listen for changes
   useEffect(() => {
     let mounted = true;
 
-    // Get initial session
+    // Get initial session and check Apple Sign In availability
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // Check Apple Sign In availability
+        const appleAvailable = await isAppleSignInAvailable();
         
         if (mounted) {
           if (error) {
@@ -43,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSession(session);
             setUser(session?.user ? mapSupabaseUser(session.user) : null);
           }
+          setIsAppleSignInAvailableState(appleAvailable);
           setIsInitialized(true);
         }
       } catch (error) {
@@ -86,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: Session | null) => {
         if (mounted) {
           console.log('Auth state changed:', event, session?.user?.email);
           
@@ -127,6 +133,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       await signInWithGoogle();
+      // Auth state change will be handled by the listener
+    } catch (error) {
+      setIsLoading(false);
+      throw error;
+    }
+  };
+
+  const handleSignInWithApple = async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      await signInWithApple();
       // Auth state change will be handled by the listener
     } catch (error) {
       setIsLoading(false);
@@ -186,10 +203,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isInitialized,
     signInWithGoogle: handleSignInWithGoogle,
+    signInWithApple: handleSignInWithApple,
     signInWithEmail: handleSignInWithEmail,
     signUpWithEmail: handleSignUpWithEmail,
     signOut: handleSignOut,
     refreshSession: handleRefreshSession,
+    isAppleSignInAvailable: isAppleSignInAvailableState,
   };
 
   return (

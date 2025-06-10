@@ -21,6 +21,10 @@ export default {
       bundleIdentifier: 'com.omnii.mobile',
       googleServicesFile: './GoogleService-Info.plist',
       icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
+      usesAppleSignIn: true,
+      entitlements: {
+        'com.apple.developer.applesignin': ['Default']
+      },
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         CFBundleURLTypes: [
@@ -109,6 +113,7 @@ export default {
     plugins: [
       'expo-font',
       'expo-secure-store',
+      'expo-apple-authentication',
       ['expo-router', { origin: 'https://omnii.net' }],
     ],
     extra: {

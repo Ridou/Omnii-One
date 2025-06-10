@@ -16,10 +16,12 @@ export interface AuthContextType {
   isLoading: boolean;
   isInitialized: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  isAppleSignInAvailable: boolean;
 }
 
 export interface AuthError {
