@@ -874,71 +874,88 @@ const CalendarEventCard: React.FC<{
     }
   };
 
+  const { isDark } = useTheme();
+  
   return (
     <TouchableOpacity 
-      style={[
-        styles.calendarCard,
-        isToday && styles.todayEvent,
-        isPast && styles.pastEvent
-      ]}
+      className={cn(
+        "p-3 rounded-lg mb-2 border",
+        isToday && "border-l-4 border-l-green-500",
+        isPast && "opacity-60",
+        isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+      )}
       onPress={() => onAction?.('view_event', event)}
     >
-      <View style={styles.eventHeader}>
-        <View style={styles.eventTitleSection}>
-          <Text style={[
-            styles.eventTitle,
-            isPast && styles.pastEventText
-          ]} numberOfLines={2}>
+      <View className="flex-row justify-between items-start mb-2">
+        <View className="flex-1 mr-2">
+          <Text className={cn(
+            "text-sm font-semibold mb-1",
+            isPast && "opacity-70",
+            isDark ? "text-white" : "text-gray-900"
+          )} numberOfLines={2}>
             📅 {event.title}
           </Text>
-          <Text style={[
-            styles.eventTime,
-            isToday && styles.todayEventTime
-          ]}>
+          <Text className={cn(
+            "text-xs",
+            isToday && "text-green-600 font-semibold",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>
             {formatDateRange()}
           </Text>
         </View>
         
         {isToday && (
-          <View style={styles.todayBadge}>
-            <Text style={styles.todayBadgeText}>TODAY</Text>
+          <View className="bg-green-600 px-2 py-1 rounded">
+            <Text className="text-xs text-white font-semibold">TODAY</Text>
           </View>
         )}
       </View>
 
       {/* Event details */}
-      <View style={styles.eventDetails}>
+      <View className="gap-1">
         {event.location && (
-          <View style={styles.eventDetailRow}>
-            <Text style={styles.eventDetailIcon}>📍</Text>
-            <Text style={styles.eventDetailText} numberOfLines={1}>
+          <View className="flex-row items-center">
+            <Text className="text-sm w-5">📍</Text>
+            <Text className={cn(
+              "text-sm flex-1",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )} numberOfLines={1}>
               {event.location}
             </Text>
           </View>
         )}
 
         {event.attendees.length > 0 && (
-          <View style={styles.eventDetailRow}>
-            <Text style={styles.eventDetailIcon}>👥</Text>
-            <Text style={styles.eventDetailText} numberOfLines={1}>
+          <View className="flex-row items-center">
+            <Text className="text-sm w-5">👥</Text>
+            <Text className={cn(
+              "text-sm flex-1",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )} numberOfLines={1}>
               {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
             </Text>
           </View>
         )}
 
         {event.meetingLink && (
-          <View style={styles.eventDetailRow}>
-            <Text style={styles.eventDetailIcon}>🔗</Text>
-            <Text style={styles.eventDetailText} numberOfLines={1}>
+          <View className="flex-row items-center">
+            <Text className="text-sm w-5">🔗</Text>
+            <Text className={cn(
+              "text-sm flex-1",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )} numberOfLines={1}>
               Video meeting available
             </Text>
           </View>
         )}
 
         {event.description && (
-          <View style={styles.eventDetailRow}>
-            <Text style={styles.eventDetailIcon}>📝</Text>
-            <Text style={styles.eventDetailText} numberOfLines={2}>
+          <View className="flex-row items-center">
+            <Text className="text-sm w-5">📝</Text>
+            <Text className={cn(
+              "text-sm flex-1",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )} numberOfLines={2}>
               {event.description}
             </Text>
           </View>
@@ -946,28 +963,28 @@ const CalendarEventCard: React.FC<{
       </View>
 
       {/* Quick actions */}
-      <View style={styles.eventQuickActions}>
+      <View className="flex-row justify-end gap-2 pt-2 mt-2 border-t border-slate-600">
         <TouchableOpacity 
-          style={styles.quickActionButton}
+          className="w-8 h-8 rounded-full bg-indigo-600 items-center justify-center"
           onPress={() => onAction?.('edit_event', event)}
         >
-          <Text style={styles.quickActionText}>✏️</Text>
+          <Text className="text-sm">✏️</Text>
         </TouchableOpacity>
         
         {event.meetingLink && (
           <TouchableOpacity 
-            style={styles.quickActionButton}
+            className="w-8 h-8 rounded-full bg-indigo-600 items-center justify-center"
             onPress={() => onAction?.('join_meeting', event)}
           >
-            <Text style={styles.quickActionText}>🔗</Text>
+            <Text className="text-sm">🔗</Text>
           </TouchableOpacity>
         )}
         
         <TouchableOpacity 
-          style={styles.quickActionButton}
+          className="w-8 h-8 rounded-full bg-indigo-600 items-center justify-center"
           onPress={() => onAction?.('share_event', event)}
         >
-          <Text style={styles.quickActionText}>📤</Text>
+          <Text className="text-sm">📤</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>

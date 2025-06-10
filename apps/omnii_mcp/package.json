@@ -4,8 +4,8 @@
   "description": "Model Context Protocol for Omnii",
   "main": "dist/app.js",
   "scripts": {
-    "build": "bun build src/app.ts --outdir ./dist --target node",
-    "build:prod": "bun build src/app.ts --outdir ./dist --target node --minify --external=neo4j-driver --external=openai --external=googleapis",
+    "build": "pnpm build src/app.ts --outdir ./dist --target node",
+    "build:prod": "pnpm build src/app.ts --outdir ./dist --target node --minify --external=neo4j-driver --external=openai --external=googleapis",
     "start": "bun run dist/app.js",
     "start:prod": "NODE_ENV=production bun run dist/app.js",
     "test:railway": "node -e \"console.log('Railway test: Node.js works'); process.exit(0);\"",
