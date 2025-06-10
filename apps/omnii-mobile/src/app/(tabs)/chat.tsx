@@ -12,11 +12,9 @@ import {
     Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, useRouter } from 'expo-router';
-import { MessageCircle } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
-import { useOnboardingContext } from '~/context/OnboardingContext';
 import { useChat } from '~/hooks/useChat';
 import { ChatMessage } from '~/components/chat/ChatMessage';
 import { PendingMessage } from '~/components/chat/PendingMessage';
@@ -24,35 +22,23 @@ import { ConnectionError } from '~/components/chat/ConnectionError';
 import { WebSocketDebug } from '~/components/chat/WebSocketDebug';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
 import { XPProgressBar } from '~/components/common/XPProgressBar';
-import { 
-  MascotStage, 
-  MascotSize, 
-  CheeringTrigger, 
-  getMascotStageByLevel 
+import {
+    MascotSize,
+    CheeringTrigger,
+    getMascotStageByLevel
 } from '~/types/mascot';
-import { AppColors } from '~/constants/Colors';
-import { BRAND_COLORS } from '~/lib/assets';
 import { cn } from '~/utils/cn';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import type { ChatTab, ChatTabConfig, ChatMessage as ChatMessageType } from '~/types/chat';
-import type { 
-  UnifiedToolResponse,
-  EmailData,
-  EmailListData,
-  CalendarData,
-  CalendarListData,
-  ContactData,
-  TaskData,
-  GeneralData
-} from '@omnii/validators';
-import { UpArrowIcon, RightArrowIcon, CalendarIcon, GmailIcon, ContactsIcon, TasksIcon } from '~/icons/ChatIcons';
+import type { ChatTab, ChatTabConfig } from '~/types/chat';
+import { UpArrowIcon, CalendarIcon, GmailIcon, ContactsIcon, TasksIcon } from '~/icons/ChatIcons';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { ResponsiveChatInput, DesktopChatContent, TabletChatContent } from '~/components/common/DesktopChatComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
 
 import { trpc } from '~/utils/api';
+import { useQuery } from '@tanstack/react-query';
+
 import { useXPContext } from '~/context/XPContext';
-import { useTasks, useTaskStats } from '~/hooks/useTasks';
 
 
 // Updated tab configuration following profile.tsx pattern
@@ -91,6 +77,11 @@ export default function ChatScreen() {
   
     const { currentLevel, currentXP } = useXPContext();
     const router = useRouter();
+
+    // TODO: Fix tRPC setup for React Query hooks
+    const { data: hello } = useQuery(trpc.tasks.test.queryOptions());
+    console.log('hello', hello);
+
 
     // Mascot state management
     const { cheeringState, triggerCheering } = useMascotCheering();

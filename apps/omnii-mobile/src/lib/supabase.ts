@@ -10,7 +10,8 @@ const isBrowser = typeof window !== 'undefined';
 const getEnvVars = () => {
   const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl;
   const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey;
-
+  console.log('supabaseUrl', Constants.expoConfig?.extra);
+  console.log('supabaseAnonKey', Constants.expoConfig?.extra?.supabaseAnonKey);
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Missing Supabase environment variables:', {
       url: supabaseUrl ? 'present' : 'missing',
