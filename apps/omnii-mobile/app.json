@@ -2,7 +2,7 @@
   "expo": {
     "name": "OMNII",
     "slug": "omnii",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png",
     "scheme": "omnii-mobile",
@@ -13,6 +13,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.omnii.mobile",
+      "buildNumber": "2",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
