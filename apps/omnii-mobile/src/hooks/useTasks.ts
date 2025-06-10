@@ -27,7 +27,7 @@ export const useTasks = () => {
     error,
     refetch,
     isRefetching
-  } = useQuery(trpc.tasks.test.queryOptions());
+  } = useQuery(trpc.tasks.getCompleteOverview.queryOptions());
 
   console.log('[useTasks] Raw tRPC response:', data);
   console.log('[useTasks] tRPC error:', error);

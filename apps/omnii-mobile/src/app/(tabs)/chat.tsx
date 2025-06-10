@@ -39,6 +39,7 @@ import { trpc } from '~/utils/api';
 import { useQuery } from '@tanstack/react-query';
 
 import { useXPContext } from '~/context/XPContext';
+import { useTasks } from '~/hooks/useTasks';
 
 
 // Updated tab configuration following profile.tsx pattern
@@ -78,9 +79,7 @@ export default function ChatScreen() {
     const { currentLevel, currentXP } = useXPContext();
     const router = useRouter();
 
-    // TODO: Fix tRPC setup for React Query hooks
-    const { data: hello } = useQuery(trpc.tasks.test.queryOptions());
-    console.log('hello', hello);
+ 
 
 
     // Mascot state management
@@ -88,18 +87,19 @@ export default function ChatScreen() {
     const mascotStage = getMascotStageByLevel(currentLevel);
 
     // ✅ ACTUAL tRPC TASKS INTEGRATION:
-    // const { 
-    //     tasksOverview, 
-    //     isLoading: tasksLoading, 
-    //     hasError: tasksError,
-    //     totalTasks,
-    //     totalLists,
-    //     totalCompleted,
-    //     totalPending,
-    //     totalOverdue,
-    //     refetch: refetchTasks
-    // } = useTasks();
+    const { 
+        tasksOverview, 
+        isLoading: tasksLoading, 
+        hasError: tasksError,
+        totalTasks,
+        totalLists,
+        totalCompleted,
+        totalPending,
+        totalOverdue,
+        refetch: refetchTasks
+    } = useTasks();
     
+    console.log('tasksOverview', tasksOverview);
     // const { stats: taskStats } = useTaskStats();
     
     // // Log tasks data when available (for debugging)
