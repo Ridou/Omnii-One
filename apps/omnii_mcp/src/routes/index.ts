@@ -16,17 +16,43 @@ export default (app: Elysia) => {
       router: appRouter,
       req: request,
       createContext: async ({ req }) => {
-        // Create a minimal auth object for the context
-        // This should be replaced with your actual auth implementation
-        const mockAuth = {
+        // Extract auth headers sent from mobile app
+        const authHeader = req.headers.get('Authorization');
+        const userIdHeader = req.headers.get('x-user-id');
+        
+        console.log('[tRPC Context] Auth header present:', !!authHeader);
+        console.log('[tRPC Context] User ID header:', userIdHeader);
+        
+        // Create auth object that matches createTRPCContext expectations
+        const auth = {
           api: {
-            getSession: async () => null, // No session for now
+            getSession: async ({ headers }: { headers: Headers }) => {
+              // If we have both auth token and user ID, create session
+              if (authHeader && userIdHeader) {
+                const token = authHeader.replace('Bearer ', '');
+                
+                console.log('[tRPC Context] Creating session for user:', userIdHeader);
+                
+                return {
+                  user: {
+                    id: userIdHeader,
+                    email: 'user@example.com', // Could extract from JWT if needed
+                    name: 'User'
+                  },
+                  access_token: token,
+                  expires_at: Date.now() + 3600000 // 1 hour from now
+                };
+              }
+              
+              console.log('[tRPC Context] No valid auth headers, returning null session');
+              return null;
+            }
           }
         };
         
         return await createTRPCContext({
           headers: req.headers,
-          auth: mockAuth as any,
+          auth: auth as any,
         });
       },
     }); 
