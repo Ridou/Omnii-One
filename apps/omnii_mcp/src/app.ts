@@ -55,13 +55,14 @@ const app = new Elysia()
           ],
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       credentials: true,
-      // Add WebSocket specific headers
+      // Add WebSocket and tRPC specific headers
       allowedHeaders: [
         "Content-Type",
         "Authorization",
         "X-Requested-With",
         "Accept",
         "Origin",
+        "x-trpc-source", // Required for tRPC client
         "Sec-WebSocket-Protocol",
         "Sec-WebSocket-Version",
         "Sec-WebSocket-Key",
