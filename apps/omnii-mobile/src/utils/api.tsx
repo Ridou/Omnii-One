@@ -7,6 +7,7 @@ import type { AppRouter } from "@omnii/api";
 
 import { authClient } from "./auth";
 import { getBaseUrl } from "./base-url";
+import { supabase } from "~/lib/supabase";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,14 +32,32 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
       httpBatchLink({
         transformer: superjson,
         url: `${getBaseUrl()}/api/trpc`,
-        headers() {
+        async headers() {
           const headers = new Map<string, string>();
           headers.set("x-trpc-source", "expo-react");
+          console.log('[tRPC]headers', headers);
 
           const cookies = authClient.getCookie();
           if (cookies) {
             headers.set("Cookie", cookies);
           }
+
+          // Add authentication headers for tRPC
+          try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            console.log('[tRPC]session', session);
+            if (session && !error) {
+              if (session.access_token) {
+                headers.set("Authorization", `Bearer ${session.access_token}`);
+              }
+              if (session.user?.id) {
+                headers.set("x-user-id", session.user.id);
+              }
+            }
+          } catch (error) {
+            console.warn('[tRPC] Failed to get session for headers:', error);
+          }
+
           return Object.fromEntries(headers);
         },
       }),
