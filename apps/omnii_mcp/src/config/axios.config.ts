@@ -84,7 +84,7 @@ axios.create = function(config) {
 // Patch the Composio library's axios instance if it exists
 try {
   // @ts-ignore - Composio might be using its own axios instance
-  const composio = require('@composio/sdk');
+  const composio = require('composio-core');
   if (composio && composio.axios) {
     configureAxiosInstance(composio.axios, 'composio');
   }
