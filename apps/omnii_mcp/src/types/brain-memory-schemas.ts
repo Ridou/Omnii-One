@@ -207,6 +207,7 @@ export type EnhancedMemory = z.infer<typeof EnhancedMemorySchema>;
 export type EnhancedConcept = z.infer<typeof EnhancedConceptSchema>;
 export type EnhancedTag = z.infer<typeof EnhancedTagSchema>;
 export type BrainMemoryContext = z.infer<typeof BrainMemoryContextSchema>;
+export { BrainMemoryContextSchema as BrainMemoryContext };
 export type EnhancedRelationship = z.infer<typeof EnhancedRelationshipSchema>;
 export type TimeWindow = z.infer<typeof TimeWindowSchema>;
 export type MemoryStrengthCalculation = z.infer<typeof MemoryStrengthCalculationSchema>;

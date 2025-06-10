@@ -25,7 +25,6 @@ import { productionBrainService } from "./memory/production-brain-service";
 
 // Use Elysia's WebSocket type
 interface ElysiaWebSocket {
-  id: string;
   send: (message: string) => void;
   readyState: number;
 }

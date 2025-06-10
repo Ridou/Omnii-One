@@ -251,6 +251,18 @@ export const getWebSocketUrl = () => {
     return fallbackUrl;
   }
   
+  // For web development, also check if we need to replace localhost
+  if (baseUrl.includes('localhost')) {
+    console.log('🔧 [getWebSocketUrl] Web development mode with localhost detected');
+    // Use the same IP that the server is running on
+    const localIP = '10.201.235.37'; // From your server logs
+    const portMatch = baseUrl.match(/:(\d+)/);
+    const port = portMatch ? portMatch[1] : '8000';
+    const wsUrl = `ws://${localIP}:${port}/ws`;
+    console.log('🔧 [getWebSocketUrl] Web development WebSocket URL:', wsUrl);
+    return wsUrl;
+  }
+  
   // For production or web, convert HTTP(S) to WS(S) and add /ws path
   let wsUrl = baseUrl.replace(/^https?:/, baseUrl.startsWith('https:') ? 'wss:' : 'ws:');
   if (!wsUrl.endsWith('/ws')) {

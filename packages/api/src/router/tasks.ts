@@ -1,6 +1,6 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../trpc";
+import { protectedProcedure, publicProcedure } from "../trpc";
 import { CompleteTaskOverviewSchema, TaskDataSchema, TaskListWithTasksSchema } from "@omnii/validators";
 import type { CompleteTaskOverview, TaskData, TaskListWithTasks } from "@omnii/validators";
 
@@ -422,5 +422,12 @@ export const tasksRouter = {
           message: 'Failed to fetch complete task overview',
         };
       }
+    }),
+    test: publicProcedure.query(({ ctx }) => {
+      console.log("[TasksRouter] Testing public procedure", ctx);
+      return {
+        success: true,
+        data: "Hello, world!",
+      };
     }),
 } satisfies TRPCRouterRecord; 

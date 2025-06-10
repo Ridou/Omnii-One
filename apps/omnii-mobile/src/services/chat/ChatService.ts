@@ -144,7 +144,7 @@ export class ChatService {
     console.log('✅ [ChatService] handleOpen complete');
   };
 
-  private handleMessage = (event: MessageEvent) => {
+  private handleMessage = (event: any) => {
     try {
       console.log('🚀 [ChatService] *** RAW MESSAGE RECEIVED ***');
       console.log('[ChatService] Raw WebSocket event.data (first 500 chars):', event.data.substring(0, 500));
@@ -604,7 +604,7 @@ export class ChatService {
     this.emit('error', new Error('WebSocket connection error'));
   };
 
-  private handleClose = (event: CloseEvent) => {
+  private handleClose = (event: any) => {
     console.log('[ChatService] WebSocket closed:', event.code, event.reason);
     this.isConnected = false;
     this.stopHeartbeat();

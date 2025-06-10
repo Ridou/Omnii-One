@@ -97,28 +97,28 @@ export default function ChatScreen() {
     const mascotStage = getMascotStageByLevel(currentLevel);
 
     // ✅ ACTUAL tRPC TASKS INTEGRATION:
-    const { 
-        tasksOverview, 
-        isLoading: tasksLoading, 
-        hasError: tasksError,
-        totalTasks,
-        totalLists,
-        totalCompleted,
-        totalPending,
-        totalOverdue,
-        refetch: refetchTasks
-    } = useTasks();
+    // const { 
+    //     tasksOverview, 
+    //     isLoading: tasksLoading, 
+    //     hasError: tasksError,
+    //     totalTasks,
+    //     totalLists,
+    //     totalCompleted,
+    //     totalPending,
+    //     totalOverdue,
+    //     refetch: refetchTasks
+    // } = useTasks();
     
-    const { stats: taskStats } = useTaskStats();
+    // const { stats: taskStats } = useTaskStats();
     
-    // Log tasks data when available (for debugging)
-    if (tasksOverview) {
-        console.log(`📋 Tasks loaded via tRPC: ${totalTasks} tasks across ${totalLists} lists`);
-        console.log(`✅ Completed: ${totalCompleted}, ⏳ Pending: ${totalPending}, ⚠️ Overdue: ${totalOverdue}`);
-        if (taskStats) {
-            console.log(`📊 Completion rate: ${taskStats.completion_rate}%`);
-        }
-    }
+    // // Log tasks data when available (for debugging)
+    // if (tasksOverview) {
+    //     console.log(`📋 Tasks loaded via tRPC: ${totalTasks} tasks across ${totalLists} lists`);
+    //     console.log(`✅ Completed: ${totalCompleted}, ⏳ Pending: ${totalPending}, ⚠️ Overdue: ${totalOverdue}`);
+    //     if (taskStats) {
+    //         console.log(`📊 Completion rate: ${taskStats.completion_rate}%`);
+    //     }
+    // }
 
 
 
@@ -612,7 +612,7 @@ export default function ChatScreen() {
                 )}>Tap to execute common tasks</Text>
 
                 {/* ✅ REAL tRPC TASKS DATA DISPLAY */}
-                {tasksOverview && (
+                {/* {tasksOverview && (
                     <View className={cn(
                         "rounded-2xl p-4 mb-6 border",
                         isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
@@ -706,9 +706,9 @@ export default function ChatScreen() {
                             isDark ? "text-slate-400" : "text-gray-600"
                         )}>🔄 Loading tasks via tRPC...</Text>
                     </View>
-                )}
+                )} */}
 
-                {tasksError && (
+                {/* {tasksError && (
                     <View className={cn(
                         "rounded-2xl p-4 mb-6 border border-red-500",
                         isDark ? "bg-red-900/20" : "bg-red-50"
@@ -726,7 +726,7 @@ export default function ChatScreen() {
                         </TouchableOpacity>
                     </View>
                 )}
-                
+                 */}
                 <View className="gap-3">
                     {quickActions.map((action) => (
                         <TouchableOpacity

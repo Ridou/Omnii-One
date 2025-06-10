@@ -18,6 +18,7 @@ export const useTasks = () => {
     };
     checkAuth();
   }, []);
+  
 
   // ✅ FIXED: tRPC packages now installed - using proper tRPC hook
   const {
@@ -26,7 +27,7 @@ export const useTasks = () => {
     error,
     refetch,
     isRefetching
-  } = useQuery(trpc.tasks.getCompleteOverview.queryOptions());
+  } = useQuery(trpc.tasks.test.queryOptions());
 
   console.log('[useTasks] Raw tRPC response:', data);
   console.log('[useTasks] tRPC error:', error);

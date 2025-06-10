@@ -14,12 +14,6 @@ export const getBaseUrl = () => {
    * **NOTE**: This is only for development. In production, you'll want to set the
    * baseUrl to your production API URL.
    */
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  const localhost = debuggerHost?.split(":")[0];
-
-  if (!localhost) {
-    // For static export or production, use production domain
-    return "https://omnii.net";
-  }
-     return `http://${localhost}:8000`;
+  const backendApiUrl = Constants.expoConfig?.extra?.backendApiUrl;
+  return backendApiUrl;  
 };
