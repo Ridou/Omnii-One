@@ -1,38 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import { useAuth } from '~/context/AuthContext';
+import { useTheme } from '~/context/ThemeContext';
 import { 
-  connectGoogleIntegration, 
+  checkGoogleTokenStatus, 
+  initiateGoogleOAuth, 
   disconnectGoogleIntegration,
-  getGoogleIntegrationStatus,
-  getAvailableGoogleServices,
-  type GoogleIntegrationStatus 
+  type GoogleTokenStatus 
 } from '~/services/googleIntegration';
-import { BodyText, ButtonText, CaptionText } from '~/components/common/Typography';
+import { cn } from '~/utils/cn';
 
 interface GoogleIntegrationCardProps {
-  onIntegrationChange?: (connected: boolean) => void;
-  showAIPrompt?: boolean;
+  onStatusChange?: (connected: boolean) => void;
 }
 
-export const GoogleIntegrationCard: React.FC<GoogleIntegrationCardProps> = ({
-  onIntegrationChange,
-  showAIPrompt = false
+export const GoogleIntegrationCard: React.FC<GoogleIntegrationCardProps> = ({ 
+  onStatusChange 
 }) => {
-  const [status, setStatus] = useState<GoogleIntegrationStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const { isDark } = useTheme();
+  const [status, setStatus] = useState<GoogleTokenStatus>({
+    isValid: false,
+    needsReconnection: true,
+    services: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  // Check status on mount and when user changes
   useEffect(() => {
-    loadIntegrationStatus();
-  }, []);
+    if (user) {
+      checkStatus();
+    }
+  }, [user]);
 
-  const loadIntegrationStatus = async () => {
+  const checkStatus = async () => {
     try {
       setIsLoading(true);
-      const integrationStatus = await getGoogleIntegrationStatus();
-      setStatus(integrationStatus);
+      const result = await checkGoogleTokenStatus();
+      setStatus(result);
+      onStatusChange?.(result.isValid);
     } catch (error) {
-      console.error('Failed to load integration status:', error);
+      console.error('Failed to check Google status:', error);
+      setStatus({ isValid: false, needsReconnection: true, services: [] });
+      onStatusChange?.(false);
     } finally {
       setIsLoading(false);
     }
@@ -41,35 +52,24 @@ export const GoogleIntegrationCard: React.FC<GoogleIntegrationCardProps> = ({
   const handleConnect = async () => {
     try {
       setIsConnecting(true);
+      await initiateGoogleOAuth();
       
-      await connectGoogleIntegration();
-      await loadIntegrationStatus();
+      // Check status after connection attempt
+      await checkStatus();
       
-      onIntegrationChange?.(true);
-      
-      Alert.alert(
-        '✅ Google Workspace Connected',
-        'Your Google services are now integrated with OMNII. You can now use AI features with your Gmail, Calendar, and Tasks!',
-        [{ text: 'Great!', style: 'default' }]
-      );
-      
+      Alert.alert('Success', 'Google Workspace connected successfully!');
     } catch (error) {
-      console.error('Failed to connect Google integration:', error);
-      
-      Alert.alert(
-        '❌ Connection Failed',
-        'Failed to connect Google workspace. Please try again.',
-        [{ text: 'OK', style: 'default' }]
-      );
+      console.error('Failed to connect Google:', error);
+      Alert.alert('Connection Failed', 'Please try again. Make sure to grant all permissions.');
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     Alert.alert(
-      '🔓 Disconnect Google Workspace',
-      'This will remove access to your Google services. AI features requiring Google access will be limited.',
+      'Disconnect Google Workspace',
+      'This will disconnect all Google services. You can reconnect anytime.',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -77,15 +77,11 @@ export const GoogleIntegrationCard: React.FC<GoogleIntegrationCardProps> = ({
           style: 'destructive',
           onPress: async () => {
             try {
-              setIsConnecting(true);
               await disconnectGoogleIntegration();
-              await loadIntegrationStatus();
-              onIntegrationChange?.(false);
+              await checkStatus();
+              Alert.alert('Disconnected', 'Google Workspace has been disconnected.');
             } catch (error) {
-              console.error('Failed to disconnect Google integration:', error);
               Alert.alert('Error', 'Failed to disconnect. Please try again.');
-            } finally {
-              setIsConnecting(false);
             }
           }
         }
@@ -95,214 +91,167 @@ export const GoogleIntegrationCard: React.FC<GoogleIntegrationCardProps> = ({
 
   if (isLoading) {
     return (
-      <View style={styles.card}>
-        <BodyText style={styles.loadingText}>Loading Google integration...</BodyText>
+      <View className={cn("rounded-2xl p-6 border shadow-sm border-l-4 border-l-blue-500", 
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+        <View className="flex-row items-center justify-center py-8">
+          <ActivityIndicator size="small" color={isDark ? "#3B82F6" : "#1D4ED8"} />
+          <Text className={cn("ml-3 text-sm", isDark ? "text-slate-300" : "text-gray-600")}>
+            Checking Google connection...
+          </Text>
+        </View>
       </View>
     );
   }
 
-  const availableServices = getAvailableGoogleServices();
-
   return (
-    <View style={styles.card}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.icon}>🔗</Text>
-          <BodyText style={styles.title}>Google Workspace</BodyText>
-          <View style={[styles.statusBadge, status?.isConnected ? styles.connectedBadge : styles.disconnectedBadge]}>
-            <CaptionText style={[styles.statusText, status?.isConnected ? styles.connectedText : styles.disconnectedText]}>
-              {status?.isConnected ? 'Connected' : 'Not Connected'}
-            </CaptionText>
-          </View>
+    <View className={cn("rounded-2xl p-6 border shadow-sm border-l-4", 
+      status.isValid 
+        ? "border-l-green-500" 
+        : "border-l-blue-500",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
+      <View className="flex-row items-center mb-4">
+        <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+          status.isValid
+            ? (isDark ? "bg-green-900/30" : "bg-green-100")
+            : (isDark ? "bg-blue-900/30" : "bg-blue-100")
+        )}>
+          <Text className="text-2xl">
+            {status.isValid ? '✅' : '🔗'}
+          </Text>
         </View>
         
-        {status?.isConnected && status.email && (
-          <CaptionText style={styles.emailText}>Connected to: {status.email}</CaptionText>
+        <View className="flex-1">
+          <Text className={cn("text-xl font-bold font-omnii-bold", 
+            isDark ? "text-white" : "text-gray-900")}>
+            Google Workspace
+          </Text>
+          <Text className={cn("text-sm leading-6", 
+            isDark ? "text-slate-400" : "text-gray-600")}>
+            {status.isValid 
+              ? `Connected • ${status.services.length} services`
+              : 'Connect Gmail, Calendar, Tasks & more'
+            }
+          </Text>
+        </View>
+
+        {status.isValid && (
+          <View className={cn("px-3 py-1.5 rounded-full", 
+            isDark ? "bg-green-900/20" : "bg-green-100")}>
+            <Text className={cn("text-xs font-semibold", 
+              isDark ? "text-green-400" : "text-green-700")}>
+              Connected
+            </Text>
+          </View>
         )}
       </View>
 
-      {/* AI Prompt (for Apple users) */}
-      {showAIPrompt && !status?.isConnected && (
-        <View style={styles.aiPrompt}>
-          <Text style={styles.aiIcon}>🤖</Text>
-          <View style={styles.aiPromptContent}>
-            <BodyText style={styles.aiPromptTitle}>Unlock AI Features</BodyText>
-            <CaptionText style={styles.aiPromptText}>
-              Connect your Google workspace to enable AI-powered email management, calendar scheduling, and task automation.
-            </CaptionText>
-          </View>
-        </View>
-      )}
-
-      {/* Services List */}
-      <View style={styles.servicesContainer}>
-        <CaptionText style={styles.servicesTitle}>Available Services:</CaptionText>
-        {availableServices.map((service, index) => (
-          <View key={service.name} style={styles.serviceItem}>
-            <Text style={styles.serviceIcon}>
-              {service.name === 'Gmail' ? '📧' : 
-               service.name === 'Calendar' ? '📅' : 
-               service.name === 'Tasks' ? '✓' : 
-               service.name === 'Contacts' ? '👥' : '🔧'}
+      {status.isValid ? (
+        <>
+          {/* Connected State */}
+          <View className="mb-4">
+            <Text className={cn("text-sm font-medium mb-2", 
+              isDark ? "text-slate-300" : "text-gray-700")}>
+              Account: {status.email}
             </Text>
-            <View style={styles.serviceContent}>
-              <CaptionText style={styles.serviceName}>{service.name}</CaptionText>
-              <CaptionText style={styles.serviceDescription}>{service.description}</CaptionText>
+            <Text className={cn("text-xs", 
+              isDark ? "text-slate-400" : "text-gray-500")}>
+              Last connected: {status.lastConnected ? 
+                new Date(status.lastConnected).toLocaleDateString() : 'Recently'
+              }
+            </Text>
+          </View>
+
+          <View className="mb-4">
+            <Text className={cn("text-sm font-medium mb-2", 
+              isDark ? "text-slate-300" : "text-gray-700")}>
+              Connected Services:
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              {status.services.map((service) => (
+                <View key={service} className={cn("px-2 py-1 rounded", 
+                  isDark ? "bg-slate-700" : "bg-gray-100")}>
+                  <Text className={cn("text-xs", 
+                    isDark ? "text-slate-300" : "text-gray-600")}>
+                    {service}
+                  </Text>
+                </View>
+              ))}
             </View>
           </View>
-        ))}
-      </View>
 
-      {/* Action Button */}
-      <TouchableOpacity
-        style={[styles.actionButton, status?.isConnected ? styles.disconnectButton : styles.connectButton]}
-        onPress={status?.isConnected ? handleDisconnect : handleConnect}
-        disabled={isConnecting}
-      >
-        <ButtonText style={[styles.actionButtonText, status?.isConnected ? styles.disconnectButtonText : styles.connectButtonText]}>
-          {isConnecting ? 'Processing...' : status?.isConnected ? '🔓 Disconnect' : '🔗 Connect Google Workspace'}
-        </ButtonText>
-      </TouchableOpacity>
+          <TouchableOpacity 
+            className={cn("px-4 py-3 rounded-xl border", 
+              isDark 
+                ? "bg-red-900/20 border-red-700 hover:bg-red-900/30" 
+                : "bg-red-50 border-red-200 hover:bg-red-100"
+            )}
+            onPress={handleDisconnect}
+          >
+            <Text className={cn("text-sm font-semibold text-center", 
+              isDark ? "text-red-400" : "text-red-700")}>
+              Disconnect
+            </Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          {/* Disconnected State */}
+          <Text className={cn("text-sm leading-6 mb-4", 
+            isDark ? "text-slate-300" : "text-gray-600")}>
+            Connect your Google account to unlock AI-powered email management, 
+            calendar optimization, and task synchronization.
+          </Text>
+
+          <View className="mb-4">
+            <Text className={cn("text-sm font-medium mb-2", 
+              isDark ? "text-slate-300" : "text-gray-700")}>
+              Features you'll unlock:
+            </Text>
+            <View className="space-y-2">
+              {[
+                'Smart email processing & task extraction',
+                'Calendar event optimization',
+                'Automatic task synchronization',
+                'Contact management integration'
+              ].map((feature, index) => (
+                <View key={index} className="flex-row items-center">
+                  <View className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-3"></View>
+                  <Text className={cn("text-sm", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>
+                    {feature}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            className={cn("px-6 py-4 rounded-xl flex-row items-center justify-center", 
+              isConnecting
+                ? (isDark ? "bg-blue-900/50" : "bg-blue-100")
+                : (isDark ? "bg-blue-900/20 hover:bg-blue-900/30" : "bg-blue-50 hover:bg-blue-100")
+            )}
+            onPress={handleConnect}
+            disabled={isConnecting}
+          >
+            {isConnecting ? (
+              <>
+                <ActivityIndicator size="small" color={isDark ? "#60A5FA" : "#2563EB"} />
+                <Text className={cn("ml-3 text-sm font-semibold", 
+                  isDark ? "text-blue-400" : "text-blue-700")}>
+                  Connecting...
+                </Text>
+              </>
+            ) : (
+              <Text className={cn("text-sm font-semibold", 
+                isDark ? "text-blue-400" : "text-blue-700")}>
+                🔗 Connect Google Workspace
+              </Text>
+            )}
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  header: {
-    marginBottom: 16,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  icon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  title: {
-    flex: 1,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  connectedBadge: {
-    backgroundColor: '#E8F5E8',
-  },
-  disconnectedBadge: {
-    backgroundColor: '#FEF7F0',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  connectedText: {
-    color: '#34A853',
-  },
-  disconnectedText: {
-    color: '#E37400',
-  },
-  emailText: {
-    color: '#666666',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  aiPrompt: {
-    flexDirection: 'row',
-    backgroundColor: '#F0F8FF',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: '#4285F4',
-  },
-  aiIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  aiPromptContent: {
-    flex: 1,
-  },
-  aiPromptTitle: {
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#1565C0',
-  },
-  aiPromptText: {
-    color: '#1976D2',
-    lineHeight: 18,
-  },
-  servicesContainer: {
-    marginBottom: 16,
-  },
-  servicesTitle: {
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333333',
-  },
-  serviceItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  serviceIcon: {
-    fontSize: 16,
-    marginRight: 8,
-    marginTop: 2,
-  },
-  serviceContent: {
-    flex: 1,
-  },
-  serviceName: {
-    fontWeight: '500',
-    marginBottom: 2,
-    color: '#333333',
-  },
-  serviceDescription: {
-    color: '#666666',
-    lineHeight: 16,
-  },
-  actionButton: {
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  connectButton: {
-    backgroundColor: '#4285F4',
-  },
-  disconnectButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DC3545',
-  },
-  actionButtonText: {
-    fontWeight: '600',
-  },
-  connectButtonText: {
-    color: '#FFFFFF',
-  },
-  disconnectButtonText: {
-    color: '#DC3545',
-  },
-  loadingText: {
-    textAlign: 'center',
-    color: '#666666',
-  },
-}); 
+}; 

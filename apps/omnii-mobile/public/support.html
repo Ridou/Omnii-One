@@ -315,9 +315,9 @@
     
     .demo-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 24px;
-      max-width: 1000px;
+      max-width: 800px;
       margin: 0 auto;
     }
     
@@ -620,7 +620,7 @@
       }
       
       .demo-grid {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: 1fr;
       }
       
       .stats-container {
@@ -935,7 +935,7 @@
         'Gmail': 'After authentication, OMNII will access your Gmail to provide AI-powered email management, smart replies, and inbox organization.',
         'Calendar': 'OMNII will integrate with Google Calendar to optimize your schedule, suggest meeting times, and provide intelligent calendar management.',
         'Tasks': 'Connect Google Tasks with OMNII for unified task management across all your productivity tools and platforms.',
-        'Drive': 'OMNII will access Google Drive to help organize files, analyze documents, and provide intelligent content suggestions.'
+        'Contacts': 'OMNII will access Google Contacts to provide smart contact management and relationship insights.'
       };
       
       const message = messages[serviceName] || 'This service integration will be available after Google OAuth authentication.';

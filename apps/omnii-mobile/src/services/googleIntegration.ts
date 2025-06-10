@@ -12,6 +12,14 @@ export interface GoogleIntegrationStatus {
   lastSyncAt?: string;
 }
 
+export interface GoogleTokenStatus {
+  isValid: boolean;
+  needsReconnection: boolean;
+  email?: string;
+  lastConnected?: string;
+  services: string[];
+}
+
 export interface GoogleService {
   name: string;
   scope: string;
@@ -45,6 +53,81 @@ export const GOOGLE_SERVICES: GoogleService[] = [
     isAvailable: true
   }
 ];
+
+/**
+ * Check if user has valid Google access token with auto-refresh
+ */
+export const checkGoogleTokenStatus = async (): Promise<GoogleTokenStatus> => {
+  try {
+    console.log('🔍 Checking Google token status...');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { isValid: false, needsReconnection: true, services: [] };
+    }
+
+    // Get OAuth tokens
+    const tokens = await getMyOAuthTokens('google');
+    
+    if (!tokens || tokens.length === 0) {
+      console.log('❌ No Google tokens found');
+      return { isValid: false, needsReconnection: true, services: [] };
+    }
+
+    const token = tokens[0];
+    
+    if (!token) {
+      console.log('❌ Token is undefined');
+      return { isValid: false, needsReconnection: true, services: [] };
+    }
+    
+    // Check if token is expired
+    const isExpired = token.expires_at ? new Date(token.expires_at) < new Date() : false;
+    
+    if (isExpired && !token.refresh_token) {
+      console.log('⚠️ Token expired and no refresh token available');
+      return { isValid: false, needsReconnection: true, services: [] };
+    }
+
+    // For now, assume token is valid if it exists and not expired or has refresh token
+    const isValid = !isExpired || !!token.refresh_token;
+    
+    console.log('✅ Google token status:', {
+      isValid,
+      hasRefreshToken: !!token.refresh_token,
+      isExpired,
+      expiresAt: token.expires_at
+    });
+    
+    return {
+      isValid,
+      needsReconnection: !isValid,
+      email: (token as any).provider_user_email || 'Connected',
+      lastConnected: (token as any).updated_at || (token as any).created_at,
+      services: GOOGLE_SERVICES.map(s => s.name)
+    };
+    
+  } catch (error) {
+    console.error('❌ Failed to check Google token status:', error);
+    return { isValid: false, needsReconnection: true, services: [] };
+  }
+};
+
+/**
+ * Initiate Google OAuth flow for integration
+ */
+export const initiateGoogleOAuth = async (): Promise<void> => {
+  try {
+    console.log('🚀 Initiating Google OAuth for integration...');
+    
+    // Use existing Google OAuth flow
+    await connectGoogleIntegration();
+    
+  } catch (error) {
+    console.error('❌ Failed to initiate Google OAuth:', error);
+    throw error;
+  }
+};
 
 /**
  * Check if user has Google workspace integration connected

@@ -17,7 +17,8 @@ interface ThemeContextValue {
   isDark: boolean;
   resolvedTheme: 'light' | 'dark';
   systemTheme: 'light' | 'dark' | null;
-  userTheme: ThemeSettings['colorScheme'];
+  userTheme: ThemeSettings['colorScheme'] | null;
+  isFollowingSystem: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
@@ -25,7 +26,8 @@ const ThemeContext = createContext<ThemeContextValue>({
   isDark: false,
   resolvedTheme: 'light',
   systemTheme: null,
-  userTheme: 'light'
+  userTheme: null,
+  isFollowingSystem: true
 });
 
 interface ThemeProviderProps {
@@ -40,19 +42,20 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const themeValue = useMemo(() => {
     try {
       // SAFETY: Handle case when profile context isn't available (SSR/web)
-      const userTheme = profileContext?.state?.theme?.colorScheme || 'light';
+      const userTheme = profileContext?.state?.theme?.colorScheme || null;
       
-      // FIXED: Proper handling of all theme types
+      // SIMPLIFIED: Only handle light/dark, default to system when no user preference
       let resolvedTheme: 'light' | 'dark';
+      let isFollowingSystem = false;
       
-      if (userTheme === 'auto') {
+      if (userTheme === null) {
+        // No user preference set, follow system
         resolvedTheme = systemColorScheme === 'dark' ? 'dark' : 'light';
-      } else if (userTheme === 'high_contrast') {
-        // High contrast maps to dark theme with special styling
-        resolvedTheme = 'dark';
+        isFollowingSystem = true;
       } else {
-        // 'light' or 'dark'
-        resolvedTheme = userTheme === 'dark' ? 'dark' : 'light';
+        // User has set a preference, use it
+        resolvedTheme = userTheme;
+        isFollowingSystem = false;
       }
       
       // Handle systemTheme with proper type safety
@@ -66,7 +69,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         isDark: resolvedTheme === 'dark',
         resolvedTheme,
         systemTheme,
-        userTheme
+        userTheme,
+        isFollowingSystem
       };
     } catch (error) {
       // FALLBACK: Safe defaults if anything fails (SSR-safe)
@@ -78,11 +82,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         : null;
       
       return {
-        theme: 'light' as const,
+        theme: 'light' as 'light',
         isDark: false,
-        resolvedTheme: 'light' as const,
+        resolvedTheme: 'light' as 'light',
         systemTheme: fallbackSystemTheme,
-        userTheme: 'light' as const
+        userTheme: null,
+        isFollowingSystem: true
       };
     }
   }, [profileContext?.state?.theme?.colorScheme, systemColorScheme]);
@@ -100,11 +105,12 @@ export function useTheme() {
   if (!context) {
     // Return safe defaults instead of throwing during SSR
     return {
-      theme: 'light' as const,
+      theme: 'light' as 'light',
       isDark: false,
-      resolvedTheme: 'light' as const,
-      systemTheme: null as const,
-      userTheme: 'light' as const
+      resolvedTheme: 'light' as 'light',
+      systemTheme: null,
+      userTheme: null,
+      isFollowingSystem: true
     };
   }
   return context;
@@ -123,9 +129,7 @@ export function useThemeIntegration() {
         updateTheme({ colorScheme: newTheme });
         
         // Announce to screen readers
-        const announcement = newTheme === 'auto' 
-          ? 'Theme set to automatic mode'
-          : `Theme changed to ${newTheme} mode`;
+        const announcement = `Theme changed to ${newTheme} mode`;
           
         AccessibilityInfo.announceForAccessibility(announcement);
       } catch (error) {
@@ -143,7 +147,7 @@ export function useThemeIntegration() {
     // Fallback when ProfileProvider is not available
     const { theme, isDark } = useTheme();
     return {
-      themeSettings: { colorScheme: 'light' as const },
+      themeSettings: { colorScheme: 'light' as 'light' },
       handleThemeChange: () => console.warn('Theme updates not available without ProfileProvider'),
       currentTheme: theme,
       isDark

@@ -12,23 +12,14 @@ import type {
   LevelProgression,
   ContextualNudge,
   FeatureExploration
-} from '~/types/onboarding';
+} from '~/types/xp';
 
 // Level up callback type
 export type LevelUpCallback = (fromLevel: number, toLevel: number, totalXP: number) => void;
 
-// SECURITY: Helper function to get unlocked features for a level (matches server-side logic)
+// Helper function to get all available features (no level restrictions)
 function getUnlockedFeaturesForLevel(level: number): string[] {
-  const features: string[] = ['approvals']; // Always available
-  
-  if (level >= 2) features.push('achievements');
-  if (level >= 3) features.push('chat', 'voice_commands');
-  if (level >= 4) features.push('analytics');
-  if (level >= 5) features.push('profile'); // ALL CORE FEATURES
-  if (level >= 6) features.push('advanced_insights', 'habit_tracking');
-  if (level >= 10) features.push('predictive_analytics', 'team_features');
-  
-  return features;
+  return ['approvals', 'achievements', 'chat', 'analytics', 'profile']; // All features always available
 }
 
 // Helper function to create contextual nudges for newly unlocked features
@@ -157,8 +148,8 @@ export function XPProvider({ children }: XPProviderProps) {
   // Level progression and celebration state - server handles celebrations now
   const [celebrationQueue, setCelebrationQueue] = useState<LevelProgression[]>([]);
   
-  // Feature unlocking state
-  const [unlockedFeatures, setUnlockedFeatures] = useState<string[]>(['approvals']);
+  // Feature unlocking state - all features always available
+  const [unlockedFeatures, setUnlockedFeatures] = useState<string[]>(['approvals', 'achievements', 'chat', 'analytics', 'profile']);
   
   // Feature exploration and nudge state
   const [featureExploration, setFeatureExploration] = useState<{ [feature: string]: FeatureExploration }>({});
@@ -220,31 +211,12 @@ export function XPProvider({ children }: XPProviderProps) {
         achieved_at: new Date().toISOString(),
       };
 
-      // Add milestone unlocks based on level
-      const oldLevelFeatures = getUnlockedFeaturesForLevel(level - 1);
-      const newLevelFeatures = getUnlockedFeaturesForLevel(level);
-      const justUnlocked = newLevelFeatures.filter(feature => !oldLevelFeatures.includes(feature));
-      
-      if (justUnlocked.length > 0) {
-        celebration.milestone_unlocks = justUnlocked;
-      }
-
       newCelebrations.push(celebration);
-
-      // Create nudges for newly unlocked features
-      const newNudges = justUnlocked
-        .map(feature => createFeatureNudge(feature, level))
-        .filter(Boolean) as ContextualNudge[];
-      
-      if (newNudges.length > 0) {
-        setActiveNudges(prev => [...prev, ...newNudges]);
-      }
 
       console.log('🎊 [XPContext] Created celebration for level:', {
         level,
         fromLevel: level - 1,
         toLevel: level,
-        unlockedFeatures: justUnlocked,
         celebrationId: celebration.id
       });
     }

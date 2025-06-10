@@ -223,6 +223,23 @@ export const LegacyTaskDataSchema = z.object({
   completedDate: z.string().optional(),
 });
 
+// ✅ GOOGLE INTEGRATION SCHEMAS: For Google workspace integration status
+export const GoogleIntegrationStatusSchema = z.object({
+  isConnected: z.boolean(),
+  email: z.string().optional(),
+  connectedAt: z.string().optional(),
+  services: z.array(z.string()),
+  lastSyncAt: z.string().optional(),
+});
+
+export const GoogleTokenStatusSchema = z.object({
+  isValid: z.boolean(),
+  needsReconnection: z.boolean(),
+  email: z.string().optional(),
+  lastConnected: z.string().optional(),
+  services: z.array(z.string()),
+});
+
 // General data schemas
 export const GeneralDataSchema = z.object({
   content: z.string(),
@@ -360,6 +377,8 @@ export type TaskListWithTasks = z.infer<typeof TaskListWithTasksSchema>;
 export type CompleteTaskOverview = z.infer<typeof CompleteTaskOverviewSchema>;
 export type ContactListData = z.infer<typeof ContactListDataSchema>;
 export type SingleContactData = z.infer<typeof SingleContactDataSchema>;
+export type GoogleIntegrationStatus = z.infer<typeof GoogleIntegrationStatusSchema>;
+export type GoogleTokenStatus = z.infer<typeof GoogleTokenStatusSchema>;
 
 // ✅ STATIC VALIDATION FUNCTIONS: Replace runtime checking
 export function isValidUnifiedToolResponse(data: any): data is UnifiedToolResponse {

@@ -7,11 +7,21 @@ import SimpleSwipeCard from '~/components/approvals/SimpleSwipeCard';
 import StreamlinedApprovalCard from '~/components/approvals/StreamlinedApprovalCard';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle } from 'react-native-svg';
 
+interface Approval {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  created_at: string;
+  requested_by: string;
+  type: string;
+}
+
 // Enhanced Desktop Approvals Content
 interface DesktopApprovalsContentProps {
-  filteredTasks: any[];
-  handleApprove: (task: any) => void;
-  handleReject: (task: any) => void;
+  filteredTasks: Approval[];
+  handleApprove: (approval: Approval) => void;
+  handleReject: (approval: Approval) => void;
   selectedFilter: string;
   stats: Record<string, number>;
 }
@@ -57,12 +67,12 @@ export const DesktopApprovalsContent: React.FC<DesktopApprovalsContentProps> = (
         ) : (
           <View className="space-y-4 max-w-6xl">
             <View className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {filteredTasks.map((task, index) => (
-                <EnhancedTaskCard
-                  key={task.id}
-                  task={task}
-                  onApprove={() => handleApprove(task)}
-                  onReject={() => handleReject(task)}
+              {filteredTasks.map((approval, index) => (
+                <EnhancedApprovalCard
+                  key={approval.id}
+                  approval={approval}
+                  onApprove={() => handleApprove(approval)}
+                  onReject={() => handleReject(approval)}
                   index={index}
                 />
               ))}
@@ -74,13 +84,13 @@ export const DesktopApprovalsContent: React.FC<DesktopApprovalsContentProps> = (
   );
 };
 
-// Enhanced Task Card with better styling
-const EnhancedTaskCard: React.FC<{
-  task: any;
+// Enhanced Approval Card with better styling
+const EnhancedApprovalCard: React.FC<{
+  approval: Approval;
   onApprove: () => void;
   onReject: () => void;
   index: number;
-}> = ({ task, onApprove, onReject, index }) => {
+}> = ({ approval, onApprove, onReject, index }) => {
   const { isDark } = useTheme();
   
   const priorityConfig = {
@@ -107,8 +117,8 @@ const EnhancedTaskCard: React.FC<{
     }
   };
   
-  const config = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
-  const aiConfidence = Math.floor(Math.random() * 15) + 85; // 85-99%
+  const config = priorityConfig[approval.priority as keyof typeof priorityConfig] || priorityConfig.medium;
+  const aiConfidence = Math.floor(Math.random() * 15) + 85;
   
   return (
     <TouchableOpacity
@@ -148,14 +158,14 @@ const EnhancedTaskCard: React.FC<{
               "text-lg font-bold leading-6 mb-2",
               isDark ? "text-white" : "text-gray-900"
             )}>
-              {task.title}
+              {approval.title}
             </Text>
             
             <Text className={cn(
               "text-sm leading-5",
               isDark ? "text-slate-400" : "text-gray-600"
             )}>
-              {task.description}
+              {approval.description}
             </Text>
           </View>
           
@@ -164,10 +174,7 @@ const EnhancedTaskCard: React.FC<{
             "w-12 h-12 rounded-xl items-center justify-center",
             config.bgColor
           )}>
-            <Text className="text-xl">
-              {task.type === 'onboarding_quote' ? '💭' : 
-               task.type === 'approval' ? '📋' : '📄'}
-            </Text>
+            <Text className="text-xl">📋</Text>
           </View>
         </View>
       </View>
@@ -187,7 +194,7 @@ const EnhancedTaskCard: React.FC<{
               "text-sm font-medium",
               isDark ? "text-slate-300" : "text-gray-700"
             )}>
-              {task.requested_by}
+              {approval.requested_by}
             </Text>
           </View>
           
@@ -202,45 +209,47 @@ const EnhancedTaskCard: React.FC<{
               "text-sm",
               isDark ? "text-slate-400" : "text-gray-600"
             )}>
-              Suggested for today at 2:00 PM
+              {new Date(approval.created_at).toLocaleDateString()}
             </Text>
           </View>
         </View>
         
         {/* AI Confidence Section */}
-        <View className="mb-6">
+        <View className={cn(
+          "rounded-xl p-4 mb-4",
+          isDark ? "bg-slate-700/50" : "bg-gray-50"
+        )}>
           <View className="flex-row items-center justify-between mb-2">
             <Text className={cn(
-              "text-sm font-semibold",
+              "text-sm font-medium",
               isDark ? "text-slate-300" : "text-gray-700"
             )}>
-              AI Confidence:
+              AI Confidence Score
             </Text>
-            <View className="flex-row items-center">
-              <Text className={cn(
-                "text-sm font-bold mr-2",
-                isDark ? "text-white" : "text-gray-900"
-              )}>
-                {aiConfidence}%
-              </Text>
-              <TouchableOpacity>
-                <Text className="text-xs text-blue-500 font-semibold">AI Generated</Text>
-              </TouchableOpacity>
-            </View>
+            <Text className={cn(
+              "text-sm font-bold",
+              isDark ? "text-green-400" : "text-green-600"
+            )}>
+              {aiConfidence}%
+            </Text>
           </View>
           
-          {/* Enhanced Progress Bar */}
           <View className={cn(
             "h-2 rounded-full overflow-hidden",
-            isDark ? "bg-slate-700" : "bg-gray-200"
+            isDark ? "bg-slate-600" : "bg-gray-200"
           )}>
-            <View className="h-full flex-row">
-              <View 
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
-                style={{ width: `${aiConfidence}%` }}
-              />
-            </View>
+            <View 
+              className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"
+              style={{ width: `${aiConfidence}%` }}
+            />
           </View>
+          
+          <Text className={cn(
+            "text-xs mt-2",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>
+            Based on your approval patterns and task priority
+          </Text>
         </View>
         
         {/* Action Buttons */}
@@ -284,61 +293,7 @@ const EnhancedTaskCard: React.FC<{
   );
 };
 
-// Enhanced Empty State
-const EmptyStateCard: React.FC<{ selectedFilter: string }> = ({ selectedFilter }) => {
-  const { isDark } = useTheme();
-  
-  const emptyStateConfig = {
-    easy: { icon: '⚡', title: 'No Easy Wins', subtitle: 'All simple tasks completed!' },
-    smart: { icon: '🤖', title: 'No Smart Suggestions', subtitle: 'AI has no recommendations right now' },
-    complex: { icon: '📝', title: 'No Complex Tasks', subtitle: 'No challenging items to review' },
-    priority: { icon: '🔥', title: 'No Priority Items', subtitle: 'No urgent tasks requiring attention' }
-  };
-  
-  const config = emptyStateConfig[selectedFilter as keyof typeof emptyStateConfig] || emptyStateConfig.smart;
-  
-  return (
-    <View className="flex-1 justify-center items-center py-20">
-      <View className={cn(
-        "rounded-2xl p-12 items-center border max-w-md mx-auto",
-        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-      )}>
-        <View className={cn(
-          "w-20 h-20 rounded-full items-center justify-center mb-6",
-          isDark ? "bg-slate-700" : "bg-gray-100"
-        )}>
-          <Text className="text-4xl">{config.icon}</Text>
-        </View>
-        
-        <Text className={cn(
-          "font-semibold text-xl mb-3 text-center",
-          isDark ? "text-white" : "text-gray-900"
-        )}>
-          {config.title}
-        </Text>
-        
-        <Text className={cn(
-          "text-center leading-6",
-          isDark ? "text-slate-400" : "text-gray-600"
-        )}>
-          {config.subtitle}
-        </Text>
-        
-        <View className="mt-6 flex-row items-center">
-          <View className="w-2 h-2 bg-green-500 rounded-full mr-2"></View>
-          <Text className={cn(
-            "text-sm font-medium",
-            isDark ? "text-green-400" : "text-green-600"
-          )}>
-            Great work staying on top of everything!
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-};
-
-// Enhanced Stats Card
+// Stats Card Component
 const StatsCard: React.FC<{
   label: string;
   value: number;
@@ -346,31 +301,45 @@ const StatsCard: React.FC<{
 }> = ({ label, value, color }) => {
   const { isDark } = useTheme();
   
-  const colorMap = {
-    gray: isDark ? 'bg-slate-700' : 'bg-gray-100',
-    easy: isDark ? 'bg-teal-900/20' : 'bg-teal-50',
-    smart: isDark ? 'bg-purple-900/20' : 'bg-purple-50',
-    complex: isDark ? 'bg-orange-900/20' : 'bg-orange-50',
-    priority: isDark ? 'bg-red-900/20' : 'bg-red-50'
+  const colorConfig = {
+    gray: { bg: isDark ? 'bg-slate-700' : 'bg-gray-100', text: isDark ? 'text-slate-300' : 'text-gray-700' },
+    easy: { bg: isDark ? 'bg-teal-900/30' : 'bg-teal-100', text: isDark ? 'text-teal-400' : 'text-teal-700' },
+    smart: { bg: isDark ? 'bg-purple-900/30' : 'bg-purple-100', text: isDark ? 'text-purple-400' : 'text-purple-700' },
+    complex: { bg: isDark ? 'bg-orange-900/30' : 'bg-orange-100', text: isDark ? 'text-orange-400' : 'text-orange-700' },
+    priority: { bg: isDark ? 'bg-red-900/30' : 'bg-red-100', text: isDark ? 'text-red-400' : 'text-red-700' },
   };
+  
+  const config = colorConfig[color as keyof typeof colorConfig] || colorConfig.gray;
+  
+  return (
+    <View className={cn("px-4 py-3 rounded-xl", config.bg)}>
+      <Text className={cn("text-2xl font-bold", config.text)}>{value}</Text>
+      <Text className={cn("text-xs font-medium", config.text)}>{label}</Text>
+    </View>
+  );
+};
+
+// Empty State Card
+const EmptyStateCard: React.FC<{ selectedFilter: string }> = ({ selectedFilter }) => {
+  const { isDark } = useTheme();
   
   return (
     <View className={cn(
-      "px-4 py-2 rounded-xl border",
-      isDark ? "border-slate-600" : "border-gray-200",
-             colorMap[color as keyof typeof colorMap] || colorMap.gray
+      "rounded-2xl p-12 items-center border-2 border-dashed max-w-md mx-auto",
+      isDark ? "border-slate-600 bg-slate-800/50" : "border-gray-300 bg-gray-50/50"
     )}>
+      <Text className="text-6xl mb-4">📋</Text>
       <Text className={cn(
-        "text-2xl font-bold text-center mb-1",
+        "text-xl font-bold mb-2 text-center",
         isDark ? "text-white" : "text-gray-900"
       )}>
-        {value}
+        No {getFilterTitle(selectedFilter)} Tasks
       </Text>
       <Text className={cn(
-        "text-xs font-medium text-center",
+        "text-sm text-center leading-relaxed",
         isDark ? "text-slate-400" : "text-gray-600"
       )}>
-        {label}
+        {getEmptyStateMessage(selectedFilter)}
       </Text>
     </View>
   );
@@ -407,31 +376,33 @@ const getFilterDescription = (filter: string): string => {
   return descriptions[filter as keyof typeof descriptions] || 'All available tasks and approvals';
 };
 
+const getEmptyStateMessage = (filter: string): string => {
+  const messages = {
+    easy: 'All easy tasks have been completed! Check other filters for more complex items.',
+    smart: 'AI has processed all relevant tasks for now. New recommendations will appear as they become available.',
+    complex: 'No complex tasks require your attention at the moment. Great work on staying organized!',
+    priority: 'All high-priority items have been addressed. You\'re all caught up!'
+  };
+  return messages[filter as keyof typeof messages] || 'No tasks available in this category at the moment.';
+};
+
 // Tablet Approvals Content
 export const TabletApprovalsContent: React.FC<{
-  filteredTasks: any[];
-  handleApprove: (task: any) => void;
-  handleReject: (task: any) => void;
+  filteredTasks: Approval[];
+  handleApprove: (approval: Approval) => void;
+  handleReject: (approval: Approval) => void;
 }> = ({ filteredTasks, handleApprove, handleReject }) => {
   return (
     <View className="flex-1 px-6">
       <View className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredTasks.map((task) => (
+        {filteredTasks.map((approval) => (
           <SimpleSwipeCard
-            key={task.id}
-            onSwipeLeft={() => handleReject(task)}
-            onSwipeRight={() => handleApprove(task)}
+            key={approval.id}
+            onSwipeLeft={() => handleReject(approval)}
+            onSwipeRight={() => handleApprove(approval)}
           >
             <StreamlinedApprovalCard
-              approval={task.approval || {
-                id: task.id,
-                title: task.title,
-                description: task.description,
-                priority: task.priority,
-                created_at: task.created_at,
-                requested_by: task.requested_by,
-                type: task.type,
-              }} 
+              approval={approval}
               onPress={() => {
                 // Handle press if needed
               }}

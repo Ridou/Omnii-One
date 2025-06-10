@@ -14,7 +14,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '~/context/AuthContext';
 import { XPProvider } from '~/context/XPContext';
 import { ProfileProvider } from '~/context/ProfileContext';
-import { OnboardingProvider } from '~/context/OnboardingContext';
+
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
 import { useFrameworkReady } from '~/hooks/useFrameworkReady';
 import { queryClient } from '~/utils/api';
@@ -59,9 +59,7 @@ export default function RootLayout() {
           <XPProvider>
             <ProfileProvider>
               <ThemeProvider>
-                <OnboardingProvider>
-                  <ThemedStack />
-                </OnboardingProvider>
+                <ThemedStack />
               </ThemeProvider>
             </ProfileProvider>
           </XPProvider>

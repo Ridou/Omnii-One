@@ -13,12 +13,11 @@ import {
   Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, useRouter } from 'expo-router';
-import { CircleUser as UserCircle } from 'lucide-react-native';
+import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useAuth } from '~/context/AuthContext';
 import { useProfile } from '~/context/ProfileContext';
-import { useOnboardingContext } from '~/context/OnboardingContext';
+
 import { useTheme } from '~/context/ThemeContext';
 import { AppLogo } from '~/components/common/OmniiLogo';
 import WorkStyleAssessment from '~/components/profile/WorkStyleAssessment';
@@ -37,6 +36,7 @@ import { XPSystemUtils } from '~/constants/XPSystem';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { DesktopProfileContent, TabletProfileContent } from '~/components/common/DesktopProfileComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
+import { GoogleIntegrationCard } from '~/components/integrations/GoogleIntegrationCard';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -46,13 +46,13 @@ const profileTabs: TabConfig[] = [
     key: 'connect',
     label: 'Connect',
     icon: '🔗',
-    gradient: ['#667eea', '#764ba2']
+    gradient: ['#4ECDC4', '#44A08D']
   },
   {
     key: 'dna',
     label: 'DNA',
     icon: '🧬',
-    gradient: ['#4ECDC4', '#44A08D']
+    gradient: ['#667eea', '#764ba2']
   },
   {
     key: 'ai',
@@ -71,10 +71,8 @@ const profileTabs: TabConfig[] = [
 export default function ProfileScreen() {
   const { user, signOut, isLoading } = useAuth();
   const { state, updateTheme } = useProfile();
-  const { 
-    state: onboardingState,
-    isOnboardingComplete
-  } = useOnboardingContext();
+  const searchParams = useLocalSearchParams();
+
   const { xpProgress, currentLevel, currentXP } = useXPSystem();
   const router = useRouter();
   const { theme, isDark } = useTheme();
@@ -91,7 +89,9 @@ export default function ProfileScreen() {
   const { cheeringState, triggerCheering } = useMascotCheering();
   const prevLevel = useRef(level);
   
-  const [selectedTab, setSelectedTab] = useState<ProfileTab>('connect');
+  // Initialize selectedTab based on URL parameter or default to 'connect'
+  const initialTab = (searchParams.tab as ProfileTab) || 'connect';
+  const [selectedTab, setSelectedTab] = useState<ProfileTab>(initialTab);
   const [refreshing, setRefreshing] = useState(false);
 
   // Animation refs for each tab (SIMPLIFIED - no more glow effects)
@@ -109,6 +109,14 @@ export default function ProfileScreen() {
     }
     prevLevel.current = level;
   }, [level, triggerCheering]);
+
+  // Update selectedTab when URL parameters change
+  useEffect(() => {
+    const urlTab = searchParams.tab as ProfileTab;
+    if (urlTab && urlTab !== selectedTab) {
+      setSelectedTab(urlTab);
+    }
+  }, [searchParams.tab]);
 
   // Handle mascot tap interaction
   const handleMascotTap = () => {
@@ -245,138 +253,79 @@ export default function ProfileScreen() {
       case 'connect':
         return (
           <ScrollView className={cn("flex-1 px-5", isDark ? "bg-slate-900" : "bg-white")} showsVerticalScrollIndicator={false}>
-            {/* Discord CTA Card for Level 5+ */}
-            {level >= 5 && (
-              <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-purple-500", 
-                isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
-                <View className="flex-row items-center mb-4">
-                  <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
-                    isDark ? "bg-purple-900/30" : "bg-purple-100")}>
-                    <Text className="text-2xl">💬</Text>
-                  </View>
-                  <View className="flex-row items-center justify-between flex-1">
-                    <Text className={cn("text-xl font-bold font-omnii-bold flex-1", 
-                      isDark ? "text-white" : "text-gray-900")}>Join Our Community</Text>
-                    <View className="bg-red-500 px-3 py-1.5 rounded-full">
-                      <Text className="text-white text-xs font-bold tracking-wide">NEW</Text>
-                    </View>
-                  </View>
-                </View>
-                
-                <Text className={cn("text-base leading-6 mb-5", 
-                  isDark ? "text-slate-300" : "text-gray-700")}>
-                  Connect with other productivity enthusiasts and share your OMNII journey! Get tips, insights, and be part of our growing community.
-                </Text>
-                
-                <View className="space-y-3 mb-6">
-                  <View className="flex-row items-center">
-                    <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
-                    <Text className={cn("text-sm font-medium leading-5 flex-1", 
-                      isDark ? "text-slate-400" : "text-gray-600")}>
-                      Early access to new features and updates
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center">
-                    <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
-                    <Text className={cn("text-sm font-medium leading-5 flex-1", 
-                      isDark ? "text-slate-400" : "text-gray-600")}>
-                      Share productivity tips and celebrate achievements
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center">
-                    <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
-                    <Text className={cn("text-sm font-medium leading-5 flex-1", 
-                      isDark ? "text-slate-400" : "text-gray-600")}>
-                      Direct feedback channel to shape OMNII&apos;s future
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center">
-                    <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
-                    <Text className={cn("text-sm font-medium leading-5 flex-1", 
-                      isDark ? "text-slate-400" : "text-gray-600")}>
-                      Connect with like-minded productivity enthusiasts
-                    </Text>
-                  </View>
-                </View>
-                
-                <TouchableOpacity
-                  className="bg-purple-600 hover:bg-purple-700 active:bg-purple-700 px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
-                  onPress={async () => {
-                    try {
-                      await Linking.openURL('https://discord.gg/HPgAARkhkE');
-                    } catch (error) {
-                      console.error('Failed to open Discord link:', error);
-                    }
-                  }}
-                >
-                  <Text className="text-white text-base font-bold mr-2">Join Discord Community</Text>
-                  <Text className="text-white text-base font-bold">→</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            {/* Google Integration Card */}
+            <GoogleIntegrationCard 
+              onStatusChange={(connected) => {
+                // Optional: Track connection status changes
+                console.log('Google integration status:', connected ? 'Connected' : 'Disconnected');
+              }}
+            />
 
-            {/* Placeholder Cards */}
-            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-blue-500", 
+            {/* Discord Feedback CTA Card */}
+            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-purple-500", 
               isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
-              <View className="flex-row items-center mb-3">
-                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
-                  isDark ? "bg-blue-900/30" : "bg-blue-100")}>
-                  <Text className="text-xl">📱</Text>
+              <View className="flex-row items-center mb-4">
+                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                  isDark ? "bg-purple-900/30" : "bg-purple-100")}>
+                  <Text className="text-2xl">💬</Text>
                 </View>
-                <Text className={cn("text-lg font-bold font-omnii-bold", 
-                  isDark ? "text-white" : "text-gray-900")}>Calendar Integration</Text>
-              </View>
-              <Text className={cn("text-sm leading-6 mb-4", 
-                isDark ? "text-slate-300" : "text-gray-600")}>
-                Connect your calendar to optimize scheduling and task management.
-              </Text>
-              <View className={cn("px-3 py-2 rounded-lg self-start", 
-                isDark ? "bg-orange-900/20" : "bg-orange-100")}>
-                <Text className={cn("text-xs font-semibold", 
-                  isDark ? "text-orange-400" : "text-orange-700")}>Coming Soon</Text>
-              </View>
-            </View>
-            
-            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-green-500", 
-              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
-              <View className="flex-row items-center mb-3">
-                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
-                  isDark ? "bg-green-900/30" : "bg-green-100")}>
-                  <Text className="text-xl">✉️</Text>
+                <View className="flex-1">
+                  <Text className={cn("text-xl font-bold font-omnii-bold", 
+                    isDark ? "text-white" : "text-gray-900")}>Share Your Feedback</Text>
+                  <Text className={cn("text-sm font-medium", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Help us improve OMNII</Text>
                 </View>
-                <Text className={cn("text-lg font-bold font-omnii-bold", 
-                  isDark ? "text-white" : "text-gray-900")}>Email Integration</Text>
               </View>
-              <Text className={cn("text-sm leading-6 mb-4", 
-                isDark ? "text-slate-300" : "text-gray-600")}>
-                Smart email processing and task extraction from your inbox.
+              
+              <Text className={cn("text-base leading-6 mb-5", 
+                isDark ? "text-slate-300" : "text-gray-700")}>
+                Have ideas, suggestions, or feedback? Join our Discord community to share your thoughts and help shape the future of OMNII.
               </Text>
-              <View className={cn("px-3 py-2 rounded-lg self-start", 
-                isDark ? "bg-orange-900/20" : "bg-orange-100")}>
-                <Text className={cn("text-xs font-semibold", 
-                  isDark ? "text-orange-400" : "text-orange-700")}>Coming Soon</Text>
-              </View>
-            </View>
-            
-            <View className={cn("rounded-2xl p-6 mb-6 border shadow-sm border-l-4 border-l-indigo-500", 
-              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
-              <View className="flex-row items-center mb-3">
-                <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
-                  isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
-                  <Text className="text-xl">💬</Text>
+              
+              <View className="space-y-3 mb-6">
+                <View className="flex-row items-center">
+                  <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                  <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>
+                    Direct feedback channel to shape OMNII&apos;s future
+                  </Text>
                 </View>
-                <Text className={cn("text-lg font-bold font-omnii-bold", 
-                  isDark ? "text-white" : "text-gray-900")}>Slack Integration</Text>
+                <View className="flex-row items-center">
+                  <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                  <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>
+                    Connect with like-minded productivity enthusiasts
+                  </Text>
+                </View>
+                <View className="flex-row items-center">
+                  <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                  <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>
+                    Early access to new features and updates
+                  </Text>
+                </View>
+                <View className="flex-row items-center">
+                  <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                  <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>
+                    Share productivity tips and celebrate achievements
+                  </Text>
+                </View>
               </View>
-              <Text className={cn("text-sm leading-6 mb-4", 
-                isDark ? "text-slate-300" : "text-gray-600")}>
-                Seamlessly manage tasks and projects from your team workspace.
-              </Text>
-              <View className={cn("px-3 py-2 rounded-lg self-start", 
-                isDark ? "bg-orange-900/20" : "bg-orange-100")}>
-                <Text className={cn("text-xs font-semibold", 
-                  isDark ? "text-orange-400" : "text-orange-700")}>Coming Soon</Text>
-              </View>
+              
+              <TouchableOpacity
+                className="bg-purple-600 hover:bg-purple-700 active:bg-purple-700 px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
+                onPress={async () => {
+                  try {
+                    await Linking.openURL('https://discord.gg/HPgAARkhkE');
+                  } catch (error) {
+                    console.error('Failed to open Discord link:', error);
+                  }
+                }}
+              >
+                <Text className="text-white text-base font-bold mr-2">Join Discord Community</Text>
+                <Text className="text-white text-base font-bold">→</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         );
@@ -676,19 +625,24 @@ export default function ProfileScreen() {
       case 'settings':
         return (
           <ScrollView className={cn("flex-1 px-5", isDark ? "bg-slate-900" : "bg-white")} showsVerticalScrollIndicator={false}>
-            {/* Account Management Section */}
+            {/* Account Settings Section - Consolidated */}
             <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm", 
               isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
-              <View className="flex-row items-center mb-4">
+              <View className="flex-row items-center mb-6">
                 <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
                   isDark ? "bg-blue-900/30" : "bg-blue-100")}>
                   <Text className="text-2xl">⚙️</Text>
                 </View>
-                <Text className={cn("text-xl font-bold font-omnii-bold", 
-                  isDark ? "text-white" : "text-gray-900")}>Account Settings</Text>
+                <View className="flex-1">
+                  <Text className={cn("text-xl font-bold font-omnii-bold", 
+                    isDark ? "text-white" : "text-gray-900")}>Account Settings</Text>
+                  <Text className={cn("text-sm", 
+                    isDark ? "text-slate-400" : "text-gray-600")}>Manage your account and preferences</Text>
+                </View>
               </View>
               
-              <View className="space-y-4">
+              {/* Account Info */}
+              <View className="space-y-4 mb-6">
                 <View className={cn("flex-row justify-between items-center py-3 border-b", 
                   isDark ? "border-slate-700" : "border-gray-100")}>
                   <Text className={cn("text-sm font-semibold", 
@@ -706,7 +660,8 @@ export default function ProfileScreen() {
                       isDark ? "text-green-400" : "text-green-700")}>Level {level}</Text>
                   </View>
                 </View>
-                <View className="flex-row justify-between items-center py-3">
+                <View className={cn("flex-row justify-between items-center py-3 border-b", 
+                  isDark ? "border-slate-700" : "border-gray-100")}>
                   <Text className={cn("text-sm font-semibold", 
                     isDark ? "text-slate-300" : "text-gray-700")}>Total XP</Text>
                   <View className={cn("px-3 py-1.5 rounded-full", 
@@ -716,48 +671,64 @@ export default function ProfileScreen() {
                   </View>
                 </View>
               </View>
-            </View>
 
-            {/* Appearance Section */}
-            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm", 
-              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
-              <View className="flex-row items-center mb-4">
-                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
-                  isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
-                  <Text className="text-2xl">🎨</Text>
+              {/* Theme Settings */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-4">
+                  <View className={cn("w-8 h-8 rounded-lg items-center justify-center mr-3", 
+                    isDark ? "bg-indigo-900/30" : "bg-indigo-100")}>
+                    <Text className="text-lg">🎨</Text>
+                  </View>
+                  <Text className={cn("text-base font-bold", 
+                    isDark ? "text-white" : "text-gray-900")}>Appearance</Text>
                 </View>
-                <Text className={cn("text-xl font-bold font-omnii-bold", 
-                  isDark ? "text-white" : "text-gray-900")}>Appearance</Text>
-              </View>
-              
-              <ThemeSelector 
-                currentTheme={state.theme?.colorScheme || 'light'}
-                onThemeChange={(theme) => updateTheme({ colorScheme: theme })}
-              />
-            </View>
-
-            {/* Account Actions Section */}
-            <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm", 
-              isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
-              <View className="flex-row items-center mb-4">
-                <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
-                  isDark ? "bg-red-900/30" : "bg-red-100")}>
-                  <Text className="text-2xl">🔓</Text>
-                </View>
-                <Text className={cn("text-xl font-bold font-omnii-bold", 
-                  isDark ? "text-white" : "text-gray-900")}>Account Actions</Text>
+                
+                <ThemeSelector 
+                  currentTheme={state.theme?.colorScheme || null}
+                  onThemeChange={(theme) => updateTheme({ colorScheme: theme })}
+                />
               </View>
 
-              <TouchableOpacity 
-                className={cn("px-6 py-4 rounded-xl border flex-row items-center justify-center", 
-                  isDark 
-                    ? "bg-slate-700 hover:bg-slate-600 active:bg-slate-600 border-slate-600" 
-                    : "bg-gray-100 hover:bg-gray-200 active:bg-gray-200 border-gray-200")}
-                onPress={handleLogout}
-              >
-                <Text className={cn("text-base font-bold", 
-                  isDark ? "text-slate-300" : "text-gray-700")}>Sign Out</Text>
-              </TouchableOpacity>
+              {/* Sign Out Button */}
+              <View>
+                <View className="flex-row items-center mb-4">
+                  <View className={cn("w-8 h-8 rounded-lg items-center justify-center mr-3", 
+                    isDark ? "bg-red-900/30" : "bg-red-100")}>
+                    <Text className="text-lg">🚪</Text>
+                  </View>
+                  <Text className={cn("text-base font-bold", 
+                    isDark ? "text-white" : "text-gray-900")}>Account Actions</Text>
+                </View>
+
+                <TouchableOpacity 
+                  className={cn("px-6 py-4 rounded-xl border-2 flex-row items-center justify-between shadow-sm", 
+                    isDark 
+                      ? "bg-red-900/10 border-red-800/50 hover:bg-red-900/20 active:bg-red-900/20" 
+                      : "bg-red-50 border-red-200 hover:bg-red-100 active:bg-red-100")}
+                  onPress={handleLogout}
+                >
+                  <View className="flex-row items-center flex-1">
+                    <View className={cn("w-10 h-10 rounded-lg items-center justify-center mr-3", 
+                      isDark ? "bg-red-900/30" : "bg-red-100")}>
+                      <Text className="text-lg">🔐</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className={cn("text-base font-bold", 
+                        isDark ? "text-red-400" : "text-red-700")}>Sign Out</Text>
+                      <Text className={cn("text-sm", 
+                        isDark ? "text-red-500" : "text-red-600")}>Exit your OMNII account</Text>
+                    </View>
+                  </View>
+                  <Text className={cn("text-lg ml-2", 
+                    isDark ? "text-red-400" : "text-red-600")}>→</Text>
+                </TouchableOpacity>
+
+                {/* Help text */}
+                <Text className={cn("text-xs text-center mt-3", 
+                  isDark ? "text-slate-500" : "text-gray-500")}>
+                  Your data will be preserved and you can sign back in anytime
+                </Text>
+              </View>
             </View>
 
             {/* Privacy Notice */}

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useResponsiveDesign } from '~/utils/responsive';
 import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
 import ThemeSelector from '~/components/profile/ThemeSelector';
 import DataManagement from '~/components/profile/DataManagement';
+import { GoogleIntegrationCard } from '~/components/integrations/GoogleIntegrationCard';
 
 // Desktop Profile Content with Multi-Column Layout
 interface DesktopProfileContentProps {
@@ -29,47 +30,100 @@ export const DesktopProfileContent: React.FC<DesktopProfileContentProps> = ({
   renderTabContent
 }) => {
   const responsive = useResponsiveDesign();
+  const { isDark } = useTheme();
   
   if (selectedTab === 'connect') {
     return (
-      <View className="flex-row gap-8 h-full">
+      <View className="flex-row gap-6 h-full">
         {/* Left column - main integrations */}
         <View className="flex-2 min-w-0">
-          <Text className="text-2xl font-bold mb-6">🔗 Connect Your Tools</Text>
-          <View className="flex-row flex-wrap gap-6">
-            <View className="flex-1 min-w-[350px]">
-              <IntegrationCard
-                title="Calendar Integration"
-                description="Connect your calendar to optimize scheduling and task management."
-                icon="📱"
-                status="coming-soon"
-                color="blue"
-              />
-            </View>
-            <View className="flex-1 min-w-[350px]">
-              <IntegrationCard
-                title="Email Integration"
-                description="Smart email processing and task extraction from your inbox."
-                icon="✉️"
-                status="coming-soon"
-                color="green"
-              />
-            </View>
-          </View>
+          <Text className={cn(
+            "text-2xl font-bold mb-6",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🔗 Connect Your Tools</Text>
+          
+          {/* Google Integration Card */}
+          <GoogleIntegrationCard 
+            onStatusChange={(connected) => {
+              console.log('Google integration status:', connected ? 'Connected' : 'Disconnected');
+            }}
+          />
         </View>
         
-        {/* Right column - community */}
+        {/* Right column - Discord CTA */}
         <View className="flex-1 min-w-0">
-          <Text className="text-xl font-bold mb-6">👥 Community</Text>
-          {level >= 5 && (
-            <View className="rounded-2xl p-6 border border-l-4 border-l-purple-500 bg-slate-800">
-              <Text className="text-xl font-bold text-white mb-4">Join Our Community</Text>
-              <Text className="text-slate-300 mb-6">Connect with other productivity enthusiasts!</Text>
-              <TouchableOpacity className="bg-purple-600 px-6 py-4 rounded-xl">
-                <Text className="text-white text-center font-bold">Join Discord →</Text>
-              </TouchableOpacity>
+          <Text className={cn(
+            "text-2xl font-bold mb-6",
+            isDark ? "text-white" : "text-gray-900"
+          )}>💬 Community & Feedback</Text>
+          
+          {/* Discord Feedback CTA Card */}
+          <View className={cn("rounded-2xl p-6 border shadow-sm border-l-4 border-l-purple-500", 
+            isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200")}>
+            
+            <View className="flex-row items-center mb-4">
+              <View className={cn("w-12 h-12 rounded-xl items-center justify-center mr-4", 
+                isDark ? "bg-purple-900/30" : "bg-purple-100")}>
+                <Text className="text-2xl">💬</Text>
+              </View>
+              <View className="flex-1">
+                <Text className={cn("text-xl font-bold", 
+                  isDark ? "text-white" : "text-gray-900")}>Share Your Feedback</Text>
+                <Text className={cn("text-sm font-medium", 
+                  isDark ? "text-slate-400" : "text-gray-600")}>Help us improve OMNII</Text>
+              </View>
             </View>
-          )}
+            
+            <Text className={cn("text-base leading-6 mb-5", 
+              isDark ? "text-slate-300" : "text-gray-700")}>
+              Have ideas, suggestions, or feedback? Join our Discord community to share your thoughts and help shape the future of OMNII.
+            </Text>
+            
+            <View className="space-y-3 mb-6">
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                  isDark ? "text-slate-400" : "text-gray-600")}>
+                  Direct feedback channel to shape OMNII&apos;s future
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                  isDark ? "text-slate-400" : "text-gray-600")}>
+                  Connect with like-minded productivity enthusiasts
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                  isDark ? "text-slate-400" : "text-gray-600")}>
+                  Early access to new features and updates
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
+                <Text className={cn("text-sm font-medium leading-5 flex-1", 
+                  isDark ? "text-slate-400" : "text-gray-600")}>
+                  Share productivity tips and celebrate achievements
+                </Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity
+              className="bg-purple-600 hover:bg-purple-700 active:bg-purple-700 px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg"
+              onPress={async () => {
+                try {
+                  await Linking.openURL('https://discord.gg/HPgAARkhkE');
+                } catch (error) {
+                  console.error('Failed to open Discord link:', error);
+                }
+              }}
+            >
+              <Text className="text-white text-base font-bold mr-2">Join Discord Community</Text>
+              <Text className="text-white text-base font-bold">→</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -118,47 +172,6 @@ export const DesktopProfileContent: React.FC<DesktopProfileContentProps> = ({
   return (
     <View style={{ maxWidth: 1200, width: '100%' }}>
       {renderTabContent()}
-    </View>
-  );
-};
-
-// Basic Integration Card
-const IntegrationCard: React.FC<{
-  title: string;
-  description: string;
-  icon: string;
-  status: string;
-  color: string;
-}> = ({ title, description, icon, status, color }) => {
-  const { isDark } = useTheme();
-  
-  return (
-    <View className={cn(
-      "rounded-2xl p-6 border shadow-sm border-l-4 border-l-blue-500",
-      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-    )}>
-      <View className="flex-row items-center mb-4">
-        <Text className="text-2xl mr-4">{icon}</Text>
-        <Text className={cn(
-          "text-xl font-bold",
-          isDark ? "text-white" : "text-gray-900"
-        )}>{title}</Text>
-      </View>
-      
-      <Text className={cn(
-        "text-sm leading-6 mb-4",
-        isDark ? "text-slate-300" : "text-gray-600"
-      )}>{description}</Text>
-      
-      <View className={cn(
-        "px-3 py-2 rounded-lg self-start",
-        isDark ? "bg-orange-900/20" : "bg-orange-100"
-      )}>
-        <Text className={cn(
-          "text-xs font-semibold",
-          isDark ? "text-orange-400" : "text-orange-700"
-        )}>Coming Soon</Text>
-      </View>
     </View>
   );
 };
@@ -622,7 +635,7 @@ const DesktopAppearanceSettings: React.FC<{
         )}>Theme Settings</Text>
         
         <ThemeSelector 
-          currentTheme={state.theme?.colorScheme || 'light'}
+          currentTheme={state.theme?.colorScheme || null}
           onThemeChange={(theme) => updateTheme({ colorScheme: theme })}
         />
       </View>

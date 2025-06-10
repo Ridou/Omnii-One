@@ -17,7 +17,7 @@ import {
 } from '~/types/mascot';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Link, useRouter } from 'expo-router';
-import { useOnboardingContext } from '~/context/OnboardingContext';
+
 import { useXPContext } from '~/context/XPContext';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { XPSystemUtils } from '~/constants/XPSystem';
@@ -32,25 +32,25 @@ const achievementTabs = [
     key: 'evolve',
     label: 'Evolve',
     icon: '🌱',
-    gradient: ['#667eea', '#764ba2'] // Purple gradient (position 1)
+    gradient: ['#4ECDC4', '#44A08D'] // Light teal (like Easy in approvals)
   },
   {
     key: 'discover',
     label: 'Discover', 
     icon: '🔍',
-    gradient: ['#4ECDC4', '#44A08D'] // Teal gradient (position 2)
+    gradient: ['#667eea', '#764ba2'] // Purple (like Smart in approvals)
   },
   {
     key: 'gallery',
     label: 'Gallery',
     icon: '🏆',
-    gradient: ['#FF7043', '#FF5722'] // NEW: Vibrant orange gradient (position 3)
+    gradient: ['#FF7043', '#FF5722'] // Orange (like Complex in approvals)
   },
   {
     key: 'social',
     label: 'Social',
     icon: '👥',
-    gradient: ['#FF3B30', '#DC143C'] // NEW: Clean red gradient (position 4)
+    gradient: ['#FF3B30', '#DC143C'] // Red (like Priority in approvals)
   }
 ];
 

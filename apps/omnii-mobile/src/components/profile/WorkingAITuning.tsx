@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,43 +7,30 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { AppColors } from '~/constants/Colors';
-import { useOnboardingContext } from '~/context/OnboardingContext';
-import type { AITuningPreferences, SystemPromptVariables } from '~/src/types/onboarding';
+
+// Simplified AI Tuning Preferences (local only)
+interface SimpleAITuningPreferences {
+  communicationStyle: number;
+  responseLength: number;
+  proactivityLevel: number;
+  focusProtection: number;
+  urgencyThreshold: number;
+  enthusiasm: number;
+  motivationStyle: number;
+}
 
 export default function WorkingAITuning() {
-  const { state, updateAITuning } = useOnboardingContext();
-  
-  // Initialize with defaults or saved preferences
-  const [preferences, setPreferences] = useState<AITuningPreferences>({
+  // Initialize with balanced defaults
+  const [preferences, setPreferences] = useState<SimpleAITuningPreferences>({
     communicationStyle: 50,
-    communicationStyleLabel: 'balanced',
     responseLength: 40,
-    responseLengthLabel: 'concise',
     proactivityLevel: 70,
-    proactivityLabel: 'proactive',
     focusProtection: 85,
-    focusProtectionLabel: 'protective',
     urgencyThreshold: 60,
-    urgencyThresholdLabel: 'important',
-    learningSpeed: 65,
-    learningSpeedLabel: 'balanced',
-    privacyLevel: 80,
-    privacyLevelLabel: 'guarded',
     enthusiasm: 45,
-    enthusiasmLabel: 'measured',
     motivationStyle: 55,
-    motivationStyleLabel: 'balanced',
-    lastUpdated: new Date().toISOString(),
   });
-
-  // Load saved preferences
-  useEffect(() => {
-    if (state.onboardingData.ai_tuning) {
-      setPreferences(state.onboardingData.ai_tuning);
-    }
-  }, [state.onboardingData.ai_tuning]);
 
   // Helper to get label based on value
   const getLabel = (value: number, type: string): string => {
@@ -65,7 +52,7 @@ export default function WorkingAITuning() {
       if (value < 20) return 'reactive';
       if (value < 40) return 'balanced';
       if (value < 60) return 'proactive';
-      if (value < 80) return 'highly_proactive';
+      if (value < 80) return 'highly proactive';
       return 'predictive';
     }
     if (type === 'focusProtection') {
@@ -80,21 +67,7 @@ export default function WorkingAITuning() {
       if (value < 40) return 'most';
       if (value < 60) return 'important';
       if (value < 80) return 'critical';
-      return 'emergency_only';
-    }
-    if (type === 'learningSpeed') {
-      if (value < 20) return 'cautious';
-      if (value < 40) return 'steady';
-      if (value < 60) return 'balanced';
-      if (value < 80) return 'adaptive';
-      return 'rapid';
-    }
-    if (type === 'privacyLevel') {
-      if (value < 20) return 'open';
-      if (value < 40) return 'selective';
-      if (value < 60) return 'balanced';
-      if (value < 80) return 'guarded';
-      return 'maximum';
+      return 'emergency only';
     }
     if (type === 'enthusiasm') {
       if (value < 20) return 'calm';
@@ -114,43 +87,57 @@ export default function WorkingAITuning() {
   };
 
   // Update a preference
-  const updatePreference = (key: keyof AITuningPreferences, value: number) => {
-    const labelKey = `${key}Label` as keyof AITuningPreferences;
-    const label = getLabel(value, key);
-    
-    const newPreferences = {
-      ...preferences,
+  const updatePreference = (key: keyof SimpleAITuningPreferences, value: number) => {
+    setPreferences(prev => ({
+      ...prev,
       [key]: value,
-      [labelKey]: label,
-      lastUpdated: new Date().toISOString(),
-    };
-    
-    setPreferences(newPreferences);
+    }));
   };
 
-  // Save preferences
+  // Save preferences (simplified - just show alert)
   const savePreferences = async () => {
-    updateAITuning(preferences);
     Alert.alert(
       '✅ AI Settings Saved',
-      'Your AI personality preferences have been updated.',
+      'Your AI personality preferences have been updated locally.',
       [{ text: 'OK' }]
     );
   };
 
-  // Generate system prompt variables for backend
-  const generateSystemPromptVariables = (): SystemPromptVariables => {
-    return {
-      communication_style: preferences.communicationStyleLabel,
-      response_length: preferences.responseLengthLabel,
-      proactivity: preferences.proactivityLabel,
-      interruption_policy: preferences.focusProtectionLabel,
-      urgency_filter: preferences.urgencyThresholdLabel,
-      learning_rate: preferences.learningSpeedLabel,
-      privacy_mode: preferences.privacyLevelLabel,
-      enthusiasm_level: preferences.enthusiasmLabel,
-      motivation_approach: preferences.motivationStyleLabel,
+  // Simple slider component (since @react-native-community/slider isn't available)
+  const SimpleSlider = ({ 
+    value, 
+    onValueChange, 
+    color = AppColors.aiGradientStart 
+  }: {
+    value: number;
+    onValueChange: (value: number) => void;
+    color?: string;
+  }) => {
+    const handlePress = (event: any) => {
+      const { locationX } = event.nativeEvent;
+      const sliderWidth = 200; // Approximate width
+      const percentage = Math.max(0, Math.min(100, (locationX / sliderWidth) * 100));
+      onValueChange(Math.round(percentage));
     };
+
+    return (
+      <TouchableOpacity onPress={handlePress} style={styles.sliderContainer}>
+        <View style={styles.sliderTrack}>
+          <View 
+            style={[
+              styles.sliderFill, 
+              { width: `${value}%`, backgroundColor: color }
+            ]} 
+          />
+          <View 
+            style={[
+              styles.sliderThumb, 
+              { left: `${value}%`, backgroundColor: color }
+            ]} 
+          />
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   // Individual tuner component
@@ -160,7 +147,6 @@ export default function WorkingAITuning() {
     onValueChange, 
     leftLabel, 
     rightLabel, 
-    currentLabel,
     color = AppColors.aiGradientStart 
   }: {
     label: string;
@@ -168,26 +154,22 @@ export default function WorkingAITuning() {
     onValueChange: (value: number) => void;
     leftLabel: string;
     rightLabel: string;
-    currentLabel: string;
     color?: string;
   }) => (
     <View style={styles.tunerContainer}>
       <Text style={styles.tunerLabel}>{label}</Text>
       <View style={styles.sliderRow}>
         <Text style={styles.sliderEndLabel}>{leftLabel}</Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={100}
+        <SimpleSlider
           value={value}
           onValueChange={onValueChange}
-          minimumTrackTintColor={color}
-          maximumTrackTintColor={AppColors.borderLight}
-          thumbTintColor={color}
+          color={color}
         />
         <Text style={styles.sliderEndLabel}>{rightLabel}</Text>
       </View>
-      <Text style={styles.currentValueLabel}>{currentLabel}</Text>
+      <Text style={styles.currentValueLabel}>
+        {getLabel(value, label.toLowerCase().replace(/\s+/g, ''))}
+      </Text>
     </View>
   );
 
@@ -203,28 +185,25 @@ export default function WorkingAITuning() {
         <Tuner
           label="Communication Style"
           value={preferences.communicationStyle}
-          onValueChange={(v) => updatePreference('communicationStyle', Math.round(v))}
+          onValueChange={(v) => updatePreference('communicationStyle', v)}
           leftLabel="Casual"
           rightLabel="Professional"
-          currentLabel={preferences.communicationStyleLabel.replace('_', ' ')}
         />
 
         <Tuner
           label="Response Length"
           value={preferences.responseLength}
-          onValueChange={(v) => updatePreference('responseLength', Math.round(v))}
+          onValueChange={(v) => updatePreference('responseLength', v)}
           leftLabel="Brief"
           rightLabel="Detailed"
-          currentLabel={preferences.responseLengthLabel}
         />
 
         <Tuner
           label="Proactivity Level"
           value={preferences.proactivityLevel}
-          onValueChange={(v) => updatePreference('proactivityLevel', Math.round(v))}
+          onValueChange={(v) => updatePreference('proactivityLevel', v)}
           leftLabel="Reactive"
           rightLabel="Proactive"
-          currentLabel={preferences.proactivityLabel.replace('_', ' ')}
         />
       </View>
 
@@ -236,51 +215,21 @@ export default function WorkingAITuning() {
         </Text>
         
         <Tuner
-          label="Focus Time Respect"
+          label="Focus Protection"
           value={preferences.focusProtection}
-          onValueChange={(v) => updatePreference('focusProtection', Math.round(v))}
+          onValueChange={(v) => updatePreference('focusProtection', v)}
           leftLabel="Interrupt"
           rightLabel="Respect"
-          currentLabel={preferences.focusProtectionLabel}
           color="#FF7043"
         />
 
         <Tuner
           label="Urgency Threshold"
           value={preferences.urgencyThreshold}
-          onValueChange={(v) => updatePreference('urgencyThreshold', Math.round(v))}
+          onValueChange={(v) => updatePreference('urgencyThreshold', v)}
           leftLabel="All"
           rightLabel="Critical"
-          currentLabel={preferences.urgencyThresholdLabel.replace('_', ' ')}
           color="#FF6B47"
-        />
-      </View>
-
-      {/* Learning Controls Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🧠 Learning Controls</Text>
-        <Text style={styles.sectionDescription}>
-          Control how AI learns from your behavior and preferences
-        </Text>
-        
-        <Tuner
-          label="Adaptation Speed"
-          value={preferences.learningSpeed}
-          onValueChange={(v) => updatePreference('learningSpeed', Math.round(v))}
-          leftLabel="Cautious"
-          rightLabel="Fast"
-          currentLabel={preferences.learningSpeedLabel}
-          color="#A6E22E"
-        />
-
-        <Tuner
-          label="Data Privacy"
-          value={preferences.privacyLevel}
-          onValueChange={(v) => updatePreference('privacyLevel', Math.round(v))}
-          leftLabel="Open"
-          rightLabel="Private"
-          currentLabel={preferences.privacyLevelLabel}
-          color="#667eea"
         />
       </View>
 
@@ -292,22 +241,20 @@ export default function WorkingAITuning() {
         </Text>
         
         <Tuner
-          label="Enthusiasm Level"
+          label="Enthusiasm"
           value={preferences.enthusiasm}
-          onValueChange={(v) => updatePreference('enthusiasm', Math.round(v))}
+          onValueChange={(v) => updatePreference('enthusiasm', v)}
           leftLabel="Calm"
           rightLabel="Energetic"
-          currentLabel={preferences.enthusiasmLabel}
           color="#FF7043"
         />
 
         <Tuner
-          label="Motivational Approach"
+          label="Motivation Style"
           value={preferences.motivationStyle}
-          onValueChange={(v) => updatePreference('motivationStyle', Math.round(v))}
+          onValueChange={(v) => updatePreference('motivationStyle', v)}
           leftLabel="Gentle"
           rightLabel="Direct"
-          currentLabel={preferences.motivationStyleLabel}
           color="#E91E63"
         />
       </View>
@@ -317,15 +264,13 @@ export default function WorkingAITuning() {
         <Text style={styles.saveButtonText}>Save AI Settings</Text>
       </TouchableOpacity>
 
-      {/* Debug: Show generated prompt variables */}
-      {__DEV__ && (
-        <View style={styles.debugSection}>
-          <Text style={styles.debugTitle}>System Prompt Variables:</Text>
-          <Text style={styles.debugText}>
-            {JSON.stringify(generateSystemPromptVariables(), null, 2)}
-          </Text>
-        </View>
-      )}
+      {/* Coming Soon Notice */}
+      <View style={styles.comingSoonSection}>
+        <Text style={styles.comingSoonTitle}>🚀 Coming Soon</Text>
+        <Text style={styles.comingSoonText}>
+          Full AI tuning integration with backend services and personalized responses.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -370,10 +315,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  slider: {
+  sliderContainer: {
     flex: 1,
     height: 40,
-    marginHorizontal: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  sliderTrack: {
+    height: 4,
+    backgroundColor: AppColors.borderLight,
+    borderRadius: 2,
+    position: 'relative',
+  },
+  sliderFill: {
+    height: 4,
+    borderRadius: 2,
+    position: 'absolute',
+  },
+  sliderThumb: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    position: 'absolute',
+    top: -6,
+    marginLeft: -8,
   },
   sliderEndLabel: {
     fontSize: 12,
@@ -392,7 +357,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     marginHorizontal: 20,
-    marginBottom: 40,
+    marginBottom: 20,
     alignItems: 'center',
   },
   saveButtonText: {
@@ -400,21 +365,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  debugSection: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 8,
+  comingSoonSection: {
+    backgroundColor: `${AppColors.aiGradientStart}15`,
+    borderRadius: 12,
     padding: 16,
     margin: 20,
+    marginTop: 0,
+    marginBottom: 40,
   },
-  debugTitle: {
-    fontSize: 14,
+  comingSoonTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.aiGradientStart,
     marginBottom: 8,
   },
-  debugText: {
-    fontSize: 12,
+  comingSoonText: {
+    fontSize: 14,
     color: AppColors.textSecondary,
-    fontFamily: 'monospace',
+    lineHeight: 20,
   },
 }); 

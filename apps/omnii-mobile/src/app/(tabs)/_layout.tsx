@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs , useRouter } from 'expo-router';
-import { Trophy } from 'lucide-react-native';
+import { Text } from 'react-native';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
 import { useXPContext } from '~/context/XPContext';
@@ -32,18 +32,7 @@ const getV4Colors = (isDark: boolean) => ({
   muted: isDark ? '#6b7280' : '#9ca3af',
 });
 
-// Breathing animation component for newly unlocked tabs - DISABLED to prevent visual artifacts
-function BreathingIcon({ children, isNewlyUnlocked }: { 
-  children: React.ReactNode; 
-  isNewlyUnlocked: boolean;
-}) {
-  // DISABLED: No more breathing animation to prevent visual artifacts
-  return (
-    <View>
-      {children}
-    </View>
-  );
-}
+
 
 export default function TabLayout() {
   const { user, session } = useAuth();
@@ -53,42 +42,17 @@ export default function TabLayout() {
   // Get theme-aware colors
   const V4_COLORS = getV4Colors(isDark);
   
-  // Use XPContext for all level/feature management
+  // Use XPContext for feature visit tracking
   const { 
-    currentLevel, 
-    isFeatureUnlocked, 
-    recordFeatureVisit,
-    getActiveNudges,
-    dismissNudge,
-    markNudgeShown,
-    unlockedFeatures
+    recordFeatureVisit
   } = useXPContext();
   
-  const [newlyUnlockedTabs, setNewlyUnlockedTabs] = useState<Set<string>>(new Set());
   const [visitedFeatures, setVisitedFeatures] = useState<Set<string>>(new Set());
   
   // Check if user is authenticated
   const isAuthenticated = !!(user && session);
   
-  // Track newly unlocked features and trigger breathing animation
-  useEffect(() => {
-    const currentUnlocked = new Set<string>();
-    
-    // Check for newly unlocked features based on current level
-    if (isFeatureUnlocked('achievements')) currentUnlocked.add('achievements');
-    if (isFeatureUnlocked('chat')) currentUnlocked.add('chat');
-    if (isFeatureUnlocked('analytics')) currentUnlocked.add('analytics');
-    if (isFeatureUnlocked('profile')) currentUnlocked.add('profile');
-    
-    setNewlyUnlockedTabs(currentUnlocked);
-    
-    // Clear newly unlocked status after tab interactions
-    const clearTimer = setTimeout(() => {
-      setNewlyUnlockedTabs(new Set());
-    }, 60000); // Clear after 1 minute
-    
-    return () => clearTimeout(clearTimer);
-  }, [currentLevel, isFeatureUnlocked]);
+
 
   // Reset visited features when user changes
   useEffect(() => {
@@ -98,44 +62,29 @@ export default function TabLayout() {
     }
   }, [user?.id]);
 
-  // Award exploration XP when users visit newly unlocked features
+  // Award exploration XP when users visit features
   const awardExplorationXP = async (feature: string) => {
-    if (isFeatureUnlocked(feature)) {
-      // ✅ CLIENT-SIDE PROTECTION: Check if we've already visited this feature
-      if (visitedFeatures.has(feature)) {
-        console.log(`⚡ [TabLayout] Already visited ${feature}, skipping XP award`);
-        return;
-      }
-
-      try {
-        // Mark as visited BEFORE the server call to prevent race conditions
-        setVisitedFeatures(prev => new Set(prev).add(feature));
-        
-        await recordFeatureVisit(feature);
-        console.log(`✨ [TabLayout] Recorded first visit to ${feature}`);
-      } catch (error) {
-        console.error(`❌ [TabLayout] Failed to record visit to ${feature}:`, error);
-        // On error, remove from visited set to allow retry
-        setVisitedFeatures(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(feature);
-          return newSet;
-        });
-      }
+    // ✅ CLIENT-SIDE PROTECTION: Check if we've already visited this feature
+    if (visitedFeatures.has(feature)) {
+      console.log(`⚡ [TabLayout] Already visited ${feature}, skipping XP award`);
+      return;
     }
-  };
 
-  // Get active nudges for displaying in UI
-  const activeNudges = getActiveNudges();
-  
-  // Handle nudge dismissal
-  const handleNudgeDismiss = (nudgeId: string) => {
-    dismissNudge(nudgeId);
-  };
-
-  // Handle nudge shown tracking
-  const handleNudgeShown = (nudgeId: string) => {
-    markNudgeShown(nudgeId);
+    try {
+      // Mark as visited BEFORE the server call to prevent race conditions
+      setVisitedFeatures(prev => new Set(prev).add(feature));
+      
+      await recordFeatureVisit(feature);
+      console.log(`✨ [TabLayout] Recorded first visit to ${feature}`);
+    } catch (error) {
+      console.error(`❌ [TabLayout] Failed to record visit to ${feature}:`, error);
+      // On error, remove from visited set to allow retry
+      setVisitedFeatures(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(feature);
+        return newSet;
+      });
+    }
   };
 
   const shouldShowTabBar = useMemo(() => {
@@ -146,16 +95,14 @@ export default function TabLayout() {
         isAuthenticated,
         user: user ? `${user.email} (${user.id})` : 'none',
         session: user ? 'exists' : 'none',
-        currentLevel,
         isDark,
         isInitialized: true,
-        shouldShowTabBar: show,
-        newlyUnlocked: Array.from(newlyUnlockedTabs)
+        shouldShowTabBar: show
       });
     }
     
     return show;
-  }, [isAuthenticated, user, currentLevel, isDark, newlyUnlockedTabs]);
+  }, [isAuthenticated, user, isDark]);
 
   const insets = useSafeAreaInsets();
 
@@ -185,28 +132,13 @@ export default function TabLayout() {
           name="analytics"
           options={{
             tabBarIcon: ({ color, size, focused }) => (
-              <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('analytics') && isFeatureUnlocked('analytics')}>
-                <AnalyticsIcon 
-                  size={size} 
-                  color={isFeatureUnlocked('analytics') ? color : V4_COLORS.muted} 
-                />
-              </BreathingIcon>
+              <Text style={{ fontSize: 24, color }}>📊</Text>
             ),
-            href: isFeatureUnlocked('analytics') ? '/analytics' : null,
           }}
           listeners={{
             tabPress: () => {
-              if (isFeatureUnlocked('analytics')) {
-                // Award exploration XP for first visit
-                awardExplorationXP('analytics');
-                
-                // Remove breathing animation when tab is pressed
-                setNewlyUnlockedTabs(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete('analytics');
-                  return newSet;
-                });
-              }
+              // Award exploration XP for first visit
+              awardExplorationXP('analytics');
             },
           }}
         />
@@ -214,28 +146,13 @@ export default function TabLayout() {
           name="achievements"
           options={{
             tabBarIcon: ({ color, size, focused }) => (
-              <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('achievements') && isFeatureUnlocked('achievements')}>
-                <Trophy 
-                  size={size} 
-                  color={isFeatureUnlocked('achievements') ? color : V4_COLORS.muted} 
-                />
-              </BreathingIcon>
+              <Text style={{ fontSize: 24, color }}>🏆</Text>
             ),
-            href: isFeatureUnlocked('achievements') ? '/achievements' : null,
           }}
           listeners={{
             tabPress: () => {
-              if (isFeatureUnlocked('achievements')) {
-                // Award exploration XP for first visit
-                awardExplorationXP('achievements');
-                
-                // Remove breathing animation when tab is pressed
-                setNewlyUnlockedTabs(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete('achievements');
-                  return newSet;
-                });
-              }
+              // Award exploration XP for first visit
+              awardExplorationXP('achievements');
             },
           }}
         />
@@ -243,9 +160,7 @@ export default function TabLayout() {
           name="approvals"
           options={{
             tabBarIcon: ({ color, size, focused }) => (
-              <BreathingIcon isNewlyUnlocked={false}>
-                <HeaderLogo />
-              </BreathingIcon>
+              <HeaderLogo />
             ),
           }}
           listeners={{
@@ -258,28 +173,13 @@ export default function TabLayout() {
           name="chat"
           options={{
             tabBarIcon: ({ color, size, focused }) => (
-              <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('chat') && isFeatureUnlocked('chat')}>
-                <ChatIcon 
-                  size={size} 
-                  color={isFeatureUnlocked('chat') ? color : V4_COLORS.muted} 
-                />
-              </BreathingIcon>
+              <Text style={{ fontSize: 24, color }}>💬</Text>
             ),
-            href: isFeatureUnlocked('chat') ? '/chat' : null,
           }}
           listeners={{
             tabPress: () => {
-              if (isFeatureUnlocked('chat')) {
-                // Award exploration XP for first visit
-                awardExplorationXP('chat');
-                
-                // Remove breathing animation when tab is pressed
-                setNewlyUnlockedTabs(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete('chat');
-                  return newSet;
-                });
-              }
+              // Award exploration XP for first visit
+              awardExplorationXP('chat');
             },
           }}
         />
@@ -287,28 +187,13 @@ export default function TabLayout() {
           name="profile"
           options={{
             tabBarIcon: ({ color, size, focused }) => (
-              <BreathingIcon isNewlyUnlocked={newlyUnlockedTabs.has('profile') && isFeatureUnlocked('profile')}>
-                <ProfileIcon 
-                  size={size} 
-                  color={isFeatureUnlocked('profile') ? color : V4_COLORS.muted} 
-                />
-              </BreathingIcon>
+              <Text style={{ fontSize: 24, color }}>👤</Text>
             ),
-            href: isFeatureUnlocked('profile') ? '/profile' : null,
           }}
           listeners={{
             tabPress: () => {
-              if (isFeatureUnlocked('profile')) {
-                // Award exploration XP for first visit
-                awardExplorationXP('profile');
-                
-                // Remove breathing animation when tab is pressed
-                setNewlyUnlockedTabs(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete('profile');
-                  return newSet;
-                });
-              }
+              // Award exploration XP for first visit
+              awardExplorationXP('profile');
             },
           }}
         />

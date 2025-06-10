@@ -10,11 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
-import { TrendingUp } from 'lucide-react-native';
 import { cn } from '~/utils/cn';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
-import { useOnboardingContext } from '~/context/OnboardingContext';
+
 import { useFetchAnalytics } from '~/hooks/useFetchAnalytics';
 import MetricCard from '~/components/analytics/MetricCard';
 import AIInsightCard from '~/components/analytics/AIInsightCard';
@@ -42,25 +41,25 @@ const analyticsTabs: AnalyticsTabConfig[] = [
     key: 'dashboard',
     label: 'Today',
     icon: '📊',
-    gradient: ['#667eea', '#764ba2'] // Purple gradient (position 1)
+    gradient: ['#4ECDC4', '#44A08D'] // Light teal (like Easy in approvals)
   },
   {
     key: 'insights',
     label: 'Insights',
     icon: '🧠',
-    gradient: ['#4ECDC4', '#44A08D'] // Teal gradient (position 2)
+    gradient: ['#667eea', '#764ba2'] // Purple (like Smart in approvals)
   },
   {
     key: 'trends',
     label: 'Trends',
     icon: '📈',
-    gradient: ['#FF7043', '#FF5722'] // NEW: Vibrant orange gradient (position 3)
+    gradient: ['#FF7043', '#FF5722'] // Orange (like Complex in approvals)
   },
   {
     key: 'reports',
     label: 'Reports',
     icon: '📋',
-    gradient: ['#FF3B30', '#DC143C'] // NEW: Clean red gradient (position 4)
+    gradient: ['#FF3B30', '#DC143C'] // Red (like Priority in approvals)
   }
 ];
 
@@ -693,7 +692,6 @@ export default function AnalyticsScreen() {
         isDark ? "bg-slate-900" : "bg-white"
       )}>
         <View className="flex-1 justify-center items-center p-6">
-          <TrendingUp size={64} color={isDark ? '#94a3b8' : '#6b7280'} />
           <Text className={cn(
             "text-3xl font-bold mt-4",
             isDark ? "text-white" : "text-gray-900"

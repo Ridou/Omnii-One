@@ -2,96 +2,123 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { colorScheme } from 'nativewind';
 import { cn } from '~/utils/cn';
-import { useTheme, useThemeIntegration } from '~/context/ThemeContext';
+import { useTheme } from '~/context/ThemeContext';
 import type { ThemeSettings } from '~/types/profile';
 
 interface ThemeSelectorProps {
-  currentTheme: ThemeSettings['colorScheme'];
+  currentTheme: ThemeSettings['colorScheme'] | null;
   onThemeChange: (theme: ThemeSettings['colorScheme']) => void;
 }
 
 export default function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProps) {
-  const { isDark, systemTheme } = useTheme();
+  const { isDark, systemTheme, isFollowingSystem } = useTheme();
   
   const handleThemeChange = (newTheme: ThemeSettings['colorScheme']) => {
     // Update our custom profile context
     onThemeChange(newTheme);
     
     // Also update NativeWind's colorScheme to trigger dark: classes
-    if (newTheme === 'dark') {
-      colorScheme.set('dark');
-    } else if (newTheme === 'light') {
-      colorScheme.set('light');
-    } else if (newTheme === 'auto') {
-      colorScheme.set('system');
-    } else if (newTheme === 'high_contrast') {
-      // High contrast maps to dark mode with special styling
-      colorScheme.set('dark');
-    }
+    colorScheme.set(newTheme);
   };
-  
-  const themeOptions = [
-    {
-      value: 'light' as const,
-      label: 'Light',
-      icon: '☀️',
-      description: 'Classic light theme'
-    },
-    {
-      value: 'dark' as const, 
-      label: 'Dark',
-      icon: '🌙',
-      description: 'Dark theme for low-light environments'
-    },
-    {
-      value: 'auto' as const,
-      label: 'Auto',
-      icon: '🔄',
-      description: `Follow system preference (currently ${systemTheme || 'light'})`
-    },
-    {
-      value: 'high_contrast' as const,
-      label: 'High Contrast',
-      icon: '🔍', 
-      description: 'Enhanced accessibility mode'
-    }
-  ];
 
   return (
-    <View className="space-y-3">
-      {themeOptions.map((option) => (
+    <View className="space-y-4">
+      {/* System Status Info */}
+      {isFollowingSystem && (
+        <View className={cn(
+          "p-3 rounded-lg border",
+          isDark ? "bg-blue-900/20 border-blue-800" : "bg-blue-50 border-blue-200"
+        )}>
+          <Text className={cn(
+            "text-sm font-medium",
+            isDark ? "text-blue-300" : "text-blue-800"
+          )}>
+            Following system preference • Currently {systemTheme || 'light'}
+          </Text>
+        </View>
+      )}
+
+      {/* Light/Dark Toggle */}
+      <View className={cn(
+        "flex-row rounded-xl p-1 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-gray-100 border-gray-200"
+      )}>
+        {/* Light Option */}
         <TouchableOpacity
-          key={option.value}
           className={cn(
-            "flex-row items-center p-4 rounded-xl border-2",
-            currentTheme === option.value 
-              ? "border-omnii-primary bg-omnii-primary/10"
-              : cn(
-                  isDark ? "border-slate-600 bg-slate-700" : "border-gray-200 bg-white"
-                )
+            "flex-1 flex-row items-center justify-center p-3 rounded-lg",
+            currentTheme === 'light'
+              ? "bg-white shadow-sm border border-gray-200"
+              : "bg-transparent"
           )}
-          onPress={() => handleThemeChange(option.value)}
+          onPress={() => handleThemeChange('light')}
           accessible={true}
           accessibilityRole="radio"
-          accessibilityState={{ checked: currentTheme === option.value }}
-          accessibilityLabel={`${option.label} theme option. ${option.description}`}
+          accessibilityState={{ checked: currentTheme === 'light' }}
+          accessibilityLabel="Light theme"
         >
-          <Text className="text-2xl mr-4">{option.icon}</Text>
-          <View className="flex-1">
-            <Text className={cn("font-semibold", isDark ? "text-white" : "text-gray-900")}>
-              {option.label}
-            </Text>
-            <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
-              {option.description}
-            </Text>
-          </View>
-          {currentTheme === option.value && (
-            <View className="w-6 h-6 rounded-full bg-omnii-primary items-center justify-center">
-              <Text className="text-white text-xs">✓</Text>
-            </View>
-          )}
+          <Text className="text-xl mr-2">☀️</Text>
+          <Text className={cn(
+            "font-semibold",
+            currentTheme === 'light'
+              ? "text-gray-900"
+              : cn(isDark ? "text-slate-400" : "text-gray-600")
+          )}>
+            Light
+          </Text>
         </TouchableOpacity>
-      ))}
+
+        {/* Dark Option */}
+        <TouchableOpacity
+          className={cn(
+            "flex-1 flex-row items-center justify-center p-3 rounded-lg",
+            currentTheme === 'dark'
+              ? cn(
+                  "shadow-sm border",
+                  isDark ? "bg-slate-700 border-slate-600" : "bg-slate-800 border-slate-700"
+                )
+              : "bg-transparent"
+          )}
+          onPress={() => handleThemeChange('dark')}
+          accessible={true}
+          accessibilityRole="radio"
+          accessibilityState={{ checked: currentTheme === 'dark' }}
+          accessibilityLabel="Dark theme"
+        >
+          <Text className="text-xl mr-2">🌙</Text>
+          <Text className={cn(
+            "font-semibold",
+            currentTheme === 'dark'
+              ? "text-white"
+              : cn(isDark ? "text-slate-400" : "text-gray-600")
+          )}>
+            Dark
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Reset to System Button */}
+      {!isFollowingSystem && (
+        <TouchableOpacity
+          className={cn(
+            "items-center p-2 rounded-lg",
+            isDark ? "bg-slate-800" : "bg-gray-50"
+          )}
+          onPress={() => {
+            // Reset to system preference by setting to null in profile context
+            // This will be handled by the parent component
+            const systemPreference = systemTheme || 'light';
+            handleThemeChange(systemPreference);
+          }}
+        >
+          <Text className={cn(
+            "text-sm font-medium",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>
+            🔄 Reset to system preference
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 } 

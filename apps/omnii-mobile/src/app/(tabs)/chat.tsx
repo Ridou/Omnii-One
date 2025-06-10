@@ -47,25 +47,25 @@ const chatTabs: ChatTabConfig[] = [
         key: 'conversation',
         label: 'Chat',
         icon: '💬',
-        gradient: ['#667eea', '#764ba2'] // Purple gradient (position 1)
+        gradient: ['#4ECDC4', '#44A08D'] // Light teal (like Easy in approvals)
     },
     {
         key: 'actions',
         label: 'Actions',
         icon: '⚡',
-        gradient: ['#4ECDC4', '#44A08D'] // Teal gradient (position 2)
+        gradient: ['#667eea', '#764ba2'] // Purple (like Smart in approvals)
     },
     {
         key: 'references',
         label: 'References',
         icon: '📚',
-        gradient: ['#FF7043', '#FF5722'] // NEW: Vibrant orange gradient (position 3)
+        gradient: ['#FF7043', '#FF5722'] // Orange (like Complex in approvals)
     },
     {
         key: 'memory',
         label: 'Memory',
         icon: '🧠',
-        gradient: ['#FF3B30', '#DC143C'] // NEW: Clean red gradient (position 4)
+        gradient: ['#FF3B30', '#DC143C'] // Red (like Priority in approvals)
     }
 ];
 
@@ -282,6 +282,19 @@ export default function ChatScreen() {
             handleQuickAction(action.command);
             // Switch to conversation tab to see the result
             setSelectedTab('conversation');
+        }
+    };
+
+    // Handle task actions including navigation
+    const handleTaskAction = (action: string, data: any) => {
+        console.log('[Chat] Task action:', action, data);
+        
+        if (action === 'navigate_to_profile_connect') {
+            // Navigate to Profile tab with Connect section
+            router.push('/(tabs)/profile?tab=connect');
+        } else {
+            // Handle other task actions
+            console.log('[Chat] Unhandled task action:', action, data);
         }
     };
 
@@ -531,6 +544,7 @@ export default function ChatScreen() {
                             <>
                             {createTaskComponent(tasksOverview, {
                             onEmailAction: () => {},
+                            onAction: handleTaskAction,
                             data: tasksOverview
                         })}
 
@@ -541,7 +555,7 @@ export default function ChatScreen() {
                                     return item.id;
                                 }}
                                 renderItem={({ item, index }) => {
-                                    return <ChatMessage message={item} onEmailAction={handleEmailAction} />;
+                                    return <ChatMessage message={item} onEmailAction={handleEmailAction} onTaskAction={handleTaskAction} />;
                                 }}
                                 contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 16, flexGrow: 1 }}
                                 showsVerticalScrollIndicator={false}

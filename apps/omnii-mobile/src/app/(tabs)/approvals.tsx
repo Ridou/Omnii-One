@@ -16,14 +16,12 @@ import { Link } from 'expo-router';
 import { cn } from '~/utils/cn';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
-import { useOnboardingContext } from '~/context/OnboardingContext';
 import { useRouter } from 'expo-router';
 import { useXPContext } from '~/context/XPContext';
 import SimpleSwipeCard from '~/components/approvals/SimpleSwipeCard';
 import StreamlinedApprovalCard from '~/components/approvals/StreamlinedApprovalCard';
 import EmptyState from '~/components/EmptyState';
 import DebugPanel from '~/components/common/DebugPanel';
-import ContextualNudge from '~/components/common/ContextualNudge';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
 import { XPProgressBar } from '~/components/common/XPProgressBar';
 import { 
@@ -34,7 +32,6 @@ import {
 } from '~/types/mascot';
 import { AppColors } from '~/constants/Colors';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import type { OnboardingQuote, LevelProgression } from '~/types/onboarding';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { XPSystemUtils, XP_REWARDS } from '~/constants/XPSystem';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
@@ -52,19 +49,6 @@ interface Approval {
   created_at: string;
   requested_by: string;
   type: string;
-}
-
-// Unified task interface for both approvals and onboarding quotes
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
-  created_at: string;
-  requested_by: string;
-  type: 'approval' | 'onboarding_quote';
-  quote?: OnboardingQuote; // For onboarding quotes
-  approval?: Approval; // For regular approvals
 }
 
 // Tab configuration with AI-focused productivity patterns (Shape of AI inspired)
@@ -134,15 +118,6 @@ export default function ApprovalsScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
   const responsive = useResponsiveDesign();
-  const {
-    state: onboardingState,
-    startOnboarding,
-    recordQuoteResponse,
-    getCurrentQuote,
-    isOnboardingComplete,
-    completeOnboarding,
-    isSystemReady,
-  } = useOnboardingContext();
   const { xpProgress, currentLevel, currentXP, awardXP } = useXPSystem();
   const { getNextCelebration, showCelebration } = useXPContext();
   
@@ -154,106 +129,9 @@ export default function ApprovalsScreen() {
   const [selectedFilter, setSelectedFilter] = useState('smart');
   const [refreshing, setRefreshing] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
-  // OPTIMISTIC UPDATES: Track pending XP for instant UI feedback - managed by XP system
-  const [pendingXP, setPendingXP] = useState(0);
-  // PREVENT RECURSIVE AUTO-START: Track if we've already attempted to start
-  const [autoStartAttempted, setAutoStartAttempted] = useState(false);
   const router = useRouter();
 
-
-
-  // AUTO-START ONBOARDING: Start onboarding when system is ready and conditions are met
-  useEffect(() => {
-    // PROPER SYSTEM CHECK: Use the context's system readiness indicator
-    const shouldAutoStart = 
-      isSystemReady && // System ready (quotes loaded, server synced, no errors)
-      user && // User authenticated
-      !onboardingState.isActive && // Not already active
-      !onboardingState.onboardingData.completed && // Server: Not completed
-      currentLevel < 5; // Server: Level 1-4 (fixed to exclude level 5 - onboarding completes AT level 5)
-
-    console.log('🚀 AUTO-START CHECK (Fixed Level 1-4):', {
-      isSystemReady,
-      user: !!user,
-      userEmail: user?.email,
-      serverLevel: currentLevel,
-      serverXP: currentXP,
-      serverCompleted: onboardingState.onboardingData.completed,
-      isActive: onboardingState.isActive,
-      shouldAutoStart,
-      autoStartAttempted,
-      decision: !shouldAutoStart ? (() => {
-        if (!isSystemReady) return 'System not ready (quotes loading or server sync pending)';
-        if (!user) return 'No user authenticated';
-        if (onboardingState.isActive) return 'Onboarding already active';
-        if (onboardingState.onboardingData.completed) return 'Server: Onboarding completed';
-        if (currentLevel >= 5) return 'Server: Level 5+ reached (onboarding completes at Level 5)';
-        return 'Unknown reason';
-      })() : autoStartAttempted ? 'Already attempted this session' : 'SERVER VALIDATED: Starting/Continuing onboarding for Level 1-4'
-    });
-
-    if (shouldAutoStart && !autoStartAttempted) {
-      console.log('🚀 AUTO-START: Clean server-driven onboarding start (Level 1-4)', {
-        userEmail: user.email,
-        serverLevel: currentLevel,
-        serverXP: currentXP,
-        reason: 'System ready + Server confirms onboarding needed (Level 1-4)'
-      });
-      
-      startOnboarding();
-      setAutoStartAttempted(true);
-    }
-  }, [
-    isSystemReady, // NEW: Proper system readiness check
-    user?.id, 
-    onboardingState.onboardingData.completed,
-    currentXP,
-    onboardingState.isActive,
-    currentLevel,
-    startOnboarding,
-    autoStartAttempted
-  ]);
-
-  // RESET AUTO-START ATTEMPT: When server state changes significantly
-  useEffect(() => {
-    // Reset the auto-start attempt flag when server state changes
-    // This allows re-attempting auto-start if server state changes (like after reset)
-    console.log('🔄 Resetting auto-start attempt due to server state change');
-    setAutoStartAttempted(false);
-  }, [user?.id, onboardingState.onboardingData.completed, currentLevel]);
-
-  // OPTIMISTIC CLEANUP: Clear pending XP when server responds
-  useEffect(() => {
-    // Clear ALL pending XP when any server XP update comes in
-    if (pendingXP > 0) {
-      console.log('🧹 CLEARING pending XP:', pendingXP, '→ 0 (server updated)');
-      
-      // LEVEL PROGRESSION FEEDBACK: Show progress toward next level
-      const levelRequirements: Record<number, number> = {
-        1: 0, 2: 100, 3: 200, 4: 320, 5: 450, 6: 750, 7: 1100, 8: 1500
-      };
-      const nextLevelXP = levelRequirements[currentLevel + 1] || 0;
-      const xpNeeded = nextLevelXP - currentXP;
-      
-      console.log('📈 LEVEL PROGRESS UPDATE:', {
-        currentLevel,
-        currentXP,
-        nextLevelAt: nextLevelXP,
-        xpNeeded: xpNeeded > 0 ? xpNeeded : 0,
-        progress: nextLevelXP > 0 ? `${Math.round((currentXP / nextLevelXP) * 100)}%` : '100%',
-        nextUnlock: currentLevel === 1 ? 'Achievements (Level 2)' :
-                   currentLevel === 2 ? 'Chat & Voice (Level 3)' :
-                   currentLevel === 3 ? 'Analytics (Level 4)' :
-                   currentLevel === 4 ? 'Profile & ALL CORE FEATURES (Level 5)' :
-                   currentLevel === 5 ? 'Onboarding Complete!' :
-                   'Advanced Features'
-      });
-      
-      setPendingXP(0);
-    }
-  }, [currentXP, onboardingState.onboardingData.onboarding_xp, currentLevel]);
-
-  // Animation refs for each tab (SIMPLIFIED - no more glow effects)
+  // Animation refs for each tab
   const scaleAnimations = useRef(
     approvalTabs.reduce((acc, tab) => {
       acc[tab.key] = new Animated.Value(1);
@@ -261,134 +139,41 @@ export default function ApprovalsScreen() {
     }, {} as Record<string, Animated.Value>)
   ).current;
 
-  // Helper function to convert onboarding quote to task
-  const quoteToTask = (quote: OnboardingQuote): Task => ({
-    id: `quote_${quote.quote_id}`,
-    title: quote.text,
-    description: `— ${quote.author}`,
-    priority: quote.difficulty === 'beginner' ? 'low' : quote.difficulty === 'intermediate' ? 'medium' : 'high',
-    created_at: new Date().toISOString(),
-    requested_by: 'Daily Inspiration',
-    type: 'onboarding_quote',
-    quote,
-  });
-
-  // Helper function to convert approval to task
-  const approvalToTask = (approval: Approval): Task => ({
-    id: approval.id,
-    title: approval.title,
-    description: approval.description,
-    priority: approval.priority,
-    created_at: approval.created_at,
-    requested_by: approval.requested_by,
-    type: 'approval',
-    approval,
-  });
-
-  // Check if onboarding should show (stop at Level 5)
-  const shouldShowOnboarding = onboardingState.isActive && !onboardingState.onboardingData.completed && currentLevel < 5;
-
-  // Get current items to display
-  const getCurrentItems = useCallback((): Task[] => {
-    const items: Task[] = [];
+  const handleApprove = useCallback(async (approval: Approval) => {
+    // Handle regular approval - award XP for engagement
+    const approvalXP = 15; // Standard approval XP
     
-    // Add regular approvals using helper function
-    items.push(...approvals.map(approvalToTask));
-
-    // Add onboarding quote if active and before Level 5 (game starts at Level 5)
-    if (shouldShowOnboarding) {
-      const currentQuote = getCurrentQuote();
-      if (currentQuote) {
-        items.push(quoteToTask(currentQuote));
-      }
+    try {
+      await awardXP(approvalXP, 'Task Approval', 'productivity');
+      console.log('✅ [Unified XP] Task approval XP awarded:', approvalXP);
+    } catch (error) {
+      console.error('❌ Failed to award approval XP:', error);
     }
+    
+    // Remove from list immediately
+    setApprovals(prev => prev.filter(a => a.id !== approval.id));
+    
+    // Trigger mascot cheering for approval
+    triggerCheering(CheeringTrigger.TASK_COMPLETE);
+  }, [awardXP, triggerCheering]);
 
-    return items;
-  }, [approvals, shouldShowOnboarding, getCurrentQuote]);
-
-  const handleApprove = useCallback(async (task: Task) => {
-    if (task.type === 'onboarding_quote' && task.quote) {
-      // ✅ CLEAN ARCHITECTURE: Coordinate between onboarding and XP systems
-      
-      // Trigger mascot cheering for approval
-      triggerCheering(CheeringTrigger.TASK_COMPLETE);
-      
-      // Step 1: Record the quote response (OnboardingContext handles onboarding flow)
-      try {
-        const timeSpent = Math.round(Math.random() * 3000 + 1000);
-        const result = await recordQuoteResponse(task.quote.quote_id, 'approve', timeSpent);
-        console.log('✅ [Onboarding] Quote response recorded');
-        
-        // Step 2: Award XP through unified system (XPContext handles XP and celebrations)
-        if (result && result.xp_awarded) {
-          await awardXP(result.xp_awarded, `Quote ${task.quote.quote_id.substring(0, 20)}...`, 'onboarding');
-          console.log('✅ [XP System] XP awarded and celebrations triggered:', result.xp_awarded);
-        }
-        
-      } catch (error) {
-        console.error('❌ Failed to process quote approval:', error);
-      }
-      
-    } else if (task.type === 'approval' && task.approval) {
-      // Handle regular approval - award XP for engagement
-      const approvalXP = 15; // Standard approval XP
-      
-      try {
-        await awardXP(approvalXP, 'Task Approval', 'productivity');
-        console.log('✅ [Unified XP] Task approval XP awarded:', approvalXP);
-      } catch (error) {
-        console.error('❌ Failed to award approval XP:', error);
-      }
-      
-      // Remove from list immediately
-      setApprovals(prev => prev.filter(a => a.id !== task.approval!.id));
-      
-      // Trigger mascot cheering for approval
-      triggerCheering(CheeringTrigger.TASK_COMPLETE);
+  const handleReject = useCallback(async (approval: Approval) => {
+    // Handle regular approval rejection - still award some XP for engagement
+    const engagementXP = 5; // Small XP for engagement even when declining
+    
+    try {
+      await awardXP(engagementXP, 'Task Review', 'productivity');
+      console.log('✅ [Unified XP] Task decline XP awarded:', engagementXP);
+    } catch (error) {
+      console.error('❌ Failed to award decline XP:', error);
     }
-  }, [recordQuoteResponse, awardXP, triggerCheering]);
-
-  const handleReject = useCallback(async (task: Task) => {
-    if (task.type === 'onboarding_quote' && task.quote) {
-      // ✅ CLEAN ARCHITECTURE: Coordinate between onboarding and XP systems
-      
-      // Trigger mascot cheering for reject (still positive engagement)
-      triggerCheering(CheeringTrigger.TASK_COMPLETE);
-      
-      // Step 1: Record the quote response (OnboardingContext handles onboarding flow)
-      try {
-        const timeSpent = Math.round(Math.random() * 2000 + 800);
-        const result = await recordQuoteResponse(task.quote.quote_id, 'decline', timeSpent);
-        console.log('✅ [Onboarding] Quote response recorded');
-        
-        // Step 2: Award XP through unified system (XPContext handles XP and celebrations)
-        if (result && result.xp_awarded) {
-          await awardXP(result.xp_awarded, `Quote ${task.quote.quote_id.substring(0, 20)}...`, 'onboarding');
-          console.log('✅ [XP System] XP awarded and celebrations triggered:', result.xp_awarded);
-        }
-        
-      } catch (error) {
-        console.error('❌ Failed to process quote decline:', error);
-      }
-      
-    } else if (task.type === 'approval' && task.approval) {
-      // Handle regular approval rejection - still award some XP for engagement
-      const engagementXP = 5; // Small XP for engagement even when declining
-      
-      try {
-        await awardXP(engagementXP, 'Task Review', 'productivity');
-        console.log('✅ [Unified XP] Task decline XP awarded:', engagementXP);
-      } catch (error) {
-        console.error('❌ Failed to award decline XP:', error);
-      }
-      
-      // Remove from list immediately
-      setApprovals(prev => prev.filter(a => a.id !== task.approval!.id));
-      
-      // Trigger mascot cheering for engagement
-      triggerCheering(CheeringTrigger.TASK_COMPLETE);
-    }
-  }, [recordQuoteResponse, awardXP, triggerCheering]);
+    
+    // Remove from list immediately
+    setApprovals(prev => prev.filter(a => a.id !== approval.id));
+    
+    // Trigger mascot cheering for engagement
+    triggerCheering(CheeringTrigger.TASK_COMPLETE);
+  }, [awardXP, triggerCheering]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -419,68 +204,58 @@ export default function ApprovalsScreen() {
     setSelectedFilter(tabKey);
   };
 
-  // Get current tasks and apply AI-focused filters
-  const currentTasks = getCurrentItems();
-  
   // AI-powered filtering logic
-  const getAIFilteredTasks = (tasks: Task[], filter: string): Task[] => {
+  const getAIFilteredTasks = (approvals: Approval[], filter: string): Approval[] => {
     switch (filter) {
       case 'easy':
         // Easy wins - prioritize low complexity items for momentum
-        return tasks
-          .filter(task => task.priority === 'low' || task.type === 'onboarding_quote')
-          .sort((a, b) => {
-            // Onboarding quotes are typically easier decisions
-            if (a.type === 'onboarding_quote' && b.type !== 'onboarding_quote') return -1;
-            if (b.type === 'onboarding_quote' && a.type !== 'onboarding_quote') return 1;
-            return 0;
-          });
+        return approvals
+          .filter(approval => approval.priority === 'low')
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
           
       case 'smart':
-        // AI-curated recommendations (mix of priorities, favor onboarding for learning)
-        return tasks
+        // AI-curated recommendations (mix of priorities for balance)
+        return approvals
           .sort((a, b) => {
-            // Prioritize onboarding quotes for learning + medium priority for balance
-            const getSmartScore = (task: Task): number => {
+            const getSmartScore = (approval: Approval): number => {
               let score = 0;
-              if (task.type === 'onboarding_quote') score += 10; // Learning priority
-              if (task.priority === 'medium') score += 5; // Balanced difficulty
-              if (task.priority === 'high') score += 3; // Still important
+              if (approval.priority === 'medium') score += 5; // Balanced difficulty
+              if (approval.priority === 'high') score += 3; // Still important
+              if (approval.priority === 'low') score += 2; // Easy wins
               return score;
             };
             return getSmartScore(b) - getSmartScore(a);
           });
           
       case 'complex':
-        // Items needing more context - high complexity or approval types
-        return tasks
-          .filter(task => task.priority === 'high' || task.type === 'approval')
-          .sort((a, b) => {
-            const priorityOrder = { high: 0, medium: 1, low: 2 };
-            return priorityOrder[a.priority] - priorityOrder[b.priority];
-          });
+        // Items needing more context - high complexity approvals
+        return approvals
+          .filter(approval => approval.priority === 'high')
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
           
       case 'priority':
-        // AI suggests high-impact items (high priority first, then by complexity)
-        return tasks
+        // AI suggests high-impact items (high priority first, then by recency)
+        return approvals
           .sort((a, b) => {
             const priorityOrder = { high: 0, medium: 1, low: 2 };
-            return priorityOrder[a.priority] - priorityOrder[b.priority];
+            const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+            if (priorityDiff !== 0) return priorityDiff;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           });
           
       default:
-        return tasks;
+        return approvals;
     }
   };
 
-  const filteredTasks = getAIFilteredTasks(currentTasks, selectedFilter);
+  const filteredApprovals = getAIFilteredTasks(approvals, selectedFilter);
 
   // Updated stats for AI-focused tabs
   const stats = {
-    easy: getAIFilteredTasks(currentTasks, 'easy').length,
-    smart: getAIFilteredTasks(currentTasks, 'smart').length,
-    complex: getAIFilteredTasks(currentTasks, 'complex').length,
-    priority: getAIFilteredTasks(currentTasks, 'priority').length,
+    easy: getAIFilteredTasks(approvals, 'easy').length,
+    smart: getAIFilteredTasks(approvals, 'smart').length,
+    complex: getAIFilteredTasks(approvals, 'complex').length,
+    priority: getAIFilteredTasks(approvals, 'priority').length,
   };
 
   // Enhanced Filter Tabs component with AI descriptions
@@ -493,7 +268,7 @@ export default function ApprovalsScreen() {
         return (
           <TouchableOpacity
             key={tab.key}
-            className="flex-1 h-24 rounded-xl overflow-hidden" // Increased height for description
+            className="flex-1 h-20 rounded-xl overflow-hidden" // Reduced from h-24 to h-20
             style={[
               isActive && {
                 elevation: 4,
@@ -533,7 +308,7 @@ export default function ApprovalsScreen() {
               </Svg>
               <View className="absolute inset-0 flex-1 justify-center items-center px-2" style={{ zIndex: 20 }}>
                 <Text 
-                  className="text-lg font-bold mb-0.5"
+                  className="text-2xl font-bold mb-0.5"
                   style={{ 
                     textShadowColor: 'rgba(0, 0, 0, 0.3)',
                     textShadowOffset: { width: 0, height: 1 },
@@ -579,7 +354,7 @@ export default function ApprovalsScreen() {
     if (responsive.effectiveIsDesktop) {
       return (
         <DesktopApprovalsContent
-          filteredTasks={filteredTasks}
+          filteredTasks={filteredApprovals}
           handleApprove={handleApprove}
           handleReject={handleReject}
           selectedFilter={selectedFilter}
@@ -591,7 +366,7 @@ export default function ApprovalsScreen() {
     if (responsive.effectiveIsTablet) {
       return (
         <TabletApprovalsContent
-          filteredTasks={filteredTasks}
+          filteredTasks={filteredApprovals}
           handleApprove={handleApprove}
           handleReject={handleReject}
         />
@@ -600,7 +375,7 @@ export default function ApprovalsScreen() {
     
     return (
       <View className="flex-1">
-        {filteredTasks.length === 0 ? (
+        {filteredApprovals.length === 0 ? (
           <View className="flex-1 justify-center items-center px-5">
             <View className={cn(
               "rounded-xl p-8 items-center border max-w-sm",
@@ -619,7 +394,7 @@ export default function ApprovalsScreen() {
           </View>
         ) : (
           <FlatList
-            data={filteredTasks}
+            data={filteredApprovals}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ padding: 20 }}
@@ -637,28 +412,17 @@ export default function ApprovalsScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: Task }) => (
+  const renderItem = ({ item }: { item: Approval }) => (
     <View className="mb-2">
       <SimpleSwipeCard
         onSwipeLeft={() => handleReject(item)}
         onSwipeRight={() => handleApprove(item)}
       >
         <StreamlinedApprovalCard
-          approval={item.approval || {
-            id: item.id,
-            title: item.title,
-            description: item.description,
-            priority: item.priority,
-            created_at: item.created_at,
-            requested_by: item.requested_by,
-            type: item.type,
-          }} 
+          approval={item} 
           onPress={() => {
-            if (item.type === 'approval') {
-              console.log('Navigating to task details:', item.id);
-              router.push(`/request/${item.id}`);
-            }
-            // Onboarding quotes are swipe-only - no tap action needed
+            console.log('Navigating to task details:', item.id);
+            router.push(`/request/${item.id}`);
           }}
         />
       </SimpleSwipeCard>
@@ -779,7 +543,7 @@ export default function ApprovalsScreen() {
 
       {/* Content */}
       <View className="flex-1">
-        {filteredTasks.length === 0 ? (
+        {filteredApprovals.length === 0 ? (
           <View className="flex-1 justify-center items-center px-5">
             <View className={cn(
               "rounded-xl p-8 items-center border max-w-sm",
@@ -798,7 +562,7 @@ export default function ApprovalsScreen() {
           </View>
         ) : (
           <FlatList
-            data={filteredTasks}
+            data={filteredApprovals}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ padding: 20 }}

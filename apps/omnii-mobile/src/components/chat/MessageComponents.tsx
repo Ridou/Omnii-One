@@ -308,6 +308,65 @@ export const ContactComponent: React.FC<BaseComponentProps & { data: ContactData
   );
 };
 
+// ✅ Google Services Connection Prompt Component
+const GoogleServicesConnectionPrompt: React.FC<{
+  onAction?: (action: string, data: any) => void;
+}> = ({ onAction }) => {
+  const { isDark } = useTheme();
+  
+  const handleConnectGoogle = () => {
+    // Navigate to Profile > Connect tab
+    onAction?.('navigate_to_profile_connect', { tab: 'connect' });
+  };
+
+  return (
+    <View className="items-center py-4">
+      <View className={cn(
+        "rounded-xl p-4 border-2 border-dashed max-w-xs w-full",
+        isDark ? "bg-slate-800/50 border-slate-600" : "bg-blue-50/50 border-blue-200"
+      )}>
+        {/* Header with icon */}
+        <View className="flex-row items-center mb-3">
+          <View className={cn(
+            "w-10 h-10 rounded-lg items-center justify-center mr-3",
+            isDark ? "bg-blue-900/30" : "bg-blue-100"
+          )}>
+            <Text className="text-xl">🔗</Text>
+          </View>
+          <View className="flex-1">
+            <Text className={cn(
+              "text-base font-bold",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Connect Google</Text>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-blue-400" : "text-blue-600"
+            )}>For tasks, calendar, contacts & email</Text>
+          </View>
+        </View>
+
+        {/* Simple description */}
+        <Text className={cn(
+          "text-sm mb-4 text-center",
+          isDark ? "text-slate-300" : "text-gray-700"
+        )}>
+          Connect your Google account to access tasks, calendar, contacts, and email.
+        </Text>
+
+        {/* Connect button */}
+        <TouchableOpacity
+          className="bg-blue-600 px-4 py-3 rounded-lg flex-row items-center justify-center"
+          onPress={handleConnectGoogle}
+        >
+          <Text className="text-white text-sm font-semibold mr-2">Connect</Text>
+          <Text className="text-white text-sm">→</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+
 
 // ✅ PHASE 2: Task-Specific Component Factory with Type Detection
 export const createTaskComponent = (taskData: any, props: any) => {
@@ -370,12 +429,7 @@ export const createTaskComponent = (taskData: any, props: any) => {
   
   // Fallback: show debug info
   console.warn('[TaskComponentFactory] Unknown task data type, rendering debug info');
-  return (
-    <View className="flex-1">
-      <Text className="text-sm">Unknown Task Data Type</Text>
-      <Text className="text-sm">{JSON.stringify(taskData, null, 2)}</Text>
-    </View>
-  );
+  return <GoogleServicesConnectionPrompt onAction={props.onAction} />;
 };
 
 // ✅ PHASE 3: Enhanced Component Factory with ServiceType enum and task detection

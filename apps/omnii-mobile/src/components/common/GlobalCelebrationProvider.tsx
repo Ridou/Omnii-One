@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useXPContext } from '~/context/XPContext';
 import LevelCelebration from '~/components/onboarding/LevelCelebration';
-import type { LevelProgression } from '~/types/onboarding';
+import type { LevelProgression } from '~/types/xp';
 
 /**
  * Global Celebration Provider

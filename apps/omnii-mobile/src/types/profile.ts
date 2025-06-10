@@ -192,7 +192,7 @@ export interface WorkflowCondition {
 }
 
 export interface ThemeSettings {
-  colorScheme: 'light' | 'dark' | 'auto' | 'high_contrast';
+  colorScheme: 'light' | 'dark';
   fontSize: 'small' | 'medium' | 'large' | 'xl';
   reducedMotion: boolean;
   voiceControls: boolean;

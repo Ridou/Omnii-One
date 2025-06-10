@@ -15,8 +15,8 @@ import * as Haptics from 'expo-haptics';
 import { cn } from '~/utils/cn';
 import { useTheme } from '~/context/ThemeContext';
 import { useResponsiveDesign } from '~/utils/responsive';
-import type { LevelProgression } from '~/types/onboarding';
-import { LEVEL_REQUIREMENTS } from '~/types/onboarding';
+import type { LevelProgression } from '~/types/xp';
+import { LEVEL_REQUIREMENTS } from '~/types/xp';
 import { Mascot } from '~/components/common/Mascot';
 import { 
   MascotStage, 
@@ -382,82 +382,16 @@ export default function LevelCelebration({
       }, delay);
     });
 
-    // Wait then show features
-    setTimeout(() => {
-      showUnlockedFeatures();
-    }, 2000); // Longer celebration time
-  };
-
-  const showUnlockedFeatures = () => {
-    setAnimationPhase('features');
-    
-    // Slide in feature cards
-    featureSlideIns.forEach((anim, index) => {
-      const delay = index * 200;
-      setTimeout(() => {
-        Animated.spring(anim, {
-          toValue: 0,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }).start();
-      }, delay);
-    });
-
-    // Show buttons after 2.5 seconds (2-3 seconds as requested)
+    // Wait then show completion
     setTimeout(() => {
       setAnimationPhase('complete');
-    }, 2500);
+    }, 3000); // Show celebration for 3 seconds
   };
 
-  const getUnlockedFeatures = (level: number) => {
-    switch (level) {
-      case 2:
-        return [{
-          icon: '🏆',
-          title: 'Achievement System',
-          description: 'Track your progress and unlock milestones',
-          route: '/(tabs)/achievements'
-        }];
-      case 3:
-        return [
-          {
-            icon: '💬',
-            title: 'AI Chat Assistant',
-            description: 'Get personalized productivity guidance',
-            route: '/(tabs)/chat' // When implemented
-          },
-          {
-            icon: '🎤',
-            title: 'Voice Commands',
-            description: 'Control OMNII with your voice',
-            route: null // System feature
-          }
-        ];
-      case 4:
-        return [{
-          icon: '📊',
-          title: 'Analytics Dashboard',
-          description: 'Deep insights into your productivity patterns',
-          route: '/(tabs)/analytics' // When implemented
-        }];
-      case 5:
-        return [{
-          icon: '👤',
-          title: 'Profile & Settings',
-          description: 'Customize your AI partnership experience',
-          route: '/(tabs)/profile'
-        }];
-      default:
-        return [];
-    }
-  };
+
 
   const getLevelTitle = (level: number) => {
-    if (level === 2) return 'ACHIEVEMENT UNLOCKED';
-    if (level === 3) return 'AI AWAKENING';
-    if (level === 4) return 'DATA INSIGHTS';
-    if (level === 5) return 'MASTERY ACHIEVED';
+    if (level <= 5) return `LEVEL ${level} ACHIEVED`;
     if (level <= 10) return 'PRODUCTIVITY EXPERT';
     if (level <= 15) return 'EFFICIENCY GURU';
     if (level <= 20) return 'WORKFLOW SAGE';
@@ -481,21 +415,7 @@ export default function LevelCelebration({
     return { primary: '#FF7043', secondary: '#FF5722' }; // Transcendent Orange
   };
 
-  // Handle navigation to newly unlocked features
-  const handleNavigationCTA = (route: string | null) => {
-    if (route && onNavigationCTA && levelProgression) {
-      onNavigationCTA(levelProgression.to_level);
-      onComplete(); // Close the modal after navigation
-    }
-  };
 
-  // Handle Discord CTA with proper async/await
-  const handleDiscordCTA = async () => {
-    if (onDiscordCTA) {
-      await onDiscordCTA();
-    }
-    onComplete();
-  };
 
   if (!visible || !levelProgression) return null;
 
@@ -511,8 +431,6 @@ export default function LevelCelebration({
   }
 
   const levelColors = getLevelColors(levelProgression.to_level);
-  const unlockedFeatures = getUnlockedFeatures(levelProgression.to_level);
-  const isLevel5 = levelProgression.to_level === 5;
 
   // ✅ DESKTOP: Show compact toast notification instead of full-screen modal
   if (responsive.effectiveIsDesktop) {
@@ -656,16 +574,7 @@ export default function LevelCelebration({
                 >
                   {getLevelTitle(levelProgression.to_level)}
                 </Text>
-                {isLevel5 && (
-                  <View 
-                    className="px-4 py-2 rounded-full"
-                    style={{ backgroundColor: '#F59E0B' }} // Solid amber background
-                  >
-                    <Text className="text-sm font-bold text-black text-center">
-                      🎉 ALL CORE FEATURES UNLOCKED! 🎉
-                    </Text>
-                  </View>
-                )}
+
               </Animated.View>
 
               {/* XP Gained with Glow Effect */}
@@ -696,95 +605,18 @@ export default function LevelCelebration({
                 </View>
               </View>
 
-              {/* Unlocked Features with Glassmorphism */}
-              {animationPhase === 'features' && unlockedFeatures.length > 0 && (
-                <View className="w-full mb-6">
-                  <Text className="text-sm font-bold text-white/90 tracking-wide mb-4 text-center">
-                    ✨ NEW FEATURES UNLOCKED ✨
-                  </Text>
-                  {unlockedFeatures.map((feature, index) => (
-                    <Animated.View
-                      key={index}
-                      className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-3 mb-3 flex-row items-center"
-                      style={{
-                        transform: [{ translateX: featureSlideIns[index] || new Animated.Value(-width) }],
-                      }}
-                    >
-                      <View 
-                        className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-                        style={{ backgroundColor: `${levelColors.primary}40` }}
-                      >
-                        <Text className="text-xl">{feature.icon}</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text 
-                          className="text-base font-bold mb-1"
-                          style={{ color: levelColors.primary }}
-                        >
-                          {feature.title}
-                        </Text>
-                        <Text className="text-xs text-gray-300 leading-4">
-                          {feature.description}
-                        </Text>
-                      </View>
-                    </Animated.View>
-                  ))}
-                </View>
-              )}
+
 
               {/* Action Buttons */}
               {animationPhase === 'complete' && (
                 <View className="w-full">
-                  {/* Discord CTA for Level 5 */}
-                  {isLevel5 && onDiscordCTA && (
-                    <TouchableOpacity 
-                      className="bg-[#5865F2] rounded-2xl py-3 px-6 shadow-xl active:scale-95 border border-white/20 mb-4"
-                      onPress={handleDiscordCTA}
-                      style={{
-                        shadowColor: '#5865F2',
-                        shadowOffset: { width: 0, height: 8 },
-                        shadowOpacity: 0.4,
-                        shadowRadius: 16,
-                      }}
-                    >
-                      <Text className="text-white text-base font-bold text-center">
-                        💬 Join our Discord for feedback & exclusive tips!
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* Navigation CTAs */}
-                  {unlockedFeatures.filter(f => f.route).map((feature, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      className="rounded-2xl py-3 px-6 shadow-xl active:scale-95 border border-white/20 mb-6"
-                      style={{
-                        backgroundColor: levelColors.primary,
-                        shadowColor: levelColors.primary,
-                        shadowOffset: { width: 0, height: 8 },
-                        shadowOpacity: 0.4,
-                        shadowRadius: 16,
-                      }}
-                      onPress={() => handleNavigationCTA(feature.route)}
-                    >
-                      <View className="items-center">
-                        <Text className="text-white text-base font-bold mb-1">
-                          Explore {feature.title}
-                        </Text>
-                        <Text className="text-white/90 text-sm font-semibold">
-                          +25 XP for first visit! ✨
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-
                   {/* Continue Button */}
                   <TouchableOpacity 
                     className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-2xl py-3 px-8 shadow-xl active:scale-95 mb-6"
                     onPress={onComplete}
                   >
                     <Text className="text-white text-base font-bold text-center">
-                      {isLevel5 ? '🚀 Begin Your Journey' : '✨ Continue'}
+                      ✨ Continue
                     </Text>
                   </TouchableOpacity>
 

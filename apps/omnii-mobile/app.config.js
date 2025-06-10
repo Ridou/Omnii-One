@@ -5,7 +5,7 @@ export default {
     name: 'OMNII',
     slug: 'omnii',
     owner: 'omnii',
-    version: '1.0.1',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
     userInterfaceStyle: 'light',
