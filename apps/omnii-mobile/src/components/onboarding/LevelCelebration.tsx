@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { cn } from '~/utils/cn';
 import { useTheme } from '~/context/ThemeContext';
+import { useResponsiveDesign } from '~/utils/responsive';
 import type { LevelProgression } from '~/types/onboarding';
 import { LEVEL_REQUIREMENTS } from '~/types/onboarding';
 import { Mascot } from '~/components/common/Mascot';
@@ -34,6 +35,179 @@ interface LevelCelebrationProps {
   onNavigationCTA?: (level: number) => void;
 }
 
+// Desktop Toast Notification Component
+const DesktopLevelToast: React.FC<{
+  visible: boolean;
+  levelProgression: LevelProgression;
+  onComplete: () => void;
+  xpGained: number;
+  levelTitle: string;
+  levelColors: { primary: string; secondary: string };
+}> = ({ visible, levelProgression, onComplete, xpGained, levelTitle, levelColors }) => {
+  const { isDark } = useTheme();
+  const slideAnim = useRef(new Animated.Value(-400)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      // Slide in from the top-right
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 80,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Auto-dismiss after 5 seconds
+      const timeout = setTimeout(() => {
+        dismissToast();
+      }, 5000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [visible]);
+
+  const dismissToast = () => {
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: -400,
+        tension: 80,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onComplete();
+    });
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View
+      className="absolute top-6 right-6 z-50"
+      style={{
+        transform: [{ translateX: slideAnim }],
+        opacity: fadeAnim,
+      }}
+    >
+      <View
+        className={cn(
+          "rounded-2xl p-4 border shadow-2xl min-w-[320px] max-w-[400px]",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}
+        style={{
+          shadowColor: levelColors.primary,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.3,
+          shadowRadius: 20,
+          elevation: 15,
+        }}
+      >
+        {/* Header with Level Badge */}
+        <View className="flex-row items-center mb-3">
+          <View
+            className="w-12 h-12 rounded-full items-center justify-center mr-3 border-2 border-white/20"
+            style={{ backgroundColor: levelColors.primary }}
+          >
+            <Text className="text-lg font-black text-white">
+              {levelProgression.to_level}
+            </Text>
+          </View>
+          <View className="flex-1">
+            <Text className={cn(
+              "text-lg font-bold",
+              isDark ? "text-white" : "text-gray-900"
+            )}>
+              Level Up!
+            </Text>
+            <Text className={cn(
+              "text-sm",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>
+              {levelTitle}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={dismissToast}
+            className="w-6 h-6 items-center justify-center"
+          >
+            <Text className={cn(
+              "text-lg",
+              isDark ? "text-slate-400" : "text-gray-400"
+            )}>×</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* XP Gained */}
+        <View className="flex-row items-center justify-between mb-3">
+          <Text className={cn(
+            "text-sm font-medium",
+            isDark ? "text-slate-300" : "text-gray-700"
+          )}>
+            XP Gained:
+          </Text>
+          <Text
+            className="text-lg font-bold"
+            style={{ color: levelColors.primary }}
+          >
+            +{xpGained}
+          </Text>
+        </View>
+
+        {/* Quick Actions */}
+        <View className="flex-row gap-2">
+          <TouchableOpacity
+            className="flex-1 py-2 px-3 rounded-lg"
+            style={{ backgroundColor: `${levelColors.primary}20` }}
+            onPress={dismissToast}
+          >
+            <Text
+              className="text-sm font-semibold text-center"
+              style={{ color: levelColors.primary }}
+            >
+              Continue
+            </Text>
+          </TouchableOpacity>
+          {levelProgression.to_level === 5 && (
+            <TouchableOpacity
+              className="flex-1 py-2 px-3 rounded-lg border"
+              style={{ 
+                backgroundColor: levelColors.primary,
+                borderColor: levelColors.secondary
+              }}
+              onPress={dismissToast}
+            >
+              <Text className="text-sm font-semibold text-center text-white">
+                Explore
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Celebration particles */}
+        <View className="absolute top-2 right-2">
+          <Text className="text-xl">🎉</Text>
+        </View>
+        <View className="absolute top-4 right-8">
+          <Text className="text-sm">✨</Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
 export default function LevelCelebration({
   visible,
   levelProgression,
@@ -42,6 +216,7 @@ export default function LevelCelebration({
   onNavigationCTA
 }: LevelCelebrationProps) {
   const { isDark } = useTheme();
+  const responsive = useResponsiveDesign();
   const router = useRouter();
   const [animationPhase, setAnimationPhase] = useState<'entrance' | 'celebration' | 'features' | 'complete'>('entrance');
   
@@ -339,6 +514,21 @@ export default function LevelCelebration({
   const unlockedFeatures = getUnlockedFeatures(levelProgression.to_level);
   const isLevel5 = levelProgression.to_level === 5;
 
+  // ✅ DESKTOP: Show compact toast notification instead of full-screen modal
+  if (responsive.effectiveIsDesktop) {
+    return (
+      <DesktopLevelToast
+        visible={visible}
+        levelProgression={levelProgression}
+        onComplete={onComplete}
+        xpGained={xpGained}
+        levelTitle={getLevelTitle(levelProgression.to_level)}
+        levelColors={levelColors}
+      />
+    );
+  }
+
+  // ✅ MOBILE: Show full celebration experience
   const sparkleRotate = sparkleRotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
