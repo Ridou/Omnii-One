@@ -63,6 +63,7 @@ const app = new Elysia()
         "Accept",
         "Origin",
         "x-trpc-source", // Required for tRPC client
+        "x-user-id", // Required for tRPC client
         "Sec-WebSocket-Protocol",
         "Sec-WebSocket-Version",
         "Sec-WebSocket-Key",
