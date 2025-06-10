@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, TextInput, Platform, FlatList } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, TextInput, Platform, FlatList, ActivityIndicator } from 'react-native';
 import { useResponsiveDesign } from '~/utils/responsive';
 import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
@@ -122,8 +122,11 @@ export const ResponsiveChatInput: React.FC<ResponsiveChatInputProps> = ({
 };
 
 // Desktop Quick Actions Sidebar
-export const DesktopQuickActions: React.FC = () => {
+export const DesktopQuickActions: React.FC<{
+  onQuickAction?: (command: string) => void;
+}> = ({ onQuickAction }) => {
   const { isDark } = useTheme();
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
   
   const quickActions = [
     { id: '1', iconComponent: <GmailIcon size={20} />, label: 'Gmail', description: 'Check latest emails', command: 'check my latest emails' },
@@ -132,8 +135,39 @@ export const DesktopQuickActions: React.FC = () => {
     { id: '4', iconComponent: <TasksIcon size={20} />, label: 'Tasks', description: 'Manage tasks', command: 'show my tasks' },
   ];
 
+  const handleActionClick = async (action: typeof quickActions[0]) => {
+    if (!onQuickAction) return;
+    
+    setLoadingAction(action.id);
+    try {
+      await onQuickAction(action.command);
+    } finally {
+      // Clear loading state after a brief delay
+      setTimeout(() => setLoadingAction(null), 1000);
+    }
+  };
+
   return (
     <View className="h-full">
+      {/* AI Context Enhancement Notice */}
+      <View className={cn(
+        "mb-4 p-3 rounded-lg border",
+        isDark ? "bg-blue-900/20 border-blue-800" : "bg-blue-50 border-blue-200"
+      )}>
+        <Text className={cn(
+          "text-sm font-medium",
+          isDark ? "text-blue-300" : "text-blue-800"
+        )}>
+          🤖 AI Context Enhancement
+        </Text>
+        <Text className={cn(
+          "text-xs mt-1",
+          isDark ? "text-blue-400" : "text-blue-600"
+        )}>
+          I analyze your Gmail, Calendar, and Tasks to provide personalized assistance and actionable insights.
+        </Text>
+      </View>
+
       <Text className={cn(
         "text-xl font-bold mb-4",
         isDark ? "text-white" : "text-gray-900"
@@ -149,12 +183,20 @@ export const DesktopQuickActions: React.FC = () => {
             key={action.id}
             className={cn(
               "p-4 rounded-xl border hover:shadow-md transition-all",
-              isDark ? "bg-slate-800 border-slate-600 hover:bg-slate-700" : "bg-white border-gray-200 hover:bg-gray-50"
+              loadingAction === action.id 
+                ? isDark ? "bg-slate-700 border-slate-500" : "bg-gray-100 border-gray-300"
+                : isDark ? "bg-slate-800 border-slate-600 hover:bg-slate-700" : "bg-white border-gray-200 hover:bg-gray-50"
             )}
+            onPress={() => handleActionClick(action)}
+            disabled={loadingAction === action.id}
           >
             <View className="flex-row items-center mb-2">
               <View className="w-8 h-8 rounded-lg bg-indigo-600 items-center justify-center mr-3">
-                {action.iconComponent}
+                {loadingAction === action.id ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  action.iconComponent
+                )}
               </View>
               <Text className={cn(
                 "font-semibold",
@@ -163,8 +205,12 @@ export const DesktopQuickActions: React.FC = () => {
             </View>
             <Text className={cn(
               "text-sm",
-              isDark ? "text-slate-400" : "text-gray-600"
-            )}>{action.description}</Text>
+              loadingAction === action.id 
+                ? isDark ? "text-slate-500" : "text-gray-400"
+                : isDark ? "text-slate-400" : "text-gray-600"
+            )}>
+              {loadingAction === action.id ? "Processing..." : action.description}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -178,13 +224,15 @@ interface DesktopChatContentProps {
   renderTabContent: () => React.ReactNode;
   messages: any[];
   flatListRef: any;
+  onQuickAction?: (command: string) => void;
 }
 
 export const DesktopChatContent: React.FC<DesktopChatContentProps> = ({
   selectedTab,
   renderTabContent,
   messages,
-  flatListRef
+  flatListRef,
+  onQuickAction
 }) => {
   const responsive = useResponsiveDesign();
   const { isDark } = useTheme();
@@ -192,7 +240,7 @@ export const DesktopChatContent: React.FC<DesktopChatContentProps> = ({
   if (selectedTab === 'conversation') {
     return (
       <View className="flex-row h-full">
-        {/* Main chat area (center) - no unnecessary empty column */}
+        {/* Main chat area (center) */}
         <View className="flex-1 flex flex-col">
           {renderTabContent()}
         </View>
@@ -202,7 +250,7 @@ export const DesktopChatContent: React.FC<DesktopChatContentProps> = ({
           "w-80 border-l p-6",
           isDark ? "border-slate-700 bg-slate-800" : "border-slate-200 bg-white"
         )}>
-          <DesktopQuickActions />
+          <DesktopQuickActions onQuickAction={onQuickAction} />
         </View>
       </View>
     );
@@ -224,8 +272,6 @@ export const DesktopChatContent: React.FC<DesktopChatContentProps> = ({
     </View>
   );
 };
-
-
 
 // Tablet optimized content wrapper
 export const TabletChatContent: React.FC<{

@@ -1,0 +1,1021 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 📊 ANALYTICS TODAY SCREEN - SMART IMPLEMENTATION PLAN
+
+## 🎯 OVERVIEW
+Transform the Analytics Today tab from mock data to intelligent, real-time analytics that demonstrate actual user productivity improvements and energy optimization through app usage. This plan focuses on **smart analytics users actually want to see** rather than generic mock data.
+
+## 🧠 CORE PHILOSOPHY: "SHOW, DON'T TELL" PRODUCTIVITY IMPACT
+
+### The Problem with Current Mock Data
+- Static numbers that don't reflect real user behavior
+- No connection to actual task completion or app usage
+- No demonstration of how OMNII improves productivity
+- Energy levels are fictional rather than behavioral-based
+- Insights are generic instead of personalized
+
+### The Smart Analytics Solution
+- **Real task completion data** from Google Tasks integration
+- **Behavioral energy tracking** based on user interaction patterns
+- **Productivity improvement metrics** showing before/after OMNII usage
+- **Actionable insights** based on actual user patterns
+- **Dynamic energy adjustment** based on task completion velocity and patterns
+
+---
+
+## 📋 PHASE 1: DATA FOUNDATION TRANSFORMATION
+
+### 1.1 Real Data Integration (EXISTING SYSTEMS ANALYSIS)
+
+#### Excellent Existing Infrastructure Discovered ✅
+Your codebase already has sophisticated tracking systems that can be leveraged immediately:
+
+**Existing Database Tables:**
+- `xp_transactions` with detailed source tracking (`reason`, `category`, `source_action`, `metadata`)
+- `user_quote_responses` with `time_spent_ms` and `confidence_score` behavioral data
+- `onboarding_sessions` with completion metrics and response analytics
+- `user_feature_access` tracking feature usage patterns with `first_interaction_at`
+- `messages` table with chat history and conversation analytics
+- `user_analytics` table (already exists!)
+- `data_operations_audit` for comprehensive action tracking
+
+**Existing Behavioral Systems:**
+- `PerformanceManager` class tracking app performance and usage
+- Neo4j conversation storage with sentiment analysis and importance scoring
+- `XPContext` with real-time XP tracking and level progression
+- `ProfileContext` with energy data and working preferences
+- Google Tasks integration via `CompleteTaskOverview`
+
+#### Smart Implementation Strategy
+```typescript
+// Enhanced data from EXISTING systems
+interface SmartTodayMetrics {
+  // REAL TASK DATA (from existing CompleteTaskOverview)
+  tasksCompleted: number;           // Count from TasksPlugin.fetchCompleteTaskOverview()
+  tasksCreatedByAI: number;         // Filter tasks with AI metadata
+  taskCompletionRate: number;       // completedCount/totalTasks from existing schema
+  avgTaskCompletionTime: number;    // Calculate from task.completed vs task.updated timestamps
+  
+  // REAL BEHAVIORAL DATA (from existing tracking)
+  xpEarnedToday: number;           // From xp_transactions WHERE date = today
+  xpFromTasks: number;             // FROM xp_transactions WHERE source_action = 'task_completion'
+  xpFromStreaks: number;           // FROM xp_transactions WHERE category = 'streak'
+  xpFromEngagement: number;        // FROM xp_transactions WHERE category = 'engagement'
+  
+  // REAL INTERACTION DATA (from existing systems)
+  chatInteractions: number;        // Count from messages table today
+  featureExplorations: number;     // From user_feature_access.interaction_count
+  responseVelocity: number;        // Avg time_spent_ms from user_quote_responses
+  confidenceLevel: number;         // Avg confidence_score from user_quote_responses
+  
+  // BEHAVIORAL ENERGY (from existing ProfileContext.energyData)
+  currentEnergyLevel: 'high' | 'medium' | 'low';  // From profile.energyData
+  peakHours: number[];             // From profile.energyData.peakHours
+  optimalWorkDuration: number;     // From profile.energyData.optimalWorkDuration
+  focusSessionsToday: number;      // Calculate from app usage patterns
+  
+  // CALCULATED METRICS (from existing data)
+  efficiencyScore: number;         // Based on task velocity + XP earning rate
+  productivityTrend: 'up' | 'down' | 'stable'; // Compare last 7 days XP transactions
+  engagementQuality: number;       // From chat sentiment + response confidence
+}
+```
+
+### 1.2 Behavioral Energy System (LEVERAGING EXISTING DATA)
+
+#### Existing Energy Data Sources Discovered ✅
+Your codebase already tracks sophisticated behavioral energy indicators:
+
+**From ProfileContext.energyData:**
+- `peakHours: number[]` - User's optimal working hours
+- `lowEnergyHours: number[]` - When user struggles most
+- `focusSessionLength: number` - Preferred deep work duration
+- `optimalWorkDuration: number` - Maximum productive session time
+
+**From Performance Tracking:**
+- App session continuity via `PerformanceManager`
+- Memory/network usage patterns indicating engagement quality
+- App state changes (background/foreground) tracking context switches
+
+**From Conversation Analytics:**
+- Chat sentiment scores from Neo4j conversation analysis
+- Response velocity from `user_quote_responses.time_spent_ms`
+- Confidence levels from `user_quote_responses.confidence_score`
+- Interaction quality from `messages` table with importance scoring
+
+#### Enhanced Energy Detection Algorithm
+```typescript
+interface BehavioralEnergyDetection {
+  // REAL USER PREFERENCES (from ProfileContext)
+  userEnergyProfile: {
+    peakHours: number[];          // From profile.energyData.peakHours
+    lowEnergyHours: number[];     // From profile.energyData.lowEnergyHours
+    optimalSessionLength: number; // From profile.energyData.focusSessionLength
+    preferredBreaks: number[];    // From profile.energyData.preferredBreakTimes
+  };
+  
+  // BEHAVIORAL INDICATORS (from existing tracking)
+  realTimeMetrics: {
+    xpEarningVelocity: number;    // XP/hour from recent xp_transactions
+    responseSpeed: number;        // Avg time_spent_ms from recent interactions
+    confidenceLevel: number;      // Avg confidence_score from responses
+    chatSentiment: number;        // Sentiment from recent messages
+    appEngagement: number;        // Session duration from PerformanceManager
+  };
+  
+  // TASK COMPLETION PATTERNS (from Google Tasks + XP data)
+  taskVelocityByHour: {
+    [hour: number]: {
+      avgCompletionTime: number;  // Minutes per task this hour
+      completionRate: number;     // Success rate this hour
+      xpEarningRate: number;      // XP earned per task this hour
+      taskComplexity: number;     // Based on XP rewards and time
+    };
+  };
+  
+  // CONTEXTUAL ENERGY STATE (real-time calculation)
+  currentEnergyState: {
+    score: number;                // 0-100 composite energy score
+    trend: 'rising' | 'falling' | 'stable';
+    confidence: number;           // How much data backs this score
+    predictedNextHour: number;    // Based on historical patterns
+    suggestedTaskType: 'complex' | 'routine' | 'creative' | 'administrative';
+    recommendedBreakTime: Date | null;
+  };
+}
+```
+
+### 1.3 Comprehensive Data Sources (EXISTING ARCHITECTURE)
+
+#### Rich Data Sources Already Available ✅
+Your codebase has an extensive data collection system that's perfect for analytics:
+
+**Core Data Tables (Supabase):**
+- `xp_transactions` - Detailed XP earning with source tracking and metadata
+- `user_quote_responses` - Behavioral data with time_spent_ms + confidence_score
+- `onboarding_sessions` - User completion patterns and response analytics
+- `user_feature_access` - Feature usage tracking with interaction_count
+- `messages` - Chat history with conversation analytics
+- `user_analytics` - Existing analytics table (ready to use!)
+- `level_progressions` - User advancement tracking
+- `data_operations_audit` - Comprehensive user action logging
+
+**Real-time Data Systems:**
+- `XPContext` - Live XP tracking with source attribution
+- `ProfileContext` - Energy preferences and working patterns
+- `PerformanceManager` - App usage, memory, network tracking
+- `Neo4j ConversationManager` - Chat sentiment and importance analysis
+- `TasksPlugin` - Google Tasks integration with completion tracking
+
+#### Enhanced Data Integration Strategy
+```typescript
+interface ExistingDataSources {
+  // SUPABASE TABLES (existing schema)
+  xpTransactions: {
+    source: 'xp_transactions';
+    fields: ['amount', 'reason', 'category', 'source_action', 'metadata', 'created_at'];
+    queries: {
+      todayXP: () => SUM(amount) WHERE date = today;
+      xpBySource: () => GROUP BY source_action;
+      hourlyXPRate: () => XP per hour analysis;
+    };
+  };
+  
+  userBehavior: {
+    source: 'user_quote_responses';
+    fields: ['time_spent_ms', 'confidence_score', 'action', 'created_at'];
+    queries: {
+      responseVelocity: () => AVG(time_spent_ms);
+      decisionConfidence: () => AVG(confidence_score);
+      interactionPatterns: () => Response patterns by hour;
+    };
+  };
+  
+  conversationAnalytics: {
+    source: 'messages + Neo4j';
+    fields: ['content', 'sentiment', 'importance_score', 'intent', 'timestamp'];
+    queries: {
+      engagementQuality: () => Sentiment + importance trends;
+      communicationStyle: () => Intent analysis patterns;
+      aiInteractionFrequency: () => Messages per day trends;
+    };
+  };
+  
+  // REAL-TIME CONTEXTS (existing hooks)
+  xpContext: {
+    source: 'XPContext';
+    data: ['currentXP', 'currentLevel', 'unlockedFeatures', 'pendingXP'];
+    realTimeUpdates: true;
+  };
+  
+  profileContext: {
+    source: 'ProfileContext';
+    data: ['energyData', 'productivityDNA', 'communicationPrefs'];
+    energyTracking: ['peakHours', 'lowEnergyHours', 'optimalWorkDuration'];
+  };
+  
+  // GOOGLE SERVICES (existing integration)
+  tasksData: {
+    source: 'TasksPlugin.fetchCompleteTaskOverview()';
+    data: ['totalTasks', 'completedCount', 'pendingCount', 'overdueCount'];
+    perTaskData: ['completed', 'due', 'updated', 'status'];
+  };
+  
+  // PERFORMANCE & BEHAVIORAL (existing systems)
+  performanceMetrics: {
+    source: 'PerformanceManager';
+    data: ['appLaunchTime', 'memoryUsage', 'networkUsage', 'sessionDuration'];
+    behavioralIndicators: ['contextSwitches', 'sessionContinuity'];
+  };
+}
+```
+
+---
+
+## 🔥 PHASE 2: SMART INSIGHTS ENGINE
+
+### 2.1 Replace Generic AI Insights with Real Pattern Recognition
+
+#### Current Problem
+```typescript
+// Generic, unhelpful mock insights
+{
+  title: '📅 Weekly Pattern Detected',
+  message: "You're 40% more focused on Tuesdays",
+  confidence: 92,
+  // No real data backing this up
+}
+```
+
+#### Smart Insights Based on Existing Rich Data
+```typescript
+interface SmartAIInsight {
+  // DATA-DRIVEN INSIGHTS (using existing tracking)
+  id: string;
+  type: 'productivity_gain' | 'energy_optimization' | 'habit_formation' | 'engagement_pattern' | 'response_improvement';
+  
+  // REAL METRICS FROM EXISTING TABLES
+  dataPoints: {
+    // From xp_transactions analysis
+    xpGrowthRate: number;         // Weekly XP trend
+    productivitySources: string[]; // Top XP earning activities
+    
+    // From user_quote_responses behavioral data  
+    responseImprovement: number;  // time_spent_ms trend (faster = more confident)
+    confidenceGrowth: number;     // confidence_score improvement trend
+    decisionQuality: number;      // Consistency in responses
+    
+    // From messages + Neo4j conversation analytics
+    engagementQuality: number;    // Sentiment trend from conversations
+    interactionDepth: number;     // Message complexity and intent analysis
+    aiRelationship: number;       // How user-AI relationship evolved
+    
+    // From TasksPlugin.fetchCompleteTaskOverview()
+    taskCompletionTrend: number;  // Daily completed tasks trend
+    taskVelocityChange: number;   // Speed improvement in task completion
+    completionReliability: number; // Consistency in finishing tasks
+    
+    // Confidence and sample data
+    confidenceLevel: number;      // Based on data quality (days tracked)
+    sampleSize: number;           // Number of data points
+    daysTracked: number;          // How long user has been active
+  };
+  
+  // EVIDENCE FROM EXISTING SYSTEMS
+  evidence: {
+    xpTransactionData: any[];     // Real XP earning patterns
+    responseData: any[];          // time_spent_ms and confidence trends
+    conversationData: any[];      // Sentiment and engagement trends
+    taskCompletionData: any[];    // Google Tasks completion patterns
+    energyPatternData: any[];     // From ProfileContext.energyData
+    comparisonPeriods: string[];  // "Week 1 vs Week 4" etc.
+  };
+  
+  // PERSONALIZED MESSAGE (based on real patterns)
+  title: string;
+  message: string;
+  
+  // ACTIONABLE RECOMMENDATIONS (using ProfileContext preferences)
+  actionableSuggestions: {
+    primary: string;              // Main action tailored to user's energyData
+    secondary: string[];          // Based on user's productivityDNA
+    expectedImpact: string;       // Calculated from actual improvement rates
+    implementationDifficulty: 'easy' | 'medium' | 'hard';
+    alignsWithEnergyProfile: boolean; // Matches user's peakHours/lowEnergyHours
+  };
+}
+```
+
+### 2.2 Real-World Insight Examples (Using Existing Data)
+
+#### XP Growth & Engagement Pattern Insight
+```typescript
+const xpGrowthInsight: SmartAIInsight = {
+  type: 'productivity_gain',
+  title: '🚀 Your XP Earning Accelerated 340% in 2 Weeks',
+  message: 'Your daily XP earning jumped from 23 to 101 XP/day. You\'re completing tasks faster and engaging more deeply with the AI.',
+  
+  dataPoints: {
+    // FROM xp_transactions table analysis
+    xpGrowthRate: 340,               // % increase over 2 weeks
+    productivitySources: ['task_completion', 'streak_bonus', 'chat_engagement'],
+    
+    // FROM user_quote_responses behavioral analysis
+    responseImprovement: 45,         // 45% faster response times
+    confidenceGrowth: 23,           // 23% higher confidence scores
+    decisionQuality: 87,            // 87% consistency in decisions
+    
+    confidenceLevel: 94,            // 14 days of solid data
+    sampleSize: 156,               // 156 XP transactions analyzed
+    daysTracked: 14
+  },
+  
+  evidence: {
+    xpTransactionData: [/* real XP earning by day/source */],
+    responseData: [/* time_spent_ms trends showing faster decisions */],
+    comparisonPeriods: ['Days 1-7', 'Days 8-14']
+  },
+  
+  actionableSuggestions: {
+    primary: 'Maintain momentum with daily 100 XP goal',
+    secondary: [
+      'Schedule tasks during your peak XP earning hours (9-11 AM)',
+      'Use chat more often - your AI engagement XP is accelerating'
+    ],
+    expectedImpact: 'Sustain 100+ XP daily for consistent growth',
+    implementationDifficulty: 'easy',
+    alignsWithEnergyProfile: true  // Matches user's ProfileContext.energyData
+  }
+};
+```
+
+#### Response Velocity & AI Relationship Insight
+```typescript
+const responseImprovementInsight: SmartAIInsight = {
+  type: 'response_improvement',
+  title: '🧠 Your Decision Speed Doubled This Week',
+  message: 'Average response time dropped from 8.2s to 4.1s. You\'re developing intuitive decision-making patterns.',
+  
+  dataPoints: {
+    // FROM user_quote_responses.time_spent_ms analysis
+    responseImprovement: 100,       // 100% faster (8.2s → 4.1s)
+    confidenceGrowth: 34,          // confidence_score increased 34%
+    decisionQuality: 91,           // 91% consistency in approve/decline patterns
+    
+    // FROM messages + Neo4j conversation sentiment
+    engagementQuality: 78,         // Sentiment trending positive
+    interactionDepth: 65,          // More complex conversations
+    aiRelationship: 82,            // Trust and engagement growing
+    
+    confidenceLevel: 89,
+    sampleSize: 47,               // 47 quote responses analyzed
+    daysTracked: 7
+  },
+  
+  evidence: {
+    responseData: [/* time_spent_ms showing speed improvement */],
+    conversationData: [/* sentiment trends from Neo4j */],
+    comparisonPeriods: ['Week 1 responses', 'Week 2 responses']
+  },
+  
+  actionableSuggestions: {
+    primary: 'Trust your instincts - your quick decisions are 91% accurate',
+    secondary: [
+      'Use voice commands for even faster interactions',
+      'Your best decision times are during peak energy hours'
+    ],
+    expectedImpact: 'Save 15 minutes daily on decision-making',
+    implementationDifficulty: 'easy',
+    alignsWithEnergyProfile: true
+  }
+};
+```
+
+#### Task Completion Pattern Insight (From Google Tasks)
+```typescript
+const taskVelocityInsight: SmartAIInsight = {
+  type: 'energy_optimization',
+  title: '⚡ Your Task Completion Rate Tripled on Tuesdays',
+  message: 'You complete 3.2x more tasks on Tuesdays vs weekends. Your Tuesday energy profile is optimal for productivity.',
+  
+  dataPoints: {
+    // FROM TasksPlugin.fetchCompleteTaskOverview() + ProfileContext.energyData
+    taskCompletionTrend: 67,        // 67% improvement in completion rate
+    taskVelocityChange: 52,         // 52% faster task completion
+    completionReliability: 88,      // 88% of started tasks get finished
+    
+    confidenceLevel: 96,            // Strong pattern over 3 weeks
+    sampleSize: 89,                // 89 tasks analyzed
+    daysTracked: 21
+  },
+  
+  evidence: {
+    taskCompletionData: [/* Google Tasks completion by day of week */],
+    energyPatternData: [/* From ProfileContext showing Tuesday peak */],
+    comparisonPeriods: ['Weekdays vs Weekends', 'Tuesday vs Other Days']
+  },
+  
+  actionableSuggestions: {
+    primary: 'Schedule your most important tasks for Tuesday mornings',
+    secondary: [
+      'Block Tuesday 9-11 AM for complex projects',
+      'Use weekends for planning, not execution',
+      'Batch similar tasks on your high-energy days'
+    ],
+    expectedImpact: 'Complete 3x more important tasks weekly',
+    implementationDifficulty: 'medium',
+    alignsWithEnergyProfile: true  // Matches ProfileContext.energyData.peakHours
+  }
+};
+```
+
+---
+
+## 📈 PHASE 3: SMART ENERGY LEVEL SYSTEM
+
+### 3.1 Behavioral Energy Detection
+
+#### Replace Mock Energy Curve with Real Behavioral Patterns
+```typescript
+interface BehavioralEnergyPoint {
+  hour: number;                    // 0-23
+  
+  // REAL BEHAVIORAL INDICATORS
+  taskCompletionVelocity: number; // Avg minutes per task this hour
+  xpEarningRate: number;          // XP earned per minute this hour
+  sessionContinuity: number;      // Avg session length this hour
+  interactionQuality: number;     // Actions per minute
+  
+  // CALCULATED ENERGY METRICS  
+  energyScore: number;            // 0-100 composite score
+  confidenceLevel: number;        // How much data backs this score
+  
+  // PRODUCTIVITY CORRELATION
+  productivityIndex: number;      // Tasks completed per hour
+  focusQuality: number;          // Uninterrupted work time %
+  
+  // TREND ANALYSIS
+  weeklyComparison: number;      // vs same hour last week
+  monthlyTrend: 'improving' | 'declining' | 'stable';
+}
+```
+
+### 3.2 Dynamic Energy Level Adjustment
+
+#### Real-time Energy State Updates
+```typescript
+interface RealTimeEnergySystem {
+  // CURRENT SESSION TRACKING
+  currentSession: {
+    startTime: Date;
+    tasksCompleted: number;
+    avgTaskDuration: number;
+    interactionRate: number;        // taps/swipes per minute
+    backgroundSwitches: number;     // context switches
+  };
+  
+  // ENERGY STATE CALCULATION
+  currentEnergyLevel: {
+    score: number;                  // 0-100 real-time calculation
+    trend: 'rising' | 'falling' | 'stable';
+    lastUpdated: Date;
+    confidence: number;             // based on session length
+  };
+  
+  // PREDICTIVE ENERGY MODELING
+  predictions: {
+    nextHourEnergy: number;         // Predicted energy next hour
+    optimalTaskType: 'complex' | 'routine' | 'creative';
+    suggestedBreakTime: Date | null; // When to take break
+    recoveryTimeNeeded: number;     // Minutes to restore energy
+  };
+  
+  // ENERGY OPTIMIZATION SUGGESTIONS
+  adaptiveRecommendations: {
+    taskSuggestions: string[];      // "Good time for email" vs "Perfect for deep work"
+    environmentalFactors: string[]; // "Try changing location" or "Take a walk"
+    timingOptimizations: string[];  // "Your energy typically rises in 30min"
+  };
+}
+```
+
+---
+
+## 🎯 PHASE 4: EFFECTIVENESS DEMONSTRATION
+
+### 4.1 "Before vs After OMNII" Analytics
+
+#### Show Users How OMNII Actually Helps
+```typescript
+interface OMNIIEffectivenessMetrics {
+  // PRODUCTIVITY IMPROVEMENTS
+  taskCompletion: {
+    beforeOMNII: {
+      avgTasksPerDay: number;
+      avgCompletionTime: number;
+      completionRate: number;        // % of tasks actually finished
+    };
+    withOMNII: {
+      avgTasksPerDay: number;
+      avgCompletionTime: number; 
+      completionRate: number;
+    };
+    improvement: {
+      tasksGain: number;             // +2.3 tasks per day
+      timeReduction: number;         // -15 minutes per task
+      efficiencyGain: number;        // +47% completion rate
+    };
+  };
+  
+  // HABIT FORMATION IMPACT
+  consistencyMetrics: {
+    streakLength: number;            // Current daily task streak
+    longestStreak: number;           // Best achievement
+    streakReliability: number;       // % of days with tasks completed
+    habitStability: number;          // Variance in daily performance
+  };
+  
+  // COGNITIVE LOAD REDUCTION
+  mentalLoadMetrics: {
+    decisionFatigue: number;         // Reduced choices needed
+    contextSwitching: number;        // Fewer app/task switches
+    procrastinationTime: number;     // Time saved from AI suggestions
+    planningTime: number;            // Minutes saved on daily planning
+  };
+  
+  // ENERGY OPTIMIZATION GAINS
+  energyEfficiency: {
+    peakHoursUtilization: number;    // % of peak hours used well
+    energyWasteReduction: number;    // Low-energy time optimization
+    recoveryTimeImprovement: number; // Faster energy restoration
+  };
+}
+```
+
+### 4.2 Progressive Improvement Tracking
+
+#### Show User Growth Over Time
+```typescript
+interface ProgressiveImprovementSystem {
+  // MILESTONE TRACKING
+  improvementMilestones: {
+    week1: ProductivitySnapshot;     // Baseline establishment
+    week2: ProductivitySnapshot;     // Initial habits forming  
+    month1: ProductivitySnapshot;    // Consistent usage patterns
+    month3: ProductivitySnapshot;    // Optimized workflows
+    month6: ProductivitySnapshot;    // Mastery achievement
+  };
+  
+  // TREND ANALYSIS
+  trendMetrics: {
+    productivitySlope: number;       // Rate of improvement per week
+    consistencyTrend: number;        // Reliability improvement
+    efficiencyGrowth: number;        // Speed/quality improvement
+    sustainabilityScore: number;     // Likelihood to maintain gains
+  };
+  
+  // PERSONALIZED INSIGHTS
+  growthInsights: {
+    strongestImprovement: string;    // "Task completion speed"
+    nextOptimizationArea: string;    // "Energy level consistency" 
+    projectedGains: string;          // "Continue for 2.4x productivity in 6 months"
+    celebrateWins: string[];         // Recent achievements to highlight
+  };
+}
+```
+
+---
+
+## 💻 PHASE 5: IMPLEMENTATION ARCHITECTURE
+
+### 5.1 Enhanced Analytics Hook (Leveraging Existing Systems)
+
+#### Transform useFetchAnalytics to useSmartAnalytics
+```typescript
+// ENHANCED: useSmartAnalytics (builds on existing infrastructure)
+interface SmartAnalyticsHook {
+  // EXISTING DATA SOURCES (already available)
+  taskData: CompleteTaskOverview | null;       // From TasksPlugin.fetchCompleteTaskOverview()
+  xpData: XPContextState;                      // From existing XPContext hook
+  profileData: ProfileState;                  // From existing ProfileContext
+  conversationData: Message[];                // From existing messages table
+  
+  // CALCULATED FROM EXISTING TABLES
+  todayMetrics: {
+    // FROM xp_transactions WHERE date = today
+    xpEarnedToday: number;
+    xpFromTasks: number;                      // WHERE source_action = 'task_completion'
+    xpFromChat: number;                       // WHERE source_action = 'chat_interaction'
+    xpFromStreaks: number;                    // WHERE category = 'streak'
+    
+    // FROM user_quote_responses behavioral analysis
+    avgResponseTime: number;                  // AVG(time_spent_ms) today
+    confidenceLevel: number;                  // AVG(confidence_score) today
+    decisionsToday: number;                   // COUNT(*) today
+    
+    // FROM Google Tasks integration (existing)
+    tasksCompleted: number;                   // From CompleteTaskOverview.totalCompleted
+    tasksCreatedByAI: number;                // Filter by AI metadata in tasks
+    completionRate: number;                   // completedCount/totalTasks
+    
+    // FROM messages + Neo4j conversation analytics
+    chatSentiment: number;                    // AVG sentiment from recent conversations
+    engagementQuality: number;                // Complexity and depth of interactions
+  };
+  
+  // BEHAVIORAL ENERGY (from ProfileContext + usage patterns)
+  energyData: {
+    currentLevel: 'high' | 'medium' | 'low';  // Based on ProfileContext.energyData
+    peakHours: number[];                      // From ProfileContext.energyData.peakHours
+    actualUsagePattern: number[];             // XP earning by hour from xp_transactions
+    energyAlignment: number;                  // How well actual usage matches preferences
+  };
+  
+  // SMART INSIGHTS (generated from real data)
+  smartInsights: SmartAIInsight[];            // Using existing data patterns
+  
+  // PERFORMANCE TRACKING (from existing PerformanceManager)
+  performanceMetrics: {
+    sessionDuration: number;                  // From PerformanceManager
+    appEngagement: number;                    // Session quality metrics
+    memoryUsage: number;                      // Performance impact
+  };
+  
+  // STATE MANAGEMENT
+  isLoading: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+  dataQuality: 'excellent' | 'good' | 'fair' | 'insufficient';
+  
+  // ACTIONS (enhanced existing functions)
+  refetch: () => Promise<void>;
+  trackBehavioralEvent: (event: BehavioralEvent) => void; // Extends existing tracking
+  updateEnergyPreference: (energyData: Partial<EnergyData>) => void; // Updates ProfileContext
+  recordAnalyticsView: () => void;            // Updates user_feature_access table
+}
+```
+
+### 5.2 Enhanced Service Architecture (Building on Existing Systems)
+
+#### SmartAnalyticsService (Extends Existing Infrastructure)
+```typescript
+class SmartAnalyticsService {
+  // LEVERAGE EXISTING DATA SOURCES
+  private supabase: SupabaseClient;         // Already configured
+  private xpContext: XPContextState;        // Already available
+  private profileContext: ProfileState;     // Already available
+  private tasksPlugin: TasksPlugin;         // Already implemented
+  private conversationManager: BrainConversationManager; // Already in Neo4j
+  
+  // ENHANCED DATA AGGREGATION (using existing tables)
+  async getTodayMetrics(userId: string): Promise<SmartTodayMetrics> {
+    const [xpData, responseData, taskData, conversationData] = await Promise.all([
+      // FROM existing xp_transactions table
+      this.supabase
+        .from('xp_transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', startOfToday()),
+      
+      // FROM existing user_quote_responses table  
+      this.supabase
+        .from('user_quote_responses')
+        .select('time_spent_ms, confidence_score, action')
+        .eq('user_id', userId)
+        .gte('created_at', startOfToday()),
+      
+      // FROM existing Google Tasks integration
+      this.tasksPlugin.fetchCompleteTaskOverview(userId),
+      
+      // FROM existing Neo4j conversation analytics
+      this.conversationManager.getBrainMemoryContext(userId, '', 'chat', '', {
+        episodicWindowHours: 24
+      })
+    ]);
+    
+    return this.calculateTodayMetrics(xpData, responseData, taskData, conversationData);
+  }
+  
+  // BEHAVIORAL ENERGY (using ProfileContext + real usage)
+  async calculateBehavioralEnergy(userId: string): Promise<BehavioralEnergyDetection> {
+    // Get user's energy preferences from ProfileContext
+    const energyPreferences = this.profileContext.energyData;
+    
+    // Get actual XP earning patterns by hour
+    const hourlyXPPattern = await this.getHourlyXPPattern(userId, 7); // Last 7 days
+    
+    // Get response velocity patterns
+    const responsePatterns = await this.getResponsePatterns(userId, 7);
+    
+    // Combine preferences with actual behavior
+    return this.combineEnergyData(energyPreferences, hourlyXPPattern, responsePatterns);
+  }
+  
+  // SMART INSIGHTS GENERATION (using existing data)
+  async generateSmartInsights(userId: string): Promise<SmartAIInsight[]> {
+    const insights: SmartAIInsight[] = [];
+    
+    // XP Growth Analysis (from xp_transactions)
+    const xpGrowthInsight = await this.analyzeXPGrowth(userId);
+    if (xpGrowthInsight) insights.push(xpGrowthInsight);
+    
+    // Response Improvement Analysis (from user_quote_responses)
+    const responseInsight = await this.analyzeResponseImprovement(userId);
+    if (responseInsight) insights.push(responseInsight);
+    
+    // Task Completion Patterns (from Google Tasks + ProfileContext)
+    const taskInsight = await this.analyzeTaskPatterns(userId);
+    if (taskInsight) insights.push(taskInsight);
+    
+    // Conversation Quality Analysis (from Neo4j + messages)
+    const conversationInsight = await this.analyzeConversationQuality(userId);
+    if (conversationInsight) insights.push(conversationInsight);
+    
+    return insights;
+  }
+  
+  // EXTEND EXISTING TRACKING (don't replace, enhance)
+  async trackAnalyticsView(userId: string): Promise<void> {
+    // Update existing user_feature_access table
+    await this.supabase
+      .from('user_feature_access')
+      .upsert({
+        user_id: userId,
+        feature_name: 'analytics',
+        last_interaction_at: new Date().toISOString(),
+        interaction_count: sql`interaction_count + 1`
+      });
+    
+    // Award XP for analytics engagement (using existing XP system)
+    await this.xpContext.awardXP(5, 'analytics_viewed', 'engagement');
+  }
+}
+```
+
+#### Real-Data Analytics Calculator (Leverages Existing Schema)
+```typescript
+class RealDataAnalyticsCalculator {
+  // CALCULATE FROM EXISTING xp_transactions TABLE
+  async calculateXPGrowthRate(userId: string, days: number): Promise<number> {
+    const { data } = await this.supabase
+      .from('xp_transactions')
+      .select('amount, created_at')
+      .eq('user_id', userId)
+      .gte('created_at', subDays(new Date(), days));
+    
+    // Calculate daily XP trend
+    const dailyXP = this.groupByDay(data);
+    return this.calculateGrowthRate(dailyXP);
+  }
+  
+  // CALCULATE FROM EXISTING user_quote_responses TABLE
+  async calculateResponseImprovement(userId: string): Promise<number> {
+    const { data } = await this.supabase
+      .from('user_quote_responses')
+      .select('time_spent_ms, confidence_score, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+    
+    // Calculate improvement in decision speed and confidence
+    return this.analyzeResponseTrends(data);
+  }
+  
+  // CALCULATE FROM EXISTING Google Tasks integration
+  async calculateTaskVelocity(userId: string): Promise<TaskVelocityData> {
+    const taskOverview = await this.tasksPlugin.fetchCompleteTaskOverview(userId);
+    
+    // Analyze completion patterns by day, time, complexity
+    return this.analyzeTaskCompletion(taskOverview);
+  }
+  
+  // CALCULATE FROM EXISTING Neo4j conversation data
+  async calculateEngagementQuality(userId: string): Promise<number> {
+    const conversations = await this.conversationManager.getBrainMemoryContext(
+      userId, '', 'chat', '', { episodicWindowHours: 168 } // Last week
+    );
+    
+    // Analyze sentiment trends and interaction depth
+    return this.calculateSentimentTrend(conversations);
+  }
+}
+```
+
+---
+
+## 🎨 PHASE 6: UI/UX IMPLEMENTATION WITH NATIVEWIND V4
+
+### 6.1 Enhanced Metric Cards with Real Data
+
+#### Transform Mock Metric Cards
+```typescript
+// BEFORE: Static mock cards
+<MetricCard title="Tasks Done" value={8} />
+
+// AFTER: Dynamic real data cards  
+<SmartMetricCard 
+  title="Tasks Completed"
+  value={realTaskData.completedToday}
+  subtitle={`+${improvement.taskGain} vs last week`}
+  trend={calculateTrend(thisWeek, lastWeek)}
+  trendValue={`${improvement.percentage}% better`}
+  confidence={dataQuality.confidence}
+  onTap={() => showDetailedBreakdown()}
+  className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-600"
+/>
+```
+
+#### Real-time Energy Visualization
+```typescript
+const SmartEnergyChart: React.FC = () => {
+  const { behavioralEnergyData, isLoading } = useSmartAnalytics();
+  
+  return (
+    <View className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-600">
+      <View className="flex-row items-center justify-between mb-4">
+        <Text className="text-xl font-bold text-gray-900 dark:text-white">
+          ⚡ Your Real Energy Pattern
+        </Text>
+        <View className="px-3 py-1 bg-green-100 dark:bg-green-900/30 rounded-lg">
+          <Text className="text-sm font-semibold text-green-700 dark:text-green-400">
+            {dataQuality}% confidence
+          </Text>
+        </View>
+      </View>
+      
+      {/* SVG Chart with Real Behavioral Data */}
+      <BehavioralEnergyChart 
+        data={behavioralEnergyData}
+        peakHours={identifyPeakHours(behavioralEnergyData)}
+        className="mb-4"
+      />
+      
+      <Text className="text-sm text-gray-600 dark:text-slate-400 text-center">
+        Based on your task completion speed and interaction patterns
+      </Text>
+    </View>
+  );
+};
+```
+
+### 6.2 Smart Insights with Proof
+
+#### Data-Backed Insight Cards
+```typescript
+const SmartInsightCard: React.FC<{ insight: SmartAIInsight }> = ({ insight }) => {
+  return (
+    <View className="bg-white dark:bg-slate-800 rounded-xl p-5 mb-4 border border-gray-200 dark:border-slate-600 border-l-4 border-l-blue-500">
+      
+      {/* Header with Confidence Badge */}
+      <View className="flex-row items-start justify-between mb-3">
+        <Text className="text-lg font-semibold text-gray-900 dark:text-white flex-1 mr-3">
+          {insight.title}
+        </Text>
+        <View className="bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-lg">
+          <Text className="text-xs font-bold text-blue-700 dark:text-blue-400">
+            {insight.dataPoints.confidenceLevel}% sure
+          </Text>
+        </View>
+      </View>
+      
+      {/* Real Data Evidence */}
+      <View className="bg-gray-50 dark:bg-slate-900 rounded-lg p-3 mb-3">
+        <Text className="text-sm text-gray-700 dark:text-slate-300 mb-2">
+          📊 Based on {insight.dataPoints.sampleSize} days of your data:
+        </Text>
+        <View className="flex-row justify-between">
+          <Text className="text-xs text-gray-600 dark:text-slate-400">
+            Before: {insight.dataPoints.beforeOmnii}
+          </Text>
+          <Text className="text-xs font-semibold text-green-600 dark:text-green-400">
+            Now: {insight.dataPoints.afterOmnii} (+{insight.dataPoints.improvementPercentage}%)
+          </Text>
+        </View>
+      </View>
+      
+      {/* Message */}
+      <Text className="text-sm text-gray-700 dark:text-slate-300 leading-5 mb-4">
+        {insight.message}
+      </Text>
+      
+      {/* Action Buttons */}
+      <View className="flex-row gap-3">
+        <TouchableOpacity className="flex-1 bg-blue-600 py-2 px-4 rounded-lg">
+          <Text className="text-white text-sm font-semibold text-center">
+            {insight.actionableSuggestions.primary}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity className="px-4 py-2 bg-gray-100 dark:bg-slate-700 rounded-lg">
+          <Text className="text-gray-700 dark:text-slate-300 text-sm font-semibold">
+            Show Data
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+```
+
+---
+
+## 🔄 PHASE 7: ACCELERATED IMPLEMENTATION TIMELINE (Leveraging Existing Systems)
+
+### Week 1: Data Integration (MUCH FASTER - existing infrastructure)
+- [ ] **SmartAnalyticsService**: Create service that leverages existing Supabase tables ⚡ 2 days
+- [ ] **Real-Data Hook**: Transform useFetchAnalytics to use existing xp_transactions + user_quote_responses ⚡ 1 day  
+- [ ] **Task Integration**: Enhance existing TasksPlugin.fetchCompleteTaskOverview() integration ⚡ 1 day
+- [ ] **Profile Integration**: Connect to existing ProfileContext.energyData ⚡ 0.5 days
+- [ ] **Conversation Analytics**: Use existing Neo4j BrainConversationManager data ⚡ 0.5 days
+
+### Week 2: Smart Insights Engine (LEVERAGING EXISTING ANALYTICS)
+- [ ] **XP Growth Analysis**: Generate insights from existing xp_transactions patterns ⚡ 1 day
+- [ ] **Response Improvement**: Use existing user_quote_responses.time_spent_ms trends ⚡ 1 day  
+- [ ] **Task Velocity Analysis**: Analyze existing Google Tasks completion data ⚡ 1 day
+- [ ] **Conversation Quality**: Use existing Neo4j sentiment and importance scoring ⚡ 1 day
+- [ ] **Energy Alignment**: Compare ProfileContext preferences with actual usage ⚡ 1 day
+
+### Week 3: UI Enhancement (MINIMAL CHANGES - existing components work)
+- [ ] **Enhanced Metric Cards**: Update existing MetricCard with real data props ⚡ 1 day
+- [ ] **Real Energy Chart**: Replace mock EnergyCurveChart with ProfileContext + XP data ⚡ 1 day
+- [ ] **Smart Insight Cards**: Enhance existing AIInsightCard with proof data ⚡ 1 day  
+- [ ] **Confidence Indicators**: Add data quality badges to existing UI ⚡ 0.5 days
+- [ ] **Real-time Updates**: Connect to existing XPContext live updates ⚡ 0.5 days
+
+### Week 4: Integration & Enhancement (MINIMAL - most systems exist)
+- [ ] **Performance Testing**: Verify database queries are efficient ⚡ 1 day
+- [ ] **Data Quality Checks**: Graceful fallbacks when users have insufficient data ⚡ 1 day
+- [ ] **Privacy Compliance**: Review existing data collection (already GDPR compliant) ⚡ 0.5 days
+- [ ] **User Testing**: Verify real analytics provide value vs mock data ⚡ 1 day
+- [ ] **Documentation**: Update types and API interfaces ⚡ 0.5 days
+
+### 🚀 MAJOR ADVANTAGES OF EXISTING INFRASTRUCTURE:
+
+**Already Built & Working:**
+- ✅ **Database Schema**: xp_transactions, user_quote_responses, messages, user_analytics
+- ✅ **Behavioral Tracking**: time_spent_ms, confidence_score, sentiment analysis  
+- ✅ **Real-time Systems**: XPContext, ProfileContext, PerformanceManager
+- ✅ **Google Integration**: TasksPlugin with CompleteTaskOverview
+- ✅ **Conversation Analytics**: Neo4j with sentiment scoring and importance
+- ✅ **User Preferences**: ProfileContext.energyData with peakHours and optimalWorkDuration
+
+**Immediate Benefits:**
+- 🎯 **Week 1 Implementation** possible instead of month-long build
+- 📊 **Real User Data** from day 1 (no need to wait for data collection)
+- 🔒 **Privacy Compliant** (existing systems already handle GDPR/data export)
+- ⚡ **Performance Optimized** (existing queries and caching)
+- 🎨 **UI Components Ready** (MetricCard, AIInsightCard, existing charts)
+
+---
+
+## 🎯 SUCCESS METRICS
+
+### User Engagement Metrics
+- **Time in Analytics**: Users spend 3x longer viewing real vs mock analytics
+- **Insight Action Rate**: 60%+ of users act on data-driven suggestions
+- **Return Frequency**: Daily analytics check becomes habit (40%+ daily active)
+- **Sharing Behavior**: Users share their improvement metrics
+
+### Data Quality Metrics  
+- **Confidence Levels**: 85%+ insights backed by sufficient data
+- **Prediction Accuracy**: Energy predictions 80%+ accurate
+- **Real-time Responsiveness**: Analytics update within 30 seconds of task completion
+- **Data Completeness**: 95%+ of active users have sufficient data for meaningful analytics
+
+### Productivity Impact Metrics
+- **Measurable Improvement**: 70%+ of users show quantifiable productivity gains
+- **Habit Formation**: 50%+ maintain productivity streaks >14 days
+- **Optimization Adoption**: 40%+ of users implement energy optimization suggestions
+- **App Effectiveness**: Clear before/after OMNII productivity metrics
+
+---
+
+## 🚀 FUTURE ENHANCEMENTS
+
+### Advanced Analytics (Phase 8+)
+- **Machine Learning Predictions**: More sophisticated energy and productivity forecasting
+- **Team Analytics**: Anonymized productivity comparisons and insights
+- **Integration Analytics**: Cross-app productivity correlation analysis
+- **Advanced Visualizations**: Interactive charts and drill-down capabilities
+
+### Personalization (Phase 9+)
+- **Custom Metrics**: User-defined productivity measurements
+- **Goal-based Analytics**: Track progress toward specific objectives
+- **Contextual Insights**: Location, weather, calendar-based productivity analysis
+- **Adaptive Recommendations**: Learning system that improves suggestions over time
+
+---
+
+## 💡 KEY IMPLEMENTATION PRINCIPLES
+
+1. **Real Data First**: Every metric must be based on actual user behavior, not estimates
+2. **Show Proof**: Always display confidence levels and data sources behind insights
+3. **Actionable Intelligence**: Every insight must include specific, implementable suggestions
+4. **Progressive Disclosure**: Show basic metrics first, detailed analysis on demand
+5. **Privacy Respect**: Behavioral tracking must be transparent and user-controlled
+6. **Performance Conscious**: Real-time calculations must not impact app responsiveness
+7. **Graceful Degradation**: Meaningful display even with limited data
+8. **Continuous Learning**: System improves recommendations based on user feedback
+
+This implementation plan transforms the Analytics Today screen from a mock data showcase into a powerful, personalized productivity intelligence system that demonstrably helps users improve their effectiveness and optimize their energy patterns.

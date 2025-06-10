@@ -210,8 +210,10 @@ export default function ChatScreen() {
             // Set pending action based on message content
             setPendingAction(message);
             
-            // Trigger mascot cheering for sending a message
-            triggerCheering(CheeringTrigger.TASK_COMPLETE);
+            // Only trigger mascot cheering on mobile to prevent layout issues on desktop
+            if (!responsive.effectiveIsDesktop) {
+                triggerCheering(CheeringTrigger.TASK_COMPLETE);
+            }
         }
     };
 
@@ -244,8 +246,10 @@ export default function ChatScreen() {
                 setMessageInput('');
                 setPendingAction(command);
                 
-                // Trigger mascot cheering for using quick actions
-                triggerCheering(CheeringTrigger.TASK_COMPLETE);
+                // Only trigger mascot cheering on mobile to prevent layout issues on desktop
+                if (!responsive.effectiveIsDesktop) {
+                    triggerCheering(CheeringTrigger.TASK_COMPLETE);
+                }
             }
         }, 100);
     };
@@ -579,6 +583,25 @@ export default function ChatScreen() {
     const ActionsContent = () => (
         <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
             <View className="py-4">
+                {/* AI Context Enhancement Notice */}
+                <View className={cn(
+                    "mb-4 p-3 rounded-lg border",
+                    isDark ? "bg-blue-900/20 border-blue-800" : "bg-blue-50 border-blue-200"
+                )}>
+                    <Text className={cn(
+                        "text-sm font-medium",
+                        isDark ? "text-blue-300" : "text-blue-800"
+                    )}>
+                        🤖 AI Context Enhancement
+                    </Text>
+                    <Text className={cn(
+                        "text-xs mt-1",
+                        isDark ? "text-blue-400" : "text-blue-600"
+                    )}>
+                        I analyze your Gmail, Calendar, and Tasks to provide personalized assistance and actionable insights.
+                    </Text>
+                </View>
+
                 <Text className={cn(
                     "text-2xl font-bold mb-2",
                     isDark ? "text-white" : "text-gray-900"
@@ -1114,6 +1137,7 @@ export default function ChatScreen() {
                         renderTabContent={renderTabContent}
                         messages={messages}
                         flatListRef={flatListRef}
+                        onQuickAction={handleQuickAction}
                     />
                 );
             }
@@ -1146,18 +1170,21 @@ export default function ChatScreen() {
                     />
                 </View>
                 
-                <MascotContainer position="header">
-                    <Mascot
-                        stage={mascotStage}
-                        level={currentLevel}
-                        size={MascotSize.STANDARD}
-                        showLevel={true}
-                        enableInteraction={true}
-                        enableCheering={cheeringState.isActive}
-                        cheeringTrigger={cheeringState.trigger}
-                        onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
-                    />
-                </MascotContainer>
+                {/* Fixed width container for desktop to prevent layout shifts */}
+                <View style={{ width: 80, alignItems: 'flex-end' }}>
+                    <MascotContainer position="header">
+                        <Mascot
+                            stage={mascotStage}
+                            level={currentLevel}
+                            size={MascotSize.STANDARD}
+                            showLevel={true}
+                            enableInteraction={true}
+                            enableCheering={false} // Disable cheering on desktop to prevent layout shifts
+                            cheeringTrigger={cheeringState.trigger}
+                            onTap={() => {}} // Disable cheering trigger on desktop
+                        />
+                    </MascotContainer>
+                </View>
             </View>
         );
 
