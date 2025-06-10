@@ -2,7 +2,7 @@ import { Elysia } from 'elysia';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import neo4jRoutes from './neo4j';
 import smsRoutes from './sms';
-import { appRouter } from '@omnii/api';
+import { appRouter, createTRPCContext } from '@omnii/api';
 
 
 // Create a new Elysia instance for API routes
@@ -15,8 +15,20 @@ export default (app: Elysia) => {
       endpoint: '/api/trpc',
       router: appRouter,
       req: request,
-      createContext: () => ({
-      }),
+      createContext: async ({ req }) => {
+        // Create a minimal auth object for the context
+        // This should be replaced with your actual auth implementation
+        const mockAuth = {
+          api: {
+            getSession: async () => null, // No session for now
+          }
+        };
+        
+        return await createTRPCContext({
+          headers: req.headers,
+          auth: mockAuth as any,
+        });
+      },
     }); 
   });
   
