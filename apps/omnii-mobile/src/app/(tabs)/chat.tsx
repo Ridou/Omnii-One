@@ -35,11 +35,10 @@ import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { ResponsiveChatInput, DesktopChatContent, TabletChatContent } from '~/components/common/DesktopChatComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
 
-import { trpc } from '~/utils/api';
-import { useQuery } from '@tanstack/react-query';
 
 import { useXPContext } from '~/context/XPContext';
 import { useTasks } from '~/hooks/useTasks';
+import { createTaskComponent } from '~/components/chat/MessageComponents';
 
 
 // Updated tab configuration following profile.tsx pattern
@@ -99,17 +98,16 @@ export default function ChatScreen() {
         refetch: refetchTasks
     } = useTasks();
     
-    console.log('tasksOverview', tasksOverview);
-    // const { stats: taskStats } = useTaskStats();
+    console.log('[Chat] tasksOverview:', tasksOverview);
+    console.log('[Chat] tasksLoading:', tasksLoading);
+    console.log('[Chat] tasksError:', tasksError);
+    console.log('[Chat] totalTasks:', totalTasks);
     
-    // // Log tasks data when available (for debugging)
-    // if (tasksOverview) {
-    //     console.log(`📋 Tasks loaded via tRPC: ${totalTasks} tasks across ${totalLists} lists`);
-    //     console.log(`✅ Completed: ${totalCompleted}, ⏳ Pending: ${totalPending}, ⚠️ Overdue: ${totalOverdue}`);
-    //     if (taskStats) {
-    //         console.log(`📊 Completion rate: ${taskStats.completion_rate}%`);
-    //     }
-    // }
+    // Log tasks data when available (for debugging)
+    if (tasksOverview) {
+        console.log(`📋 Tasks loaded via tRPC: ${totalTasks} tasks across ${totalLists} lists`);
+        console.log(`✅ Completed: ${totalCompleted}, ⏳ Pending: ${totalPending}, ⚠️ Overdue: ${totalOverdue}`);
+    }
 
 
 
@@ -416,7 +414,9 @@ export default function ChatScreen() {
     const renderTabContent = () => {
         switch (selectedTab) {
             case 'conversation':
-                return <ConversationContent />;
+                return <>
+                <ConversationContent />;
+                </>
             case 'actions':
                 return <ActionsContent />;
             case 'references':
@@ -439,6 +439,8 @@ export default function ChatScreen() {
                         contentContainerStyle={{ paddingVertical: 20 }}
                         showsVerticalScrollIndicator={false}
                     >
+
+                        {JSON.stringify(tasksOverview || {"not loaded": "not loaded"})}
                         {/* WebSocket Debug Panel */}
                         {__DEV__ && <WebSocketDebug />}
 
@@ -526,6 +528,12 @@ export default function ChatScreen() {
                         const reversedMessages = [...messages].reverse();
                         
                         return (
+                            <>
+                            {createTaskComponent(tasksOverview, {
+                            onEmailAction: () => {},
+                            data: tasksOverview
+                        })}
+
                             <FlatList
                                 ref={flatListRef}
                                 data={reversedMessages}
@@ -564,6 +572,7 @@ export default function ChatScreen() {
                                     })()
                                 }
                             />
+                            </>
                         );
                     })()
                 )}
@@ -602,79 +611,54 @@ export default function ChatScreen() {
                     isDark ? "text-slate-400" : "text-gray-600"
                 )}>Tap to execute common tasks</Text>
 
-                {/* ✅ REAL tRPC TASKS DATA DISPLAY */}
-                {/* {tasksOverview && (
-                    <View className={cn(
-                        "rounded-2xl p-4 mb-6 border",
-                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                    )}>
-                        <View className="flex-row items-center mb-3">
-                            <TasksIcon size={24} />
-                            <Text className={cn(
-                                "text-lg font-bold ml-2",
-                                isDark ? "text-white" : "text-gray-900"
-                            )}>📋 Your Tasks (via tRPC)</Text>
-                        </View>
-                        
-                        <View className="gap-2">
-                            <View className="flex-row justify-between">
+                {/* ✅ REAL tRPC TASKS DATA DISPLAY - Using Existing TaskComponent */}
+                {tasksOverview && (
+                    <View className="mb-6">
+                        {/* Debug Info */}
+                        {__DEV__ && (
+                            <View className={cn(
+                                "rounded-xl p-3 mb-3 border",
+                                isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+                            )}>
                                 <Text className={cn(
-                                    "text-sm",
-                                    isDark ? "text-slate-300" : "text-gray-600"
-                                )}>Total Tasks:</Text>
+                                    "text-xs font-mono",
+                                    isDark ? "text-green-400" : "text-green-600"
+                                )}>
+                                    🐛 DEBUG: tasksOverview structure:
+                                </Text>
                                 <Text className={cn(
-                                    "text-sm font-bold",
-                                    isDark ? "text-white" : "text-gray-900"
-                                )}>{totalTasks}</Text>
-                            </View>
-                            
-                            <View className="flex-row justify-between">
+                                    "text-xs font-mono mt-1",
+                                    isDark ? "text-slate-300" : "text-gray-700"
+                                )}>
+                                    Type: {typeof tasksOverview}
+                                </Text>
                                 <Text className={cn(
-                                    "text-sm",
-                                    isDark ? "text-slate-300" : "text-gray-600"
-                                )}>Completed:</Text>
-                                <Text className="text-sm font-bold text-green-500">
-                                    {totalCompleted}
+                                    "text-xs font-mono",
+                                    isDark ? "text-slate-300" : "text-gray-700"
+                                )}>
+                                    Has taskLists: {tasksOverview?.taskLists ? 'YES' : 'NO'}
+                                </Text>
+                                <Text className={cn(
+                                    "text-xs font-mono",
+                                    isDark ? "text-slate-300" : "text-gray-700"
+                                )}>
+                                    Total Tasks: {tasksOverview?.totalTasks}
+                                </Text>
+                                <Text className={cn(
+                                    "text-xs font-mono",
+                                    isDark ? "text-slate-300" : "text-gray-700"
+                                )}>
+                                    Keys: {Object.keys(tasksOverview || {}).join(', ')}
                                 </Text>
                             </View>
-                            
-                            <View className="flex-row justify-between">
-                                <Text className={cn(
-                                    "text-sm",
-                                    isDark ? "text-slate-300" : "text-gray-600"
-                                )}>Pending:</Text>
-                                <Text className="text-sm font-bold text-blue-500">
-                                    {totalPending}
-                                </Text>
-                            </View>
-                            
-                            {totalOverdue > 0 && (
-                                <View className="flex-row justify-between">
-                                    <Text className={cn(
-                                        "text-sm",
-                                        isDark ? "text-slate-300" : "text-gray-600"
-                                    )}>Overdue:</Text>
-                                    <Text className="text-sm font-bold text-red-500">
-                                        {totalOverdue}
-                                    </Text>
-                                </View>
-                            )}
-                            
-                            {taskStats && (
-                                <View className="flex-row justify-between pt-2 mt-2 border-t border-gray-300 dark:border-slate-600">
-                                    <Text className={cn(
-                                        "text-sm",
-                                        isDark ? "text-slate-300" : "text-gray-600"
-                                    )}>Completion Rate:</Text>
-                                    <Text className={cn(
-                                        "text-sm font-bold",
-                                        taskStats.completion_rate >= 80 ? "text-green-500" :
-                                        taskStats.completion_rate >= 60 ? "text-yellow-500" : "text-red-500"
-                                    )}>{taskStats.completion_rate}%</Text>
-                                </View>
-                            )}
-                        </View>
+                        )}
                         
+                        {createTaskComponent(tasksOverview, {
+                            onEmailAction: () => {},
+                            data: tasksOverview
+                        })}
+                        
+                        {/* Refresh Button */}
                         <TouchableOpacity 
                             className="mt-3 p-2 bg-blue-500 rounded-lg"
                             onPress={() => refetchTasks()}
@@ -697,9 +681,9 @@ export default function ChatScreen() {
                             isDark ? "text-slate-400" : "text-gray-600"
                         )}>🔄 Loading tasks via tRPC...</Text>
                     </View>
-                )} */}
+                )}
 
-                {/* {tasksError && (
+                {tasksError && (
                     <View className={cn(
                         "rounded-2xl p-4 mb-6 border border-red-500",
                         isDark ? "bg-red-900/20" : "bg-red-50"
@@ -717,7 +701,7 @@ export default function ChatScreen() {
                         </TouchableOpacity>
                     </View>
                 )}
-                 */}
+                
                 <View className="gap-3">
                     {quickActions.map((action) => (
                         <TouchableOpacity

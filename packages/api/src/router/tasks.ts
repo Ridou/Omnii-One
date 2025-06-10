@@ -1,8 +1,18 @@
 import type { TRPCRouterRecord } from "@trpc/server";
-import { z } from "zod";
 import { protectedProcedure, publicProcedure } from "../trpc";
-import { CompleteTaskOverviewSchema, TaskDataSchema, TaskListWithTasksSchema } from "@omnii/validators";
-import type { CompleteTaskOverview, TaskData, TaskListWithTasks } from "@omnii/validators";
+import { 
+  CompleteTaskOverviewSchema, 
+  TaskDataSchema, 
+  TaskListWithTasksSchema,
+  TasksCompleteOverviewResponseSchema
+} from "@omnii/validators";
+import type { 
+  CompleteTaskOverview, 
+  TaskData, 
+  TaskListWithTasks,
+  TasksCompleteOverviewResponse,
+  TasksTestResponse
+} from "@omnii/validators";
 
 // Interface for OAuth token manager (matching the existing pattern)
 interface IOAuthTokenManager {
@@ -401,33 +411,44 @@ const tasksService = new TasksService();
 
 export const tasksRouter = {
   getCompleteOverview: protectedProcedure
-    .query(async ({ ctx }) => {
+    .query(async ({ ctx }): Promise<TasksCompleteOverviewResponse> => {
       try {
         const userId = ctx.session.user.id;
         console.log(`[TasksRouter] Getting complete task overview for user: ${userId}`);
         
         const overview = await tasksService.fetchCompleteTaskOverview(userId);
         
-        return {
+        const response: TasksCompleteOverviewResponse = {
           success: true,
           data: overview,
           message: `Retrieved ${overview.totalTasks} tasks across ${overview.totalLists} lists`,
         };
+        
+        const validation = TasksCompleteOverviewResponseSchema.safeParse(response);
+        if (!validation.success) {
+          console.error('[TasksRouter] Response validation failed:', validation.error);
+        }
+        return response;
       } catch (error) {
         console.error(`[TasksRouter] Error fetching complete task overview:`, error);
         
-        return {
+        const errorResponse: TasksCompleteOverviewResponse = {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : String(error),
           message: 'Failed to fetch complete task overview',
         };
+        
+        return errorResponse;
       }
     }),
-    test: publicProcedure.query(({ ctx }) => {
+    test: publicProcedure.query(({ ctx }): TasksTestResponse => {
       console.log("[TasksRouter] Testing public procedure", ctx);
-      return {
+      
+      const response: TasksTestResponse = {
         success: true,
         data: "Hello, world!",
       };
+      
+      return response;
     }),
 } satisfies TRPCRouterRecord; 

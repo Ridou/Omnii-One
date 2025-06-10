@@ -1,23 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { AppColors } from '~/constants/Colors';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { GmailIcon, CalendarIcon, ContactsIcon, TasksIcon } from '~/icons/ChatIcons';
 import { ComponentAction } from '~/types/chat';
+import { cn } from '~/utils/cn';
+import { useTheme } from '~/context/ThemeContext';
 
 // ✅ ZOD-INFERRED TYPES: Always use validated types from Zod schemas
 import type {
-  EmailData,
-  EmailListData,
-  TaskData,
-  TaskList,
-  TaskListData,
-  TaskListsData,
-  TaskListWithTasks,
-  CompleteTaskOverview,
-  CalendarData,
-  CalendarListData,
-  ContactData,
-  ContactListData,
+  EmailData, TaskListData,
+  TaskListsData, CompleteTaskOverview,
+  CalendarData, ContactData
 } from '@omnii/validators';
 
 // ✅ RUNTIME IMPORTS: Import type guards and enums as regular imports for runtime usage
@@ -39,7 +31,7 @@ interface BaseComponentProps {
   onAction?: (action: string, data: any) => void;
 }
 
-// Email Component
+// Email Component - Using Native Tailwind Classes  
 export const EmailComponent: React.FC<BaseComponentProps & { data: EmailData }> = ({
   id,
   timestamp,
@@ -47,27 +39,49 @@ export const EmailComponent: React.FC<BaseComponentProps & { data: EmailData }> 
   onAction,
   data
 }) => {
+  const { isDark } = useTheme();
   if (!data) return null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View className={cn(
+      "rounded-xl p-4 my-2 shadow-sm border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
+      <View className="flex-row items-center mb-3 gap-2">
         <GmailIcon size={20} />
-        <Text style={styles.title}>{data.subject}</Text>
+        <Text className={cn(
+          "text-base font-semibold flex-1",
+          isDark ? "text-white" : "text-gray-900"
+        )}>{data.subject}</Text>
       </View>
-      <View style={styles.content}>
-        <Text style={styles.from}>From: {data.from}</Text>
-        <Text style={styles.to}>To: {data.to.join(', ')}</Text>
-        <Text style={styles.body}>{data.body}</Text>
+      <View className="mb-4">
+        <Text className={cn(
+          "text-sm mb-1",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>From: {data.from}</Text>
+        <Text className={cn(
+          "text-sm mb-2",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>To: {data.to.join(', ')}</Text>
+        <Text className={cn(
+          "text-sm mb-2",
+          isDark ? "text-white" : "text-gray-900"
+        )}>{data.body}</Text>
         {data.attachments && data.attachments.length > 0 && (
-          <View style={styles.attachments}>
+          <View className="mt-2">
             {data.attachments.map((attachment, index) => (
               <TouchableOpacity
                 key={index}
-                style={styles.attachment}
+                className={cn(
+                  "p-2 rounded-lg mb-1",
+                  isDark ? "bg-slate-900" : "bg-gray-50"
+                )}
                 onPress={() => onAction?.('download', attachment)}
               >
-                <Text style={styles.attachmentText}>
+                <Text className={cn(
+                  "text-xs",
+                  isDark ? "text-slate-400" : "text-gray-600"
+                )}>
                   📎 {attachment.name} ({attachment.size} bytes)
                 </Text>
               </TouchableOpacity>
@@ -75,25 +89,37 @@ export const EmailComponent: React.FC<BaseComponentProps & { data: EmailData }> 
           </View>
         )}
       </View>
-      <View style={styles.actions}>
+      <View className="flex-row justify-end gap-2">
         <TouchableOpacity
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('reply', data)}
         >
-          <Text style={styles.actionText}>Reply</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Reply</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('forward', data)}
         >
-          <Text style={styles.actionText}>Forward</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Forward</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-// Calendar Component
+// Calendar Component - Using Native Tailwind Classes
 export const CalendarComponent: React.FC<BaseComponentProps & { data: CalendarData }> = ({
   id,
   timestamp,
@@ -101,6 +127,7 @@ export const CalendarComponent: React.FC<BaseComponentProps & { data: CalendarDa
   onAction,
   data
 }) => {
+  const { isDark } = useTheme();
   if (!data) return null;
 
   const startDate = new Date(data.start);
@@ -108,31 +135,52 @@ export const CalendarComponent: React.FC<BaseComponentProps & { data: CalendarDa
   const isToday = startDate.toDateString() === new Date().toDateString();
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View className={cn(
+      "rounded-xl p-4 my-2 shadow-sm border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
+      <View className="flex-row items-center mb-3 gap-2">
         <CalendarIcon size={20} color="white" />
-        <Text style={styles.title}>{data.title}</Text>
+        <Text className={cn(
+          "text-base font-semibold flex-1",
+          isDark ? "text-white" : "text-gray-900"
+        )}>{data.title}</Text>
         {isToday && (
-          <View style={styles.todayBadge}>
-            <Text style={styles.todayBadgeText}>TODAY</Text>
+          <View className="bg-green-600 px-2 py-1 rounded">
+            <Text className="text-xs text-white font-semibold">TODAY</Text>
           </View>
         )}
       </View>
-      <View style={styles.content}>
-        <Text style={styles.time}>
+      <View className="mb-4">
+        <Text className={cn(
+          "text-sm mb-1",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
           {startDate.toLocaleString()} - {endDate.toLocaleString()}
         </Text>
         {data.location && (
-          <Text style={styles.location}>📍 {data.location}</Text>
+          <Text className={cn(
+            "text-sm mb-1",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>📍 {data.location}</Text>
         )}
         {data.description && (
-          <Text style={styles.description}>{data.description}</Text>
+          <Text className={cn(
+            "text-sm mb-2",
+            isDark ? "text-white" : "text-gray-900"
+          )}>{data.description}</Text>
         )}
         {data.attendees.length > 0 && (
-          <View style={styles.attendees}>
-            <Text style={styles.attendeesTitle}>Attendees:</Text>
+          <View className="mt-2">
+            <Text className={cn(
+              "text-sm font-semibold mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Attendees:</Text>
             {data.attendees.map((attendee, index) => (
-              <Text key={index} style={styles.attendee}>
+              <Text key={index} className={cn(
+                "text-sm mb-0.5",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>
                 • {attendee.name || attendee.email}
               </Text>
             ))}
@@ -140,32 +188,44 @@ export const CalendarComponent: React.FC<BaseComponentProps & { data: CalendarDa
         )}
         {data.meetingLink && (
           <TouchableOpacity 
-            style={styles.meetingLinkButton}
+            className="bg-green-600 p-2 rounded-md items-center mt-2"
             onPress={() => onAction?.('join_meeting', data)}
           >
-            <Text style={styles.meetingLinkText}>🔗 Join Meeting</Text>
+            <Text className="text-xs text-white font-semibold">🔗 Join Meeting</Text>
           </TouchableOpacity>
         )}
       </View>
-      <View style={styles.actions}>
+      <View className="flex-row justify-end gap-2">
         <TouchableOpacity
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('edit', data)}
         >
-          <Text style={styles.actionText}>Edit</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('share', data)}
         >
-          <Text style={styles.actionText}>Share</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Share</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-// Contact Component
+// Contact Component - Using Native Tailwind Classes
 export const ContactComponent: React.FC<BaseComponentProps & { data: ContactData }> = ({
   id,
   timestamp,
@@ -173,114 +233,96 @@ export const ContactComponent: React.FC<BaseComponentProps & { data: ContactData
   onAction,
   data
 }) => {
+  const { isDark } = useTheme();
   if (!data) return null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View className={cn(
+      "rounded-xl p-4 my-2 shadow-sm border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
+      <View className="flex-row items-center mb-3 gap-2">
         <ContactsIcon size={20} />
-        <Text style={styles.title}>{data.name}</Text>
+        <Text className={cn(
+          "text-base font-semibold flex-1",
+          isDark ? "text-white" : "text-gray-900"
+        )}>{data.name}</Text>
       </View>
-      <View style={styles.content}>
+      <View className="mb-4">
         {data.title && (
-          <Text style={styles.subtitle}>{data.title}</Text>
+          <Text className={cn(
+            "text-sm mb-1",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>{data.title}</Text>
         )}
         {data.company && (
-          <Text style={styles.company}>{data.company}</Text>
+          <Text className={cn(
+            "text-sm mb-2",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>{data.company}</Text>
         )}
         {data.emails.map((emailObj, index) => (
-          <Text key={index} style={styles.contactInfo}>
+          <Text key={index} className={cn(
+            "text-sm mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             ✉️ {emailObj.address}
           </Text>
         ))}
         {data.phones.map((phoneObj, index) => (
-          <Text key={index} style={styles.contactInfo}>
+          <Text key={index} className={cn(
+            "text-sm mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             📞 {phoneObj.number}
           </Text>
         ))}
       </View>
-      <View style={styles.actions}>
+      <View className="flex-row justify-end gap-2">
         <TouchableOpacity
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('edit', data)}
         >
-          <Text style={styles.actionText}>Edit</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('message', data)}
         >
-          <Text style={styles.actionText}>Message</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Message</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-// Task Component (Legacy - for backwards compatibility)
-export const TaskComponent: React.FC<BaseComponentProps & { data: TaskData }> = ({
-  id,
-  timestamp,
-  status,
-  onAction,
-  data
-}) => {
-  if (!data) return null;
-
-  // Handle both legacy and new TaskData formats
-  const title = data.title;
-  const taskStatus = data.status || 'needsAction';
-  const dueDate = data.due; // New schema uses 'due' instead of 'dueDate'
-  const description = data.notes; // New schema uses 'notes' instead of 'description'
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TasksIcon size={20} />
-        <Text style={styles.title}>{title}</Text>
-      </View>
-      <View style={styles.content}>
-        {dueDate && (
-          <Text style={styles.dueDate}>
-            Due: {new Date(dueDate).toLocaleDateString()}
-          </Text>
-        )}
-        {description && (
-          <Text style={styles.notes}>{description}</Text>
-        )}
-        <View style={[
-          styles.statusBadge,
-          { backgroundColor: taskStatus === 'completed' ? AppColors.success : AppColors.warning }
-        ]}>
-          <Text style={styles.statusText}>
-            {taskStatus === 'needsAction' ? 'Pending' : taskStatus.charAt(0).toUpperCase() + taskStatus.slice(1)}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => onAction?.('complete', data)}
-        >
-          <Text style={styles.actionText}>Complete</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => onAction?.('edit', data)}
-        >
-          <Text style={styles.actionText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
 
 // ✅ PHASE 2: Task-Specific Component Factory with Type Detection
 export const createTaskComponent = (taskData: any, props: any) => {
   console.log('[TaskComponentFactory] Detecting task data type:', typeof taskData, taskData);
+  console.log('[TaskComponentFactory] Data keys:', Object.keys(taskData || {}));
+  console.log('[TaskComponentFactory] Has taskLists?', 'taskLists' in (taskData || {}));
+  console.log('[TaskComponentFactory] taskLists is array?', Array.isArray(taskData?.taskLists));
+  console.log('[TaskComponentFactory] Has totalTasks?', 'totalTasks' in (taskData || {}));
+  console.log('[TaskComponentFactory] totalTasks type:', typeof taskData?.totalTasks);
   
   // Use type guards to determine component type
-  if (isCompleteTaskOverview(taskData)) {
+  const isCompleteOverview = isCompleteTaskOverview(taskData);
+  console.log('[TaskComponentFactory] isCompleteTaskOverview result:', isCompleteOverview);
+  
+  if (isCompleteOverview) {
     console.log('[TaskComponentFactory] Rendering CompleteTaskOverviewComponent');
     return <CompleteTaskOverviewComponent overview={taskData} onAction={props.onAction} />;
   }
@@ -317,13 +359,23 @@ export const createTaskComponent = (taskData: any, props: any) => {
   }
   
   if (isTaskData(taskData)) {
-    console.log('[TaskComponentFactory] Rendering individual TaskComponent');
-    return <TaskComponent {...props} data={taskData} />;
+    console.log('[TaskComponentFactory] Rendering individual task data');
+    return (
+      <View className="flex-1 ">
+        <Text className="text-sm">Individual Task</Text>
+        <Text className="text-sm">{JSON.stringify(taskData, null, 2)}</Text>
+      </View>
+    );
   }
   
-  // Fallback: try to render as individual task
-  console.warn('[TaskComponentFactory] Unknown task data type, attempting TaskComponent fallback');
-  return <TaskComponent {...props} data={taskData} />;
+  // Fallback: show debug info
+  console.warn('[TaskComponentFactory] Unknown task data type, rendering debug info');
+  return (
+    <View className="flex-1">
+      <Text className="text-sm">Unknown Task Data Type</Text>
+      <Text className="text-sm">{JSON.stringify(taskData, null, 2)}</Text>
+    </View>
+  );
 };
 
 // ✅ PHASE 3: Enhanced Component Factory with ServiceType enum and task detection
@@ -360,804 +412,9 @@ export const createMessageComponent = (type: string, props: any) => {
   }
 };
 
-// Styles
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    flex: 1,
-  },
-  content: {
-    marginBottom: 16,
-  },
-  from: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 4,
-  },
-  to: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 8,
-  },
-  body: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    marginBottom: 8,
-  },
-  attachments: {
-    marginTop: 8,
-  },
-  attachment: {
-    padding: 8,
-    backgroundColor: AppColors.background,
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  attachmentText: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: AppColors.background,
-    borderRadius: 6,
-  },
-  actionText: {
-    fontSize: 12,
-    color: AppColors.textPrimary,
-    fontWeight: '500',
-  },
-  time: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    marginBottom: 4,
-  },
-  location: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 4,
-  },
-  description: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    marginBottom: 8,
-  },
-  attendees: {
-    marginTop: 8,
-  },
-  attendeesTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    marginBottom: 4,
-  },
-  attendee: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 4,
-  },
-  company: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 8,
-  },
-  contactInfo: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    marginBottom: 4,
-  },
-  list: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 4,
-  },
-  dueDate: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-  },
-  notes: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    marginBottom: 8,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
-  
-  // ✅ PHASE 4: NEW email list styles
-  emailListContainer: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  emailSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  summaryText: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-  },
-  emailCard: {
-    padding: 12,
-    backgroundColor: AppColors.background,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  unreadEmail: {
-    backgroundColor: `${AppColors.aiGradientStart}10`,
-    borderColor: AppColors.aiGradientStart,
-  },
-  emailHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  emailFrom: {
-    fontSize: 12,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-    flex: 1,
-  },
-  emailDate: {
-    fontSize: 11,
-    color: AppColors.textSecondary,
-  },
-  emailSubject: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  emailPreview: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    lineHeight: 16,
-  },
-  expandButton: {
-    padding: 8,
-    backgroundColor: AppColors.background,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  expandText: {
-    fontSize: 12,
-    color: AppColors.aiGradientStart,
-    fontWeight: '500',
-  },
-  emailActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  attachmentIndicator: {
-    alignSelf: 'flex-end',
-    backgroundColor: AppColors.aiGradientStart,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
-  },
-  emailAttachmentText: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  emailMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  richContentIndicator: {
-    fontSize: 12,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-  },
-  messageLengthIndicator: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    marginTop: 4,
-  },
-  labelIndicator: {
-    fontSize: 12,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-  },
-  labelsContainer: {
-    padding: 4,
-    backgroundColor: AppColors.background,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  labelsText: {
-    fontSize: 12,
-    color: AppColors.textPrimary,
-  },
-  emailExtras: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  summaryDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  enhancedIndicators: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  indicator: {
-    fontSize: 12,
-    color: AppColors.textPrimary,
-    fontWeight: '500',
-  },
-  expandedContent: {
-    marginBottom: 8,
-  },
-  fullMessageContainer: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: `${AppColors.background}80`,
-    borderRadius: 6,
-    borderLeftWidth: 3,
-    borderLeftColor: AppColors.aiGradientStart,
-  },
-  fullMessageLabel: {
-    fontSize: 12,
-    color: AppColors.aiGradientStart,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  fullMessageText: {
-    fontSize: 13,
-    color: AppColors.textPrimary,
-    lineHeight: 18,
-  },
-  expandIndicator: {
-    alignItems: 'center',
-    paddingVertical: 4,
-    marginTop: 4,
-  },
-  emailCardActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 8,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
-  },
-  cardActionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: AppColors.aiGradientStart,
-    borderRadius: 6,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  cardActionText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
 
-  // ✅ PHASE 4: NEW task-specific styles
-  taskListContainer: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  taskSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  taskIndicators: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  taskCard: {
-    padding: 12,
-    backgroundColor: AppColors.background,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  completedTask: {
-    backgroundColor: `${AppColors.success}10`,
-    borderColor: AppColors.success,
-  },
-  overdueTask: {
-    backgroundColor: `${AppColors.error}10`,
-    borderColor: AppColors.error,
-  },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  taskStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 8,
-  },
-  statusIcon: {
-    fontSize: 16,
-  },
-  taskTitle: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-    flex: 1,
-  },
-  completedTitle: {
-    textDecorationLine: 'line-through',
-    color: AppColors.textSecondary,
-  },
-  overdueDateText: {
-    color: AppColors.error,
-    fontWeight: '600',
-  },
-  taskNotes: {
-    fontSize: 13,
-    color: AppColors.textSecondary,
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  taskMeta: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
-  },
-  updatedDate: {
-    fontSize: 11,
-    color: AppColors.textSecondary,
-  },
-  taskActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 8,
-  },
 
-  // ✅ PHASE 4: TaskListsComponent for multiple Google Task Lists (LIST_TASK_LISTS response)
-  taskListsContainer: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  taskListHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  taskListTitle: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-  },
-  taskListDate: {
-    fontSize: 11,
-    color: AppColors.textSecondary,
-  },
-  taskListMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  taskListId: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-  },
-  taskListCard: {
-    padding: 12,
-    backgroundColor: AppColors.background,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-
-  // ✅ PHASE 4: NEW Complete Task Overview Component
-  completeOverviewContainer: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-  },
-  overviewSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  overviewSummaryDetails: {
-    flexDirection: 'column',
-    gap: 4,
-  },
-  overviewTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-  },
-  overviewStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  overviewStat: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-  },
-  overdueStats: {
-    color: AppColors.error,
-    fontWeight: '600',
-  },
-  syncWarning: {
-    backgroundColor: `${AppColors.warning}10`,
-    borderRadius: 4,
-    padding: 8,
-    marginBottom: 8,
-  },
-  syncWarningText: {
-    fontSize: 14,
-    color: AppColors.error,
-    fontWeight: '600',
-  },
-  taskListWithTasksCard: {
-    backgroundColor: AppColors.background,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-  },
-  taskListWithTasksHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  taskListHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  expandIcon: {
-    fontSize: 16,
-    color: AppColors.textPrimary,
-  },
-  taskListWithTasksTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    flex: 1,
-  },
-  taskListHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  taskCount: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-  },
-  overdueCount: {
-    fontSize: 14,
-    color: AppColors.error,
-    fontWeight: '600',
-  },
-  expandedTasksContainer: {
-    marginTop: 8,
-  },
-  noTasksText: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 8,
-  },
-  addTaskToListButton: {
-    padding: 12,
-    backgroundColor: AppColors.aiGradientStart,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  addTaskToListText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  overviewActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryActionButton: {
-    padding: 12,
-    backgroundColor: AppColors.aiGradientStart,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  primaryActionText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  urgentAction: {
-    backgroundColor: AppColors.error,
-  },
-  fetchError: {
-    backgroundColor: `${AppColors.error}10`,
-    padding: 8,
-    borderRadius: 4,
-    marginTop: 8,
-  },
-  fetchErrorText: {
-    fontSize: 12,
-    color: AppColors.error,
-    fontWeight: '500',
-  },
-
-  // ✅ NEW: ContactListComponent for multiple contacts
-  contactListContainer: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  contactSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  contactActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 8,
-  },
-  contactCard: {
-    padding: 12,
-    backgroundColor: AppColors.background,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  contactHeader: {
-    marginBottom: 8,
-  },
-  contactNameSection: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    marginBottom: 2,
-  },
-  contactJob: {
-    fontSize: 13,
-    color: AppColors.textSecondary,
-  },
-  contactDetails: {
-    marginBottom: 8,
-    gap: 4,
-  },
-  contactDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  contactDetailType: {
-    fontSize: 14,
-    width: 20,
-  },
-  contactDetailValue: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    flex: 1,
-  },
-  contactQuickActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
-  },
-  quickActionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: AppColors.aiGradientStart,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickActionText: {
-    fontSize: 16,
-  },
-
-  // ✅ NEW: CalendarListComponent for multiple calendar events
-  calendarListContainer: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  calendarSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  timeRangeText: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-  },
-  calendarCard: {
-    padding: 12,
-    backgroundColor: AppColors.background,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  todayEvent: {
-    backgroundColor: `${AppColors.success}10`,
-    borderColor: AppColors.success,
-  },
-  pastEvent: {
-    backgroundColor: `${AppColors.textSecondary}05`,
-    borderColor: AppColors.textSecondary,
-  },
-  eventHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  eventTitleSection: {
-    flex: 1,
-  },
-  eventTitle: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  pastEventText: {
-    color: AppColors.textSecondary,
-  },
-  eventTime: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-  },
-  todayEventTime: {
-    color: AppColors.success,
-    fontWeight: '600',
-  },
-  todayBadge: {
-    padding: 4,
-    backgroundColor: AppColors.success,
-    borderRadius: 4,
-  },
-  todayBadgeText: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  eventDetails: {
-    marginTop: 8,
-    gap: 4,
-  },
-  eventDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  eventDetailIcon: {
-    fontSize: 14,
-    width: 20,
-  },
-  eventDetailText: {
-    fontSize: 13,
-    color: AppColors.textPrimary,
-    flex: 1,
-  },
-  eventQuickActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    paddingTop: 8,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
-  },
-  calendarActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 8,
-  },
-  meetingLinkButton: {
-    padding: 8,
-    backgroundColor: AppColors.success,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  meetingLinkText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-}); 
-
-// ✅ PHASE 4: NEW EmailListComponent for multiple emails
+// ✅ EmailListComponent - Using Native Tailwind Classes
 export const EmailListComponent: React.FC<{
   emails: EmailData[];
   totalCount: number;
@@ -1165,34 +422,55 @@ export const EmailListComponent: React.FC<{
   hasMore?: boolean;
   onAction?: (action: string, data: any) => void;
 }> = ({ emails, totalCount, unreadCount, hasMore, onAction }) => {
+  const { isDark } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const displayEmails = expanded ? emails : emails.slice(0, 3);
 
   return (
-    <View style={styles.emailListContainer}>
+    <View className={cn(
+      "rounded-xl p-3 my-2 border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
       {/* Summary header */}
-      <View style={styles.emailSummary}>
+      <View className="flex-row items-center mb-2 gap-2">
         <GmailIcon size={20} />
-        <View style={styles.summaryDetails}>
-          <Text style={styles.summaryText}>
-            {totalCount} email{totalCount !== 1 ? 's' : ''}{unreadCount > 0 && ` (${unreadCount} unread)`}
-          </Text>
-        </View>
+        <Text className={cn(
+          "text-sm font-semibold",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
+          {totalCount} email{totalCount !== 1 ? 's' : ''}{unreadCount > 0 && ` (${unreadCount} unread)`}
+        </Text>
       </View>
 
       {/* Email preview cards */}
       {displayEmails.map((email, index) => (
-        <View key={email.id || index} style={[styles.emailCard, !email.isRead && styles.unreadEmail]}>
-          <View style={styles.emailHeader}>
-            <Text style={styles.emailFrom} numberOfLines={1}>
+        <View key={email.id || index} className={cn(
+          "p-3 rounded-lg mb-2 border",
+          !email.isRead && "border-l-4 border-l-blue-500",
+          isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+        )}>
+          <View className="flex-row justify-between items-center mb-1">
+            <Text className={cn(
+              "text-xs font-semibold flex-1",
+              isDark ? "text-white" : "text-gray-900"
+            )} numberOfLines={1}>
               {email.from}
             </Text>
-            <Text style={styles.emailDate}>{email.date}</Text>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>{email.date}</Text>
           </View>
-          <Text style={styles.emailSubject} numberOfLines={1}>
+          <Text className={cn(
+            "text-sm font-semibold mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )} numberOfLines={1}>
             {email.subject}
           </Text>
-          <Text style={styles.emailPreview} numberOfLines={2}>
+          <Text className={cn(
+            "text-xs leading-4",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )} numberOfLines={2}>
             {email.body}
           </Text>
         </View>
@@ -1201,30 +479,48 @@ export const EmailListComponent: React.FC<{
       {/* Expand/collapse toggle */}
       {emails.length > 3 && (
         <TouchableOpacity 
-          style={styles.expandButton}
+          className={cn(
+            "p-2 rounded-md items-center mb-2",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => setExpanded(!expanded)}
         >
-          <Text style={styles.expandText}>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-blue-400" : "text-blue-600"
+          )}>
             {expanded ? 'Show Less' : `Show ${emails.length - 3} More`}
           </Text>
         </TouchableOpacity>
       )}
 
       {/* Actions */}
-      <View style={styles.emailActions}>
+      <View className="flex-row justify-between gap-2">
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('reply_first', emails[0])}
         >
-          <Text style={styles.actionText}>Reply to First</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Reply to First</Text>
         </TouchableOpacity>
         
         {hasMore && (
           <TouchableOpacity 
-            style={styles.actionButton}
+            className={cn(
+              "px-3 py-1.5 rounded-md",
+              isDark ? "bg-slate-900" : "bg-gray-50"
+            )}
             onPress={() => onAction?.('load_more', null)}
           >
-            <Text style={styles.actionText}>Load More</Text>
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Load More</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -1232,7 +528,7 @@ export const EmailListComponent: React.FC<{
   );
 };
 
-// ✅ NEW: ContactListComponent for multiple contacts
+// ✅ ContactListComponent - Using Native Tailwind Classes
 export const ContactListComponent: React.FC<{
   contacts: ContactData[];
   totalCount: number;
@@ -1240,19 +536,24 @@ export const ContactListComponent: React.FC<{
   nextPageToken?: string;
   onAction?: (action: string, data: any) => void;
 }> = ({ contacts, totalCount, hasMore, nextPageToken, onAction }) => {
+  const { isDark } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const displayContacts = expanded ? contacts : contacts.slice(0, 5);
 
   return (
-    <View style={styles.contactListContainer}>
+    <View className={cn(
+      "rounded-xl p-3 my-2 border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
       {/* Summary header */}
-      <View style={styles.contactSummary}>
+      <View className="flex-row items-center mb-2 gap-2">
         <ContactsIcon size={20} />
-        <View style={styles.summaryDetails}>
-          <Text style={styles.summaryText}>
-            📱 {totalCount} contact{totalCount !== 1 ? 's' : ''}
-          </Text>
-        </View>
+        <Text className={cn(
+          "text-sm font-semibold",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
+          📱 {totalCount} contact{totalCount !== 1 ? 's' : ''}
+        </Text>
       </View>
 
       {/* Contact preview cards */}
@@ -1267,37 +568,61 @@ export const ContactListComponent: React.FC<{
       {/* Expand/collapse toggle */}
       {contacts.length > 5 && (
         <TouchableOpacity 
-          style={styles.expandButton}
+          className={cn(
+            "p-2 rounded-md items-center mb-2",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => setExpanded(!expanded)}
         >
-          <Text style={styles.expandText}>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-blue-400" : "text-blue-600"
+          )}>
             {expanded ? 'Show Less' : `Show ${contacts.length - 5} More`}
           </Text>
         </TouchableOpacity>
       )}
 
       {/* Actions */}
-      <View style={styles.contactActions}>
+      <View className="flex-row justify-between gap-2 mt-2">
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('search_contacts', null)}
         >
-          <Text style={styles.actionText}>🔍 Search</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🔍 Search</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('create_contact', null)}
         >
-          <Text style={styles.actionText}>➕ Create</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>➕ Create</Text>
         </TouchableOpacity>
 
         {hasMore && (
           <TouchableOpacity 
-            style={styles.actionButton}
+            className={cn(
+              "px-3 py-1.5 rounded-md",
+              isDark ? "bg-slate-900" : "bg-gray-50"
+            )}
             onPress={() => onAction?.('load_more', { nextPageToken })}
           >
-            <Text style={styles.actionText}>Load More</Text>
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Load More</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -1305,33 +630,50 @@ export const ContactListComponent: React.FC<{
   );
 };
 
-// ✅ Individual Contact Card Component
+// ✅ Individual Contact Card Component - Using Native Tailwind Classes
 const ContactCard: React.FC<{
   contact: ContactData;
   onAction?: (action: string, data: any) => void;
 }> = ({ contact, onAction }) => {
+  const { isDark } = useTheme();
+  
   return (
     <TouchableOpacity 
-      style={styles.contactCard}
+      className={cn(
+        "p-3 rounded-lg mb-2 border",
+        isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+      )}
       onPress={() => onAction?.('view_contact', contact)}
     >
-      <View style={styles.contactHeader}>
-        <View style={styles.contactNameSection}>
-          <Text style={styles.contactName} numberOfLines={1}>
+      <View className="mb-2">
+        <View className="flex-1">
+          <Text className={cn(
+            "text-base font-semibold mb-0.5",
+            isDark ? "text-white" : "text-gray-900"
+          )} numberOfLines={1}>
             👤 {contact.name}
           </Text>
           {contact.title && contact.company && (
-            <Text style={styles.contactJob} numberOfLines={1}>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )} numberOfLines={1}>
               {contact.title} at {contact.company}
             </Text>
           )}
           {contact.title && !contact.company && (
-            <Text style={styles.contactJob} numberOfLines={1}>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )} numberOfLines={1}>
               {contact.title}
             </Text>
           )}
           {!contact.title && contact.company && (
-            <Text style={styles.contactJob} numberOfLines={1}>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )} numberOfLines={1}>
               {contact.company}
             </Text>
           )}
@@ -1339,12 +681,15 @@ const ContactCard: React.FC<{
       </View>
 
       {/* Contact details */}
-      <View style={styles.contactDetails}>
+      <View className="mb-2 gap-1">
         {/* Emails */}
         {contact.emails.length > 0 && (
-          <View style={styles.contactDetailRow}>
-            <Text style={styles.contactDetailType}>✉️</Text>
-            <Text style={styles.contactDetailValue} numberOfLines={1}>
+          <View className="flex-row items-center gap-2">
+            <Text className="text-sm w-5">✉️</Text>
+            <Text className={cn(
+              "text-sm flex-1",
+              isDark ? "text-white" : "text-gray-900"
+            )} numberOfLines={1}>
               {contact.emails.map(email => email.address).join(', ')}
             </Text>
           </View>
@@ -1352,9 +697,12 @@ const ContactCard: React.FC<{
 
         {/* Phones */}
         {contact.phones.length > 0 && (
-          <View style={styles.contactDetailRow}>
-            <Text style={styles.contactDetailType}>📞</Text>
-            <Text style={styles.contactDetailValue} numberOfLines={1}>
+          <View className="flex-row items-center gap-2">
+            <Text className="text-sm w-5">📞</Text>
+            <Text className={cn(
+              "text-sm flex-1",
+              isDark ? "text-white" : "text-gray-900"
+            )} numberOfLines={1}>
               {contact.phones.map(phone => phone.number).join(', ')}
             </Text>
           </View>
@@ -1362,37 +710,37 @@ const ContactCard: React.FC<{
       </View>
 
       {/* Quick actions */}
-      <View style={styles.contactQuickActions}>
+      <View className="flex-row justify-end gap-2 pt-2 border-t border-slate-600">
         {contact.emails.length > 0 && (
           <TouchableOpacity 
-            style={styles.quickActionButton}
+            className="w-9 h-9 rounded-full bg-indigo-600 items-center justify-center"
             onPress={() => onAction?.('email_contact', contact)}
           >
-            <Text style={styles.quickActionText}>✉️</Text>
+            <Text className="text-base">✉️</Text>
           </TouchableOpacity>
         )}
         
         {contact.phones.length > 0 && (
           <TouchableOpacity 
-            style={styles.quickActionButton}
+            className="w-9 h-9 rounded-full bg-indigo-600 items-center justify-center"
             onPress={() => onAction?.('call_contact', contact)}
           >
-            <Text style={styles.quickActionText}>📞</Text>
+            <Text className="text-base">📞</Text>
           </TouchableOpacity>
         )}
         
         <TouchableOpacity 
-          style={styles.quickActionButton}
+          className="w-9 h-9 rounded-full bg-indigo-600 items-center justify-center"
           onPress={() => onAction?.('edit_contact', contact)}
         >
-          <Text style={styles.quickActionText}>✏️</Text>
+          <Text className="text-base">✏️</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
 };
 
-// ✅ NEW: CalendarListComponent for multiple calendar events
+// ✅ CalendarListComponent - Using Native Tailwind Classes
 export const CalendarListComponent: React.FC<{
   events: CalendarData[];
   totalCount: number;
@@ -1400,20 +748,30 @@ export const CalendarListComponent: React.FC<{
   timeRange?: { start: string; end: string };
   onAction?: (action: string, data: any) => void;
 }> = ({ events, totalCount, hasMore, timeRange, onAction }) => {
+  const { isDark } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const displayEvents = expanded ? events : events.slice(0, 4);
 
   return (
-    <View style={styles.calendarListContainer}>
+    <View className={cn(
+      "rounded-xl p-3 my-2 border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
       {/* Summary header */}
-      <View style={styles.calendarSummary}>
+      <View className="flex-row items-center mb-2 gap-2">
         <CalendarIcon size={20} color="white" />
-        <View style={styles.summaryDetails}>
-          <Text style={styles.summaryText}>
+        <View>
+          <Text className={cn(
+            "text-sm font-semibold",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             📅 {totalCount} event{totalCount !== 1 ? 's' : ''}
           </Text>
           {timeRange && (
-            <Text style={styles.timeRangeText}>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>
               {new Date(timeRange.start).toLocaleDateString()} - {new Date(timeRange.end).toLocaleDateString()}
             </Text>
           )}
@@ -1432,37 +790,61 @@ export const CalendarListComponent: React.FC<{
       {/* Expand/collapse toggle */}
       {events.length > 4 && (
         <TouchableOpacity 
-          style={styles.expandButton}
+          className={cn(
+            "p-2 rounded-md items-center mb-2",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => setExpanded(!expanded)}
         >
-          <Text style={styles.expandText}>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-blue-400" : "text-blue-600"
+          )}>
             {expanded ? 'Show Less' : `Show ${events.length - 4} More Events`}
           </Text>
         </TouchableOpacity>
       )}
 
       {/* Actions */}
-      <View style={styles.calendarActions}>
+      <View className="flex-row justify-between gap-2 mt-2">
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('create_event', null)}
         >
-          <Text style={styles.actionText}>➕ Create Event</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>➕ Create Event</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('view_calendar', null)}
         >
-          <Text style={styles.actionText}>🗓️ Open Calendar</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🗓️ Open Calendar</Text>
         </TouchableOpacity>
 
         {hasMore && (
           <TouchableOpacity 
-            style={styles.actionButton}
+            className={cn(
+              "px-3 py-1.5 rounded-md",
+              isDark ? "bg-slate-900" : "bg-gray-50"
+            )}
             onPress={() => onAction?.('load_more_events', null)}
           >
-            <Text style={styles.actionText}>Load More</Text>
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Load More</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -1592,12 +974,14 @@ const CalendarEventCard: React.FC<{
   );
 };
 
-// ✅ NEW: CompleteTaskOverviewComponent - reuses TaskComponent for individual tasks
+// ✅ NEW: CompleteTaskOverviewComponent - Using Native Tailwind Classes
 export const CompleteTaskOverviewComponent: React.FC<{
   overview: CompleteTaskOverview;
   onAction?: (action: string, data: any) => void;
 }> = ({ overview, onAction }) => {
+  const { isDark } = useTheme();
   const [expandedLists, setExpandedLists] = useState<Set<string>>(new Set());
+  const [showAllLists, setShowAllLists] = useState(false);
   
   const toggleListExpansion = (listId: string) => {
     const newExpanded = new Set(expandedLists);
@@ -1611,176 +995,216 @@ export const CompleteTaskOverviewComponent: React.FC<{
 
   const hasOverdueTasks = overview.totalOverdue > 0;
   const hasFailures = overview.partialFailures && overview.partialFailures.length > 0;
+  
+  // Show only first 2 task lists initially, with option to expand
+  const displayLists = showAllLists ? overview.taskLists : overview.taskLists.slice(0, 2);
 
   return (
-    <View style={styles.completeOverviewContainer}>
-      {/* Overview Summary */}
-      <View style={styles.overviewSummary}>
-        <TasksIcon size={24} />
-        <View style={styles.overviewSummaryDetails}>
-          <Text style={styles.overviewTitle}>
-            📋 Complete Task Overview
+    <View className={cn(
+      "w-full rounded-lg p-2 my-1 border max-h-60 min-h-30",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
+      {/* Compact Overview Summary */}
+      <View className={cn(
+        "flex-row items-center pb-1.5 border-b mb-1.5 w-full",
+        isDark ? "border-slate-700" : "border-gray-100"
+      )}>
+        <TasksIcon size={18} />
+        <Text className={cn(
+          "text-sm font-semibold ml-1.5 flex-1 min-w-0",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
+          📋 {overview.totalTasks} tasks • {overview.totalLists} lists
+        </Text>
+        {hasOverdueTasks && (
+          <Text className="text-xs text-red-500 font-semibold min-w-10">
+            ⚠️ {overview.totalOverdue}
           </Text>
-          <View style={styles.overviewStats}>
-            <Text style={styles.overviewStat}>
-              {overview.totalTasks} tasks across {overview.totalLists} lists
-            </Text>
-            {overview.totalCompleted > 0 && (
-              <Text style={styles.overviewStat}>
-                • {overview.totalCompleted} completed
-              </Text>
-            )}
-            {overview.totalPending > 0 && (
-              <Text style={styles.overviewStat}>
-                • {overview.totalPending} pending
-              </Text>
-            )}
-            {hasOverdueTasks && (
-              <Text style={[styles.overviewStat, styles.overdueStats]}>
-                • {overview.totalOverdue} overdue ⚠️
-              </Text>
-            )}
-          </View>
-        </View>
+        )}
       </View>
 
-      {/* Sync warnings */}
-      {hasFailures && (
-        <View style={styles.syncWarning}>
-          <Text style={styles.syncWarningText}>
-            ⚠️ Some task lists failed to load: {overview.partialFailures?.map(f => f.listTitle).join(', ')}
-          </Text>
-        </View>
-      )}
-
-      {/* Task Lists with Tasks */}
-      {overview.taskLists.map((taskListWithTasks) => (
-        <View key={taskListWithTasks.id} style={styles.taskListWithTasksCard}>
-          <TouchableOpacity 
-            style={styles.taskListWithTasksHeader}
-            onPress={() => toggleListExpansion(taskListWithTasks.id)}
-          >
-            <View style={styles.taskListHeaderLeft}>
-              <Text style={styles.expandIcon}>
+      {/* Scrollable Task Lists - More Compact */}
+      <ScrollView 
+        className="w-full max-h-36 flex-1"
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+      >
+        {displayLists.map((taskListWithTasks) => (
+          <View key={taskListWithTasks.id} className={cn(
+            "rounded mb-1 border w-full",
+            isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+          )}>
+            <TouchableOpacity 
+              className="flex-row items-center p-2 w-full"
+              onPress={() => toggleListExpansion(taskListWithTasks.id)}
+            >
+              <Text className={cn(
+                "text-xs mr-1.5 w-4 text-center",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>
                 {expandedLists.has(taskListWithTasks.id) ? '▼' : '▶'}
               </Text>
-              <Text style={styles.taskListWithTasksTitle} numberOfLines={1}>
+              <Text className={cn(
+                "text-sm font-medium flex-1 min-w-0",
+                isDark ? "text-white" : "text-gray-900"
+              )} numberOfLines={1}>
                 {taskListWithTasks.title}
               </Text>
-            </View>
-            <View style={styles.taskListHeaderRight}>
-              <Text style={styles.taskCount}>
-                {taskListWithTasks.taskCount} tasks
+              <Text className={cn(
+                "text-xs mr-2 min-w-5 text-right",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>
+                {taskListWithTasks.taskCount}
               </Text>
               {taskListWithTasks.overdueCount > 0 && (
-                <Text style={styles.overdueCount}>
-                  {taskListWithTasks.overdueCount} overdue
+                <Text className="text-xs text-red-500 font-semibold min-w-7">
+                  ⚠️{taskListWithTasks.overdueCount}
                 </Text>
               )}
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
 
-          {/* Expanded Tasks - REUSING TaskComponent */}
-          {expandedLists.has(taskListWithTasks.id) && (
-            <View style={styles.expandedTasksContainer}>
-              {taskListWithTasks.tasks.length === 0 ? (
-                <View>
-                  <Text style={styles.noTasksText}>No tasks in this list</Text>
-                  <TouchableOpacity 
-                    style={styles.addTaskToListButton}
-                    onPress={() => onAction?.('create_task_in_list', { listId: taskListWithTasks.id, listTitle: taskListWithTasks.title })}
-                  >
-                    <Text style={styles.addTaskToListText}>➕ Add Task to {taskListWithTasks.title}</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                taskListWithTasks.tasks.map((task) => (
-                  <TaskComponent
-                    key={task.id}
-                    id={task.id}
-                    timestamp={task.updated || new Date().toISOString()}
-                    status="success"
-                    data={task}
-                    onAction={onAction}
-                  />
-                ))
-              )}
-            </View>
-          )}
-
-          {/* Fetch errors */}
-          {!taskListWithTasks.fetchSuccess && (
-            <View style={styles.fetchError}>
-              <Text style={styles.fetchErrorText}>
-                Failed to load tasks: {taskListWithTasks.fetchError}
-              </Text>
-            </View>
-          )}
-        </View>
-      ))}
-
-      {/* Overview Actions */}
-      <View style={styles.overviewActions}>
-        <TouchableOpacity 
-          style={[
-            styles.primaryActionButton,
-            hasOverdueTasks && styles.urgentAction
-          ]}
-          onPress={() => onAction?.('create_task', null)}
-        >
-          <Text style={styles.primaryActionText}>
-            ➕ Create New Task
-          </Text>
-        </TouchableOpacity>
+            {/* Compact Expanded Tasks */}
+            {expandedLists.has(taskListWithTasks.id) && (
+              <View className="px-2 pb-2 w-full">
+                {taskListWithTasks.tasks.length === 0 ? (
+                  <Text className={cn(
+                    "text-xs italic w-full text-center",
+                    isDark ? "text-slate-400" : "text-gray-600"
+                  )}>No tasks</Text>
+                ) : (
+                  taskListWithTasks.tasks.slice(0, 5).map((task) => (
+                    <View key={task.id} className="py-1 px-2 mb-0.5 w-full">
+                      <Text className={cn(
+                        "text-xs mb-0.5 w-full flex-wrap",
+                        isDark ? "text-white" : "text-gray-900"
+                      )} numberOfLines={1}>
+                        {task.status === 'completed' ? '✅' : '⭕'} {task.title}
+                      </Text>
+                      {task.due && (
+                        <Text className={cn(
+                          "text-xs w-full",
+                          isDark ? "text-slate-400" : "text-gray-600"
+                        )}>
+                          📅 {new Date(task.due).toLocaleDateString()}
+                        </Text>
+                      )}
+                    </View>
+                  ))
+                )}
+                {taskListWithTasks.tasks.length > 5 && (
+                  <Text className={cn(
+                    "text-xs italic text-center py-1 w-full",
+                    isDark ? "text-slate-400" : "text-gray-600"
+                  )}>
+                    +{taskListWithTasks.tasks.length - 5} more tasks
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        ))}
         
+        {/* Show More Lists Button */}
+        {overview.taskLists.length > 2 && (
+          <TouchableOpacity 
+            className="p-2 items-center w-full"
+            onPress={() => setShowAllLists(!showAllLists)}
+          >
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>
+              {showAllLists ? 'Show Less' : `+${overview.taskLists.length - 2} More Lists`}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+
+      {/* Compact Actions */}
+      <View className={cn(
+        "flex-row justify-between pt-1.5 border-t mt-1.5 w-full px-2",
+        isDark ? "border-slate-700" : "border-gray-100"
+      )}>
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-4 py-2 rounded-full border min-w-11 w-2/5 items-center",
+            isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+          )}
           onPress={() => onAction?.('refresh_overview', null)}
         >
-          <Text style={styles.actionText}>🔄 Refresh</Text>
+          <Text className={cn(
+            "text-base text-center",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🔄</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          className="bg-green-600 border-green-600 px-4 py-2 rounded-full border min-w-11 w-2/5 items-center"
+          onPress={() => onAction?.('create_task', null)}
+        >
+          <Text className={cn(
+            "text-base text-center",
+            isDark ? "text-white" : "text-gray-900"
+          )}>➕</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-// ✅ PHASE 1: NEW TaskListsComponent for multiple task lists (LIST_TASK_LISTS response)
+// ✅ TaskListsComponent - Using Native Tailwind Classes
 export const TaskListsComponent: React.FC<{
   taskListsData: TaskListsData;
   onAction?: (action: string, data: any) => void;
 }> = ({ taskListsData, onAction }) => {
+  const { isDark } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const displayLists = expanded ? taskListsData.taskLists : taskListsData.taskLists.slice(0, 3);
 
   return (
-    <View style={styles.taskListsContainer}>
+    <View className={cn(
+      "rounded-xl p-3 my-2 border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
       {/* Summary header */}
-      <View style={styles.taskSummary}>
+      <View className="flex-row items-center mb-2 gap-2">
         <TasksIcon size={20} />
-        <View style={styles.summaryDetails}>
-          <Text style={styles.summaryText}>
-            📋 {taskListsData.totalCount} task list{taskListsData.totalCount !== 1 ? 's' : ''}
-          </Text>
-        </View>
+        <Text className={cn(
+          "text-sm font-semibold",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
+          📋 {taskListsData.totalCount} task list{taskListsData.totalCount !== 1 ? 's' : ''}
+        </Text>
       </View>
 
       {/* Task Lists */}
       {displayLists.map((taskList) => (
         <TouchableOpacity 
           key={taskList.id}
-          style={styles.taskListCard}
+          className={cn(
+            "p-3 rounded-lg mb-2 border",
+            isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+          )}
           onPress={() => onAction?.('view_task_list', taskList)}
         >
-          <View style={styles.taskListHeader}>
-            <Text style={styles.taskListTitle} numberOfLines={1}>
+          <View className="flex-row justify-between items-center mb-1">
+            <Text className={cn(
+              "text-sm font-semibold flex-1",
+              isDark ? "text-white" : "text-gray-900"
+            )} numberOfLines={1}>
               📝 {taskList.title}
             </Text>
-            <Text style={styles.taskListDate}>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>
               {new Date(taskList.updated).toLocaleDateString()}
             </Text>
           </View>
-          <View style={styles.taskListMeta}>
-            <Text style={styles.taskListId}>ID: {taskList.id}</Text>
+          <View>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>ID: {taskList.id}</Text>
           </View>
         </TouchableOpacity>
       ))}
@@ -1788,37 +1212,61 @@ export const TaskListsComponent: React.FC<{
       {/* Expand/collapse toggle */}
       {taskListsData.taskLists.length > 3 && (
         <TouchableOpacity 
-          style={styles.expandButton}
+          className={cn(
+            "p-2 rounded-md items-center mb-2",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => setExpanded(!expanded)}
         >
-          <Text style={styles.expandText}>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-blue-400" : "text-blue-600"
+          )}>
             {expanded ? 'Show Less' : `Show ${taskListsData.taskLists.length - 3} More Lists`}
           </Text>
         </TouchableOpacity>
       )}
 
       {/* Actions */}
-      <View style={styles.taskActions}>
+      <View className="flex-row justify-between gap-2 mt-2">
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('create_task_list', null)}
         >
-          <Text style={styles.actionText}>➕ Create List</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>➕ Create List</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('refresh_task_lists', null)}
         >
-          <Text style={styles.actionText}>🔄 Refresh</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🔄 Refresh</Text>
         </TouchableOpacity>
 
         {taskListsData.hasMore && (
           <TouchableOpacity 
-            style={styles.actionButton}
+            className={cn(
+              "px-3 py-1.5 rounded-md",
+              isDark ? "bg-slate-900" : "bg-gray-50"
+            )}
             onPress={() => onAction?.('load_more_lists', null)}
           >
-            <Text style={styles.actionText}>Load More</Text>
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Load More</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -1826,29 +1274,42 @@ export const TaskListsComponent: React.FC<{
   );
 };
 
-// ✅ PHASE 1: NEW TaskListDataComponent for tasks within a single list (LIST_TASKS response)
+// ✅ TaskListDataComponent - Using Native Tailwind Classes
 export const TaskListDataComponent: React.FC<{
   taskListData: TaskListData;
   onAction?: (action: string, data: any) => void;
 }> = ({ taskListData, onAction }) => {
+  const { isDark } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const displayTasks = expanded ? taskListData.tasks : taskListData.tasks.slice(0, 5);
 
   return (
-    <View style={styles.taskListContainer}>
+    <View className={cn(
+      "rounded-xl p-3 my-2 border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
       {/* Summary header */}
-      <View style={styles.taskSummary}>
+      <View className="flex-row items-center mb-2 gap-2">
         <TasksIcon size={20} />
-        <View style={styles.summaryDetails}>
-          <Text style={styles.summaryText}>
+        <View>
+          <Text className={cn(
+            "text-sm font-semibold",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             📋 {taskListData.listTitle || 'Task List'}
           </Text>
-          <View style={styles.taskIndicators}>
-            <Text style={styles.summaryText}>
+          <View className="flex-row items-center gap-2">
+            <Text className={cn(
+              "text-sm",
+              isDark ? "text-white" : "text-gray-900"
+            )}>
               {taskListData.totalCount} task{taskListData.totalCount !== 1 ? 's' : ''}
             </Text>
             {taskListData.completedCount > 0 && (
-              <Text style={styles.summaryText}>
+              <Text className={cn(
+                "text-sm",
+                isDark ? "text-white" : "text-gray-900"
+              )}>
                 • {taskListData.completedCount} completed
               </Text>
             )}
@@ -1856,75 +1317,115 @@ export const TaskListDataComponent: React.FC<{
         </View>
       </View>
 
-      {/* Individual Tasks - REUSING TaskComponent */}
+      {/* Individual Tasks */}
       {displayTasks.length === 0 ? (
         <View>
-          <Text style={styles.noTasksText}>No tasks in this list</Text>
+          <Text className={cn(
+            "text-sm mb-2",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>No tasks in this list</Text>
           <TouchableOpacity 
-            style={styles.addTaskToListButton}
+            className="p-3 bg-indigo-600 rounded-md items-center"
             onPress={() => onAction?.('create_task_in_list', { 
               listId: taskListData.listId, 
               listTitle: taskListData.listTitle 
             })}
           >
-            <Text style={styles.addTaskToListText}>
+            <Text className="text-sm text-white font-semibold">
               ➕ Add Task{taskListData.listTitle ? ` to ${taskListData.listTitle}` : ''}
             </Text>
           </TouchableOpacity>
         </View>
       ) : (
         displayTasks.map((task) => (
-          <TaskComponent
-            key={task.id}
-            id={task.id}
-            timestamp={task.updated || new Date().toISOString()}
-            status="success"
-            data={task}
-            onAction={onAction}
-          />
+          <View key={task.id} className={cn(
+            "p-3 rounded-lg mb-2 border",
+            isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+          )}>
+            <Text className={cn(
+              "text-sm font-semibold",
+              isDark ? "text-white" : "text-gray-900"
+            )}>{task.title}</Text>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Status: {task.status}</Text>
+            {task.due && <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Due: {new Date(task.due).toLocaleDateString()}</Text>}
+            {task.notes && <Text className={cn(
+              "text-xs mt-1",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>{task.notes}</Text>}
+          </View>
         ))
       )}
 
       {/* Expand/collapse toggle */}
       {taskListData.tasks.length > 5 && (
         <TouchableOpacity 
-          style={styles.expandButton}
+          className={cn(
+            "p-2 rounded-md items-center mb-2",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => setExpanded(!expanded)}
         >
-          <Text style={styles.expandText}>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-blue-400" : "text-blue-600"
+          )}>
             {expanded ? 'Show Less' : `Show ${taskListData.tasks.length - 5} More Tasks`}
           </Text>
         </TouchableOpacity>
       )}
 
       {/* Actions */}
-      <View style={styles.taskActions}>
+      <View className="flex-row justify-between gap-2 mt-2">
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('create_task_in_list', { 
             listId: taskListData.listId, 
             listTitle: taskListData.listTitle 
           })}
         >
-          <Text style={styles.actionText}>➕ Add Task</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>➕ Add Task</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.actionButton}
+          className={cn(
+            "px-3 py-1.5 rounded-md",
+            isDark ? "bg-slate-900" : "bg-gray-50"
+          )}
           onPress={() => onAction?.('view_list_details', { 
             listId: taskListData.listId, 
             listTitle: taskListData.listTitle 
           })}
         >
-          <Text style={styles.actionText}>📝 List Details</Text>
+          <Text className={cn(
+            "text-xs font-medium",
+            isDark ? "text-white" : "text-gray-900"
+          )}>📝 List Details</Text>
         </TouchableOpacity>
 
         {taskListData.hasMore && (
           <TouchableOpacity 
-            style={styles.actionButton}
+            className={cn(
+              "px-3 py-1.5 rounded-md",
+              isDark ? "bg-slate-900" : "bg-gray-50"
+            )}
             onPress={() => onAction?.('load_more_tasks', { listId: taskListData.listId })}
           >
-            <Text style={styles.actionText}>Load More</Text>
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Load More</Text>
           </TouchableOpacity>
         )}
       </View>

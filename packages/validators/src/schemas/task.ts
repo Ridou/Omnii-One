@@ -108,6 +108,19 @@ export const CompleteTaskOverviewSchema = z.object({
   })).optional(),
 });
 
+// ✅ tRPC Response Schemas
+export const TasksCompleteOverviewResponseSchema = z.object({
+  success: z.boolean(),
+  data: CompleteTaskOverviewSchema.optional(),
+  error: z.string().optional(),
+  message: z.string(),
+});
+
+export const TasksTestResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.string(),
+});
+
 // ✅ LEGACY SCHEMA: Keep for backwards compatibility
 export const LegacyTaskDataSchema = z.object({
   title: z.string(),

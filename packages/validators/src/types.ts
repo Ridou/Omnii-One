@@ -39,6 +39,8 @@ import {
   TaskListSchema,
   TaskListsDataSchema,
   TaskListWithTasksSchema,
+  TasksCompleteOverviewResponseSchema,
+  TasksTestResponseSchema,
   UnifiedActionSchema,
 } from "./schemas/task";
 import {
@@ -61,6 +63,10 @@ export type TaskListsData = z.infer<typeof TaskListsDataSchema>;
 export type TaskListWithTasks = z.infer<typeof TaskListWithTasksSchema>;
 export type CompleteTaskOverview = z.infer<typeof CompleteTaskOverviewSchema>;
 export type LegacyTaskData = z.infer<typeof LegacyTaskDataSchema>;
+
+// ✅ tRPC TASK RESPONSE TYPES: Zod-inferred for type safety
+export type TasksCompleteOverviewResponse = z.infer<typeof TasksCompleteOverviewResponseSchema>;
+export type TasksTestResponse = z.infer<typeof TasksTestResponseSchema>;
 
 // ✅ EMAIL TYPES: Zod-inferred for type safety
 export type EmailData = z.infer<typeof EmailDataSchema>;
