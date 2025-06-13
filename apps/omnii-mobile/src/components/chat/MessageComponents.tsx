@@ -409,8 +409,8 @@ export const createTaskComponent = (taskData: any, props: any) => {
            list.fetchError.toLowerCase().includes('permission')
          );
        })) ||
-      // Empty response with no data (likely auth issue)
-      (taskData.totalLists === 0 && taskData.totalTasks === 0 && 
+      // Empty response with no data AND sync failed (likely auth issue)
+      (taskData.syncSuccess === false && taskData.totalLists === 0 && taskData.totalTasks === 0 && 
        (!taskData.taskLists || taskData.taskLists.length === 0))
     );
     
