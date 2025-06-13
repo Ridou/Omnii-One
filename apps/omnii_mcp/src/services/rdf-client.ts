@@ -4,44 +4,49 @@
  */
 
 export class RDFServiceClient {
-  private nodeServiceUrl = process.env.RDF_NODE_SERVICE_URL!;
-  private pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_URL!;
+  private pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_URL || "http://omnii-rdf-python-production.railway.internal:8000";
 
   constructor() {
-    if (!this.nodeServiceUrl) {
-      console.warn('⚠️ RDF_NODE_SERVICE_URL not configured');
-    }
+    console.log(`[RDFServiceClient] 🔗 Connecting directly to Python RDF service:`);
+    console.log(`[RDFServiceClient] - Python service: ${this.pythonServiceUrl}`);
+    
     if (!this.pythonServiceUrl) {
       console.warn('⚠️ RDF_PYTHON_SERVICE_URL not configured');
     }
   }
 
   /**
-   * Process RDF request through the complete pipeline
-   * omnii_mcp → omnii-rdf-node → omnii-rdf-python
+   * Process RDF request directly through Python service
+   * omnii_mcp → omnii-rdf-python
    */
   async processRDFRequest(data: any) {
     try {
-      console.log('🧠 Processing RDF request through node service');
+      console.log('🧠 Processing RDF request directly through Python service');
       
-      if (!this.nodeServiceUrl) {
-        throw new Error('RDF_NODE_SERVICE_URL not configured');
+      if (!this.pythonServiceUrl) {
+        throw new Error('RDF_PYTHON_SERVICE_URL not configured');
       }
 
-      // Call Node RDF service
-      const nodeResponse = await fetch(`${this.nodeServiceUrl}/api/rdf/process`, {
+      // Call Python RDF service directly
+      const response = await fetch(`${this.pythonServiceUrl}/api/rdf/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(data)
       });
 
-      if (!nodeResponse.ok) {
-        throw new Error(`Node RDF service error: ${nodeResponse.status} ${nodeResponse.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Python RDF service error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const result = await nodeResponse.json();
+      const result = await response.json();
       
       console.log('✅ RDF processing completed successfully');
+      console.log('📊 RDF result keys:', Object.keys(result));
+      
       return result;
 
     } catch (error) {
@@ -51,70 +56,21 @@ export class RDFServiceClient {
   }
 
   /**
-   * Call Python service directly if needed
+   * Get Python analysis (alias for processRDFRequest for backward compatibility)
    * omnii_mcp → omnii-rdf-python
    */
   async getPythonAnalysis(rdfData: any) {
-    try {
-      console.log('🐍 Getting Python AI analysis');
-      
-      if (!this.pythonServiceUrl) {
-        throw new Error('RDF_PYTHON_SERVICE_URL not configured');
-      }
-
-      // Call Python service directly
-      const pythonResponse = await fetch(`${this.pythonServiceUrl}/api/rdf/analyze`, {
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(rdfData)
-      });
-
-      if (!pythonResponse.ok) {
-        throw new Error(`Python service error: ${pythonResponse.status} ${pythonResponse.statusText}`);
-      }
-
-      const result = await pythonResponse.json();
-      
-      console.log('✅ Python analysis completed successfully');
-      return result;
-
-    } catch (error) {
-      console.error('❌ Python analysis failed:', error);
-      throw error;
-    }
+    console.log('🐍 Getting Python AI analysis (calling processRDFRequest)');
+    return this.processRDFRequest(rdfData);
   }
 
   /**
-   * Health check for RDF services
+   * Health check for Python RDF service
    */
   async healthCheck() {
     const results = {
-      nodeService: { status: 'unknown', error: null as string | null },
       pythonService: { status: 'unknown', error: null as string | null }
     };
-
-    // Check Node service
-    try {
-      if (this.nodeServiceUrl) {
-        const nodeHealth = await fetch(`${this.nodeServiceUrl}/health`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (nodeHealth.ok) {
-          results.nodeService.status = 'healthy';
-        } else {
-          results.nodeService.status = 'unhealthy';
-          results.nodeService.error = `HTTP ${nodeHealth.status}`;
-        }
-      } else {
-        results.nodeService.status = 'not_configured';
-        results.nodeService.error = 'RDF_NODE_SERVICE_URL not set';
-      }
-    } catch (error) {
-      results.nodeService.status = 'error';
-      results.nodeService.error = error instanceof Error ? error.message : 'Unknown error';
-    }
 
     // Check Python service
     try {
@@ -126,27 +82,31 @@ export class RDFServiceClient {
         
         if (pythonHealth.ok) {
           results.pythonService.status = 'healthy';
+          console.log('✅ Python RDF service is healthy');
         } else {
           results.pythonService.status = 'unhealthy';
           results.pythonService.error = `HTTP ${pythonHealth.status}`;
+          console.warn(`⚠️ Python RDF service unhealthy: ${pythonHealth.status}`);
         }
       } else {
         results.pythonService.status = 'not_configured';
         results.pythonService.error = 'RDF_PYTHON_SERVICE_URL not set';
+        console.warn('⚠️ Python RDF service URL not configured');
       }
     } catch (error) {
       results.pythonService.status = 'error';
       results.pythonService.error = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Python RDF service health check failed:', error);
     }
 
     return results;
   }
 
   /**
-   * Check if RDF services are available
+   * Check if Python RDF service is available
    */
   isAvailable(): boolean {
-    return Boolean(this.nodeServiceUrl && this.pythonServiceUrl);
+    return Boolean(this.pythonServiceUrl);
   }
 }
 

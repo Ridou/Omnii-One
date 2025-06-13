@@ -1,34 +1,71 @@
 import { MessageAnalysis, NameVariation, Contact, ContactResolution } from '../types/contact-resolution';
 import { ExecutionContextType } from '../types/action-planning.types';
+import { rdfServiceClient } from './rdf-client';
 
 export class RDFContactAnalyzer {
   
   /**
-   * Analyze a message to extract contact reference and communication intent
+   * Analyze a message using RDF semantic reasoning to extract contact reference and communication intent
    */
   async analyzeMessage(message: string): Promise<MessageAnalysis> {
+    console.log(`[RDFContactAnalyzer] 🧠 Using RDF semantic analysis for: "${message}"`);
+    
+    try {
+      // Use RDF service for semantic message analysis
+      const rdfAnalysis = await rdfServiceClient.processRDFRequest({
+        text: message,
+        domain: 'contact_communication',
+        task: 'message_analysis',
+        extractors: ['contact_names', 'communication_intent', 'context_clues', 'formality_level', 'urgency_indicators']
+      });
+      
+      console.log(`[RDFContactAnalyzer] ✅ RDF analysis completed:`, {
+        hasContactExtraction: !!rdfAnalysis.contact_extraction,
+        hasIntentAnalysis: !!rdfAnalysis.intent_analysis,
+        hasContextAnalysis: !!rdfAnalysis.context_analysis
+      });
+      
+      // Extract results from RDF analysis
+      const primaryContact = rdfAnalysis.contact_extraction?.primary_contact || this.extractContactNameFallback(message);
+      const intent = rdfAnalysis.intent_analysis?.communication_action || this.determineIntentFallback(message);
+      const contextClues = rdfAnalysis.context_analysis?.context_indicators || this.extractContextCluesFallback(message);
+      const formality = rdfAnalysis.context_analysis?.formality_level || 'neutral';
+      const urgency = rdfAnalysis.context_analysis?.urgency_level || 'normal';
+      const additionalContext = rdfAnalysis.context_analysis?.additional_context || this.generateAdditionalContextFallback(formality, contextClues);
+      const confidence = rdfAnalysis.confidence_score || this.calculateConfidenceFallback(primaryContact, intent, contextClues);
+      
+      return {
+        primary_contact: primaryContact,
+        intent,
+        context_clues: contextClues,
+        formality,
+        urgency,
+        additional_context: additionalContext,
+        confidence
+      };
+      
+    } catch (error) {
+      console.warn(`[RDFContactAnalyzer] ⚠️ RDF analysis failed, using fallback approach:`, error);
+      
+      // Fallback to simple analysis if RDF fails
+      return this.analyzeMessageFallback(message);
+    }
+  }
+
+  /**
+   * Fallback message analysis when RDF service is unavailable
+   */
+  private async analyzeMessageFallback(message: string): Promise<MessageAnalysis> {
+    console.log(`[RDFContactAnalyzer] 📝 Using fallback analysis for: "${message}"`);
+    
     const lowerMessage = message.toLowerCase();
-    
-    // Extract primary contact (simple pattern matching for now)
-    const contactMatch = this.extractContactName(message);
-    
-    // Determine intent based on action words
-    const intent = this.determineIntent(lowerMessage);
-    
-    // Extract context clues
-    const contextClues = this.extractContextClues(lowerMessage);
-    
-    // Determine formality level
-    const formality = this.determineFormalityLevel(message, contextClues);
-    
-    // Determine urgency
-    const urgency = this.determineUrgency(message);
-    
-    // Generate additional context
-    const additionalContext = this.generateAdditionalContext(formality, contextClues);
-    
-    // Calculate confidence based on various factors
-    const confidence = this.calculateConfidence(contactMatch, intent, contextClues);
+    const contactMatch = this.extractContactNameFallback(message);
+    const intent = this.determineIntentFallback(lowerMessage);
+    const contextClues = this.extractContextCluesFallback(lowerMessage);
+    const formality = this.determineFormalityLevelFallback(message, contextClues);
+    const urgency = this.determineUrgencyFallback(message);
+    const additionalContext = this.generateAdditionalContextFallback(formality, contextClues);
+    const confidence = this.calculateConfidenceFallback(contactMatch, intent, contextClues);
     
     return {
       primary_contact: contactMatch,
@@ -64,12 +101,12 @@ export class RDFContactAnalyzer {
   }
 
   /**
-   * Search for contacts using Google Contacts API
+   * INTELLIGENT CONTACT SEARCH SYSTEM
+   * This replaces the current limited search with a comprehensive approach
    */
   async searchContacts(expandedNames: string[], userUUID?: string): Promise<Contact[]> {
-    const contacts: Contact[] = [];
-    
-    console.log(`[RDFContactAnalyzer] 🔍 Searching contacts for ${expandedNames.length} name variations`);
+    console.log(`[RDFContactAnalyzer] 🧠 INTELLIGENT SEARCH: Starting comprehensive contact search for ${expandedNames.length} name variations`);
+    console.log(`[RDFContactAnalyzer] 🔍 Search variations: [${expandedNames.join(', ')}]`);
     
     if (!userUUID) {
       console.warn(`[RDFContactAnalyzer] ⚠️ No userUUID provided for contact search`);
@@ -77,44 +114,397 @@ export class RDFContactAnalyzer {
     }
     
     // Lazy import to avoid initialization issues during testing
-    const { default: unifiedGoogleManager } = await import('./unified-google-manager');
+    let unifiedGoogleManager;
+    try {
+      const imported = await import('./unified-google-manager');
+      unifiedGoogleManager = imported.default;
+    } catch (importError) {
+      console.error(`[RDFContactAnalyzer] Failed to import unified-google-manager:`, importError);
+      return [];
+    }
     
-    // Try each name variation
-    for (const name of expandedNames) {
-      try {
-        console.log(`[RDFContactAnalyzer] 🔍 Searching for: "${name}"`);
+    // SINGLE STRATEGY: Simple search (no recursion)
+    console.log(`[RDFContactAnalyzer] 🎯 SIMPLIFIED STRATEGY: Single search for primary name`);
+    const searchResults = await this.trySpecificSearches(expandedNames, userUUID, unifiedGoogleManager);
+    
+    if (searchResults.length > 0) {
+      console.log(`[RDFContactAnalyzer] ✅ SUCCESS: Found ${searchResults.length} contacts`);
+      return this.deduplicateContacts(searchResults);
+    }
+    
+    // FALLBACK: Try to list a few contacts to see what's available
+    console.log(`[RDFContactAnalyzer] 📍 FALLBACK: Listing sample contacts to verify connection`);
+    const sampleContacts = await this.getSampleContacts(userUUID, unifiedGoogleManager);
+    
+    if (sampleContacts.length > 0) {
+      console.log(`[RDFContactAnalyzer] ✅ Found ${sampleContacts.length} sample contacts in your Google Contacts`);
+      console.log(`[RDFContactAnalyzer] 💡 Consider searching for one of these names instead:`);
+      sampleContacts.slice(0, 3).forEach((contact, i) => {
+        console.log(`[RDFContactAnalyzer]   ${i + 1}. ${contact.name}`);
+      });
+      
+      // Try fuzzy matching against sample contacts
+      const fuzzyMatch = this.findBestFuzzyMatch(expandedNames[0], sampleContacts);
+      if (fuzzyMatch) {
+        console.log(`[RDFContactAnalyzer] 🎯 FUZZY MATCH: Found potential match - ${fuzzyMatch.name}`);
+        return [fuzzyMatch];
+      }
+    }
+    
+    console.log(`[RDFContactAnalyzer] ❌ NO MATCHES: No contacts found for "${expandedNames[0]}"`);
+    return [];
+  }
+
+  /**
+   * Try specific searches for each name variation (SIMPLIFIED - NO RECURSION)
+   */
+  private async trySpecificSearches(
+    expandedNames: string[], 
+    userUUID: string, 
+    unifiedGoogleManager: any
+  ): Promise<Contact[]> {
+    console.log(`[RDFContactAnalyzer] 🔍 SIMPLIFIED SEARCH: Testing ${expandedNames.length} name variations`);
+    
+    // Try just the first name (original) to avoid recursion
+    const primaryName = expandedNames[0];
+    if (!primaryName) return [];
+    
+    try {
+      console.log(`[RDFContactAnalyzer] 🎯 Single search for primary name: "${primaryName}"`);
+      
+      const result = await unifiedGoogleManager.processMessage(
+        `Search contacts for: ${primaryName}`,
+        userUUID,
+        "America/Los_Angeles",
+        undefined,
+        ExecutionContextType.WEBSOCKET
+      );
+      
+      console.log(`[RDFContactAnalyzer] Search result for "${primaryName}":`, {
+        success: result.success,
+        hasRawData: !!result.rawData,
+        hasStructured: !!result.structured,
+        dataType: typeof result.data
+      });
+      
+      if (result.success) {
+        // Try to extract from both rawData and structured data
+        let extractedContacts: Contact[] = [];
         
-        // Use the unified Google manager to search contacts
-        const searchQuery = `Search contacts for: ${name}`;
+        if (result.rawData) {
+          extractedContacts = this.extractContactsFromApiResponse(result.rawData, primaryName);
+        }
+        
+        if (extractedContacts.length === 0 && result.structured) {
+          extractedContacts = this.extractContactsFromStructuredResponse(result.structured, primaryName);
+        }
+        
+        if (extractedContacts.length === 0 && result.data) {
+          extractedContacts = this.extractContactsFromApiResponse(result.data, primaryName);
+        }
+        
+        console.log(`[RDFContactAnalyzer] ✅ Extracted ${extractedContacts.length} contacts for "${primaryName}"`);
+        return extractedContacts;
+      }
+      
+    } catch (error) {
+      console.warn(`[RDFContactAnalyzer] Search failed for "${primaryName}":`, error);
+    }
+    
+    return [];
+  }
+
+  /**
+   * Get a small sample of contacts to verify connection and show available names
+   */
+  private async getSampleContacts(userUUID: string, unifiedGoogleManager: any): Promise<Contact[]> {
+    try {
+      console.log(`[RDFContactAnalyzer] 📋 Getting sample contacts to verify connection`);
+      
+      const result = await unifiedGoogleManager.processMessage(
+        `List my contacts`,
+        userUUID,
+        "America/Los_Angeles",
+        undefined,
+        ExecutionContextType.WEBSOCKET
+      );
+      
+      console.log(`[RDFContactAnalyzer] Sample contacts result:`, {
+        success: result.success,
+        hasRawData: !!result.rawData,
+        hasStructured: !!result.structured,
+        hasData: !!result.data
+      });
+      
+      if (result.success) {
+        let contacts: Contact[] = [];
+        
+        // Try different response formats
+        if (result.rawData) {
+          const rawContacts = this.extractAllContactsFromResponse(result.rawData);
+          contacts = rawContacts.slice(0, 10).map(c => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
+        }
+        
+        if (contacts.length === 0 && result.structured) {
+          contacts = this.extractContactsFromStructuredResponse(result.structured, 'sample').slice(0, 10);
+        }
+        
+        if (contacts.length === 0 && result.data) {
+          const dataContacts = this.extractAllContactsFromResponse(result.data);
+          contacts = dataContacts.slice(0, 10).map(c => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
+        }
+        
+        console.log(`[RDFContactAnalyzer] ✅ Retrieved ${contacts.length} sample contacts`);
+        return contacts;
+      }
+      
+      return [];
+      
+    } catch (error) {
+      console.error(`[RDFContactAnalyzer] Error getting sample contacts:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Find the best fuzzy match from a list of contacts
+   */
+  private findBestFuzzyMatch(searchTerm: string, contacts: Contact[]): Contact | null {
+    if (!searchTerm || contacts.length === 0) return null;
+    
+    let bestMatch: Contact | null = null;
+    let bestScore = 0;
+    
+    for (const contact of contacts) {
+      const score = this.calculateNameMatchConfidence(searchTerm, contact);
+      if (score > bestScore && score > 0.4) { // Minimum 40% confidence
+        bestScore = score;
+        bestMatch = contact;
+      }
+    }
+    
+    if (bestMatch) {
+      console.log(`[RDFContactAnalyzer] 🎯 Best fuzzy match: "${searchTerm}" → "${bestMatch.name}" (${Math.round(bestScore * 100)}%)`);
+    }
+    
+    return bestMatch;
+  }
+
+  /**
+   * Get ALL contacts for fuzzy matching
+   */
+  private async getAllContactsForMatching(userUUID: string, unifiedGoogleManager: any): Promise<any[]> {
+    try {
+      console.log(`[RDFContactAnalyzer] 📋 Getting ALL contacts for intelligent matching`);
+      
+      // Try to get all contacts
+      const listQueries = [
+        `List all my contacts`,
+        `Get all contacts`,
+        `Show me all my contacts`,
+        `Retrieve my contact list`
+      ];
+      
+      for (const listQuery of listQueries) {
         const result = await unifiedGoogleManager.processMessage(
-          searchQuery,
+          listQuery,
           userUUID,
           "America/Los_Angeles",
           undefined,
           ExecutionContextType.WEBSOCKET
         );
         
-        console.log(`[RDFContactAnalyzer] Search result for "${name}":`, {
+        console.log(`[RDFContactAnalyzer] List query "${listQuery}" result:`, {
           success: result.success,
           hasRawData: !!result.rawData
         });
         
         if (result.success && result.rawData) {
-          const extractedContacts = this.extractContactsFromApiResponse(result.rawData, name);
-          console.log(`[RDFContactAnalyzer] Extracted ${extractedContacts.length} contacts for "${name}"`);
-          contacts.push(...extractedContacts);
+          const allContacts = this.extractAllContactsFromResponse(result.rawData);
+          if (allContacts.length > 0) {
+            console.log(`[RDFContactAnalyzer] ✅ Retrieved ${allContacts.length} total contacts`);
+            return allContacts;
+          }
         }
-        
-      } catch (error) {
-        console.warn(`[RDFContactAnalyzer] Search failed for "${name}":`, error);
+      }
+      
+      console.log(`[RDFContactAnalyzer] ⚠️ Could not retrieve contact list`);
+      return [];
+      
+    } catch (error) {
+      console.error(`[RDFContactAnalyzer] Error getting all contacts:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Extract all contacts from various response formats
+   */
+  private extractAllContactsFromResponse(rawData: any): any[] {
+    const data = rawData.data || rawData;
+    
+    // Try multiple possible response formats
+    if (data.contacts && Array.isArray(data.contacts)) {
+      console.log(`[RDFContactAnalyzer] Found contacts in data.contacts: ${data.contacts.length}`);
+      return data.contacts;
+    }
+    
+    if (data.response_data?.results && Array.isArray(data.response_data.results)) {
+      console.log(`[RDFContactAnalyzer] Found contacts in response_data.results: ${data.response_data.results.length}`);
+      return data.response_data.results;
+    }
+    
+    if (data.results && Array.isArray(data.results)) {
+      console.log(`[RDFContactAnalyzer] Found contacts in results: ${data.results.length}`);
+      return data.results;
+    }
+    
+    // Try to find any array of contact-like objects
+    for (const [key, value] of Object.entries(data)) {
+      if (Array.isArray(value) && value.length > 0) {
+        // Check if it looks like contacts (has person data or name fields)
+        const firstItem = value[0];
+        if (firstItem && (
+          firstItem.person || 
+          firstItem.name || 
+          firstItem.names || 
+          firstItem.emailAddresses ||
+          firstItem.phoneNumbers
+        )) {
+          console.log(`[RDFContactAnalyzer] Found contacts in ${key}: ${value.length}`);
+          return value;
+        }
       }
     }
     
-    // Remove duplicates based on email address
-    const uniqueContacts = this.deduplicateContacts(contacts);
-    console.log(`[RDFContactAnalyzer] 🎯 Found ${uniqueContacts.length} unique contacts total`);
+    console.log(`[RDFContactAnalyzer] ⚠️ No contact arrays found in response`);
+    return [];
+  }
+
+  /**
+   * Perform intelligent fuzzy matching with AI-generated variations
+   */
+  private async performIntelligentFuzzyMatching(
+    searchVariations: string[], 
+    allContacts: any[]
+  ): Promise<Contact[]> {
+    console.log(`[RDFContactAnalyzer] 🧠 Performing intelligent fuzzy matching`);
+    console.log(`[RDFContactAnalyzer] 🔍 Matching ${searchVariations.length} search terms against ${allContacts.length} contacts`);
     
-    return uniqueContacts;
+    const matches: Array<Contact & { confidence: number }> = [];
+    
+    for (const contact of allContacts) {
+      const transformedContact = this.transformApiContactToContact(contact, 'fuzzy-search');
+      if (!transformedContact) continue;
+      
+      // Calculate confidence for this contact against all search variations
+      let bestConfidence = 0;
+      let bestReason = '';
+      
+      for (const searchTerm of searchVariations) {
+        const confidence = this.calculateNameMatchConfidence(searchTerm, transformedContact);
+        if (confidence > bestConfidence) {
+          bestConfidence = confidence;
+          bestReason = `Matched "${searchTerm}" to "${transformedContact.name}"`;
+        }
+      }
+      
+      // If confidence is above threshold, include this contact
+      if (bestConfidence > 0.3) {  // Lower threshold for fuzzy matching
+        console.log(`[RDFContactAnalyzer] 🎯 MATCH: ${transformedContact.name} (${Math.round(bestConfidence * 100)}% confidence) - ${bestReason}`);
+        matches.push({
+          ...transformedContact,
+          confidence: bestConfidence
+        });
+      }
+    }
+    
+    // Sort by confidence (highest first) and return top matches
+    const sortedMatches = matches
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 10); // Top 10 matches
+    
+    console.log(`[RDFContactAnalyzer] 🏆 Final fuzzy matches: ${sortedMatches.length} contacts`);
+    sortedMatches.forEach((match, index) => {
+      console.log(`[RDFContactAnalyzer]   ${index + 1}. ${match.name} ${match.email ? `(${match.email})` : ''} - ${Math.round(match.confidence * 100)}%`);
+    });
+    
+    // Remove confidence property and return as Contact[]
+    return sortedMatches.map(({ confidence, ...contact }) => contact);
+  }
+
+  /**
+   * Calculate intelligent name matching confidence
+   */
+  private calculateNameMatchConfidence(searchTerm: string, contact: Contact): number {
+    const searchLower = searchTerm.toLowerCase().trim();
+    const contactName = contact.name.toLowerCase();
+    
+    // Exact match
+    if (contactName === searchLower) return 1.0;
+    
+    // Extract first and last names
+    const contactParts = contactName.split(/\s+/);
+    const contactFirst = contactParts[0] || '';
+    const contactLast = contactParts[contactParts.length - 1] || '';
+    
+    // First name exact match
+    if (contactFirst === searchLower) return 0.9;
+    
+    // Last name exact match  
+    if (contactLast === searchLower) return 0.8;
+    
+    // Contains search term
+    if (contactName.includes(searchLower)) return 0.7;
+    
+    // First name starts with search term
+    if (contactFirst.startsWith(searchLower)) return 0.6;
+    
+    // Last name starts with search term
+    if (contactLast.startsWith(searchLower)) return 0.6;
+    
+    // Search term starts with first name (nickname potential)
+    if (searchLower.startsWith(contactFirst) && contactFirst.length >= 3) return 0.5;
+    
+    // Levenshtein distance for typos
+    const distance = this.calculateLevenshteinDistance(searchLower, contactFirst);
+    if (distance <= 2 && contactFirst.length > 3) {
+      return Math.max(0, 0.7 - (distance * 0.2));
+    }
+    
+    // Check against full name with different distance
+    const fullDistance = this.calculateLevenshteinDistance(searchLower, contactName);
+    const maxLength = Math.max(searchLower.length, contactName.length);
+    const similarity = 1 - (fullDistance / maxLength);
+    
+    if (similarity > 0.5) {
+      return similarity * 0.6; // Scale down full name similarity
+    }
+    
+    return 0;
+  }
+
+  /**
+   * Calculate Levenshtein distance between two strings
+   */
+  private calculateLevenshteinDistance(str1: string, str2: string): number {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+
+    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+
+    for (let j = 1; j <= str2.length; j++) {
+      for (let i = 1; i <= str1.length; i++) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1, // deletion
+          matrix[j - 1][i] + 1, // insertion
+          matrix[j - 1][i - 1] + indicator // substitution
+        );
+      }
+    }
+
+    return matrix[str2.length][str1.length];
   }
 
   /**
@@ -196,7 +586,7 @@ export class RDFContactAnalyzer {
 
   // Private helper methods
 
-  private extractContactName(message: string): string {
+  private extractContactNameFallback(message: string): string {
     console.log(`[RDFContactAnalyzer] 🔍 Extracting contact name from: "${message}"`);
     
     // Special case: look for single letter names after "with"
@@ -208,16 +598,16 @@ export class RDFContactAnalyzer {
 
     // Enhanced regex patterns to find names after action words
     const patterns = [
-      // "send/email/text/call Eden" or "send to Eden"
-      /(?:send|email|text|call|toss)(?:\s+(?:an?\s+)?(?:email|message|text)\s+)?(?:to\s+)?([A-Z][a-z]+)(?:\s|$)/i,
+      // "send/email/text/call Eden" or "send to Eden" 
+      /(?:send|email|text|call|toss)(?:\s+(?:an?\s+)?(?:email|message|text)\s+)?(?:to\s+)?([A-Z][a-z]+)(?:\s+(?:about|asking|regarding))/i,
+      // "send Eden an email" pattern
+      /(?:send|email|text|call|toss)\s+([A-Z][a-z]+)\s+(?:an?\s+)/i,
       // "message to Eden" or "email to Eden"
-      /(?:message|email)\s+(?:to\s+)?([A-Z][a-z]+)/i,
+      /(?:message|email)\s+(?:to\s+)?([A-Z][a-z]+)(?:\s+(?:about|asking|regarding))/i,
       // "to Eden" (standalone)
       /\b(?:to)\s+([A-Z][a-z]+)(?:\s+(?:asking|about|regarding))/i,
       // "with Eden"
       /(?:with)\s+([A-Z][a-z]+)/i,
-      // "Eden about/an" pattern
-      /\b([A-Z][a-z]+)\s+(?:about|asking)/i,
       // "Dr. Eden" pattern
       /Dr\.\s+([A-Z][a-z]+)/i
     ];
@@ -250,7 +640,7 @@ export class RDFContactAnalyzer {
     return 'Unknown';
   }
 
-  private determineIntent(message: string): string {
+  private determineIntentFallback(message: string): string {
     if (message.includes('email') || message.includes('send')) return 'send_email';
     if (message.includes('text') || message.includes('message')) return 'send_text';
     if (message.includes('call')) return 'make_call';
@@ -258,7 +648,7 @@ export class RDFContactAnalyzer {
     return 'unknown';
   }
 
-  private extractContextClues(message: string): string[] {
+  private extractContextCluesFallback(message: string): string[] {
     const clues: string[] = [];
     
     // Business context
@@ -274,14 +664,14 @@ export class RDFContactAnalyzer {
     return clues;
   }
 
-  private determineFormalityLevel(message: string, contextClues: string[]): 'casual' | 'neutral' | 'business' | 'formal' {
+  private determineFormalityLevelFallback(message: string, contextClues: string[]): 'casual' | 'neutral' | 'business' | 'formal' {
     if (message.includes('Dr.') || message.includes('test results')) return 'formal';
     if (contextClues.some(clue => ['quarterly', 'report', 'meeting', 'project'].includes(clue))) return 'business';
     if (contextClues.some(clue => ['dinner', 'tonight'].includes(clue))) return 'casual';
     return 'neutral';
   }
 
-  private determineUrgency(message: string): 'low' | 'normal' | 'urgent' {
+  private determineUrgencyFallback(message: string): 'low' | 'normal' | 'urgent' {
     if (message.toUpperCase().includes('URGENT') || message.includes('immediately')) return 'urgent';
     if (message.includes('asap')) return 'urgent';
     // Don't treat casual dinner plans as urgent
@@ -289,14 +679,14 @@ export class RDFContactAnalyzer {
     return 'normal';
   }
 
-  private generateAdditionalContext(formality: string, contextClues: string[]): string {
+  private generateAdditionalContextFallback(formality: string, contextClues: string[]): string {
     if (formality === 'business') return 'work-related communication';
     if (formality === 'casual') return 'personal communication';
     if (formality === 'formal') return 'formal/professional communication';
     return 'general communication';
   }
 
-  private calculateConfidence(contactName: string, intent: string, contextClues: string[]): number {
+  private calculateConfidenceFallback(contactName: string, intent: string, contextClues: string[]): number {
     let confidence = 0.5; // Base confidence
 
     // Boost for clear contact name
@@ -315,78 +705,81 @@ export class RDFContactAnalyzer {
   }
 
   /**
-   * Generate intelligent name variations using AI reasoning
+   * Generate intelligent name variations using RDF semantic reasoning (REPLACES EXPENSIVE OPENAI CALLS!)
    */
   private async generateIntelligentNameVariations(name: string, context?: MessageAnalysis): Promise<string[]> {
     try {
-      console.log(`[RDFContactAnalyzer] 🤖 Using AI to generate variations for "${name}"`);
+      console.log(`[RDFContactAnalyzer] 🧠 Using RDF semantic reasoning for name variations: "${name}"`);
       
-      const { OpenAI } = await import('openai');
-      const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
+      // Use RDF service for name variation generation - much cheaper than OpenAI!
+      const rdfNameAnalysis = await rdfServiceClient.processRDFRequest({
+        name: name,
+        domain: 'name_linguistics',
+        task: 'name_variation_generation',
+        context: context ? {
+          formality: context.formality,
+          intent: context.intent,
+          cultural_context: context.context_clues
+        } : undefined,
+        variation_types: [
+          'phonetic_variations',
+          'nickname_derivations', 
+          'cultural_variants',
+          'orthographic_variations',
+          'diminutive_forms',
+          'similar_sounding_names'
+        ]
       });
-
-      const contextInfo = context ? `
-        Communication context: ${context.formality} (${context.intent})
-        Context clues: ${context.context_clues?.join(', ') || 'none'}
-      ` : '';
-
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an intelligent name variation generator for contact resolution. Generate realistic variations that could refer to the same person.
-
-Include:
-1. Common nicknames and short forms
-2. Phonetic spellings and pronunciations  
-3. Cultural/linguistic variations
-4. Similar-sounding names people might confuse
-5. Common typos or mishearings
-
-Return ONLY a JSON array of strings (no explanations). Focus on practical variations people actually use.
-
-Examples:
-- "Michael" → ["Mike", "Mick", "Mickey", "Mikael", "Mikhail", "Michel"]
-- "Catherine" → ["Kate", "Katie", "Cathy", "Katherine", "Kathryn", "Cat", "Kit"]
-- "Eden" → ["Edan", "Aiden", "Ethan", "Aden", "Eaton"]
-- "Santiago" → ["Santo", "Santi", "Tiago", "Diego"]`
-          },
-          {
-            role: "user", 
-            content: `Generate name variations for: "${name}"${contextInfo}`
-          }
-        ],
-        max_tokens: 150,
-        temperature: 0.3
+      
+      console.log(`[RDFContactAnalyzer] ✅ RDF name analysis completed:`, {
+        hasPhoneticVariations: !!rdfNameAnalysis.phonetic_variations,
+        hasNicknames: !!rdfNameAnalysis.nickname_derivations,
+        hasCulturalVariants: !!rdfNameAnalysis.cultural_variants
       });
-
-      const content = response.choices[0]?.message?.content?.trim();
-      if (!content) {
-        console.warn(`[RDFContactAnalyzer] AI returned empty response for "${name}"`);
-        return this.generateRuleBasedVariations(name);
+      
+      // Collect all variations from RDF analysis
+      const variations: string[] = [];
+      
+      if (rdfNameAnalysis.phonetic_variations) {
+        variations.push(...rdfNameAnalysis.phonetic_variations);
       }
-
-      const variations = JSON.parse(content);
-      if (!Array.isArray(variations)) {
-        console.warn(`[RDFContactAnalyzer] AI returned non-array for "${name}"`);
-        return this.generateRuleBasedVariations(name);
+      
+      if (rdfNameAnalysis.nickname_derivations) {
+        variations.push(...rdfNameAnalysis.nickname_derivations);
       }
-
-      console.log(`[RDFContactAnalyzer] 🧠 AI generated ${variations.length} variations for "${name}": [${variations.join(', ')}]`);
-      return variations.filter(v => typeof v === 'string' && v.length > 0);
+      
+      if (rdfNameAnalysis.cultural_variants) {
+        variations.push(...rdfNameAnalysis.cultural_variants);
+      }
+      
+      if (rdfNameAnalysis.orthographic_variations) {
+        variations.push(...rdfNameAnalysis.orthographic_variations);
+      }
+      
+      if (rdfNameAnalysis.diminutive_forms) {
+        variations.push(...rdfNameAnalysis.diminutive_forms);
+      }
+      
+      if (rdfNameAnalysis.similar_sounding_names) {
+        variations.push(...rdfNameAnalysis.similar_sounding_names);
+      }
+      
+      // Filter and deduplicate
+      const uniqueVariations = [...new Set(variations.filter(v => typeof v === 'string' && v.length > 0))];
+      
+      console.log(`[RDFContactAnalyzer] 🧠 RDF generated ${uniqueVariations.length} variations for "${name}": [${uniqueVariations.join(', ')}]`);
+      return uniqueVariations;
       
     } catch (error) {
-      console.warn(`[RDFContactAnalyzer] AI name variation failed for "${name}":`, error);
-      return this.generateRuleBasedVariations(name);
+      console.warn(`[RDFContactAnalyzer] ⚠️ RDF name variation failed for "${name}", using rule-based fallback:`, error);
+      return this.generateRuleBasedVariationsFallback(name);
     }
   }
 
   /**
-   * Fallback rule-based name variations for when AI fails
+   * Fallback rule-based name variations for when RDF fails
    */
-  private generateRuleBasedVariations(name: string): string[] {
+  private generateRuleBasedVariationsFallback(name: string): string[] {
     console.log(`[RDFContactAnalyzer] 📝 Using rule-based fallback for "${name}"`);
     
     const variations: string[] = [];
@@ -502,6 +895,46 @@ Examples:
     }
 
     return reasons.join(', ') || 'Basic contact match';
+  }
+
+  /**
+   * Extract contacts from structured response format
+   */
+  private extractContactsFromStructuredResponse(structured: any, searchTerm: string): Contact[] {
+    console.log(`[RDFContactAnalyzer] 📄 Processing structured response for "${searchTerm}"`);
+    
+    const contacts: Contact[] = [];
+    
+    try {
+      // Handle structured contact data format
+      if (structured.contacts && Array.isArray(structured.contacts)) {
+        console.log(`[RDFContactAnalyzer] Found ${structured.contacts.length} contacts in structured.contacts`);
+        
+        for (const item of structured.contacts) {
+          const contact = this.transformApiContactToContact(item, searchTerm);
+          if (contact) {
+            contacts.push(contact);
+          }
+        }
+      } else if (structured.results && Array.isArray(structured.results)) {
+        console.log(`[RDFContactAnalyzer] Found ${structured.results.length} contacts in structured.results`);
+        
+        for (const item of structured.results) {
+          const contact = this.transformApiContactToContact(item, searchTerm);
+          if (contact) {
+            contacts.push(contact);
+          }
+        }
+      } else {
+        console.log(`[RDFContactAnalyzer] ⚠️ No recognized contact arrays in structured response`);
+        console.log(`[RDFContactAnalyzer] Available keys:`, Object.keys(structured));
+      }
+      
+    } catch (error) {
+      console.error(`[RDFContactAnalyzer] Error processing structured response:`, error);
+    }
+    
+    return contacts;
   }
 
   /**

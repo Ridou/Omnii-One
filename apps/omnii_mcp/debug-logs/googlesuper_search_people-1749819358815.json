@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-06-13T12:55:58.815Z",
+  "userId": "cd9bdc60-35af-4bb6-b87e-1932e96fb354",
+  "actionName": "GOOGLESUPER_SEARCH_PEOPLE",
+  "inputParams": {},
+  "response": {
+    "data": {
+      "response_data": {
+        "results": [
+          {
+            "person": {
+              "emailAddresses": [
+                {
+                  "metadata": {
+                    "primary": true,
+                    "source": {
+                      "id": "6c8ebdf70f1be55b",
+                      "type": "OTHER_CONTACT"
+                    },
+                    "sourcePrimary": true
+                  },
+                  "value": "edenchan717@gmail.com"
+                }
+              ],
+              "etag": "%EgkBAgkLLjc9Pj8aAQIiDGNPaHZHZWVkN0dZPQ==",
+              "names": [
+                {
+                  "displayName": "Eden Chan",
+                  "displayNameLastFirst": "Chan, Eden",
+                  "familyName": "Chan",
+                  "givenName": "Eden",
+                  "metadata": {
+                    "primary": true,
+                    "source": {
+                      "id": "6c8ebdf70f1be55b",
+                      "type": "OTHER_CONTACT"
+                    },
+                    "sourcePrimary": true
+                  },
+                  "unstructuredName": "Eden Chan"
+                }
+              ],
+              "resourceName": "otherContacts/c7822398471597188443"
+            }
+          }
+        ]
+      }
+    },
+    "error": null,
+    "successfull": true,
+    "successful": true,
+    "logId": "log_fn8v9pEotfht"
+  },
+  "success": true,
+  "formattedTimestamp": "6/13/2025, 12:55:58 PM"
+}
