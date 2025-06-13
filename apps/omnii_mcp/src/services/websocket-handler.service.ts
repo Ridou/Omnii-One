@@ -17,7 +17,7 @@ import {
 import { TimezoneManager } from "./timezone-manager";
 import { UnifiedGoogleManager } from "./unified-google-manager";
 import { InterventionManager } from "./intervention-manager";
-import { RDFService } from "./rdf-service";
+import { rdfServiceClient } from "./rdf-client";
 import { randomBytes } from "crypto";
 import responseManager from "./response-manager";
 import { getObjectStructure, logObjectStructure } from "../utils/object-structure";
@@ -44,7 +44,9 @@ export class WebSocketHandlerService {
   private googleManager: UnifiedGoogleManager;
   private interventionManager: InterventionManager;
   private entityManager: EntityManager;
-  private rdfService: RDFService;
+  private rdfService: {
+    processHumanInputToOmniiMCP: (message: string) => Promise<any>;
+  };
 
   constructor() {
     this.timezoneManager = new TimezoneManager();
@@ -52,9 +54,64 @@ export class WebSocketHandlerService {
     this.interventionManager = new InterventionManager(this);
     this.actionPlanner = new ActionPlanner(this.interventionManager);
     this.entityManager = new EntityManager();
-    this.rdfService = new RDFService();
     
-    console.log('🧠 WebSocketHandlerService initialized with brain memory integration');
+    // Create RDF service adapter that connects to Python service on Railway
+    this.rdfService = {
+      processHumanInputToOmniiMCP: async (message: string) => {
+        try {
+          console.log(`[WebSocket] 🚀 RDF Client: Connecting to Python service on Railway internal network`);
+          
+          // Use the RDF client to connect to Python service
+          const result = await rdfServiceClient.processRDFRequest({
+            text: message,
+            domain: 'contact_communication',
+            task: 'message_analysis',
+            extractors: ['contact_names', 'communication_intent', 'context_clues', 'formality_level', 'urgency_indicators']
+          });
+          
+          console.log(`[WebSocket] ✅ RDF Client: Received response from Python service`);
+          
+          // Transform the result to match the expected interface
+          return {
+            success: true,
+            data: {
+              structured: {
+                ai_reasoning: {
+                  extracted_concepts: result.concepts || [],
+                  intent_analysis: {
+                    primary_intent: result.intent || 'unknown',
+                    confidence: result.confidence || 0.5,
+                    urgency_level: result.urgency_level || 'medium'
+                  }
+                },
+                structured_actions: result.actions || []
+              }
+            }
+          };
+        } catch (error) {
+          console.warn(`[WebSocket] ⚠️ RDF Client: Failed to connect to Python service:`, error);
+          // Return a graceful fallback response
+          return {
+            success: false,
+            data: {
+              structured: {
+                ai_reasoning: {
+                  extracted_concepts: [],
+                  intent_analysis: {
+                    primary_intent: 'unknown',
+                    confidence: 0,
+                    urgency_level: 'medium'
+                  }
+                },
+                structured_actions: []
+              }
+            }
+          };
+        }
+      }
+    };
+    
+    console.log('🧠 WebSocketHandlerService initialized with Railway RDF client integration');
   }
 
   /**
@@ -341,28 +398,14 @@ export class WebSocketHandlerService {
         `[WebSocket] 📍 Using timezone: ${userTimezone} for user: ${userId}`
       );
 
-      // NEW: Get brain memory context before processing
+      // NEW: Get brain memory context before processing (with fast timeout)
       let brainMemoryContext: BrainMemoryContext | null = null;
       let brainMemoryUsed = false;
       
-      try {
-        console.log(`[WebSocket] 🧠 Retrieving brain memory context for chat user: ${userId}`);
-        brainMemoryContext = await productionBrainService.getBrainMemoryContext(
-          userId,
-          message,
-          'chat',
-          `chat_${userId}`, // Use chat ID format
-          {
-            prioritizeRecent: false, // Chat can use longer context
-            timeoutMs: 200 // Slightly more time for chat
-          }
-        );
-        brainMemoryUsed = true;
-        console.log(`[WebSocket] ✅ Brain memory retrieved: strength ${brainMemoryContext.consolidation_metadata.memory_strength.toFixed(2)}, ${brainMemoryContext.working_memory.recent_messages.length} recent messages`);
-      } catch (error) {
-        console.warn(`[WebSocket] ⚠️ Brain memory retrieval failed, continuing without context:`, error);
-        brainMemoryUsed = false;
-      }
+      // ⚡ DISABLED: Neo4j context retrieval - too slow for real-time processing
+      // We need a faster caching strategy instead of querying Neo4j on every message
+      console.log(`[WebSocket] ⚡ Skipping brain memory context retrieval for faster processing`);
+      brainMemoryUsed = false;
 
       // NEW: RDF Analysis (pre-processing for semantic understanding)
       let rdfInsights: any = null;

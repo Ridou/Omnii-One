@@ -29,7 +29,6 @@ import {
 } from "./intervention-manager";
 import { EntityManager } from "./entity-recognizer";
 import { SmartContactResolver } from "./smart-contact-resolver";
-import { RDFService } from "./rdf-service";
 import responseManager from "./response-manager";
 import { StepExecutorFactory } from "./action-planner/step-executors/step-executor-factory";
 import { DependencyResolver } from "./action-planner/dependency-resolver";
@@ -59,7 +58,6 @@ export class ActionPlanner {
   private entityManager: EntityManager;
   private stepExecutorFactory: StepExecutorFactory;
   private smartContactResolver: SmartContactResolver;
-  private rdfService: RDFService | null;
 
   constructor(interventionManager?: InterventionManager) {
     this.openai = new OpenAI({
@@ -72,14 +70,6 @@ export class ActionPlanner {
       this.interventionManager
     );
     this.smartContactResolver = new SmartContactResolver();
-    
-    try {
-      this.rdfService = new RDFService();
-      console.log('🧠 ActionPlanner initialized with RDF reasoning for entity resolution');
-    } catch (error) {
-      console.warn('⚠️ RDF service unavailable for entity resolution, using fallback contact resolution');
-      this.rdfService = null;
-    }
   }
 
   /**

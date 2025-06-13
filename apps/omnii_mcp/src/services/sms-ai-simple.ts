@@ -12,7 +12,6 @@ import {
 import { InterventionManager } from "./intervention-manager";
 import { productionBrainService } from "./memory/production-brain-service";
 import { BrainMemoryContext } from "../types/brain-memory-schemas";
-import { RDFService } from "./rdf-service";
 
 export class SimpleSMSAI {
   private openai: OpenAI;
@@ -20,7 +19,6 @@ export class SimpleSMSAI {
   private actionPlanner: ActionPlanner;
   private interventionManager: InterventionManager;
   private entityManager: EntityManager;
-  private rdfService: RDFService | null;
 
   // Phone number to user UUID mapping (for OAuth and contact lookups)
   private phoneToUUIDMap: Record<string, string> = {
@@ -43,15 +41,6 @@ export class SimpleSMSAI {
     this.interventionManager = new InterventionManager(); // No WebSocket handler for SMS
     this.actionPlanner = new ActionPlanner(this.interventionManager);
     this.entityManager = new EntityManager();
-
-    // Initialize RDF service if available
-    try {
-      this.rdfService = new RDFService();
-      console.log('🧠 SimpleSMSAI initialized with brain memory + RDF integration');
-    } catch (error) {
-      console.warn('⚠️ RDF service unavailable for SMS, continuing without semantic reasoning:', error.message);
-      this.rdfService = null;
-    }
   }
 
   async processMessage(
@@ -133,24 +122,10 @@ export class SimpleSMSAI {
       let brainMemoryContext: BrainMemoryContext | null = null;
       let brainMemoryUsed = false;
       
-      try {
-        console.log(`[SimpleSMSAI] 🧠 Retrieving brain memory context for ${phoneNumber}`);
-        brainMemoryContext = await productionBrainService.getBrainMemoryContext(
-          entityId,
-          message,
-          'sms',
-          phoneNumber,
-          {
-            prioritizeRecent: true, // SMS needs recent context
-            timeoutMs: 150 // Faster for SMS
-          }
-        );
-        brainMemoryUsed = true;
-        console.log(`[SimpleSMSAI] ✅ Brain memory retrieved: strength ${brainMemoryContext.consolidation_metadata.memory_strength.toFixed(2)}, ${brainMemoryContext.working_memory.recent_messages.length} recent messages`);
-      } catch (error) {
-        console.warn(`[SimpleSMSAI] ⚠️ Brain memory retrieval failed, continuing without context:`, error);
-        brainMemoryUsed = false;
-      }
+      // ⚡ DISABLED: Neo4j context retrieval - too slow for real-time SMS processing  
+      // We need a faster caching strategy instead of querying Neo4j on every SMS
+      console.log(`[SimpleSMSAI] ⚡ Skipping brain memory context retrieval for faster SMS processing`);
+      brainMemoryUsed = false;
 
       // Use action planner with brain memory and RDF enhancement
       const result = await this.handleWithActionPlanner(
@@ -362,51 +337,18 @@ export class SimpleSMSAI {
       let rdfEnhancement: any = undefined;
       const rdfStartTime = Date.now();
 
-      if (this.rdfService) {
-        try {
-          console.log(`[SimpleSMSAI] 🧠 Running RDF analysis on SMS: "${message}"`);
-          rdfInsights = await this.rdfService.processHumanInputToOmniiMCP(message);
-          rdfSuccess = true;
-          
-          const rdfProcessingTime = Date.now() - rdfStartTime;
-          console.log(`[SimpleSMSAI] ✅ RDF analysis complete (${rdfProcessingTime}ms):`, rdfInsights);
-
-          // Create RDF enhancement metadata from complex nested structure
-          const aiReasoning = rdfInsights.data?.structured?.ai_reasoning || rdfInsights.ai_reasoning;
-          const structuredActions = rdfInsights.data?.structured?.structured_actions || rdfInsights.structured_actions || [];
-          
-          rdfEnhancement = {
-            reasoning_applied: true,
-            extracted_concepts: (aiReasoning?.extracted_concepts || []).map(concept => ({
-              concept_name: concept.concept_name,
-              confidence: concept.confidence,
-              concept_type: concept.insight_type || 'semantic_connection'
-            })),
-            intent_analysis: aiReasoning?.intent_analysis || {
-              primary_intent: structuredActions[0]?.action_type || 'unknown',  
-              confidence: structuredActions[0]?.confidence || 0.5,
-              urgency_level: aiReasoning?.intent_analysis?.urgency_level || 'medium'
-            },
-            processing_metadata: {
-              processing_time_ms: rdfProcessingTime,
-              concepts_extracted: (aiReasoning?.extracted_concepts || []).length,
-              analysis_depth: rdfInsights.reasoning_depth || rdfInsights.data?.structured?.reasoning_depth || 'standard'
-            }
-          };
-        } catch (error) {
-          console.warn(`[SimpleSMSAI] ⚠️ RDF analysis failed, continuing without semantic reasoning:`, error);
-          rdfEnhancement = {
-            reasoning_applied: false,
-            extracted_concepts: [],
-            intent_analysis: { primary_intent: 'unknown', confidence: 0, urgency_level: 'medium' },
-            processing_metadata: {
-              processing_time_ms: Date.now() - rdfStartTime,
-              concepts_extracted: 0,
-              analysis_depth: 'failed'
-            }
-          };
+      // RDF service removed - skip semantic reasoning for SMS for now
+      console.log(`[SimpleSMSAI] ⚠️ RDF semantic analysis disabled - SMS will use standard processing`);
+      rdfEnhancement = {
+        reasoning_applied: false,
+        extracted_concepts: [],
+        intent_analysis: { primary_intent: 'unknown', confidence: 0, urgency_level: 'medium' },
+        processing_metadata: {
+          processing_time_ms: Date.now() - rdfStartTime,
+          concepts_extracted: 0,
+          analysis_depth: 'disabled'
         }
-      }
+      };
 
       // Extract and resolve entities (pass userUUID for contact resolution)
       const resolvedEntities = await this.entityManager.resolveEntities(

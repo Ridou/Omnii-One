@@ -1,5 +1,4 @@
 import unifiedGoogleManager from "./unified-google-manager";
-import { RDFService } from "./rdf-service";
 import { ExecutionContextType } from "../types/action-planning.types";
 
 interface ContactMatch {
@@ -19,18 +18,11 @@ interface SmartContactResult {
 }
 
 export class SmartContactResolver {
-  private rdfService: RDFService | null;
   private contactsCache: Map<string, any[]> = new Map();
   private cacheExpiry: number = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
-    try {
-      this.rdfService = new RDFService();
-      console.log('🧠 SmartContactResolver initialized with RDF reasoning');
-    } catch (error) {
-      console.warn('⚠️ RDF service unavailable for contact resolution, using fallback matching');
-      this.rdfService = null;
-    }
+    console.log('🔍 SmartContactResolver initialized (legacy fallback mode - RDFContactAnalyzer recommended)');
   }
 
   /**
@@ -113,71 +105,8 @@ export class SmartContactResolver {
    * Ask RDF for context analysis of what the search term could refer to
    */
   private async getRDFContextSuggestions(searchTerm: string): Promise<string[]> {
-    if (!this.rdfService) {
-      console.log(`[SmartContactResolver] RDF service not available for context analysis`);
-      return [];
-    }
-
-    try {
-      console.log(`[SmartContactResolver] 🧠 Asking RDF for context analysis of "${searchTerm}"`);
-      
-      const contextPrompt = `Analyze the search term "${searchTerm}" and provide ALL possible interpretations, variations, and related terms that someone might use to refer to a person. Consider:
-
-1. Common nicknames and formal name variations
-2. Cultural/language variations (Spanish, English, etc.)
-3. Family relationship terms (papi = father, dad, papa, etc.)
-4. Shortened versions and informal variations
-5. Alternative spellings and phonetic matches
-6. Potential typos or similar-sounding names
-
-For "${searchTerm}", what are ALL the possible names, nicknames, or terms this could refer to? Return a comprehensive list of search terms to try.`;
-
-      const rdfResult = await this.rdfService.processHumanInputToOmniiMCP(contextPrompt);
-      
-      if (rdfResult?.success && rdfResult.data?.structured?.ai_reasoning) {
-        const reasoning = rdfResult.data.structured.ai_reasoning;
-        const suggestions: string[] = [];
-        
-        // Extract suggestions from RDF response concepts
-        if (reasoning.extracted_concepts) {
-          for (const concept of reasoning.extracted_concepts) {
-            suggestions.push(concept.concept_name);
-          }
-        }
-        
-        // Also parse the response content for additional suggestions
-        if (reasoning.response_content) {
-          const content = reasoning.response_content.toLowerCase();
-          const commonSuggestions = [
-            'papa', 'dad', 'father', 'pap', 'papá', 'daddy',
-            'alex', 'alexander', 'alejandro', 'santin', 'santín'
-          ];
-          
-          for (const suggestion of commonSuggestions) {
-            if (content.includes(suggestion) && !suggestions.includes(suggestion)) {
-              suggestions.push(suggestion);
-            }
-          }
-        }
-        
-        // Add the original search term and basic variations
-        suggestions.push(searchTerm);
-        if (searchTerm.length >= 3) {
-          suggestions.push(searchTerm.substring(0, 3));
-          suggestions.push(searchTerm.substring(0, 4));
-        }
-        
-        const uniqueSuggestions = [...new Set(suggestions.filter(s => s && s.length > 0))];
-        console.log(`[SmartContactResolver] 🧠 RDF generated ${uniqueSuggestions.length} context suggestions:`, uniqueSuggestions);
-        
-        return uniqueSuggestions;
-      }
-    } catch (error) {
-      console.warn(`[SmartContactResolver] RDF context analysis failed:`, error);
-    }
-    
-    // Fallback to basic variations if RDF fails
-    return [searchTerm, searchTerm.substring(0, 3)];
+    console.log(`[SmartContactResolver] RDF service not available for context analysis`);
+    return [];
   }
 
   /**
@@ -240,7 +169,7 @@ For "${searchTerm}", what are ALL the possible names, nicknames, or terms this c
     
     // Use RDF to analyze the best fuzzy matches if available
     let rdfMatches: ContactMatch[] = [];
-    if (this.rdfService && allMatches.length > 0) {
+    if (rdfSuggestions.length > 0 && allMatches.length > 0) {
       rdfMatches = await this.findRDFMatches(searchTerm, allMatches.slice(0, 5)); // Top 5 for RDF analysis
     }
     
@@ -250,8 +179,6 @@ For "${searchTerm}", what are ALL the possible names, nicknames, or terms this c
     console.log(`[SmartContactResolver] 🎯 Found ${combinedMatches.length} intelligent matches`);
     return combinedMatches;
   }
-
-
 
   /**
    * Try flexible search with multiple strategies
@@ -654,44 +581,8 @@ For "${searchTerm}", what are ALL the possible names, nicknames, or terms this c
    * Use RDF to find semantic matches
    */
   private async findRDFMatches(searchTerm: string, fuzzyMatches: ContactMatch[]): Promise<ContactMatch[]> {
-    if (!this.rdfService || fuzzyMatches.length === 0) {
-      return [];
-    }
-
-    try {
-      const contactNames = fuzzyMatches.slice(0, 5).map(m => m.name); // Top 5 for RDF analysis
-      const rdfPrompt = `Analyze name similarity: User searched for "${searchTerm}" and we found these contacts: ${contactNames.join(', ')}. Which names are most likely to be the same person?`;
-      
-      console.log(`[SmartContactResolver] 🧠 RDF analyzing: ${rdfPrompt}`);
-      
-      const rdfResult = await this.rdfService.processHumanInputToOmniiMCP(rdfPrompt);
-      
-      if (rdfResult?.success && rdfResult.data?.structured?.ai_reasoning?.extracted_concepts) {
-        const concepts = rdfResult.data.structured.ai_reasoning.extracted_concepts;
-        
-        // Enhance fuzzy matches with RDF insights
-        return fuzzyMatches.map(match => {
-          const relevantConcept = concepts.find(c => 
-            match.name.toLowerCase().includes(c.concept_name.toLowerCase()) ||
-            c.concept_name.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-          
-          if (relevantConcept) {
-            return {
-              ...match,
-              confidence: Math.min(match.confidence + (relevantConcept.confidence * 0.3), 1.0),
-              reasoning: `${match.reasoning} + RDF semantic analysis (${Math.round(relevantConcept.confidence * 100)}% relevance)`
-            };
-          }
-          
-          return match;
-        });
-      }
-    } catch (error) {
-      console.warn(`[SmartContactResolver] RDF analysis failed:`, error);
-    }
-
-    return fuzzyMatches;
+    console.log(`[SmartContactResolver] RDF service not available for RDF analysis`);
+    return [];
   }
 
   /**

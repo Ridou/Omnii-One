@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { WebSocketHandlerService } from "../../src/services/websocket-handler.service";
-import { RDFService } from "../../src/services/rdf-service";
+import { rdfServiceClient } from "../../src/services/rdf-client";
 import { RDF_ACTION_TYPES } from "@omnii/validators";
 
 describe("WebSocketHandler RDF Integration", () => {
@@ -17,8 +17,9 @@ describe("WebSocketHandler RDF Integration", () => {
   });
 
   test("should integrate RDF service into WebSocketHandler", () => {
-    // This test will initially fail - we need to add rdfService to WebSocketHandler
-    expect(handler['rdfService']).toBeInstanceOf(RDFService);
+    // Check that the WebSocket handler has RDF service integration
+    expect(handler['rdfService']).toBeDefined();
+    expect(typeof handler['rdfService'].processHumanInputToOmniiMCP).toBe('function');
   });
 
   test("should process vague input with RDF enhancement", async () => {
