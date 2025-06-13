@@ -181,18 +181,22 @@ export class ActionPlanner {
 
           // Update the plan's entity placeholders with resolved emails
           const updatedSteps = this.patchEntityPlaceholders(initialPlan.steps, resolvedEntities);
+          
+          // Generate contextual subjects for email steps that lack them
+          const enhancedSteps = await this.enhanceEmailStepsWithContext(updatedSteps, message, userUUID);
 
-          console.log(`[ActionPlanner] 📋 Final plan after RDF resolution:`, {
-            stepDetails: updatedSteps.map(s => ({
+          console.log(`[ActionPlanner] 📋 Final plan after RDF resolution and email enhancement:`, {
+            stepDetails: enhancedSteps.map(s => ({
               type: s.type,
               action: s.action,
-              recipientEmail: s.params?.recipient_email
+              recipientEmail: s.params?.recipient_email,
+              subject: s.params?.subject
             }))
           });
 
           return {
             ...initialPlan,
-            steps: updatedSteps,
+            steps: enhancedSteps,
             isMultiStep: initialPlan.isMultiStep,
             currentStepIndex: 0,
             state: PlanState.CREATED,
@@ -375,6 +379,156 @@ export class ActionPlanner {
   }
 
   /**
+   * Enhance email steps with contextual subjects and bodies using RDF reasoning
+   */
+  private async enhanceEmailStepsWithContext(
+    steps: ActionStep[],
+    originalMessage: string,
+    userUUID?: string
+  ): Promise<ActionStep[]> {
+    console.log(`[ActionPlanner] 🎨 Enhancing email steps with contextual content`);
+    
+    const enhancedSteps = await Promise.all(
+      steps.map(async (step) => {
+        if (step.type === "email" && (step.action === "send_email" || step.action === "create_draft")) {
+          // Check if subject is missing or generic
+          const hasSubject = step.params?.subject && 
+                           step.params.subject !== "No Subject" && 
+                           step.params.subject.trim().length > 0;
+          
+          if (!hasSubject) {
+            console.log(`[ActionPlanner] 🎯 Generating subject for email step`);
+            
+            try {
+              // Use RDF to analyze the original message and generate contextual content
+              const rdfAnalyzer = new RDFContactAnalyzer();
+              const analysis = await rdfAnalyzer.analyzeMessage(originalMessage);
+              
+              // Generate contextual subject based on analysis
+              const subject = this.generateContextualSubject(analysis, originalMessage);
+              
+              // Generate contextual body if missing
+              const hasBody = step.params?.body && step.params.body.trim().length > 0;
+              const body = hasBody ? step.params.body : this.generateContextualBody(analysis, originalMessage);
+              
+              console.log(`[ActionPlanner] ✅ Generated subject: "${subject}"`);
+              
+              return {
+                ...step,
+                params: {
+                  ...step.params,
+                  subject,
+                  body
+                }
+              };
+            } catch (error) {
+              console.warn(`[ActionPlanner] Failed to generate contextual content:`, error);
+              // Fallback to a simple subject
+              return {
+                ...step,
+                params: {
+                  ...step.params,
+                  subject: "Message from Omnii AI",
+                  body: step.params?.body || "Hi there! I wanted to reach out."
+                }
+              };
+            }
+          }
+        }
+        
+        return step;
+      })
+    );
+    
+    console.log(`[ActionPlanner] 🎨 Email enhancement complete`);
+    return enhancedSteps;
+  }
+
+  /**
+   * Generate contextual email subject based on RDF analysis
+   */
+  private generateContextualSubject(analysis: any, originalMessage: string): string {
+    // Extract key context clues
+    const contextClues = analysis.context_clues || [];
+    const formality = analysis.formality || 'neutral';
+    
+    // Generate subject based on context
+    if (contextClues.includes('quarterly') && contextClues.includes('report')) {
+      return 'Quarterly Report Discussion';
+    }
+    
+    if (contextClues.includes('meeting') || contextClues.includes('project')) {
+      return 'Project Meeting Follow-up';
+    }
+    
+    if (contextClues.includes('dinner') || contextClues.includes('tonight')) {
+      return 'Tonight\'s Plans';
+    }
+    
+    if (contextClues.includes('medical') || contextClues.includes('test results')) {
+      return 'Medical Test Results';
+    }
+    
+    // Check for weekend context
+    if (originalMessage.toLowerCase().includes('weekend')) {
+      return 'Weekend Plans';
+    }
+    
+    // Check for asking about plans
+    if (originalMessage.toLowerCase().includes('plans')) {
+      return 'Checking In About Plans';
+    }
+    
+    // Formality-based fallbacks
+    if (formality === 'business') {
+      return 'Quick Check-in';
+    } else if (formality === 'casual') {
+      return 'Hey! 👋';
+    } else if (formality === 'formal') {
+      return 'Professional Inquiry';
+    }
+    
+    // Generic fallback
+    return 'Quick Message';
+  }
+
+  /**
+   * Generate contextual email body based on RDF analysis
+   */
+  private generateContextualBody(analysis: any, originalMessage: string): string {
+    const formality = analysis.formality || 'neutral';
+    const contextClues = analysis.context_clues || [];
+    
+    // Start with appropriate greeting
+    let greeting = '';
+    if (formality === 'business') {
+      greeting = 'Hi there,';
+    } else if (formality === 'casual') {
+      greeting = 'Hey!';
+    } else if (formality === 'formal') {
+      greeting = 'Good day,';
+    } else {
+      greeting = 'Hi,';
+    }
+    
+    // Generate body based on context
+    if (contextClues.includes('weekend') || originalMessage.toLowerCase().includes('weekend')) {
+      return `${greeting}\n\nI wanted to check what your plans are for the weekend. Let me know what you're up to!\n\nTalk soon!`;
+    }
+    
+    if (contextClues.includes('dinner') || contextClues.includes('tonight')) {
+      return `${greeting}\n\nJust wanted to touch base about tonight's plans. Let me know what works for you!\n\nThanks!`;
+    }
+    
+    if (contextClues.includes('quarterly') && contextClues.includes('report')) {
+      return `${greeting}\n\nI wanted to follow up regarding the quarterly report. Please let me know if you have any questions or need additional information.\n\nBest regards`;
+    }
+    
+    // Generic friendly message
+    return `${greeting}\n\nI wanted to reach out and connect. Hope you're doing well!\n\nBest`;
+  }
+
+  /**
    * Patch entity placeholders in steps with resolved emails
    */
   private patchEntityPlaceholders(steps: ActionStep[], resolvedEntities: CachedEntity[]): ActionStep[] {
@@ -404,15 +558,17 @@ export class ActionPlanner {
               };
             } else {
               console.warn(`[ActionPlanner] ❌ Could not resolve placeholder: ${recipientEmail}`);
-              // Instead of failing, use a smart fallback
+              // Instead of creating fake emails, mark the step as failed
               const entityName = slug.replace(/-/g, ' ');
               return {
                 ...step,
                 params: {
                   ...step.params,
-                  recipient_email: `${entityName.toLowerCase()}@example.com`, // Fallback email
+                  recipient_email: "", // Clear the invalid placeholder
+                  _resolutionError: `Could not find email address for "${entityName}". Please ensure the contact exists in your Google Contacts.`
                 },
-                description: `${step.description} (using fallback email for ${entityName})`,
+                description: `${step.description} (❌ Contact resolution failed)`,
+                state: StepState.FAILED,
               };
             }
           }

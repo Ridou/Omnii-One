@@ -19,6 +19,30 @@ export class EmailStepExecutor extends BaseStepExecutor {
     context: ExecutionContext
   ): Promise<StepResult> {
     try {
+      // Check if step already failed due to contact resolution error
+      if (step.params?._resolutionError) {
+        console.log(`[EmailStepExecutor] ❌ Step failed due to contact resolution error: ${step.params._resolutionError}`);
+        return this.createStepResult(
+          step,
+          false,
+          undefined,
+          step.params._resolutionError,
+          step.params._resolutionError
+        );
+      }
+
+      // Check for empty recipient email (another sign of resolution failure)
+      if (step.params?.recipient_email === "") {
+        console.log(`[EmailStepExecutor] ❌ Step has empty recipient email`);
+        return this.createStepResult(
+          step,
+          false,
+          undefined,
+          "No recipient email address provided. Contact resolution may have failed.",
+          "Missing recipient email address"
+        );
+      }
+
       // --- Dependency enforcement is already handled by executeStep ---
       // Patch recipient_email if it's a placeholder
       let patchedStep = { ...step };

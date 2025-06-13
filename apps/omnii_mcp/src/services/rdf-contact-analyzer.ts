@@ -45,25 +45,22 @@ export class RDFContactAnalyzer {
    * Expand a contact name into variations for better matching
    */
   async expandContactName(contactName: string, context?: MessageAnalysis): Promise<string[]> {
+    console.log(`[RDFContactAnalyzer] 🧠 Generating intelligent name variations for "${contactName}"`);
+    
     const variations: string[] = [];
     
     // Always include exact match first
     variations.push(contactName);
     
-    // Generate phonetic variations
-    const phoneticVariations = this.generatePhoneticVariations(contactName);
-    variations.push(...phoneticVariations.map(v => v.name));
-    
-    // Generate similar sounding names
-    const similarVariations = this.generateSimilarVariations(contactName);
-    variations.push(...similarVariations.map(v => v.name));
-    
-    // Cultural/linguistic variations
-    const culturalVariations = this.generateCulturalVariations(contactName);
-    variations.push(...culturalVariations.map(v => v.name));
+    // Generate AI-based intelligent variations
+    const intelligentVariations = await this.generateIntelligentNameVariations(contactName, context);
+    variations.push(...intelligentVariations);
     
     // Remove duplicates and return
-    return [...new Set(variations)];
+    const uniqueVariations = [...new Set(variations)];
+    console.log(`[RDFContactAnalyzer] ✅ Generated ${uniqueVariations.length} total variations: [${uniqueVariations.join(', ')}]`);
+    
+    return uniqueVariations;
   }
 
   /**
@@ -200,37 +197,56 @@ export class RDFContactAnalyzer {
   // Private helper methods
 
   private extractContactName(message: string): string {
+    console.log(`[RDFContactAnalyzer] 🔍 Extracting contact name from: "${message}"`);
+    
     // Special case: look for single letter names after "with"
     const singleLetterMatch = message.match(/(?:with|to)\s+([A-Z])\s+(?:about|regarding)/i);
     if (singleLetterMatch) {
+      console.log(`[RDFContactAnalyzer] ✅ Found single letter name: ${singleLetterMatch[1]}`);
       return singleLetterMatch[1];
     }
 
-    // Simple regex to find names after action words
+    // Enhanced regex patterns to find names after action words
     const patterns = [
-      /(?:send|email|text|call)\s+([A-Z][a-z]+)/i,
-      /(?:message|email)\s+(?:to)\s+([A-Z][a-z]+)/i,
-      /(?:to)\s+([A-Z][a-z]+)(?:\s|$)/i,
+      // "send/email/text/call Eden" or "send to Eden"
+      /(?:send|email|text|call|toss)(?:\s+(?:an?\s+)?(?:email|message|text)\s+)?(?:to\s+)?([A-Z][a-z]+)(?:\s|$)/i,
+      // "message to Eden" or "email to Eden"
+      /(?:message|email)\s+(?:to\s+)?([A-Z][a-z]+)/i,
+      // "to Eden" (standalone)
+      /\b(?:to)\s+([A-Z][a-z]+)(?:\s+(?:asking|about|regarding))/i,
+      // "with Eden"
       /(?:with)\s+([A-Z][a-z]+)/i,
-      /([A-Z][a-z]+)\s+(?:an|about)/i,
+      // "Eden about/an" pattern
+      /\b([A-Z][a-z]+)\s+(?:about|asking)/i,
+      // "Dr. Eden" pattern
       /Dr\.\s+([A-Z][a-z]+)/i
     ];
 
     for (const pattern of patterns) {
       const match = message.match(pattern);
-      if (match) {
-        return match[1];
+      if (match && match[1]) {
+        // Filter out common false positives
+        const name = match[1];
+        const stopWords = ['Email', 'Message', 'Text', 'Call', 'Send', 'To', 'About', 'Asking', 'With'];
+        if (!stopWords.includes(name)) {
+          console.log(`[RDFContactAnalyzer] ✅ Found contact name: ${name} (pattern: ${pattern})`);
+          return name;
+        }
       }
     }
 
-    // Fallback: look for any capitalized word
+    // Fallback: look for any capitalized word that isn't a stop word
     const words = message.split(' ');
+    const stopWords = ['Yooo', 'Email', 'Message', 'Text', 'Call', 'Send', 'To', 'About', 'Asking', 'With', 'The', 'And', 'Or', 'But'];
+    
     for (const word of words) {
-      if (word.match(/^[A-Z][a-z]+$/) && word.length > 1) {
+      if (word.match(/^[A-Z][a-z]+$/) && word.length > 1 && !stopWords.includes(word)) {
+        console.log(`[RDFContactAnalyzer] ✅ Found contact name via fallback: ${word}`);
         return word;
       }
     }
 
+    console.log(`[RDFContactAnalyzer] ❌ Could not extract contact name from message`);
     return 'Unknown';
   }
 
@@ -298,69 +314,138 @@ export class RDFContactAnalyzer {
     return Math.min(Math.max(confidence, 0), 1);
   }
 
-  private generatePhoneticVariations(name: string): NameVariation[] {
-    const variations: NameVariation[] = [];
-    
-    // Common phonetic variations
-    const phoneticMap: { [key: string]: string[] } = {
-      'Eden': ['Edan'],
-      'Mike': ['Mick', 'Michael'],
-      'Maria': ['Marie', 'Mary']
-    };
-
-    if (phoneticMap[name]) {
-      phoneticMap[name].forEach(variation => {
-        variations.push({
-          name: variation,
-          confidence: 0.8,
-          type: 'phonetic'
-        });
+  /**
+   * Generate intelligent name variations using AI reasoning
+   */
+  private async generateIntelligentNameVariations(name: string, context?: MessageAnalysis): Promise<string[]> {
+    try {
+      console.log(`[RDFContactAnalyzer] 🤖 Using AI to generate variations for "${name}"`);
+      
+      const { OpenAI } = await import('openai');
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
       });
-    }
 
-    return variations;
+      const contextInfo = context ? `
+        Communication context: ${context.formality} (${context.intent})
+        Context clues: ${context.context_clues?.join(', ') || 'none'}
+      ` : '';
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are an intelligent name variation generator for contact resolution. Generate realistic variations that could refer to the same person.
+
+Include:
+1. Common nicknames and short forms
+2. Phonetic spellings and pronunciations  
+3. Cultural/linguistic variations
+4. Similar-sounding names people might confuse
+5. Common typos or mishearings
+
+Return ONLY a JSON array of strings (no explanations). Focus on practical variations people actually use.
+
+Examples:
+- "Michael" → ["Mike", "Mick", "Mickey", "Mikael", "Mikhail", "Michel"]
+- "Catherine" → ["Kate", "Katie", "Cathy", "Katherine", "Kathryn", "Cat", "Kit"]
+- "Eden" → ["Edan", "Aiden", "Ethan", "Aden", "Eaton"]
+- "Santiago" → ["Santo", "Santi", "Tiago", "Diego"]`
+          },
+          {
+            role: "user", 
+            content: `Generate name variations for: "${name}"${contextInfo}`
+          }
+        ],
+        max_tokens: 150,
+        temperature: 0.3
+      });
+
+      const content = response.choices[0]?.message?.content?.trim();
+      if (!content) {
+        console.warn(`[RDFContactAnalyzer] AI returned empty response for "${name}"`);
+        return this.generateRuleBasedVariations(name);
+      }
+
+      const variations = JSON.parse(content);
+      if (!Array.isArray(variations)) {
+        console.warn(`[RDFContactAnalyzer] AI returned non-array for "${name}"`);
+        return this.generateRuleBasedVariations(name);
+      }
+
+      console.log(`[RDFContactAnalyzer] 🧠 AI generated ${variations.length} variations for "${name}": [${variations.join(', ')}]`);
+      return variations.filter(v => typeof v === 'string' && v.length > 0);
+      
+    } catch (error) {
+      console.warn(`[RDFContactAnalyzer] AI name variation failed for "${name}":`, error);
+      return this.generateRuleBasedVariations(name);
+    }
   }
 
-  private generateSimilarVariations(name: string): NameVariation[] {
-    const variations: NameVariation[] = [];
+  /**
+   * Fallback rule-based name variations for when AI fails
+   */
+  private generateRuleBasedVariations(name: string): string[] {
+    console.log(`[RDFContactAnalyzer] 📝 Using rule-based fallback for "${name}"`);
     
-    // Similar sounding names
-    const similarMap: { [key: string]: string[] } = {
-      'Eden': ['Aiden', 'Ethan'],
-      'Maria': ['Mariah', 'Mária']
-    };
-
-    if (similarMap[name]) {
-      similarMap[name].forEach((variation, index) => {
-        variations.push({
-          name: variation,
-          confidence: 0.7 - (index * 0.1), // Decreasing confidence
-          type: 'similar'
-        });
-      });
-    }
-
-    return variations;
-  }
-
-  private generateCulturalVariations(name: string): NameVariation[] {
-    const variations: NameVariation[] = [];
+    const variations: string[] = [];
+    const lowerName = name.toLowerCase();
     
-    // Cultural variations
-    const culturalMap: { [key: string]: string[] } = {
-      'Maria': ['Marie', 'Mary', 'Mariah', 'Mária']
-    };
-
-    if (culturalMap[name]) {
-      culturalMap[name].forEach((variation, index) => {
-        variations.push({
-          name: variation,
-          confidence: 0.6 - (index * 0.05),
-          type: 'cultural'
-        });
-      });
+    // Common nickname patterns
+    const nicknameRules = [
+      { pattern: /^(.*?)athan$/, replacement: '$1' },     // Jonathan -> Jon
+      { pattern: /^(.*?)ael$/, replacement: '$1' },       // Michael -> Mich  
+      { pattern: /^(.*?)ine$/, replacement: '$1y' },      // Christine -> Christy
+      { pattern: /^(.*?)er$/, replacement: '$1' },        // Christopher -> Chris
+      { pattern: /^(.*?)opher$/, replacement: '$1' },     // Christopher -> Christ
+      { pattern: /^(.*?)andro$/, replacement: '$1' },     // Alejandro -> Ale
+    ];
+    
+    for (const rule of nicknameRules) {
+      const match = lowerName.match(rule.pattern);
+      if (match) {
+        const variation = lowerName.replace(rule.pattern, rule.replacement);
+        if (variation.length >= 2) {
+          variations.push(variation.charAt(0).toUpperCase() + variation.slice(1));
+        }
+      }
     }
-
+    
+    // Phonetic substitution rules
+    const phoneticRules = [
+      { from: 'ph', to: 'f' },     // Philip -> Filip
+      { from: 'ck', to: 'k' },     // Nick -> Nik
+      { from: 'ie', to: 'y' },     // Katie -> Katy
+      { from: 'y', to: 'ie' },     // Katy -> Katie
+      { from: 'c', to: 'k' },      // Eric -> Erik
+      { from: 'z', to: 's' },      // Liz -> Lis
+      { from: 's', to: 'z' },      // Chris -> Chriz
+      { from: 'th', to: 't' },     // Anthony -> Antony
+    ];
+    
+    for (const rule of phoneticRules) {
+      if (lowerName.includes(rule.from)) {
+        const variant = lowerName.replace(new RegExp(rule.from, 'g'), rule.to);
+        if (variant !== lowerName && variant.length >= 2) {
+          variations.push(variant.charAt(0).toUpperCase() + variant.slice(1));
+        }
+      }
+    }
+    
+    // Generate shortened versions
+    if (name.length > 4) {
+      variations.push(name.substring(0, 3));    // First 3 letters
+      variations.push(name.substring(0, 4));    // First 4 letters
+    }
+    
+    // Add common endings
+    if (name.length >= 3) {
+      variations.push(name + 'y');              // Eden -> Edeny
+      variations.push(name + 'ie');             // Eden -> Edenie
+    }
+    
+    console.log(`[RDFContactAnalyzer] 📝 Rule-based generated ${variations.length} variations: [${variations.join(', ')}]`);
     return variations;
   }
 
