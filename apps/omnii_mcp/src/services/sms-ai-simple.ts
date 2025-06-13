@@ -125,7 +125,7 @@ export class SimpleSMSAI {
       // ⚡ DISABLED: Neo4j context retrieval - too slow for real-time SMS processing  
       // We need a faster caching strategy instead of querying Neo4j on every SMS
       console.log(`[SimpleSMSAI] ⚡ Skipping brain memory context retrieval for faster SMS processing`);
-      brainMemoryUsed = false;
+        brainMemoryUsed = false;
 
       // Use action planner with brain memory and RDF enhancement
       const result = await this.handleWithActionPlanner(
@@ -339,13 +339,13 @@ export class SimpleSMSAI {
 
       // RDF service removed - skip semantic reasoning for SMS for now
       console.log(`[SimpleSMSAI] ⚠️ RDF semantic analysis disabled - SMS will use standard processing`);
-      rdfEnhancement = {
-        reasoning_applied: false,
-        extracted_concepts: [],
-        intent_analysis: { primary_intent: 'unknown', confidence: 0, urgency_level: 'medium' },
-        processing_metadata: {
-          processing_time_ms: Date.now() - rdfStartTime,
-          concepts_extracted: 0,
+          rdfEnhancement = {
+            reasoning_applied: false,
+            extracted_concepts: [],
+            intent_analysis: { primary_intent: 'unknown', confidence: 0, urgency_level: 'medium' },
+            processing_metadata: {
+              processing_time_ms: Date.now() - rdfStartTime,
+              concepts_extracted: 0,
           analysis_depth: 'disabled'
         }
       };

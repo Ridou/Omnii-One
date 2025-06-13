@@ -592,35 +592,62 @@ export class WebSocketHandlerService {
         return result.unifiedResponse; // Return the enhanced UnifiedToolResponse
       }
 
-      // OLD: Fallback to legacy response format with RDF enhancement
-      const legacyResponse = {
-        success: result.success,
-        message: result.message,
-        error: result.error,
-        authRequired: result.authRequired || false,
-        authUrl: result.authUrl || null,
-      };
+      // ✅ CRITICAL FIX: Convert legacy response to proper UnifiedToolResponse
+      // Instead of returning legacy format that breaks Zod validation, create a proper UnifiedToolResponse
+      console.log(`[WebSocket] ❌ *** NO UNIFIED RESPONSE - CONVERTING LEGACY TO UNIFIED ***`);
       
-      // NEW: Add RDF enhancement to legacy responses for testing (only if RDF service is available)
+      const { UnifiedResponseBuilder } = await import('../types/unified-response.types.js');
+      const builder = new UnifiedResponseBuilder('general', userId);
+      
+      const convertedResponse = builder
+        .setSuccess(result.success)
+        .setTitle(result.success ? "✅ Request Completed" : "❌ Request Failed")
+        .setContent(result.message || "Processing completed")
+        .setMessage(result.message || "Request processed")
+        .setAuthRequired(result.authRequired || false)
+        .setAuthUrl(result.authUrl || null)
+        .build();
+        
+      // NEW: Add RDF enhancement to structured data (only if RDF service is available)
       if (this.rdfService) {
-        (legacyResponse as any).data = {
-          structured: {
-            rdf_enhancement: {
-              reasoning_applied: rdfSuccess,
-              extracted_concepts: rdfSuccess && rdfInsights?.ai_reasoning?.extracted_concepts || [],
-              intent_analysis: rdfSuccess && rdfInsights?.ai_reasoning?.intent_analysis || {},
-              processing_metadata: {
-                processing_time_ms: Date.now() - rdfStartTime,
-                confidence_threshold: 0.5,
-                action_count: rdfSuccess && rdfInsights?.structured_actions?.length || 0,
-                concept_count: rdfSuccess && rdfInsights?.ai_reasoning?.extracted_concepts?.length || 0
-              }
-            }
+        if (!convertedResponse.data) {
+          convertedResponse.data = { 
+            ui: convertedResponse.data?.ui || { 
+              title: '', 
+              content: '', 
+              icon: '⚡', 
+              actions: [], 
+              metadata: { 
+                category: 'general', 
+                confidence: 0, 
+                timestamp: new Date().toISOString() 
+              } 
+            } 
+          };
+        }
+        if (!convertedResponse.data.structured) {
+          convertedResponse.data.structured = {};
+        }
+        
+        (convertedResponse.data.structured as any).rdf_enhancement = {
+          reasoning_applied: rdfSuccess,
+          extracted_concepts: rdfSuccess && rdfInsights?.ai_reasoning?.extracted_concepts || [],
+          intent_analysis: rdfSuccess && rdfInsights?.ai_reasoning?.intent_analysis || {},
+          processing_metadata: {
+            processing_time_ms: Date.now() - rdfStartTime,
+            confidence_threshold: 0.5,
+            action_count: rdfSuccess && rdfInsights?.structured_actions?.length || 0,
+            concept_count: rdfSuccess && rdfInsights?.ai_reasoning?.extracted_concepts?.length || 0
           }
         };
       }
       
-      return legacyResponse;
+      console.log(`[WebSocket] 🚀 Converted legacy response to UnifiedToolResponse`);
+      console.log(`[WebSocket] - Type: ${convertedResponse.type}`);
+      console.log(`[WebSocket] - Success: ${convertedResponse.success}`);
+      console.log(`[WebSocket] - Has data.ui: ${!!convertedResponse.data?.ui}`);
+      
+      return convertedResponse;
     } catch (error) {
       console.error(`[WebSocket] Action planner error:`, error);
       return {
