@@ -1,5 +1,5 @@
 {
-  "extends": "@omnii/tsconfig/internal-package.json",
+  "extends": "../../tooling/typescript/package-node-js.json",
   "include": ["src"],
   "exclude": ["node_modules"]
 }

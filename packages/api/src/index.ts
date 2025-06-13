@@ -11,7 +11,7 @@ import { createCallerFactory, createTRPCContext } from "./trpc";
  * const res = await trpc.post.all();
  *       ^? Post[]
  */
-const createCaller = createCallerFactory(appRouter);
+const createCaller = createCallerFactory(appRouter) as any;
 
 /**
  * Inference helpers for input types

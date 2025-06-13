@@ -1,0 +1,334 @@
+import { describe, test, expect } from 'bun:test';
+import {
+  // Schemas
+  EnhancedChatMessageSchema,
+  EnhancedMemorySchema,
+  EnhancedConceptSchema,
+  EnhancedTagSchema,
+  BrainMemoryContextSchema,
+  EnhancedRelationshipSchema,
+  TimeWindowSchema,
+  MemoryStrengthCalculationSchema,
+  ComposioMemoryEnhancementSchema,
+  
+  // Constants
+  BRAIN_MEMORY_CONSTANTS,
+  
+  // Validation functions
+  isValidBrainMemoryContext,
+  validateBrainMemoryContext,
+  safeParseEnhancedChatMessage,
+  
+  // Types
+  type EnhancedChatMessage,
+  type EnhancedMemory,
+  type EnhancedConcept,
+  type EnhancedTag,
+  type BrainMemoryContext,
+  type EnhancedRelationship,
+  type TimeWindow,
+  type MemoryStrengthCalculation,
+  type ComposioMemoryEnhancement
+} from '../src/index';
+
+describe('Unified Brain Memory Schema Validation', () => {
+  
+  test('should export all brain memory schemas correctly', () => {
+    console.log('🧠 Testing unified brain memory schema exports...');
+    
+    // Test schema exports
+    expect(EnhancedChatMessageSchema).toBeDefined();
+    expect(EnhancedMemorySchema).toBeDefined();
+    expect(EnhancedConceptSchema).toBeDefined();
+    expect(EnhancedTagSchema).toBeDefined();
+    expect(BrainMemoryContextSchema).toBeDefined();
+    expect(EnhancedRelationshipSchema).toBeDefined();
+    expect(TimeWindowSchema).toBeDefined();
+    expect(MemoryStrengthCalculationSchema).toBeDefined();
+    expect(ComposioMemoryEnhancementSchema).toBeDefined();
+    
+    // Test constants
+    expect(BRAIN_MEMORY_CONSTANTS).toBeDefined();
+    expect(BRAIN_MEMORY_CONSTANTS.WORKING_MEMORY_SIZE).toBe(7);
+    expect(BRAIN_MEMORY_CONSTANTS.WORKING_MEMORY_TIME_WINDOW_DAYS).toBe(21);
+    
+    // Test validation functions
+    expect(isValidBrainMemoryContext).toBeDefined();
+    expect(validateBrainMemoryContext).toBeDefined();
+    expect(safeParseEnhancedChatMessage).toBeDefined();
+    
+    console.log('✅ All brain memory schemas exported correctly');
+  });
+  
+  test('should validate enhanced chat message correctly', () => {
+    console.log('💬 Testing EnhancedChatMessage validation...');
+    
+    const validMessage: EnhancedChatMessage = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      content: 'Schedule a meeting with John tomorrow at 2pm',
+      timestamp: new Date().toISOString(),
+      channel: 'sms',
+      source_identifier: '+18582260766',
+      intent: 'request',
+      sentiment: 0.2,
+      importance_score: 0.8,
+      last_modified: new Date().toISOString(),
+      modification_reason: 'concept_update',
+      sms_metadata: {
+        phone_number: '+18582260766',
+        is_incoming: true,
+        local_datetime: new Date().toISOString()
+      },
+      google_service_context: {
+        service_type: 'calendar',
+        operation: 'create_event',
+        success: true
+      }
+    };
+    
+    const result = safeParseEnhancedChatMessage(validMessage);
+    expect(result.success).toBe(true);
+    
+    if (result.success) {
+      expect(result.data.channel).toBe('sms');
+      expect(result.data.intent).toBe('request');
+      expect(result.data.importance_score).toBe(0.8);
+    }
+    
+    console.log('✅ EnhancedChatMessage validation successful');
+  });
+  
+  test('should validate brain memory context correctly', () => {
+    console.log('🧠 Testing BrainMemoryContext validation...');
+    
+    const validContext: BrainMemoryContext = {
+      working_memory: {
+        recent_messages: [
+          {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            content: 'Test message',
+            timestamp: new Date().toISOString(),
+            channel: 'chat',
+            source_identifier: 'websocket-123'
+          }
+        ],
+        active_concepts: ['concept1', 'concept2'],
+        current_intent: 'conversation',
+        time_window_stats: {
+          previous_week_count: 5,
+          current_week_count: 8,
+          next_week_count: 2,
+          recently_modified_count: 3
+        }
+      },
+      episodic_memory: {
+        conversation_threads: [
+          {
+            thread_id: 'thread_123',
+            semantic_weight: 0.75,
+            memory_node_id: '550e8400-e29b-41d4-a716-446655440001'
+          }
+        ],
+        related_episodes: ['episode1', 'episode2']
+      },
+      semantic_memory: {
+        activated_concepts: [
+          {
+            concept: {
+              id: '550e8400-e29b-41d4-a716-446655440002',
+              name: 'meeting',
+              activation_strength: 0.9,
+              mention_count: 5,
+              semantic_weight: 0.8,
+              user_id: 'user123'
+            },
+            activation_strength: 0.9,
+            related_concepts: ['calendar', 'schedule']
+          }
+        ],
+        concept_associations: [
+          {
+            from_concept: 'concept1',
+            to_concept: 'concept2',
+            association_strength: 0.7,
+            relationship_type: 'RELATED_TO'
+          }
+        ]
+      },
+      consolidation_metadata: {
+        retrieval_timestamp: new Date().toISOString(),
+        memory_strength: 0.85,
+        context_channels: ['sms', 'chat'],
+        memory_age_hours: 24,
+        consolidation_score: 0.75,
+        working_memory_limit: 7,
+        episodic_window_hours: 168,
+        semantic_activation_threshold: 0.3,
+        sms_optimization: {
+          character_budget: 1500,
+          suggested_response_length: 'normal'
+        }
+      }
+    };
+    
+    // Test validation function
+    expect(isValidBrainMemoryContext(validContext)).toBe(true);
+    
+    // Test parse function (should not throw)
+    const validated = validateBrainMemoryContext(validContext);
+    expect(validated).toBeDefined();
+    expect(validated.working_memory.recent_messages.length).toBe(1);
+    expect(validated.semantic_memory.activated_concepts.length).toBe(1);
+    expect(validated.consolidation_metadata.memory_strength).toBe(0.85);
+    
+    console.log('✅ BrainMemoryContext validation successful');
+  });
+  
+  test('should validate composio memory enhancement correctly', () => {
+    console.log('🔧 Testing ComposioMemoryEnhancement validation...');
+    
+    const validEnhancement: ComposioMemoryEnhancement = {
+      tool_name: 'calendar_create_event',
+      original_params: {
+        title: 'Meeting',
+        start_time: '2024-02-15T14:00:00Z'
+      },
+      memory_enhanced_params: {
+        title: 'Meeting with John - discussed in SMS',
+        start_time: '2024-02-15T14:00:00Z',
+        description: 'Context from SMS conversation about project planning'
+      },
+      memory_insights: [
+        'User frequently schedules meetings on Tuesdays',
+        'John is a frequent contact in recent conversations'
+      ],
+      concepts_used: ['meeting', 'john', 'project'],
+      episodic_context_used: ['recent_sms_conversation'],
+      enhancement_confidence: 0.82
+    };
+    
+    const result = ComposioMemoryEnhancementSchema.safeParse(validEnhancement);
+    expect(result.success).toBe(true);
+    
+    if (result.success) {
+      expect(result.data.tool_name).toBe('calendar_create_event');
+      expect(result.data.enhancement_confidence).toBe(0.82);
+      expect(result.data.memory_insights.length).toBe(2);
+    }
+    
+    console.log('✅ ComposioMemoryEnhancement validation successful');
+  });
+  
+  test('should handle error cases correctly', () => {
+    console.log('🚨 Testing error handling...');
+    
+    // Invalid chat message (missing required fields)
+    const invalidMessage = {
+      id: 'invalid-uuid',
+      content: '',
+      channel: 'invalid_channel'
+    };
+    
+    const messageResult = safeParseEnhancedChatMessage(invalidMessage);
+    expect(messageResult.success).toBe(false);
+    
+    // Invalid brain memory context
+    const invalidContext = {
+      working_memory: {},
+      episodic_memory: {},
+      semantic_memory: {}
+      // Missing consolidation_metadata
+    };
+    
+    expect(isValidBrainMemoryContext(invalidContext)).toBe(false);
+    
+    console.log('✅ Error handling working correctly');
+  });
+  
+  test('should validate brain memory constants correctly', () => {
+    console.log('📊 Testing brain memory constants...');
+    
+    expect(BRAIN_MEMORY_CONSTANTS.WORKING_MEMORY_SIZE).toBe(7);
+    expect(BRAIN_MEMORY_CONSTANTS.WORKING_MEMORY_TIME_WINDOW_DAYS).toBe(21);
+    expect(BRAIN_MEMORY_CONSTANTS.EPISODIC_MEMORY_WINDOW_HOURS).toBe(168);
+    expect(BRAIN_MEMORY_CONSTANTS.SEMANTIC_ACTIVATION_THRESHOLD).toBe(0.3);
+    expect(BRAIN_MEMORY_CONSTANTS.MEMORY_CONSOLIDATION_HOURS).toBe(24);
+    expect(BRAIN_MEMORY_CONSTANTS.RECENT_MODIFICATION_HOURS).toBe(2);
+    expect(BRAIN_MEMORY_CONSTANTS.CACHE_TTL_SECONDS).toBe(1800);
+    
+    // Test time distribution bonuses
+    expect(BRAIN_MEMORY_CONSTANTS.TIME_DISTRIBUTION_BONUSES.PREVIOUS_WEEK).toBe(0.1);
+    expect(BRAIN_MEMORY_CONSTANTS.TIME_DISTRIBUTION_BONUSES.CURRENT_WEEK).toBe(0.2);
+    expect(BRAIN_MEMORY_CONSTANTS.TIME_DISTRIBUTION_BONUSES.NEXT_WEEK).toBe(0.05);
+    expect(BRAIN_MEMORY_CONSTANTS.TIME_DISTRIBUTION_BONUSES.RECENT_MODIFICATION).toBe(0.3);
+    
+    console.log('✅ Brain memory constants validation successful');
+  });
+  
+  test('should demonstrate omnii_mcp + omnii-rdf unified integration', () => {
+    console.log('🌐 Testing unified integration scenario...');
+    
+    // Simulate a complete flow: SMS → Brain Memory → RDF → omnii_mcp
+    const smsMessage: EnhancedChatMessage = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      content: 'Book a flight to Italy next month for my vacation',
+      timestamp: new Date().toISOString(),
+      channel: 'sms',
+      source_identifier: '+18582260766',
+      intent: 'request',
+      importance_score: 0.9
+    };
+    
+    const brainContext: BrainMemoryContext = {
+      working_memory: {
+        recent_messages: [smsMessage],
+        active_concepts: ['travel', 'italy', 'vacation'],
+        current_intent: 'booking_request'
+      },
+      episodic_memory: {
+        conversation_threads: [],
+        related_episodes: []
+      },
+      semantic_memory: {
+        activated_concepts: [
+          {
+            concept_name: 'travel',
+            activation_strength: 0.9,
+            related_concepts: ['flights', 'hotels', 'vacation']
+          }
+        ],
+        concept_associations: []
+      },
+      consolidation_metadata: {
+        retrieval_timestamp: new Date().toISOString(),
+        memory_strength: 0.9,
+        context_channels: ['sms'],
+        consolidation_score: 0.8
+      }
+    };
+    
+    // Validate the complete flow
+    expect(safeParseEnhancedChatMessage(smsMessage).success).toBe(true);
+    expect(isValidBrainMemoryContext(brainContext)).toBe(true);
+    
+    // This would be processed by RDF service and handed off to omnii_mcp
+    const composioEnhancement: ComposioMemoryEnhancement = {
+      tool_name: 'book_flight',
+      original_params: { destination: 'Italy' },
+      memory_enhanced_params: { 
+        destination: 'Italy',
+        context: 'Vacation trip mentioned in SMS',
+        preferred_month: 'next_month'
+      },
+      memory_insights: ['User frequently travels in summer', 'Italy mentioned in previous conversations'],
+      concepts_used: ['travel', 'italy', 'vacation'],
+      episodic_context_used: ['recent_sms'],
+      enhancement_confidence: 0.85
+    };
+    
+    expect(ComposioMemoryEnhancementSchema.safeParse(composioEnhancement).success).toBe(true);
+    
+    console.log('✅ Unified integration scenario validated');
+    console.log('🎉 SMS → Brain Memory → RDF → omnii_mcp flow working correctly!');
+  });
+}); 

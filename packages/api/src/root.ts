@@ -1,4 +1,7 @@
 import { authRouter } from "./router/auth";
+import { calendarRouter } from "./router/calendar";
+import { contactsRouter } from "./router/contacts";
+import { emailRouter } from "./router/email";
 import { helloRouter } from "./router/hello";
 import { postRouter } from "./router/post";
 import { tasksRouter } from "./router/tasks";
@@ -9,7 +12,9 @@ export const appRouter = createTRPCRouter({
   post: postRouter,
   hello: helloRouter,
   tasks: tasksRouter,
-  test2: helloRouter,
+  calendar: calendarRouter,
+  contacts: contactsRouter,
+  email: emailRouter,
 });
 
 // export type definition of API

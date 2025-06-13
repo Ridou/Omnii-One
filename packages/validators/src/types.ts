@@ -1,39 +1,72 @@
-import { z } from "zod/v4";
+import type { z } from "zod/v4";
 
-import {
+import type {
   // Achievement schemas
   AchievementDataSchema,
   AchievementProgressResultSchema,
   AchievementStatsSchema,
 } from "./schemas/achievement";
-import {
+import type {
   // Calendar schemas
   CalendarDataSchema,
   CalendarListDataSchema,
 } from "./schemas/calendar";
-import {
+import type {
   // Contact schemas
   ContactDataSchema,
   ContactListDataSchema,
   SingleContactDataSchema,
 } from "./schemas/contact";
-import {
+import type {
   // Email schemas
   EmailDataSchema,
   EmailListDataSchema,
   SingleEmailDataSchema,
 } from "./schemas/email";
 import {
+  // RDF schemas
+  RDFDataSchema,
+  RDFBridgeDataSchema,
+  RDFQueryDataSchema,
+  RDFAnalysisDataSchema,
+  RDFHealthDataSchema,
+  RDFQueryListDataSchema,
+  RDFAnalysisListDataSchema,
+  RDFInputSchema,
+  RDFProcessingSchema,
+  BrainMemoryIntegrationSchema,
+  ConceptInsightSchema,
+  SemanticConnectionSchema,
+  TemporalPatternSchema,
+  StructuredActionSchema,
+  HumanInputSchema,
+  AIReasoningSchema,
+  // RDF action type constants
+  RDF_ACTION_TYPES,
+  RDF_ACTION_TYPE_VALUES,
+  type RDFActionType,
+} from "./schemas/rdf";
+import {
+  // Brain Memory schemas
+  EnhancedChatMessageSchema,
+  EnhancedMemorySchema,
+  EnhancedConceptSchema,
+  EnhancedTagSchema,
+  BrainMemoryContextSchema,
+  EnhancedRelationshipSchema,
+  TimeWindowSchema,
+  MemoryStrengthCalculationSchema,
+  ComposioMemoryEnhancementSchema,
+} from "./schemas/brain-memory";
+import {
   // General schemas
   GeneralDataSchema,
   UIDataSchema,
   UIMetadataSchema,
 } from "./schemas/general";
-import {
+import type {
   CompleteTaskOverviewSchema,
   LegacyTaskDataSchema,
-  // Task schemas
-  ServiceType,
   TaskDataSchema,
   TaskListDataSchema,
   TaskListSchema,
@@ -43,17 +76,21 @@ import {
   TasksTestResponseSchema,
   UnifiedActionSchema,
 } from "./schemas/task";
-import {
+import type {
   // Unified response schema
   UnifiedToolResponseSchema,
 } from "./schemas/unified-response";
-import {
+import type {
   LevelProgressionSchema,
   XPProgressSchema,
   XPRealtimeUpdateSchema,
   // XP schemas
   XPUpdateSchema,
 } from "./schemas/xp";
+import {
+  // Task schemas
+  ServiceType,
+} from "./schemas/task";
 
 // ✅ TASK TYPES: Zod-inferred for type safety
 export type TaskData = z.infer<typeof TaskDataSchema>;
@@ -65,7 +102,9 @@ export type CompleteTaskOverview = z.infer<typeof CompleteTaskOverviewSchema>;
 export type LegacyTaskData = z.infer<typeof LegacyTaskDataSchema>;
 
 // ✅ tRPC TASK RESPONSE TYPES: Zod-inferred for type safety
-export type TasksCompleteOverviewResponse = z.infer<typeof TasksCompleteOverviewResponseSchema>;
+export type TasksCompleteOverviewResponse = z.infer<
+  typeof TasksCompleteOverviewResponseSchema
+>;
 export type TasksTestResponse = z.infer<typeof TasksTestResponseSchema>;
 
 // ✅ EMAIL TYPES: Zod-inferred for type safety
@@ -81,6 +120,24 @@ export type CalendarListData = z.infer<typeof CalendarListDataSchema>;
 export type ContactData = z.infer<typeof ContactDataSchema>;
 export type ContactListData = z.infer<typeof ContactListDataSchema>;
 export type SingleContactData = z.infer<typeof SingleContactDataSchema>;
+
+// ✅ RDF TYPES: Zod-inferred for type safety
+export type RDFData = z.infer<typeof RDFDataSchema>;
+export type RDFBridgeData = z.infer<typeof RDFBridgeDataSchema>;
+export type RDFQueryData = z.infer<typeof RDFQueryDataSchema>;
+export type RDFAnalysisData = z.infer<typeof RDFAnalysisDataSchema>;
+export type RDFHealthData = z.infer<typeof RDFHealthDataSchema>;
+export type RDFQueryListData = z.infer<typeof RDFQueryListDataSchema>;
+export type RDFAnalysisListData = z.infer<typeof RDFAnalysisListDataSchema>;
+export type RDFInput = z.infer<typeof RDFInputSchema>;
+export type RDFProcessing = z.infer<typeof RDFProcessingSchema>;
+export type BrainMemoryIntegration = z.infer<typeof BrainMemoryIntegrationSchema>;
+export type ConceptInsight = z.infer<typeof ConceptInsightSchema>;
+export type SemanticConnection = z.infer<typeof SemanticConnectionSchema>;
+export type TemporalPattern = z.infer<typeof TemporalPatternSchema>;
+export type StructuredAction = z.infer<typeof StructuredActionSchema>;
+export type HumanInput = z.infer<typeof HumanInputSchema>;
+export type AIReasoning = z.infer<typeof AIReasoningSchema>;
 
 // ✅ XP SYSTEM TYPES: Zod-inferred for type safety
 export type XPUpdate = z.infer<typeof XPUpdateSchema>;
@@ -100,9 +157,27 @@ export type GeneralData = z.infer<typeof GeneralDataSchema>;
 export type UIMetadata = z.infer<typeof UIMetadataSchema>;
 export type UIData = z.infer<typeof UIDataSchema>;
 
+// ✅ BRAIN MEMORY TYPES: Zod-inferred for type safety
+export type EnhancedChatMessage = z.infer<typeof EnhancedChatMessageSchema>;
+export type EnhancedMemory = z.infer<typeof EnhancedMemorySchema>;
+export type EnhancedConcept = z.infer<typeof EnhancedConceptSchema>;
+export type EnhancedTag = z.infer<typeof EnhancedTagSchema>;
+export type BrainMemoryContext = z.infer<typeof BrainMemoryContextSchema>;
+export type EnhancedRelationship = z.infer<typeof EnhancedRelationshipSchema>;
+export type TimeWindow = z.infer<typeof TimeWindowSchema>;
+export type MemoryStrengthCalculation = z.infer<typeof MemoryStrengthCalculationSchema>;
+export type ComposioMemoryEnhancement = z.infer<typeof ComposioMemoryEnhancementSchema>;
+
 // ✅ UNIFIED RESPONSE TYPE
 export type UnifiedToolResponse = z.infer<typeof UnifiedToolResponseSchema>;
 
 // ✅ SHARED TYPES
 export type UnifiedAction = z.infer<typeof UnifiedActionSchema>;
 export { ServiceType };
+
+// ✅ RDF ACTION TYPE CONSTANTS - Available throughout the codebase
+export { RDF_ACTION_TYPES, RDF_ACTION_TYPE_VALUES };
+export type { RDFActionType };
+
+// ✅ UNIFIED RESPONSE BUILDER
+export { UnifiedResponseBuilder } from "./schemas/unified-response";

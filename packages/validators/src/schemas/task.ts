@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from "zod/v4";
 
 // ✅ SERVICE TYPE ENUM
 export enum ServiceType {
@@ -6,6 +6,7 @@ export enum ServiceType {
   CALENDAR = 'calendar', 
   CONTACT = 'contact',
   TASK = 'task',
+  RDF = 'rdf',
   GENERAL = 'general'
 }
 
@@ -13,7 +14,7 @@ export enum ServiceType {
 export const UnifiedActionSchema = z.object({
   id: z.string(),
   label: z.string(),
-  type: z.enum(['primary', 'secondary', 'destructive']),
+  type: z.enum(["primary", "secondary", "destructive"]),
   icon: z.string().optional(),
   command: z.string().optional(),
 });
@@ -24,7 +25,7 @@ export const UnifiedActionSchema = z.object({
 export const TaskDataSchema = z.object({
   id: z.string(),
   title: z.string(),
-  status: z.enum(['needsAction', 'completed']).optional(),
+  status: z.enum(["needsAction", "completed"]).optional(),
   notes: z.string().nullish(), // Can be null or undefined
   due: z.string().nullish(), // ISO date string, can be null
   completed: z.string().nullish(), // ISO date string, can be null
@@ -34,11 +35,15 @@ export const TaskDataSchema = z.object({
   selfLink: z.string().optional(),
   etag: z.string().optional(),
   kind: z.string().optional(),
-  links: z.array(z.object({
-    type: z.string(),
-    link: z.string(),
-    description: z.string().optional(),
-  })).optional(),
+  links: z
+    .array(
+      z.object({
+        type: z.string(),
+        link: z.string(),
+        description: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 // Individual task list (container for tasks)
@@ -77,14 +82,14 @@ export const TaskListWithTasksSchema = z.object({
   selfLink: z.string().optional(),
   etag: z.string().optional(),
   kind: z.string().optional(),
-  
+
   // Tasks within this list
   tasks: z.array(TaskDataSchema),
   taskCount: z.number(),
   completedCount: z.number(),
   pendingCount: z.number(),
   overdueCount: z.number(),
-  
+
   // Fetching metadata
   lastFetched: z.string(),
   fetchSuccess: z.boolean(),
@@ -101,11 +106,15 @@ export const CompleteTaskOverviewSchema = z.object({
   totalOverdue: z.number(),
   lastSyncTime: z.string(),
   syncSuccess: z.boolean(),
-  partialFailures: z.array(z.object({
-    listId: z.string(),
-    listTitle: z.string(),
-    error: z.string(),
-  })).optional(),
+  partialFailures: z
+    .array(
+      z.object({
+        listId: z.string(),
+        listTitle: z.string(),
+        error: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 // ✅ tRPC Response Schemas
@@ -126,10 +135,10 @@ export const LegacyTaskDataSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   dueDate: z.string().optional(),
-  status: z.enum(['completed', 'pending', 'in_progress']),
-  priority: z.enum(['high', 'medium', 'low']).optional(),
+  status: z.enum(["completed", "pending", "in_progress"]),
+  priority: z.enum(["high", "medium", "low"]).optional(),
   list: z.string(),
   listId: z.string().optional(),
   taskId: z.string().optional(),
   completedDate: z.string().optional(),
-}); 
+});

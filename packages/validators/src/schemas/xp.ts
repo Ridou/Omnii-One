@@ -1,4 +1,4 @@
-import { z } from 'zod/v4';
+import { z } from "zod/v4";
 
 // ✅ XP SYSTEM SCHEMAS: Centralized XP data validation
 export const XPUpdateSchema = z.object({
@@ -36,7 +36,7 @@ export const LevelProgressionSchema = z.object({
 });
 
 export const XPRealtimeUpdateSchema = z.object({
-  type: z.enum(['xp_awarded', 'level_up', 'milestone_unlocked']),
+  type: z.enum(["xp_awarded", "level_up", "milestone_unlocked"]),
   payload: z.union([XPUpdateSchema, LevelProgressionSchema]),
   timestamp: z.string(),
-}); 
+});
