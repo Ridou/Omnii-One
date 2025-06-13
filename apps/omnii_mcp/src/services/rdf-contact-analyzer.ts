@@ -8,48 +8,11 @@ export class RDFContactAnalyzer {
    * Analyze a message using RDF semantic reasoning to extract contact reference and communication intent
    */
   async analyzeMessage(message: string): Promise<MessageAnalysis> {
-    console.log(`[RDFContactAnalyzer] 🧠 Using RDF semantic analysis for: "${message}"`);
+    console.log(`[RDFContactAnalyzer] 🧠 Analyzing message: "${message}" (SIMPLIFIED - NO RECURSION)`);
     
-    try {
-      // Use RDF service for semantic message analysis
-      const rdfAnalysis = await rdfServiceClient.processRDFRequest({
-        text: message,
-        domain: 'contact_communication',
-        task: 'message_analysis',
-        extractors: ['contact_names', 'communication_intent', 'context_clues', 'formality_level', 'urgency_indicators']
-      });
-      
-      console.log(`[RDFContactAnalyzer] ✅ RDF analysis completed:`, {
-        hasContactExtraction: !!rdfAnalysis.contact_extraction,
-        hasIntentAnalysis: !!rdfAnalysis.intent_analysis,
-        hasContextAnalysis: !!rdfAnalysis.context_analysis
-      });
-      
-      // Extract results from RDF analysis
-      const primaryContact = rdfAnalysis.contact_extraction?.primary_contact || this.extractContactNameFallback(message);
-      const intent = rdfAnalysis.intent_analysis?.communication_action || this.determineIntentFallback(message);
-      const contextClues = rdfAnalysis.context_analysis?.context_indicators || this.extractContextCluesFallback(message);
-      const formality = rdfAnalysis.context_analysis?.formality_level || 'neutral';
-      const urgency = rdfAnalysis.context_analysis?.urgency_level || 'normal';
-      const additionalContext = rdfAnalysis.context_analysis?.additional_context || this.generateAdditionalContextFallback(formality, contextClues);
-      const confidence = rdfAnalysis.confidence_score || this.calculateConfidenceFallback(primaryContact, intent, contextClues);
-      
-      return {
-        primary_contact: primaryContact,
-        intent,
-        context_clues: contextClues,
-        formality,
-        urgency,
-        additional_context: additionalContext,
-        confidence
-      };
-      
-    } catch (error) {
-      console.warn(`[RDFContactAnalyzer] ⚠️ RDF analysis failed, using fallback approach:`, error);
-      
-      // Fallback to simple analysis if RDF fails
-      return this.analyzeMessageFallback(message);
-    }
+    // SIMPLIFIED: Skip RDF service to prevent recursion, use fallback directly
+    console.log(`[RDFContactAnalyzer] 📝 Using fallback analysis only to prevent recursion`);
+    return this.analyzeMessageFallback(message);
   }
 
   /**
@@ -82,16 +45,17 @@ export class RDFContactAnalyzer {
    * Expand a contact name into variations for better matching
    */
   async expandContactName(contactName: string, context?: MessageAnalysis): Promise<string[]> {
-    console.log(`[RDFContactAnalyzer] 🧠 Generating intelligent name variations for "${contactName}"`);
+    console.log(`[RDFContactAnalyzer] 🧠 Generating name variations for "${contactName}" (SIMPLIFIED - NO RECURSION)`);
     
     const variations: string[] = [];
     
     // Always include exact match first
     variations.push(contactName);
     
-    // Generate AI-based intelligent variations
-    const intelligentVariations = await this.generateIntelligentNameVariations(contactName, context);
-    variations.push(...intelligentVariations);
+    // SIMPLIFIED: Use rule-based fallback only to prevent recursion
+    console.log(`[RDFContactAnalyzer] 📝 Using rule-based variations only to prevent recursion`);
+    const ruleBasedVariations = this.generateRuleBasedVariationsFallback(contactName);
+    variations.push(...ruleBasedVariations);
     
     // Remove duplicates and return
     const uniqueVariations = [...new Set(variations)];
@@ -191,16 +155,35 @@ export class RDFContactAnalyzer {
         // Try to extract from both rawData and structured data
         let extractedContacts: Contact[] = [];
         
-        if (result.rawData) {
+        console.log(`[RDFContactAnalyzer] 🔍 Search response structure for "${primaryName}":`, {
+          hasRawData: !!result.rawData,
+          hasStructured: !!result.structured,
+          hasData: !!result.data,
+          dataKeys: result.data ? Object.keys(result.data) : []
+        });
+        
+        // FIXED: Handle the actual response format from unified manager
+        if (result.data?.contacts && Array.isArray(result.data.contacts)) {
+          console.log(`[RDFContactAnalyzer] ✅ Found ${result.data.contacts.length} contacts in search result.data.contacts`);
+          extractedContacts = result.data.contacts.map(c => this.transformGoogleContactToContact(c)).filter(Boolean) as Contact[];
+        }
+        
+        else if (result.data?.structured?.contacts && Array.isArray(result.data.structured.contacts)) {
+          console.log(`[RDFContactAnalyzer] ✅ Found ${result.data.structured.contacts.length} contacts in result.data.structured.contacts`);
+          extractedContacts = result.data.structured.contacts.map(c => this.transformGoogleContactToContact(c)).filter(Boolean) as Contact[];
+        }
+        
+        else if (result.structured?.contacts && Array.isArray(result.structured.contacts)) {
+          console.log(`[RDFContactAnalyzer] ✅ Found ${result.structured.contacts.length} contacts in result.structured.contacts`);
+          extractedContacts = result.structured.contacts.map(c => this.transformGoogleContactToContact(c)).filter(Boolean) as Contact[];
+        }
+        
+        else if (result.rawData) {
           extractedContacts = this.extractContactsFromApiResponse(result.rawData, primaryName);
         }
         
-        if (extractedContacts.length === 0 && result.structured) {
+        else if (result.structured) {
           extractedContacts = this.extractContactsFromStructuredResponse(result.structured, primaryName);
-        }
-        
-        if (extractedContacts.length === 0 && result.data) {
-          extractedContacts = this.extractContactsFromApiResponse(result.data, primaryName);
         }
         
         console.log(`[RDFContactAnalyzer] ✅ Extracted ${extractedContacts.length} contacts for "${primaryName}"`);
@@ -239,19 +222,36 @@ export class RDFContactAnalyzer {
       if (result.success) {
         let contacts: Contact[] = [];
         
-        // Try different response formats
-        if (result.rawData) {
+        // Try different response formats - FIXED TO HANDLE ACTUAL FORMAT!
+        console.log(`[RDFContactAnalyzer] 🔍 Response structure:`, {
+          hasRawData: !!result.rawData,
+          hasStructured: !!result.structured, 
+          hasData: !!result.data,
+          dataKeys: result.data ? Object.keys(result.data) : []
+        });
+        
+        if (result.data?.contacts && Array.isArray(result.data.contacts)) {
+          console.log(`[RDFContactAnalyzer] ✅ Found ${result.data.contacts.length} contacts in result.data.contacts`);
+          contacts = result.data.contacts.slice(0, 10).map(c => this.transformGoogleContactToContact(c)).filter(Boolean) as Contact[];
+        }
+        
+        else if (result.data?.structured?.contacts && Array.isArray(result.data.structured.contacts)) {
+          console.log(`[RDFContactAnalyzer] ✅ Found ${result.data.structured.contacts.length} contacts in result.data.structured.contacts`);
+          contacts = result.data.structured.contacts.slice(0, 10).map(c => this.transformGoogleContactToContact(c)).filter(Boolean) as Contact[];
+        }
+        
+        else if (result.structured?.contacts && Array.isArray(result.structured.contacts)) {
+          console.log(`[RDFContactAnalyzer] ✅ Found ${result.structured.contacts.length} contacts in result.structured.contacts`);
+          contacts = result.structured.contacts.slice(0, 10).map(c => this.transformGoogleContactToContact(c)).filter(Boolean) as Contact[];
+        }
+        
+        else if (result.rawData) {
           const rawContacts = this.extractAllContactsFromResponse(result.rawData);
           contacts = rawContacts.slice(0, 10).map(c => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
         }
         
-        if (contacts.length === 0 && result.structured) {
+        else if (result.structured) {
           contacts = this.extractContactsFromStructuredResponse(result.structured, 'sample').slice(0, 10);
-        }
-        
-        if (contacts.length === 0 && result.data) {
-          const dataContacts = this.extractAllContactsFromResponse(result.data);
-          contacts = dataContacts.slice(0, 10).map(c => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
         }
         
         console.log(`[RDFContactAnalyzer] ✅ Retrieved ${contacts.length} sample contacts`);
@@ -978,6 +978,48 @@ export class RDFContactAnalyzer {
     }
     
     return contacts;
+  }
+
+  /**
+   * Transform Google Contacts API response to our Contact interface
+   */
+  private transformGoogleContactToContact(googleContact: any): Contact | null {
+    try {
+      if (!googleContact || !googleContact.name) {
+        return null;
+      }
+      
+      // Extract email - handle the ACTUAL Google Contacts API format from unified manager
+      let email: string | undefined;
+      if (googleContact.emails && Array.isArray(googleContact.emails) && googleContact.emails.length > 0) {
+        // Get first email with address property
+        const emailObj = googleContact.emails.find((e: any) => e.address) || googleContact.emails[0];
+        email = emailObj?.address || emailObj?.value;
+      }
+      
+      // Extract phone - handle the actual format
+      let phone: string | undefined;
+      if (googleContact.phones && Array.isArray(googleContact.phones) && googleContact.phones.length > 0) {
+        // Get first phone with number property
+        const phoneObj = googleContact.phones.find((p: any) => p.number) || googleContact.phones[0];
+        phone = phoneObj?.number || phoneObj?.value;
+      }
+      
+      const contact: Contact = {
+        name: googleContact.name,
+        email: email,
+        phone: phone,
+        title: googleContact.title,
+        company: googleContact.company
+      };
+      
+      console.log(`[RDFContactAnalyzer] 🎯 Transformed Google contact: ${contact.name} ${contact.email ? `(${contact.email})` : '(no email)'}`);
+      return contact;
+      
+    } catch (error) {
+      console.warn(`[RDFContactAnalyzer] Error transforming Google contact:`, error);
+      return null;
+    }
   }
 
   /**

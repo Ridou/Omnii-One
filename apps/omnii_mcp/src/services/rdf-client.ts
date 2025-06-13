@@ -1,7 +1,9 @@
 /**
  * RDF Service Client for omnii_mcp
- * Handles communication with the omnii-rdf-node and omnii-rdf-python services
+ * Handles communication with the omnii-rdf-python service with caching
  */
+
+import { rdfCache } from './rdf-cache';
 
 export class RDFServiceClient {
   private pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_URL || "http://omnii-rdf-python-production.railway.internal:8000";
@@ -16,11 +18,21 @@ export class RDFServiceClient {
   }
 
   /**
-   * Process RDF request directly through Python service
+   * Process RDF request directly through Python service with caching
    * omnii_mcp → omnii-rdf-python
    */
   async processRDFRequest(data: any) {
     try {
+      // Generate cache key from request data
+      const cacheKey = `rdf_request_${JSON.stringify(data)}`;
+      
+      // Check cache first
+      const cachedResult = rdfCache.get(cacheKey);
+      if (cachedResult) {
+        console.log('🎯 RDF cache hit - returning cached result');
+        return cachedResult;
+      }
+      
       console.log('🧠 Processing RDF request directly through Python service');
       
       if (!this.pythonServiceUrl) {
@@ -46,6 +58,9 @@ export class RDFServiceClient {
       
       console.log('✅ RDF processing completed successfully');
       console.log('📊 RDF result keys:', Object.keys(result));
+      
+      // Cache the result for 30 minutes
+      rdfCache.set(cacheKey, result, 1800000);
       
       return result;
 
