@@ -8,11 +8,48 @@ export class RDFContactAnalyzer {
    * Analyze a message using RDF semantic reasoning to extract contact reference and communication intent
    */
   async analyzeMessage(message: string): Promise<MessageAnalysis> {
-    console.log(`[RDFContactAnalyzer] 🧠 Analyzing message: "${message}" (SIMPLIFIED - NO RECURSION)`);
+    console.log(`[RDFContactAnalyzer] 🧠 Using RDF semantic analysis for: "${message}"`);
     
-    // SIMPLIFIED: Skip RDF service to prevent recursion, use fallback directly
-    console.log(`[RDFContactAnalyzer] 📝 Using fallback analysis only to prevent recursion`);
-    return this.analyzeMessageFallback(message);
+    try {
+      // Use RDF service for semantic message analysis
+      const rdfAnalysis = await rdfServiceClient.processRDFRequest({
+        text: message,
+        domain: 'contact_communication',
+        task: 'message_analysis',
+        extractors: ['contact_names', 'communication_intent', 'context_clues', 'formality_level', 'urgency_indicators']
+      });
+      
+      console.log(`[RDFContactAnalyzer] ✅ RDF analysis completed:`, {
+        hasContactExtraction: !!rdfAnalysis.contact_extraction,
+        hasIntentAnalysis: !!rdfAnalysis.intent_analysis,
+        hasContextAnalysis: !!rdfAnalysis.context_analysis
+      });
+      
+      // Extract results from RDF analysis
+      const primaryContact = rdfAnalysis.contact_extraction?.primary_contact || this.extractContactNameFallback(message);
+      const intent = rdfAnalysis.intent_analysis?.communication_action || this.determineIntentFallback(message);
+      const contextClues = rdfAnalysis.context_analysis?.context_indicators || this.extractContextCluesFallback(message);
+      const formality = rdfAnalysis.context_analysis?.formality_level || 'neutral';
+      const urgency = rdfAnalysis.context_analysis?.urgency_level || 'normal';
+      const additionalContext = rdfAnalysis.context_analysis?.additional_context || this.generateAdditionalContextFallback(formality, contextClues);
+      const confidence = rdfAnalysis.confidence_score || this.calculateConfidenceFallback(primaryContact, intent, contextClues);
+      
+      return {
+        primary_contact: primaryContact,
+        intent,
+        context_clues: contextClues,
+        formality,
+        urgency,
+        additional_context: additionalContext,
+        confidence
+      };
+      
+    } catch (error) {
+      console.warn(`[RDFContactAnalyzer] ⚠️ RDF analysis failed, using fallback approach:`, error);
+      
+      // Fallback to simple analysis if RDF fails
+      return this.analyzeMessageFallback(message);
+    }
   }
 
   /**
@@ -45,17 +82,23 @@ export class RDFContactAnalyzer {
    * Expand a contact name into variations for better matching
    */
   async expandContactName(contactName: string, context?: MessageAnalysis): Promise<string[]> {
-    console.log(`[RDFContactAnalyzer] 🧠 Generating name variations for "${contactName}" (SIMPLIFIED - NO RECURSION)`);
+    console.log(`[RDFContactAnalyzer] 🧠 Generating intelligent name variations for "${contactName}"`);
     
     const variations: string[] = [];
     
     // Always include exact match first
     variations.push(contactName);
     
-    // SIMPLIFIED: Use rule-based fallback only to prevent recursion
-    console.log(`[RDFContactAnalyzer] 📝 Using rule-based variations only to prevent recursion`);
-    const ruleBasedVariations = this.generateRuleBasedVariationsFallback(contactName);
-    variations.push(...ruleBasedVariations);
+    try {
+      // Generate AI-based intelligent variations using RDF
+      const intelligentVariations = await this.generateIntelligentNameVariations(contactName, context);
+      variations.push(...intelligentVariations);
+    } catch (error) {
+      console.warn(`[RDFContactAnalyzer] ⚠️ RDF name expansion failed, using rule-based fallback:`, error);
+      // Fallback to rule-based variations if RDF fails
+      const fallbackVariations = this.generateRuleBasedVariationsFallback(contactName);
+      variations.push(...fallbackVariations);
+    }
     
     // Remove duplicates and return
     const uniqueVariations = [...new Set(variations)];
@@ -87,9 +130,9 @@ export class RDFContactAnalyzer {
       return [];
     }
     
-    // SINGLE STRATEGY: Simple search (no recursion)
-    console.log(`[RDFContactAnalyzer] 🎯 SIMPLIFIED STRATEGY: Single search for primary name`);
-    const searchResults = await this.trySpecificSearches(expandedNames, userUUID, unifiedGoogleManager);
+    // RECURSION SAFEGUARD: Use direct contact search to prevent message processing loops
+    console.log(`[RDFContactAnalyzer] 🛡️ RECURSION SAFEGUARD: Using direct contact search to prevent loops`);
+    const searchResults = await this.tryDirectContactSearch(expandedNames, userUUID, unifiedGoogleManager);
     
     if (searchResults.length > 0) {
       console.log(`[RDFContactAnalyzer] ✅ SUCCESS: Found ${searchResults.length} contacts`);
@@ -120,22 +163,23 @@ export class RDFContactAnalyzer {
   }
 
   /**
-   * Try specific searches for each name variation (SIMPLIFIED - NO RECURSION)
+   * Try direct contact searches for each name variation (RECURSION-SAFE)
    */
-  private async trySpecificSearches(
+  private async tryDirectContactSearch(
     expandedNames: string[], 
     userUUID: string, 
     unifiedGoogleManager: any
   ): Promise<Contact[]> {
-    console.log(`[RDFContactAnalyzer] 🔍 SIMPLIFIED SEARCH: Testing ${expandedNames.length} name variations`);
+    console.log(`[RDFContactAnalyzer] 🔍 DIRECT SEARCH: Testing ${expandedNames.length} name variations`);
     
-    // Try just the first name (original) to avoid recursion
+    // Try just the first name (original) to avoid over-searching
     const primaryName = expandedNames[0];
     if (!primaryName) return [];
     
     try {
-      console.log(`[RDFContactAnalyzer] 🎯 Single search for primary name: "${primaryName}"`);
+      console.log(`[RDFContactAnalyzer] 🎯 Direct search for primary name: "${primaryName}"`);
       
+      // RECURSION SAFEGUARD: Use a simple search query that won't trigger complex message processing
       const result = await unifiedGoogleManager.processMessage(
         `Search contacts for: ${primaryName}`,
         userUUID,

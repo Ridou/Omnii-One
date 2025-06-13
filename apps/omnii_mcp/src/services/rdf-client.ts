@@ -9,7 +9,7 @@ export class RDFServiceClient {
   private pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_URL || "http://omnii-rdf-python-production.railway.internal:8000";
 
   constructor() {
-    console.log(`[RDFServiceClient] 🔗 Connecting directly to Python RDF service:`);
+    console.log(`[RDFServiceClient] 🔗 Connecting to Python RDF service (INTERNAL RAILWAY URL):`);
     console.log(`[RDFServiceClient] - Python service: ${this.pythonServiceUrl}`);
     
     if (!this.pythonServiceUrl) {

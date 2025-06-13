@@ -1,12 +1,12 @@
 import { Elysia, t } from 'elysia';
-import { rdfService } from '../services/rdf-service';
+import { rdfServiceClient } from '../services/rdf-client';
 import { HumanInputSchema } from '../types/rdf-schemas';
 
 export default new Elysia({ prefix: '/rdf' })
   .get('/health', async () => {
     console.log('🏥 RDF Health check requested');
     try {
-      const health = await rdfService.healthCheck();
+      const health = await rdfServiceClient.healthCheck();
       return health;
     } catch (error) {
       console.error('❌ RDF health check failed:', error);
@@ -22,7 +22,7 @@ export default new Elysia({ prefix: '/rdf' })
     console.log('🧠 RDF Processing request received');
     
     try {
-      const result = await rdfService.processHumanInputToOmniiMCP(body);
+      const result = await rdfServiceClient.processRDFRequest(body);
       
       if (!result.success) {
         set.status = 400;
@@ -46,30 +46,20 @@ export default new Elysia({ prefix: '/rdf' })
     console.log('🔍 RDF Analysis request received');
     
     try {
-      // For analysis, we process the input and return just the analysis data
-      const result = await rdfService.processHumanInputToOmniiMCP(body);
+      // For analysis, we process the input through the Python RDF service
+      const result = await rdfServiceClient.processRDFRequest(body);
       
       if (!result.success) {
         set.status = 400;
         return result;
       }
       
-      // Extract analysis results from the bridge data
-      const analysisResults = result.data?.structured?.analysis_results || {};
-      
       return {
         success: true,
-        analysis: {
-          concepts: analysisResults.concept_insights || [],
-          intent: analysisResults.intent_analysis || {},
-          sentiment: analysisResults.sentiment_analysis || {},
-          temporal_patterns: analysisResults.temporal_patterns || [],
-          semantic_connections: analysisResults.semantic_connections || [],
-          confidence_score: analysisResults.processing_metadata?.confidence_score || 0
-        },
+        analysis: result,
         metadata: {
-          processing_time_ms: result.processing_time_ms || 0,
-          concepts_extracted: analysisResults.processing_metadata?.concepts_extracted || 0
+          processing_time_ms: 0,
+          concepts_extracted: 0
         },
         timestamp: new Date().toISOString()
       };
@@ -89,10 +79,10 @@ export default new Elysia({ prefix: '/rdf' })
   .get('/status', () => {
     console.log('📊 RDF Status check requested');
     return {
-      service: 'omnii-rdf-integrated',
-      status: rdfService.isServiceAvailable() ? 'available' : 'unavailable',
+      service: 'omnii-rdf-python-client',
+      status: rdfServiceClient.isAvailable() ? 'available' : 'unavailable',
       version: '1.0.0',
-      integration: 'native',
+      integration: 'python_service_client',
       timestamp: new Date().toISOString()
     };
   })
@@ -110,22 +100,20 @@ export default new Elysia({ prefix: '/rdf' })
         };
       }
 
-      const { extractBasicConcepts, analyzeBasicSentiment, detectBasicIntent } = await import('../utils/rdf-helpers');
-      
-      const text = (body as any).text;
-      const concepts = extractBasicConcepts(text);
-      const sentiment = analyzeBasicSentiment(text);
-      const intent = detectBasicIntent(text);
+      // Use the Python RDF service for concept extraction
+      const result = await rdfServiceClient.processRDFRequest({
+        text: (body as any).text,
+        domain: 'concept_extraction',
+        task: 'extract_concepts',
+        extractors: ['concepts', 'sentiment', 'intent']
+      });
       
       return {
         success: true,
-        concepts: concepts,
-        sentiment: {
-          score: sentiment,
-          polarity: sentiment > 0.1 ? 'positive' : sentiment < -0.1 ? 'negative' : 'neutral'
-        },
-        intent: intent,
-        text_length: text.length,
+        concepts: result.concepts || [],
+        sentiment: result.sentiment || { score: 0, polarity: 'neutral' },
+        intent: result.intent || 'unknown',
+        text_length: (body as any).text.length,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
@@ -146,13 +134,13 @@ export default new Elysia({ prefix: '/rdf' })
   .get('/test', () => {
     console.log('🧪 RDF Test endpoint accessed');
     return {
-      message: 'RDF service test endpoint',
-      service: 'omnii-rdf-integrated',
+      message: 'RDF Python service client test endpoint',
+      service: 'omnii-rdf-python-client',
       endpoints: [
-        'GET /api/rdf/health - Service health check',
-        'POST /api/rdf/process - Full RDF processing pipeline',
-        'POST /api/rdf/analyze - Analysis-only endpoint',
-        'POST /api/rdf/extract-concepts - Concept extraction only',
+        'GET /api/rdf/health - Python RDF service health check',
+        'POST /api/rdf/process - Full RDF processing via Python service',
+        'POST /api/rdf/analyze - Analysis via Python service',
+        'POST /api/rdf/extract-concepts - Concept extraction via Python service',
         'GET /api/rdf/status - Service status',
         'GET /api/rdf/test - This endpoint'
       ],
