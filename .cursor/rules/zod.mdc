@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
  refer to existing zod schema in [unified-response.validation.ts](mdc:omnii-mobile/src/types/unified-response.validation.ts)  and update accordingly. if the schema doesnt' exist build off of it. 
  

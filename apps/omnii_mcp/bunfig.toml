@@ -1,7 +1,14 @@
 [test]
+# Test configuration
+coverage = true
+timeout = 10000
+preload = ["./tests/setup.ts"]
+
+# Test file patterns
+include = ["tests/**/*.test.ts", "tests/**/*.spec.ts"]
+exclude = ["node_modules", "dist"]
+
 # Configure bun test settings
-preload = ["./tests/setup.js"]
-timeout = 15000 # 15 seconds - increased timeout for MCP API calls
 # Retry failed tests 2 times
 retries = 2
 

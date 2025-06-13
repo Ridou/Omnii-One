@@ -238,279 +238,216 @@ export class EntityManager {
     context: ExecutionContextType,
     userUUID?: string
   ): Promise<CachedEntity[]> {
-    try {
-      console.log(`[EntityManager] ===== STARTING ENTITY RESOLUTION =====`);
-      console.log(`[EntityManager] Input message: "${message}"`);
-      console.log(`[EntityManager] Context: ${context}`);
+    console.log(`[EntityManager] 🔍 Resolving entities from: "${message}"`);
+    console.log(`[EntityManager] Context: ${context}, UserUUID: ${userUUID || 'none'}`);
+    
+    const entities = await this.extractEntities(message);
+    console.log(`[EntityManager] 📊 Extracted ${entities.length} raw entities:`, entities.map(e => ({
+      type: e.type,
+      value: e.value
+    })));
+    
+    const resolvedEntities: CachedEntity[] = [];
 
-      // Extract entities from message
-      const extractedEntities = await this.extractEntities(message);
-      console.log(
-        `[EntityManager] Extracted ${extractedEntities.length} entities:`,
-        extractedEntities
-      );
+    for (const entity of entities) {
+      console.log(`[EntityManager] 🔍 Processing entity: ${entity.type} = "${entity.value}"`);
+      
+      const cacheKey = `entity:${userUUID || 'default'}:${entity.type}:${entity.value}`;
+      console.log(`[EntityManager] 📋 Cache key: ${cacheKey}`);
 
-      if (extractedEntities.length === 0) {
-        console.log(
-          `[EntityManager] No entities extracted, returning empty array`
-        );
-        return [];
+      // Check cache first
+      const cachedEntity = await this.getCachedEntity(cacheKey);
+      if (cachedEntity) {
+        console.log(`[EntityManager] ✅ Found cached entity: ${entity.value} → ${cachedEntity.type} (${cachedEntity.email || 'no email'})`);
+        resolvedEntities.push(cachedEntity);
+        continue;
       }
 
-      // Resolve each entity
-      const resolvedEntities: CachedEntity[] = [];
-      for (const entity of extractedEntities) {
-        console.log(
-          `[EntityManager] Processing entity: ${entity.type} = "${entity.value}"`
-        );
+      console.log(`[EntityManager] 🔍 No cache found, analyzing entity type: ${entity.type}`);
 
-        // Check cache first
-        const cacheKey = `${entity.type}:${entity.value}`;
-        const cachedEntity = await this.getCachedEntity(cacheKey);
-
-        // For UNKNOWN entities, retry contact lookup if cache is older than 2 minutes
-        // This ensures we don't get stuck with stale UNKNOWN entities when contacts exist
-        const shouldRetryUnknown =
-          cachedEntity &&
-          cachedEntity.type === EntityType.UNKNOWN &&
-          Date.now() - cachedEntity.resolvedAt > 2 * 60 * 1000; // 2 minutes
-
-        if (cachedEntity && !shouldRetryUnknown) {
-          console.log(
-            `[EntityManager] Cache hit for ${cacheKey} (type: ${cachedEntity.type})`
-          );
-          resolvedEntities.push(cachedEntity);
-          continue;
-        }
-
-        if (shouldRetryUnknown) {
-          console.log(
-            `[EntityManager] Cached UNKNOWN entity is stale (${Math.round(
-              (Date.now() - cachedEntity!.resolvedAt) / 60000
-            )}min old), retrying contact lookup`
-          );
-          // Clear the stale cache entry so fresh lookup can be cached
-          await this.clearCachedEntity(entity.type, entity.value);
-        } else {
-          console.log(`[EntityManager] Cache miss for ${cacheKey}`);
-        }
-
-        // Handle different entity types
-        switch (entity.type) {
-          case EntityType.PERSON: {
-            // Look up contact
-            console.log(`[EntityManager] Looking up contact: ${entity.value}`);
+      // Handle different entity types
+      switch (entity.type) {
+        case EntityType.PERSON: {
+          console.log(`[EntityManager] 👤 Processing PERSON entity: ${entity.value}`);
+          
+          // Look up contact
+          console.log(`[EntityManager] Looking up contact: ${entity.value}`);
+          
+          // Skip contact lookup if no valid userUUID
+          if (!userUUID || userUUID.trim() === "") {
+            console.warn(`[EntityManager] No valid userUUID for contact lookup: ${entity.value}`);
             
-            // Skip contact lookup if no valid userUUID
-            if (!userUUID || userUUID.trim() === "") {
-              console.warn(`[EntityManager] No valid userUUID for contact lookup: ${entity.value}`);
-              // Skip to smart resolution which might handle this better
-            } else {
-              const contactResult = await unifiedGoogleManager.processMessage(
-                `Find contact: ${entity.value}`,
-                userUUID,
-                "America/Los_Angeles",
-                undefined,
-                context
-              );
+            // Create PERSON entity that needs email resolution
+            const personEntity: CachedEntity = {
+              type: EntityType.PERSON,
+              value: entity.value,
+              needsEmailResolution: true,
+              resolvedAt: Date.now(),
+            };
+            await this.cacheEntity(cacheKey, personEntity);
+            resolvedEntities.push(personEntity);
+            console.log(`[EntityManager] ✅ Created PERSON entity (needs resolution): ${entity.value}`);
+            continue;
+          } else {
+            console.log(`[EntityManager] 📞 Calling Google Contacts for: ${entity.value} (userUUID: ${userUUID})`);
+            
+            const contactResult = await unifiedGoogleManager.processMessage(
+              `Find contact: ${entity.value}`,
+              userUUID,
+              "America/Los_Angeles",
+              undefined,
+              context
+            );
 
-            console.log(
-              `[EntityManager] Contact lookup result:`,
-              contactResult
-            );
-            console.log(
-              `[EntityManager] Contact lookup success: ${contactResult.success}`
-            );
-            console.log(
-              `[EntityManager] Contact lookup rawData:`,
-              JSON.stringify(contactResult.rawData, null, 2)
-            );
+            console.log(`[EntityManager] 📊 Contact lookup result:`, {
+              success: contactResult.success,
+              hasRawData: !!contactResult.rawData,
+              message: contactResult.message
+            });
 
             if (contactResult.success && contactResult.rawData) {
-              // Check if we got contact data
-              const data = contactResult.rawData.data || contactResult.rawData;
-              console.log(
-                `[EntityManager] Parsed data:`,
-                JSON.stringify(data, null, 2)
+              console.log(`[EntityManager] 📋 Raw contact data keys:`, Object.keys(contactResult.rawData));
+              
+              const contactData = this.extractContactFromResult(contactResult, entity.value);
+              console.log(`[EntityManager] 📊 Extracted contact data:`, contactData);
+              
+              if (contactData) {
+                const resolvedEntity: CachedEntity = {
+                  type: EntityType.EMAIL,
+                  value: entity.value,
+                  email: contactData.email!,
+                  displayName: contactData.name,
+                  phoneNumber: contactData.phone,
+                  resolvedAt: Date.now(),
+                };
+                await this.cacheEntity(cacheKey, resolvedEntity);
+                resolvedEntities.push(resolvedEntity);
+                console.log(`[EntityManager] ✅ Direct contact resolution: ${entity.value} → ${contactData.email} (${contactData.name})`);
+                continue;
+              } else {
+                console.log(`[EntityManager] ⚠️ Contact lookup succeeded but no data extracted`);
+              }
+            } else {
+              console.log(`[EntityManager] ⚠️ Contact lookup failed or returned no data`);
+            }
+            
+            // If direct contact lookup failed, try smart contact resolution
+            console.log(`[EntityManager] 🧠 Trying smart contact resolution for: ${entity.value}`);
+            
+            try {
+              const smartResult = await this.smartContactResolver.resolveContact(
+                entity.value,
+                context,
+                userUUID
               );
+              
+              console.log(`[EntityManager] 🧠 Smart resolution result:`, {
+                success: smartResult.success,
+                hasExactMatch: !!smartResult.exactMatch,
+                hasSuggestions: !!smartResult.suggestions?.length,
+                message: smartResult.message
+              });
 
-              const results = data.response_data?.results || data.results || [];
-              console.log(
-                `[EntityManager] Found ${results.length} contact results`
-              );
-
-              if (results.length > 0 && results[0].person) {
-                const person = results[0].person;
-                const email = person.emailAddresses?.[0]?.value;
-                const phoneNumber = person.phoneNumbers?.[0]?.value;
-                const displayName =
-                  person.names?.[0]?.displayName || entity.value;
-
-                console.log(
-                  `[EntityManager] Found contact: ${displayName}, email: ${
-                    email || "none"
-                  }, phone: ${phoneNumber || "none"}`
-                );
-
-                if (email) {
-                  // Contact has email - create EMAIL entity
+              if (smartResult.success && smartResult.exactMatch) {
+                if (smartResult.exactMatch.email) {
+                  // High-confidence match with email
                   const resolvedEntity: CachedEntity = {
                     type: EntityType.EMAIL,
                     value: entity.value,
-                    email,
+                    email: smartResult.exactMatch.email,
+                    displayName: smartResult.exactMatch.name,
+                    phoneNumber: smartResult.exactMatch.phone,
                     resolvedAt: Date.now(),
                   };
                   await this.cacheEntity(cacheKey, resolvedEntity);
                   resolvedEntities.push(resolvedEntity);
-                  console.log(
-                    `[EntityManager] Created EMAIL entity for ${entity.value} -> ${email}`
-                  );
+                  console.log(`[EntityManager] ✅ Smart resolution with email: ${entity.value} → ${smartResult.exactMatch.email} (${smartResult.exactMatch.name})`);
                   continue;
                 } else {
-                  // Contact found but no email - create PERSON entity that needs email resolution
-                  console.log(
-                    `[EntityManager] Contact "${displayName}" found but has no email address`
-                  );
+                  // High-confidence match but no email
                   const personEntity: CachedEntity = {
                     type: EntityType.PERSON,
                     value: entity.value,
-                    displayName,
-                    phoneNumber,
+                    displayName: smartResult.exactMatch.name,
+                    phoneNumber: smartResult.exactMatch.phone,
                     needsEmailResolution: true,
                     resolvedAt: Date.now(),
                   };
                   await this.cacheEntity(cacheKey, personEntity);
                   resolvedEntities.push(personEntity);
+                  console.log(`[EntityManager] ✅ Smart resolution without email (needs resolution): ${entity.value} → ${smartResult.exactMatch.name}`);
                   continue;
                 }
-              } else {
-                console.log(
-                  `[EntityManager] No person data found in contact results`
-                );
-              }
-            } else {
-              console.log(
-                `[EntityManager] Contact lookup failed or no rawData`
-              );
-            }
-            } // Close the userUUID check else block
-
-            // Standard lookup failed - try smart contact resolution
-            console.log(
-              `[EntityManager] 🧠 Standard lookup failed for "${entity.value}", trying smart contact resolution...`
-            );
-            
-            // Only try smart resolution if we have a valid userUUID
-            if (!userUUID || userUUID.trim() === "") {
-              console.warn(`[EntityManager] No valid userUUID for smart contact resolution: ${entity.value}`);
-              break; // Skip to UNKNOWN entity creation
-            }
-
-            const smartResult = await this.smartContactResolver.resolveContact(
-              entity.value,
-              context,
-              userUUID
-            );
-
-            if (smartResult.success && smartResult.exactMatch) {
-              console.log(
-                `[EntityManager] ✅ Smart resolution found: ${smartResult.exactMatch.name} (confidence: ${smartResult.exactMatch.confidence})`
-              );
-              
-              if (smartResult.exactMatch.email) {
-                // High-confidence match with email
-                const resolvedEntity: CachedEntity = {
-                  type: EntityType.EMAIL,
+              } else if (smartResult.suggestions && smartResult.suggestions.length > 0) {
+                // Found suggestions - create an UNKNOWN entity with suggestions for user intervention
+                console.log(`[EntityManager] 💡 Found ${smartResult.suggestions.length} suggestions for "${entity.value}"`);
+                const unknownWithSuggestions: CachedEntity = {
+                  type: EntityType.UNKNOWN,
                   value: entity.value,
-                  email: smartResult.exactMatch.email,
-                  displayName: smartResult.exactMatch.name,
+                  smartSuggestions: smartResult.suggestions,
                   resolvedAt: Date.now(),
                 };
-                await this.cacheEntity(cacheKey, resolvedEntity);
-                resolvedEntities.push(resolvedEntity);
-                console.log(
-                  `[EntityManager] Created EMAIL entity from smart resolution: ${entity.value} -> ${smartResult.exactMatch.email}`
-                );
-                continue;
-              } else {
-                // High-confidence match but no email
-                const personEntity: CachedEntity = {
-                  type: EntityType.PERSON,
-                  value: entity.value,
-                  displayName: smartResult.exactMatch.name,
-                  phoneNumber: smartResult.exactMatch.phone,
-                  needsEmailResolution: true,
-                  resolvedAt: Date.now(),
-                };
-                await this.cacheEntity(cacheKey, personEntity);
-                resolvedEntities.push(personEntity);
-                console.log(
-                  `[EntityManager] Created PERSON entity from smart resolution: ${smartResult.exactMatch.name} (needs email)`
-                );
+                await this.cacheEntity(cacheKey, unknownWithSuggestions);
+                resolvedEntities.push(unknownWithSuggestions);
+                console.log(`[EntityManager] ✅ Created UNKNOWN entity with suggestions: ${smartResult.message}`);
                 continue;
               }
-            } else if (smartResult.suggestions && smartResult.suggestions.length > 0) {
-              // Found suggestions - create an UNKNOWN entity with suggestions for user intervention
-              console.log(
-                `[EntityManager] 💡 Found ${smartResult.suggestions.length} suggestions for "${entity.value}"`
-              );
-              const unknownWithSuggestions: CachedEntity = {
-                type: EntityType.UNKNOWN,
-                value: entity.value,
-                smartSuggestions: smartResult.suggestions,
-                resolvedAt: Date.now(),
-              };
-              await this.cacheEntity(cacheKey, unknownWithSuggestions);
-              resolvedEntities.push(unknownWithSuggestions);
-              console.log(
-                `[EntityManager] Created UNKNOWN entity with smart suggestions: ${smartResult.message}`
-              );
-              continue;
-            }
 
-            // If we get here, even smart resolution failed
-            console.log(
-              `[EntityManager] ❌ Smart resolution also failed for: ${entity.value}, creating UNKNOWN entity`
-            );
-            break;
+              // If we get here, even smart resolution failed
+              console.log(`[EntityManager] ❌ Smart resolution also failed for: ${entity.value}, creating UNKNOWN entity`);
+            } catch (error) {
+              console.error(`[EntityManager] Smart resolution error for "${entity.value}":`, error);
+            }
           }
-          case EntityType.EMAIL: {
-            // Email is already resolved
-            const resolvedEntity: CachedEntity = {
-              type: EntityType.EMAIL,
-              value: entity.value,
-              email: entity.value,
-              resolvedAt: Date.now(),
-            };
-            await this.cacheEntity(cacheKey, resolvedEntity);
-            resolvedEntities.push(resolvedEntity);
-            continue;
-          }
+
+          // If all contact resolution methods failed, create PERSON entity that needs email resolution
+          const personEntity: CachedEntity = {
+            type: EntityType.PERSON,
+            value: entity.value,
+            needsEmailResolution: true,
+            resolvedAt: Date.now(),
+          };
+          await this.cacheEntity(cacheKey, personEntity);
+          resolvedEntities.push(personEntity);
+          console.log(`[EntityManager] ✅ Fallback: Created PERSON entity needing resolution: ${entity.value}`);
+          break;
         }
 
-        // If we get here, entity couldn't be resolved
-        const unknownEntity: CachedEntity = {
-          type: EntityType.UNKNOWN,
-          value: entity.value,
-          resolvedAt: Date.now(),
-        };
-        await this.cacheEntity(cacheKey, unknownEntity);
-        resolvedEntities.push(unknownEntity);
-        console.log(
-          `[EntityManager] Created UNKNOWN entity for: ${entity.value}`
-        );
-      }
+        case EntityType.EMAIL: {
+          // Direct email - store as-is
+          const emailEntity: CachedEntity = {
+            type: EntityType.EMAIL,
+            value: entity.value,
+            email: entity.value,
+            resolvedAt: Date.now(),
+          };
+          await this.cacheEntity(cacheKey, emailEntity);
+          resolvedEntities.push(emailEntity);
+          console.log(`[EntityManager] ✅ Direct email entity: ${entity.value}`);
+          break;
+        }
 
-      console.log(`[EntityManager] ===== ENTITY RESOLUTION COMPLETE =====`);
-      console.log(
-        `[EntityManager] Final resolved entities (${resolvedEntities.length}):`,
-        resolvedEntities
-      );
-      return resolvedEntities;
-    } catch (error) {
-      console.error(`[EntityManager] Error resolving entities:`, error);
-      return [];
+        default: {
+          // Unknown entity type - create as UNKNOWN
+          const unknownEntity: CachedEntity = {
+            type: EntityType.UNKNOWN,
+            value: entity.value,
+            resolvedAt: Date.now(),
+          };
+          await this.cacheEntity(cacheKey, unknownEntity);
+          resolvedEntities.push(unknownEntity);
+          console.log(`[EntityManager] ⚠️ Created UNKNOWN entity: ${entity.value} (type: ${entity.type})`);
+          break;
+        }
+      }
     }
+
+    console.log(`[EntityManager] 🎯 Final resolution summary:`);
+    resolvedEntities.forEach((entity, idx) => {
+      console.log(`[EntityManager] ${idx + 1}. ${entity.type} = "${entity.value}" ${entity.email ? `(email: ${entity.email})` : ''} ${entity.needsEmailResolution ? '(NEEDS EMAIL RESOLUTION)' : ''}`);
+    });
+
+    return resolvedEntities;
   }
 
   /**

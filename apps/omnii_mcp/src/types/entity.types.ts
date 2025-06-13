@@ -17,6 +17,8 @@ export const CachedEntitySchema = z.object({
   displayName: z.string().optional(),
   phoneNumber: z.string().optional(),
   needsEmailResolution: z.boolean().optional(),
+  // Confidence score for resolved entities (0.0 to 1.0)
+  confidence: z.number().min(0).max(1).optional(),
   // Smart contact suggestions when no exact match is found
   smartSuggestions: z.array(z.object({
     name: z.string(),

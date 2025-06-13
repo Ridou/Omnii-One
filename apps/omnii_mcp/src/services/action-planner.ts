@@ -49,6 +49,8 @@ import {
   fillEntityPlaceholders,
   extractActionStepsFromPlan
 } from "./action-planner-utils";
+import { RDFContactAnalyzer } from './rdf-contact-analyzer';
+import { ContactConfidenceBooster } from './contact-confidence-booster';
 
 export class ActionPlanner {
   private openai: OpenAI;
@@ -90,16 +92,42 @@ export class ActionPlanner {
   ): Promise<ActionPlan> {
     try {
       console.log(`[ActionPlanner] Creating plan for: "${message}"`);
+      console.log(`[ActionPlanner] 🔍 Input entities:`, entities?.map(e => ({
+        type: e.type,
+        value: e.value,
+        email: e.email,
+        needsEmailResolution: e.needsEmailResolution
+      })));
 
       // Get initial plan from LLM
       const initialPlan = await this.createPlanWithLLM(message, entities);
+      
+      console.log(`[ActionPlanner] 📋 Initial plan created:`, {
+        steps: initialPlan.steps.length,
+        stepDetails: initialPlan.steps.map(s => ({
+          type: s.type,
+          action: s.action,
+          recipientEmail: s.params?.recipient_email
+        }))
+      });
 
       // Apply placeholder patching if entities are available
       if (entities && entities.length > 0) {
+        console.log(`[ActionPlanner] 🔧 Patching email placeholders with ${entities.length} entities...`);
         initialPlan.steps = this.entityManager.patchEmailPlaceholders(
           initialPlan.steps,
           entities
         );
+        
+        console.log(`[ActionPlanner] 📋 After placeholder patching:`, {
+          stepDetails: initialPlan.steps.map(s => ({
+            type: s.type,
+            action: s.action,
+            recipientEmail: s.params?.recipient_email
+          }))
+        });
+      } else {
+        console.log(`[ActionPlanner] ⚠️ No entities provided for placeholder patching`);
       }
 
       // Validate plan dependencies before proceeding
@@ -114,7 +142,10 @@ export class ActionPlanner {
       }
 
       // Check for unresolved placeholders after patching
-      if (this.entityManager.hasUnresolvedPlaceholders(initialPlan.steps)) {
+      const hasUnresolvedPlaceholders = this.entityManager.hasUnresolvedPlaceholders(initialPlan.steps);
+      console.log(`[ActionPlanner] 🔍 Has unresolved placeholders: ${hasUnresolvedPlaceholders}`);
+      
+      if (hasUnresolvedPlaceholders) {
         console.log(
           `[ActionPlanner] Found unresolved placeholders, checking for entities that need resolution`
         );
@@ -127,6 +158,12 @@ export class ActionPlanner {
               (e.type === EntityType.PERSON && e.needsEmailResolution)
           ) || [];
 
+        console.log(`[ActionPlanner] 🔍 Entities needing resolution:`, entitiesNeedingResolution.map(e => ({
+          type: e.type,
+          value: e.value,
+          needsEmailResolution: e.needsEmailResolution
+        })));
+
         if (entitiesNeedingResolution.length > 0) {
           console.log(
             `[ActionPlanner] 🧠 Found ${entitiesNeedingResolution.length} entities needing resolution - using RDF reasoning instead of user intervention`
@@ -135,8 +172,23 @@ export class ActionPlanner {
           // Use RDF + smart reasoning to resolve entities automatically  
           const resolvedEntities = await this.resolveEntitiesWithRDF(entitiesNeedingResolution, entities, userUUID);
 
+          console.log(`[ActionPlanner] 🎯 RDF Resolution returned ${resolvedEntities.length} entities:`, resolvedEntities.map(e => ({
+            type: e.type,
+            value: e.value,
+            email: e.email,
+            confidence: e.confidence
+          })));
+
           // Update the plan's entity placeholders with resolved emails
           const updatedSteps = this.patchEntityPlaceholders(initialPlan.steps, resolvedEntities);
+
+          console.log(`[ActionPlanner] 📋 Final plan after RDF resolution:`, {
+            stepDetails: updatedSteps.map(s => ({
+              type: s.type,
+              action: s.action,
+              recipientEmail: s.params?.recipient_email
+            }))
+          });
 
           return {
             ...initialPlan,
@@ -145,8 +197,20 @@ export class ActionPlanner {
             currentStepIndex: 0,
             state: PlanState.CREATED,
           };
+        } else {
+          console.log(`[ActionPlanner] ❌ No entities found that need resolution`);
         }
+      } else {
+        console.log(`[ActionPlanner] ✅ No unresolved placeholders found`);
       }
+
+      console.log(`[ActionPlanner] 📋 Returning plan as-is:`, {
+        stepDetails: initialPlan.steps.map(s => ({
+          type: s.type,
+          action: s.action,
+          recipientEmail: s.params?.recipient_email
+        }))
+      });
 
       return initialPlan;
     } catch (error) {
@@ -179,92 +243,134 @@ export class ActionPlanner {
     allEntities?: CachedEntity[],
     userUUID?: string
   ): Promise<CachedEntity[]> {
-    console.log(`[ActionPlanner] 🧠 Resolving ${entitiesNeedingResolution.length} entities with RDF reasoning`);
+    console.log(`[ActionPlanner] 🧠 Resolving ${entitiesNeedingResolution.length} entities with RDF contact resolution`);
     console.log(`[ActionPlanner] 🔑 Using userUUID: ${userUUID || 'undefined'}`);
     
+    if (!userUUID) {
+      console.warn(`[ActionPlanner] ⚠️ No userUUID provided, cannot use brain memory for confidence boosting`);
+    }
+    
     const resolvedEntities: CachedEntity[] = [];
+    
+    // Initialize RDF contact analyzer and confidence booster
+    const rdfAnalyzer = new RDFContactAnalyzer();
+    const confidenceBooster = new ContactConfidenceBooster();
     
     for (const entity of entitiesNeedingResolution) {
       console.log(`[ActionPlanner] 🔍 Resolving entity: ${entity.type} = "${entity.value}"`);
       
       try {
-        // Use smart contact resolution to find the best match
-        const smartResult = await this.smartContactResolver.resolveContact(
-          entity.value,
-          ExecutionContextType.WEBSOCKET, // Use WebSocket context
-          userUUID // Pass the actual userUUID
-        );
+        // Step 1: Analyze the contact mention using RDF semantics
+        const contactName = entity.value;
+        const contextMessage = `Send email to ${contactName}`; // Reconstruct context
         
-        if (smartResult.success && smartResult.exactMatch) {
-          // High confidence match found
-          console.log(`[ActionPlanner] ✅ Found exact match: ${smartResult.exactMatch.name} (${Math.round(smartResult.exactMatch.confidence * 100)}%)`);
+        const analysis = await rdfAnalyzer.analyzeMessage(contextMessage);
+        console.log(`[ActionPlanner] 📊 RDF Analysis complete:`, {
+          contact: analysis.contact,
+          intent: analysis.intent,
+          confidence: analysis.confidence,
+          context: analysis.context
+        });
+        
+        // Step 2: Expand the contact name for better matching
+        const expandedNames = await rdfAnalyzer.expandContactName(contactName);
+        console.log(`[ActionPlanner] 📝 Name expansion: ${contactName} → [${expandedNames.join(', ')}]`);
+        
+        // Step 3: Search for contacts using all name variations
+        const searchResults = await rdfAnalyzer.searchContacts(expandedNames, userUUID);
+        console.log(`[ActionPlanner] 🔍 Found ${searchResults.length} potential contacts`);
+        
+        if (searchResults.length === 0) {
+          console.log(`[ActionPlanner] ❌ No contacts found for "${contactName}"`);
+          resolvedEntities.push({
+            ...entity,
+            displayName: `${contactName} (not found)`,
+          });
+          continue;
+        }
+        
+        // Step 4: Apply contextual scoring and brain memory confidence boosting
+        const scoredContacts = await rdfAnalyzer.scoreContacts(searchResults, analysis);
+        console.log(`[ActionPlanner] 🎯 Scored ${scoredContacts.length} contacts`);
+        
+        // Step 5: Boost confidence using brain memory (if userUUID available)
+        let boostedContacts = scoredContacts;
+        if (userUUID) {
+          try {
+            boostedContacts = await confidenceBooster.boostContactConfidence(
+              scoredContacts,
+              contactName,
+              userUUID
+            );
+            console.log(`[ActionPlanner] 🧠 Brain memory boosting complete`);
+          } catch (error) {
+            console.warn(`[ActionPlanner] Brain memory boosting failed:`, error);
+            // Continue with unboosted scores
+          }
+        }
+        
+        // Step 6: Apply smart intervention logic
+        const topContact = boostedContacts[0];
+        const autoResolveThreshold = 0.8;
+        
+        if (topContact && topContact.confidence >= autoResolveThreshold) {
+          // High confidence - auto-resolve
+          console.log(`[ActionPlanner] ✅ Auto-resolving: ${topContact.name} (${Math.round(topContact.confidence * 100)}% confidence)`);
           
           const resolvedEntity: CachedEntity = {
             type: EntityType.EMAIL,
             value: entity.value,
-            email: smartResult.exactMatch.email!,
-            displayName: smartResult.exactMatch.name,
+            email: topContact.email!,
+            displayName: topContact.name,
             resolvedAt: Date.now(),
+            confidence: topContact.confidence,
           };
           resolvedEntities.push(resolvedEntity);
           
-        } else if (smartResult.suggestions && smartResult.suggestions.length > 0) {
-          // Use best suggestion automatically
-          const bestSuggestion = smartResult.suggestions[0];
-          console.log(`[ActionPlanner] 💡 Using best suggestion: ${bestSuggestion.name} (${Math.round(bestSuggestion.confidence * 100)}% confidence)`);
+        } else if (boostedContacts.length > 0) {
+          // Multiple options or low confidence - use best match for now
+          // TODO: In the future, this could trigger user intervention
+          const bestMatch = boostedContacts[0];
+          console.log(`[ActionPlanner] 💡 Using best match: ${bestMatch.name} (${Math.round(bestMatch.confidence * 100)}% confidence)`);
           
-          if (bestSuggestion.email) {
+          if (bestMatch.email) {
             const resolvedEntity: CachedEntity = {
               type: EntityType.EMAIL,
               value: entity.value,
-              email: bestSuggestion.email,
-              displayName: bestSuggestion.name,
+              email: bestMatch.email,
+              displayName: bestMatch.name,
               resolvedAt: Date.now(),
+              confidence: bestMatch.confidence,
             };
             resolvedEntities.push(resolvedEntity);
           } else {
-            // No email in suggestion, keep as unresolved
-            console.log(`[ActionPlanner] ⚠️ Best suggestion "${bestSuggestion.name}" has no email`);
-            resolvedEntities.push(entity);
+            console.log(`[ActionPlanner] ⚠️ Best match "${bestMatch.name}" has no email`);
+            resolvedEntities.push({
+              ...entity,
+              displayName: `${bestMatch.name} (no email)`,
+            });
           }
-          
         } else {
-          // Use RDF reasoning to make intelligent guess
-          if (this.rdfService) {
-            console.log(`[ActionPlanner] 🧠 Using RDF reasoning for "${entity.value}"`);
-            
-            try {
-              const rdfPrompt = `I need to send an email to "${entity.value}". Based on common names and context, what's the most likely full name and email format for this person?`;
-              const rdfResult = await this.rdfService.processHumanInputToOmniiMCP(rdfPrompt);
-              
-              if (rdfResult?.success) {
-                console.log(`[ActionPlanner] 🧠 RDF reasoning provided context for "${entity.value}"`);
-                // For now, still mark as unresolved but with RDF context
-                resolvedEntities.push({
-                  ...entity,
-                  displayName: `${entity.value} (RDF enhanced)`,
-                });
-              } else {
-                resolvedEntities.push(entity);
-              }
-            } catch (error) {
-              console.warn(`[ActionPlanner] RDF reasoning failed:`, error);
-              resolvedEntities.push(entity);
-            }
-          } else {
-            // No RDF service, keep as unresolved
-            console.log(`[ActionPlanner] ❌ No resolution found for "${entity.value}"`);
-            resolvedEntities.push(entity);
-          }
+          // No good matches found
+          console.log(`[ActionPlanner] ❌ No suitable matches found for "${contactName}"`);
+          resolvedEntities.push({
+            ...entity,
+            displayName: `${contactName} (no matches)`,
+          });
         }
         
       } catch (error) {
-        console.error(`[ActionPlanner] Error resolving entity "${entity.value}":`, error);
-        resolvedEntities.push(entity);
+        console.error(`[ActionPlanner] Error in RDF contact resolution for "${entity.value}":`, error);
+        resolvedEntities.push({
+          ...entity,
+          displayName: `${entity.value} (resolution error)`,
+        });
       }
     }
     
-    console.log(`[ActionPlanner] 🎯 Resolved ${resolvedEntities.filter(e => e.email).length}/${entitiesNeedingResolution.length} entities to emails`);
+    const successfulResolutions = resolvedEntities.filter(e => e.email).length;
+    console.log(`[ActionPlanner] 🎯 RDF Resolution complete: ${successfulResolutions}/${entitiesNeedingResolution.length} entities resolved to emails`);
+    
     return resolvedEntities;
   }
 
