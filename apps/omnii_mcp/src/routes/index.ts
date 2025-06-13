@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import neo4jRoutes from './neo4j';
 import smsRoutes from './sms';
+import rdfRoutes from './rdf';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
 
@@ -61,6 +62,7 @@ export default (app: Elysia) => {
   // Register other routes
   api.use(neo4jRoutes);
   api.use(smsRoutes);
+  api.use(rdfRoutes);
   
   // Mount the API routes under /api
   return app.use(api);

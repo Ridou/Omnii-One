@@ -7,7 +7,7 @@ import { CalendarPlugin } from "./plugins/calendar-plugin";
 import { ContactsPlugin } from "./plugins/contacts-plugin";
 import { EmailPlugin } from "./plugins/email-plugin";
 import { ExecutionContextType } from "../types/action-planning.types";
-import { UnifiedToolResponse } from "../types/unified-response.types";
+import { UnifiedToolResponse } from "@omnii/validators";
 import { isValidUnifiedToolResponse, validateUnifiedToolResponse } from "@omnii/validators";
 import {
   GoogleServiceType, getGoogleServiceConfig

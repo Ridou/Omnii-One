@@ -1,5 +1,5 @@
 import { redisCache } from "./redis-cache";
-import { ZodSchema } from "zod";
+import { ZodSchema } from "zod/v4";
 
 export async function setTyped<T>(key: string, value: T, ttl?: number) {
   await redisCache.set(key, value, ttl);

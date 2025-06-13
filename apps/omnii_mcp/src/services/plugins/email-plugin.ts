@@ -13,7 +13,7 @@ import {
   EmailData,
   UnifiedAction,
   EmailListData,
-} from "../../types/unified-response.types";
+} from "@omnii/validators";
 import {
   ServiceType,
 } from "@omnii/validators";

@@ -5,14 +5,14 @@ import {
   GoogleServiceType,
   IOAuthTokenManager
 } from "../google-service-plugin";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { google } from "googleapis";
 import { ComposioApp, GoogleContactsAction } from "../../types/composio-enums";
 import { ExecutionContextType } from "../../types/action-planning.types";
 import {
   ContactData, ServiceType
 } from "@omnii/validators";
-import { UnifiedResponseBuilder, UnifiedToolResponse } from "../../types/unified-response.types";
+import { UnifiedResponseBuilder, UnifiedToolResponse } from "@omnii/validators";
 import {
   GoogleContactSchema,
   ListContactsParamsSchema, transformGoogleContactToSchema, createContactSuccessResponse,
@@ -688,15 +688,30 @@ export class ContactsPlugin implements GoogleServicePlugin {
       );
     }
 
-    // Handle legacy format with people_data and other_contacts
     const contacts: ContactData[] = [];
 
+    // Handle NEW format: response_data.results[] (this is what Google API actually returns!)
+    if (parsed.data?.response_data?.results) {
+      console.log(`[ContactsPlugin] ✅ Found contacts in response_data.results format: ${parsed.data.response_data.results.length} results`);
+      
+      parsed.data.response_data.results.forEach((result: any, index: number) => {
+        if (result.person) {
+          console.log(`[ContactsPlugin] 📇 Processing contact ${index + 1}: ${result.person.names?.[0]?.displayName || 'Unknown'}`);
+          const contact = transformGoogleContactToSchema(result.person);
+          contacts.push(contact);
+        }
+      });
+    }
+
+    // Handle legacy format with people_data and other_contacts (fallback)
     if (parsed.data?.people_data) {
+      console.log(`[ContactsPlugin] ✅ Found contact in people_data format`);
       const contact = transformGoogleContactToSchema(parsed.data.people_data);
       contacts.push(contact);
     }
 
     if (parsed.data?.other_contacts) {
+      console.log(`[ContactsPlugin] ✅ Found contacts in other_contacts format`);
       const otherContactsArray = Array.isArray(parsed.data.other_contacts)
         ? parsed.data.other_contacts
         : Object.values(parsed.data.other_contacts);
@@ -708,6 +723,7 @@ export class ContactsPlugin implements GoogleServicePlugin {
       });
     }
 
+    console.log(`[ContactsPlugin] 🎯 Final result: ${contacts.length} contacts extracted and formatted`);
     return createContactSuccessResponse(builder, contacts, actionName, "👥 Search Results");
   }
 

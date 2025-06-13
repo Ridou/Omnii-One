@@ -49,7 +49,9 @@
     "test:websocket:event": "bun test/websocket-scenarios.test.ts --event",
     "test:websocket:email": "bun test/websocket-scenarios.test.ts --email-read",
     "test:websocket:contact": "bun test/websocket-scenarios.test.ts --contact-add",
-    "test:websocket:all": "bun test/websocket-scenarios.test.ts --all"
+    "test:websocket:all": "bun test/websocket-scenarios.test.ts --all",
+    "test:rdf": "bun test-rdf-integration.js",
+    "test:rdf-integration": "bun test-rdf-integration.js"
   },
   "dependencies": {
     "@elysiajs/bearer": "^1.3.0",

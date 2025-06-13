@@ -13,7 +13,7 @@ import {
   CalendarListData,
   UnifiedAction,
   ServiceType
-} from "../../types/unified-response.types";
+} from "@omnii/validators";
 
 export class CalendarPlugin implements GoogleServicePlugin {
   serviceType = GoogleServiceType.CALENDAR;

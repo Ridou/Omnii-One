@@ -1,11 +1,11 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { 
   ContactData, 
   ContactListData, 
   ContactDataSchema,
   ContactListDataSchema 
 } from "@omnii/validators";
-import { UnifiedResponseBuilder, UnifiedToolResponse } from "../../types/unified-response.types";
+import { UnifiedResponseBuilder, UnifiedToolResponse } from "@omnii/validators";
 
 // ✅ Use Unified Schemas from Frontend (Single Source of Truth)
 export const GoogleContactSchema = z.object({

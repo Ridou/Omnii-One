@@ -17,10 +17,11 @@ import {
 import { TimezoneManager } from "./timezone-manager";
 import { UnifiedGoogleManager } from "./unified-google-manager";
 import { InterventionManager } from "./intervention-manager";
+import { RDFService } from "./rdf-service";
 import { randomBytes } from "crypto";
 import responseManager from "./response-manager";
 import { getObjectStructure, logObjectStructure } from "../utils/object-structure";
-import { isValidUnifiedToolResponse } from "../types/unified-response.validation";
+import { isValidUnifiedToolResponse } from "@omnii/validators";
 import { productionBrainService } from "./memory/production-brain-service";
 
 // Use Elysia's WebSocket type
@@ -43,6 +44,7 @@ export class WebSocketHandlerService {
   private googleManager: UnifiedGoogleManager;
   private interventionManager: InterventionManager;
   private entityManager: EntityManager;
+  private rdfService: RDFService;
 
   constructor() {
     this.timezoneManager = new TimezoneManager();
@@ -50,6 +52,7 @@ export class WebSocketHandlerService {
     this.interventionManager = new InterventionManager(this);
     this.actionPlanner = new ActionPlanner(this.interventionManager);
     this.entityManager = new EntityManager();
+    this.rdfService = new RDFService();
     
     console.log('🧠 WebSocketHandlerService initialized with brain memory integration');
   }
@@ -265,19 +268,29 @@ export class WebSocketHandlerService {
         return result.unifiedResponse; // Return the UnifiedToolResponse directly
       }
 
-      // OLD: Fallback to legacy response format
+      // OLD: Fallback to legacy response format (preserve RDF enhancement)
       console.log(`[WebSocket] 📤 Using legacy response format`);
+      const legacyData: any = {
+        message: result.message,
+        success: result.success,
+        userId: payload.userId,
+        processedAt: new Date().toISOString(),
+        error: result.error,
+      };
+      
+      // NEW: Preserve RDF enhancement data from handleWithActionPlanner (only if RDF actually ran)
+      if (result.data?.structured?.rdf_enhancement) {
+        legacyData.structured = {
+          rdf_enhancement: result.data.structured.rdf_enhancement
+        };
+      }
+      
       return {
         status: result.success
           ? WebSocketResponseStatus.SUCCESS
           : WebSocketResponseStatus.ERROR,
-        data: {
-          message: result.message,
-          success: result.success,
-          userId: payload.userId,
-          processedAt: new Date().toISOString(),
-          error: result.error,
-        },
+        data: legacyData,
+        success: result.success, // Add success property for test compatibility
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -351,12 +364,41 @@ export class WebSocketHandlerService {
         brainMemoryUsed = false;
       }
 
+      // NEW: RDF Analysis (pre-processing for semantic understanding)
+      let rdfInsights: any = null;
+      let rdfSuccess = false;
+      const rdfStartTime = Date.now();
+      
+      try {
+        if (this.rdfService) {
+          console.log(`[WebSocket] 🧠 Analyzing message with RDF semantic processing: "${message}"`);
+          const rdfResponse = await this.rdfService.processHumanInputToOmniiMCP(message);
+          const rdfProcessingTime = Date.now() - rdfStartTime;
+          
+          if (rdfResponse && rdfResponse.success && rdfResponse.data?.structured) {
+            rdfInsights = rdfResponse.data.structured;
+            rdfSuccess = true;
+            console.log(`[WebSocket] ✅ RDF analysis completed in ${rdfProcessingTime}ms`);
+            console.log(`[WebSocket] 🎯 Extracted ${rdfInsights.ai_reasoning?.extracted_concepts?.length || 0} concepts`);
+            console.log(`[WebSocket] 🎯 Generated ${rdfInsights.structured_actions?.length || 0} actions`);
+          } else {
+            console.warn(`[WebSocket] ⚠️ RDF analysis failed or returned invalid response`);
+          }
+        } else {
+          console.log(`[WebSocket] ⚠️ RDF service disabled, skipping semantic analysis`);
+        }
+      } catch (error) {
+        console.warn(`[WebSocket] ⚠️ RDF analysis failed, continuing with standard flow:`, error);
+        rdfSuccess = false;
+      }
+
       // Extract and resolve entities
       console.log(`[WebSocket] 🔍 Extracting entities from: "${message}"`);
 
       const resolvedEntities = await this.entityManager.resolveEntities(
         message,
-        ExecutionContextType.WEBSOCKET
+        ExecutionContextType.WEBSOCKET,
+        userId
       );
       console.log(
         `[WebSocket] ✅ Resolved ${resolvedEntities.length} entities:`,
@@ -377,10 +419,11 @@ export class WebSocketHandlerService {
         });
       }
 
-      // Create execution context with brain memory enhancement
+      // Create execution context with brain memory enhancement and RDF insights
       const context: ExecutionContext = {
         entityId: userId,
         phoneNumber: userId, // Use userId as phoneNumber for WebSocket context
+        userUUID: userId, // Add userUUID for OAuth operations
         userTimezone,
         localDatetime,
         stepResults: new Map(),
@@ -398,14 +441,23 @@ export class WebSocketHandlerService {
           chatId: `chat_${userId}`,
           isGroupChat: false,
           participants: [userId]
-        }
+        },
+        // NEW: RDF enhancement fields
+        rdfInsights: rdfInsights,
+        rdfSuccess: rdfSuccess,
+        enhancedIntent: rdfInsights?.ai_reasoning?.intent_analysis ? {
+          primary_intent: rdfInsights.ai_reasoning.intent_analysis.primary_intent || 'unknown',
+          confidence: rdfInsights.ai_reasoning.intent_analysis.confidence || 0,
+          urgency_level: rdfInsights.ai_reasoning.intent_analysis.urgency_level || 'medium'
+        } : undefined
       };
 
       // Create and execute plan (ActionPlanner will use brain memory context if available)
       console.log(`[WebSocket] 🎯 Creating action plan...`);
       const plan = await this.actionPlanner.createPlan(
         message,
-        resolvedEntities
+        resolvedEntities,
+        userId // Pass userUUID for contact resolution
       );
       console.log(
         `[WebSocket] 📝 Plan created with ${plan.steps.length} steps`
@@ -459,17 +511,73 @@ export class WebSocketHandlerService {
       if (result.unifiedResponse) {
         console.log(`[WebSocket] 🚀 handleWithActionPlanner returning UnifiedToolResponse directly`);
         logObjectStructure(`[WebSocket] UnifiedResponse structure`, result.unifiedResponse);
-        return result.unifiedResponse; // Return the UnifiedToolResponse directly
+        
+        // NEW: Enhance UnifiedToolResponse with RDF metadata (only if RDF service is available)
+        if (this.rdfService) {
+          if (rdfSuccess && rdfInsights) {
+            result.unifiedResponse.data = result.unifiedResponse.data || {};
+            result.unifiedResponse.data.structured = result.unifiedResponse.data.structured || {};
+            result.unifiedResponse.data.structured.rdf_enhancement = {
+              reasoning_applied: true,
+              extracted_concepts: rdfInsights.ai_reasoning?.extracted_concepts || [],
+              intent_analysis: rdfInsights.ai_reasoning?.intent_analysis || {},
+              processing_metadata: {
+                processing_time_ms: Date.now() - rdfStartTime,
+                confidence_threshold: 0.5,
+                action_count: rdfInsights.structured_actions?.length || 0,
+                concept_count: rdfInsights.ai_reasoning?.extracted_concepts?.length || 0
+              }
+            };
+          } else {
+            // Still add metadata even if RDF failed (but RDF service is available)
+            result.unifiedResponse.data = result.unifiedResponse.data || {};
+            result.unifiedResponse.data.structured = result.unifiedResponse.data.structured || {};
+            result.unifiedResponse.data.structured.rdf_enhancement = {
+              reasoning_applied: false,
+              extracted_concepts: [],
+              intent_analysis: {},
+              processing_metadata: {
+                processing_time_ms: Date.now() - rdfStartTime,
+                confidence_threshold: 0.5,
+                action_count: 0,
+                concept_count: 0
+              }
+            };
+          }
+        }
+        
+        return result.unifiedResponse; // Return the enhanced UnifiedToolResponse
       }
 
-      // OLD: Fallback to legacy response format
-      return {
+      // OLD: Fallback to legacy response format with RDF enhancement
+      const legacyResponse = {
         success: result.success,
         message: result.message,
         error: result.error,
         authRequired: result.authRequired || false,
         authUrl: result.authUrl || null,
       };
+      
+      // NEW: Add RDF enhancement to legacy responses for testing (only if RDF service is available)
+      if (this.rdfService) {
+        (legacyResponse as any).data = {
+          structured: {
+            rdf_enhancement: {
+              reasoning_applied: rdfSuccess,
+              extracted_concepts: rdfSuccess && rdfInsights?.ai_reasoning?.extracted_concepts || [],
+              intent_analysis: rdfSuccess && rdfInsights?.ai_reasoning?.intent_analysis || {},
+              processing_metadata: {
+                processing_time_ms: Date.now() - rdfStartTime,
+                confidence_threshold: 0.5,
+                action_count: rdfSuccess && rdfInsights?.structured_actions?.length || 0,
+                concept_count: rdfSuccess && rdfInsights?.ai_reasoning?.extracted_concepts?.length || 0
+              }
+            }
+          }
+        };
+      }
+      
+      return legacyResponse;
     } catch (error) {
       console.error(`[WebSocket] Action planner error:`, error);
       return {

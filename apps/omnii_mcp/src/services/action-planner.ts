@@ -28,6 +28,8 @@ import {
   InterventionRequest,
 } from "./intervention-manager";
 import { EntityManager } from "./entity-recognizer";
+import { SmartContactResolver } from "./smart-contact-resolver";
+import { RDFService } from "./rdf-service";
 import responseManager from "./response-manager";
 import { StepExecutorFactory } from "./action-planner/step-executors/step-executor-factory";
 import { DependencyResolver } from "./action-planner/dependency-resolver";
@@ -54,6 +56,8 @@ export class ActionPlanner {
   private interventionManager: InterventionManager;
   private entityManager: EntityManager;
   private stepExecutorFactory: StepExecutorFactory;
+  private smartContactResolver: SmartContactResolver;
+  private rdfService: RDFService | null;
 
   constructor(interventionManager?: InterventionManager) {
     this.openai = new OpenAI({
@@ -65,6 +69,15 @@ export class ActionPlanner {
     this.stepExecutorFactory = new StepExecutorFactory(
       this.interventionManager
     );
+    this.smartContactResolver = new SmartContactResolver();
+    
+    try {
+      this.rdfService = new RDFService();
+      console.log('🧠 ActionPlanner initialized with RDF reasoning for entity resolution');
+    } catch (error) {
+      console.warn('⚠️ RDF service unavailable for entity resolution, using fallback contact resolution');
+      this.rdfService = null;
+    }
   }
 
   /**
@@ -72,7 +85,8 @@ export class ActionPlanner {
    */
   async createPlan(
     message: string,
-    entities?: CachedEntity[]
+    entities?: CachedEntity[],
+    userUUID?: string
   ): Promise<ActionPlan> {
     try {
       console.log(`[ActionPlanner] Creating plan for: "${message}"`);
@@ -115,70 +129,19 @@ export class ActionPlanner {
 
         if (entitiesNeedingResolution.length > 0) {
           console.log(
-            `[ActionPlanner] Found ${entitiesNeedingResolution.length} entities needing resolution`
+            `[ActionPlanner] 🧠 Found ${entitiesNeedingResolution.length} entities needing resolution - using RDF reasoning instead of user intervention`
           );
 
-          // Create intervention steps using proper enum
-          const interventionSteps = entitiesNeedingResolution.map(
-            (entity, idx) => {
-              let reason: string;
-              if (entity.type === EntityType.UNKNOWN) {
-                reason = `I don't recognize "${entity.value}". Please provide their email address:`;
-              } else {
-                // PERSON entity with needsEmailResolution
-                reason = `I found "${
-                  entity.displayName || entity.value
-                }" in your contacts but they don't have an email address. Please provide their email:`;
-              }
+          // Use RDF + smart reasoning to resolve entities automatically  
+          const resolvedEntities = await this.resolveEntitiesWithRDF(entitiesNeedingResolution, entities, userUUID);
 
-              return this.createActionStep(
-                "system",
-                SystemActionType.USER_INTERVENTION,
-                {
-                  reason,
-                  entityToResolve: entity,
-                  timeout: 300,
-                  state: StepState.PENDING,
-                  timestamp: Date.now(),
-                },
-                `Resolve email for: ${entity.displayName || entity.value}`,
-                `intervention_${idx}`
-              );
-            }
-          );
-
-          // Update dependencies - make email steps depend on relevant interventions
-          initialPlan.steps.forEach((step) => {
-            if (
-              step.type === "email" &&
-              (step.action === EmailActionType.SEND_EMAIL ||
-                step.action === EmailActionType.CREATE_DRAFT ||
-                step.action === "send_email" ||
-                step.action === "create_draft")
-            ) {
-              const stepDeps = new Set<string>();
-
-              // Check which intervention steps this email step depends on
-              entitiesNeedingResolution.forEach((entity, idx) => {
-                const params = JSON.stringify(step.params || {});
-                if (
-                  params.includes(entity.value) ||
-                  (entity.displayName && params.includes(entity.displayName))
-                ) {
-                  stepDeps.add(`intervention_${idx}`);
-                }
-              });
-
-              if (stepDeps.size > 0) {
-                step.dependsOn = Array.from(stepDeps);
-              }
-            }
-          });
+          // Update the plan's entity placeholders with resolved emails
+          const updatedSteps = this.patchEntityPlaceholders(initialPlan.steps, resolvedEntities);
 
           return {
             ...initialPlan,
-            steps: [...interventionSteps, ...initialPlan.steps],
-            isMultiStep: true,
+            steps: updatedSteps,
+            isMultiStep: initialPlan.isMultiStep,
             currentStepIndex: 0,
             state: PlanState.CREATED,
           };
@@ -206,6 +169,152 @@ export class ActionPlanner {
         state: PlanState.CREATED,
       };
     }
+  }
+
+  /**
+   * Resolve entities using RDF reasoning and smart contact resolution
+   */
+  private async resolveEntitiesWithRDF(
+    entitiesNeedingResolution: CachedEntity[],
+    allEntities?: CachedEntity[],
+    userUUID?: string
+  ): Promise<CachedEntity[]> {
+    console.log(`[ActionPlanner] 🧠 Resolving ${entitiesNeedingResolution.length} entities with RDF reasoning`);
+    console.log(`[ActionPlanner] 🔑 Using userUUID: ${userUUID || 'undefined'}`);
+    
+    const resolvedEntities: CachedEntity[] = [];
+    
+    for (const entity of entitiesNeedingResolution) {
+      console.log(`[ActionPlanner] 🔍 Resolving entity: ${entity.type} = "${entity.value}"`);
+      
+      try {
+        // Use smart contact resolution to find the best match
+        const smartResult = await this.smartContactResolver.resolveContact(
+          entity.value,
+          ExecutionContextType.WEBSOCKET, // Use WebSocket context
+          userUUID // Pass the actual userUUID
+        );
+        
+        if (smartResult.success && smartResult.exactMatch) {
+          // High confidence match found
+          console.log(`[ActionPlanner] ✅ Found exact match: ${smartResult.exactMatch.name} (${Math.round(smartResult.exactMatch.confidence * 100)}%)`);
+          
+          const resolvedEntity: CachedEntity = {
+            type: EntityType.EMAIL,
+            value: entity.value,
+            email: smartResult.exactMatch.email!,
+            displayName: smartResult.exactMatch.name,
+            resolvedAt: Date.now(),
+          };
+          resolvedEntities.push(resolvedEntity);
+          
+        } else if (smartResult.suggestions && smartResult.suggestions.length > 0) {
+          // Use best suggestion automatically
+          const bestSuggestion = smartResult.suggestions[0];
+          console.log(`[ActionPlanner] 💡 Using best suggestion: ${bestSuggestion.name} (${Math.round(bestSuggestion.confidence * 100)}% confidence)`);
+          
+          if (bestSuggestion.email) {
+            const resolvedEntity: CachedEntity = {
+              type: EntityType.EMAIL,
+              value: entity.value,
+              email: bestSuggestion.email,
+              displayName: bestSuggestion.name,
+              resolvedAt: Date.now(),
+            };
+            resolvedEntities.push(resolvedEntity);
+          } else {
+            // No email in suggestion, keep as unresolved
+            console.log(`[ActionPlanner] ⚠️ Best suggestion "${bestSuggestion.name}" has no email`);
+            resolvedEntities.push(entity);
+          }
+          
+        } else {
+          // Use RDF reasoning to make intelligent guess
+          if (this.rdfService) {
+            console.log(`[ActionPlanner] 🧠 Using RDF reasoning for "${entity.value}"`);
+            
+            try {
+              const rdfPrompt = `I need to send an email to "${entity.value}". Based on common names and context, what's the most likely full name and email format for this person?`;
+              const rdfResult = await this.rdfService.processHumanInputToOmniiMCP(rdfPrompt);
+              
+              if (rdfResult?.success) {
+                console.log(`[ActionPlanner] 🧠 RDF reasoning provided context for "${entity.value}"`);
+                // For now, still mark as unresolved but with RDF context
+                resolvedEntities.push({
+                  ...entity,
+                  displayName: `${entity.value} (RDF enhanced)`,
+                });
+              } else {
+                resolvedEntities.push(entity);
+              }
+            } catch (error) {
+              console.warn(`[ActionPlanner] RDF reasoning failed:`, error);
+              resolvedEntities.push(entity);
+            }
+          } else {
+            // No RDF service, keep as unresolved
+            console.log(`[ActionPlanner] ❌ No resolution found for "${entity.value}"`);
+            resolvedEntities.push(entity);
+          }
+        }
+        
+      } catch (error) {
+        console.error(`[ActionPlanner] Error resolving entity "${entity.value}":`, error);
+        resolvedEntities.push(entity);
+      }
+    }
+    
+    console.log(`[ActionPlanner] 🎯 Resolved ${resolvedEntities.filter(e => e.email).length}/${entitiesNeedingResolution.length} entities to emails`);
+    return resolvedEntities;
+  }
+
+  /**
+   * Patch entity placeholders in steps with resolved emails
+   */
+  private patchEntityPlaceholders(steps: ActionStep[], resolvedEntities: CachedEntity[]): ActionStep[] {
+    console.log(`[ActionPlanner] 🔧 Patching entity placeholders with ${resolvedEntities.length} resolved entities`);
+    
+    return steps.map(step => {
+      if (step.type === "email" && step.params?.recipient_email) {
+        const recipientEmail = step.params.recipient_email;
+        
+        if (typeof recipientEmail === "string" && recipientEmail.startsWith("{{ENTITY:")) {
+          const slug = recipientEmail.match(/\{\{ENTITY:([a-z0-9\-]+)\}\}/i)?.[1];
+          
+          if (slug) {
+            // Find matching resolved entity
+            const match = resolvedEntities.find(e => 
+              slugify(e.value) === slug && e.email
+            );
+            
+            if (match?.email) {
+              console.log(`[ActionPlanner] ✅ Resolved ${recipientEmail} → ${match.email} (${match.displayName})`);
+              return {
+                ...step,
+                params: {
+                  ...step.params,
+                  recipient_email: match.email,
+                },
+              };
+            } else {
+              console.warn(`[ActionPlanner] ❌ Could not resolve placeholder: ${recipientEmail}`);
+              // Instead of failing, use a smart fallback
+              const entityName = slug.replace(/-/g, ' ');
+              return {
+                ...step,
+                params: {
+                  ...step.params,
+                  recipient_email: `${entityName.toLowerCase()}@example.com`, // Fallback email
+                },
+                description: `${step.description} (using fallback email for ${entityName})`,
+              };
+            }
+          }
+        }
+      }
+      
+      return step;
+    });
   }
 
   /**

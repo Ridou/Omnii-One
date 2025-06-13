@@ -128,6 +128,12 @@ export class CalendarStepExecutor extends BaseStepExecutor {
       case CalendarActionType.CREATE_EVENT:
         return step.params.message || `Create event: ${step.params.title}`;
 
+      case CalendarActionType.FIND_FREE_SLOTS:
+      case "find_free_time": // Support legacy/cross-type action
+        return step.params.time_range ? 
+          `Find free time slots for ${step.params.time_range}` :
+          "Find free time slots in my calendar";
+
       default:
         return null;
     }
@@ -160,6 +166,9 @@ export class CalendarStepExecutor extends BaseStepExecutor {
       case "create_event":
       case CalendarActionType.CREATE_EVENT:
         return ResponseCategory.CALENDAR_EVENT;
+      case "find_free_time":
+      case CalendarActionType.FIND_FREE_SLOTS:
+        return ResponseCategory.CALENDAR_LIST; // Free slots are returned as a list
       default:
         return ResponseCategory.CALENDAR_EVENT;
     }

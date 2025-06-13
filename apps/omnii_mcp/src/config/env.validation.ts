@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
 const Neo4jConfigSchema = z.object({
   // Neo4j AuraDB Configuration

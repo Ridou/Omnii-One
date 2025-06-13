@@ -252,11 +252,12 @@ import { BrainMemoryContext } from "./brain-memory-schemas";
 export { BrainMemoryContext } from "./brain-memory-schemas";
 
 /**
- * Execution context (enhanced with brain memory support)
+ * Execution context (enhanced with brain memory support and RDF insights)
  */
 export interface ExecutionContext {
   entityId: string;
   phoneNumber: string;
+  userUUID?: string; // User UUID for OAuth and contact operations
   userTimezone: string;
   localDatetime?: string;
   stepResults: Map<string, StepResult>;
@@ -275,6 +276,15 @@ export interface ExecutionContext {
     chatId: string;
     isGroupChat?: boolean;
     participants?: string[];
+  };
+  
+  // NEW: RDF enhancement fields
+  rdfInsights?: any; // RDF structured data from semantic analysis
+  rdfSuccess?: boolean; // Whether RDF analysis was successful
+  enhancedIntent?: {
+    primary_intent: string;
+    confidence: number;
+    urgency_level: string;
   };
 }
 

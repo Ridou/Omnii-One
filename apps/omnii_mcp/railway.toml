@@ -5,4 +5,6 @@ builder = "dockerfile"
 restartPolicyType = "always"
 
 [env]
-NODE_ENV = "production" 
+NODE_ENV = "production"
+RDF_NODE_SERVICE_URL = "https://omnii-rdf-node-production.up.railway.app"
+RDF_PYTHON_SERVICE_URL = "https://omnii-rdf-python-production.up.railway.app" 

@@ -8,6 +8,7 @@ import {
   EntityType,
 } from "../types/entity.types";
 import unifiedGoogleManager from "./unified-google-manager";
+import { SmartContactResolver } from "./smart-contact-resolver";
 import {
   ActionStep,
   EmailActionType,
@@ -30,6 +31,7 @@ function slugify(str: string): string {
 export class EntityManager {
   private openai: OpenAI;
   private composio: OpenAIToolSet;
+  private smartContactResolver: SmartContactResolver;
 
   constructor() {
     this.openai = new OpenAI({
@@ -39,6 +41,9 @@ export class EntityManager {
     this.composio = new OpenAIToolSet({
       apiKey: process.env.COMPOSIO_API_KEY,
     });
+
+    this.smartContactResolver = new SmartContactResolver();
+    console.log('🧠 EntityManager initialized with SmartContactResolver');
   }
 
   /**
@@ -230,7 +235,8 @@ export class EntityManager {
    */
   async resolveEntities(
     message: string,
-    context: ExecutionContextType
+    context: ExecutionContextType,
+    userUUID?: string
   ): Promise<CachedEntity[]> {
     try {
       console.log(`[EntityManager] ===== STARTING ENTITY RESOLUTION =====`);
@@ -294,13 +300,19 @@ export class EntityManager {
           case EntityType.PERSON: {
             // Look up contact
             console.log(`[EntityManager] Looking up contact: ${entity.value}`);
-            const contactResult = await unifiedGoogleManager.processMessage(
-              `Find contact: ${entity.value}`,
-              context === ExecutionContextType.WEBSOCKET ? entity.value : "",
-              "America/Los_Angeles",
-              undefined,
-              context
-            );
+            
+            // Skip contact lookup if no valid userUUID
+            if (!userUUID || userUUID.trim() === "") {
+              console.warn(`[EntityManager] No valid userUUID for contact lookup: ${entity.value}`);
+              // Skip to smart resolution which might handle this better
+            } else {
+              const contactResult = await unifiedGoogleManager.processMessage(
+                `Find contact: ${entity.value}`,
+                userUUID,
+                "America/Los_Angeles",
+                undefined,
+                context
+              );
 
             console.log(
               `[EntityManager] Contact lookup result:`,
@@ -381,10 +393,84 @@ export class EntityManager {
                 `[EntityManager] Contact lookup failed or no rawData`
               );
             }
+            } // Close the userUUID check else block
 
-            // If we get here, contact lookup failed or no contact found
+            // Standard lookup failed - try smart contact resolution
             console.log(
-              `[EntityManager] No contact found for: ${entity.value}, creating UNKNOWN entity`
+              `[EntityManager] 🧠 Standard lookup failed for "${entity.value}", trying smart contact resolution...`
+            );
+            
+            // Only try smart resolution if we have a valid userUUID
+            if (!userUUID || userUUID.trim() === "") {
+              console.warn(`[EntityManager] No valid userUUID for smart contact resolution: ${entity.value}`);
+              break; // Skip to UNKNOWN entity creation
+            }
+
+            const smartResult = await this.smartContactResolver.resolveContact(
+              entity.value,
+              context,
+              userUUID
+            );
+
+            if (smartResult.success && smartResult.exactMatch) {
+              console.log(
+                `[EntityManager] ✅ Smart resolution found: ${smartResult.exactMatch.name} (confidence: ${smartResult.exactMatch.confidence})`
+              );
+              
+              if (smartResult.exactMatch.email) {
+                // High-confidence match with email
+                const resolvedEntity: CachedEntity = {
+                  type: EntityType.EMAIL,
+                  value: entity.value,
+                  email: smartResult.exactMatch.email,
+                  displayName: smartResult.exactMatch.name,
+                  resolvedAt: Date.now(),
+                };
+                await this.cacheEntity(cacheKey, resolvedEntity);
+                resolvedEntities.push(resolvedEntity);
+                console.log(
+                  `[EntityManager] Created EMAIL entity from smart resolution: ${entity.value} -> ${smartResult.exactMatch.email}`
+                );
+                continue;
+              } else {
+                // High-confidence match but no email
+                const personEntity: CachedEntity = {
+                  type: EntityType.PERSON,
+                  value: entity.value,
+                  displayName: smartResult.exactMatch.name,
+                  phoneNumber: smartResult.exactMatch.phone,
+                  needsEmailResolution: true,
+                  resolvedAt: Date.now(),
+                };
+                await this.cacheEntity(cacheKey, personEntity);
+                resolvedEntities.push(personEntity);
+                console.log(
+                  `[EntityManager] Created PERSON entity from smart resolution: ${smartResult.exactMatch.name} (needs email)`
+                );
+                continue;
+              }
+            } else if (smartResult.suggestions && smartResult.suggestions.length > 0) {
+              // Found suggestions - create an UNKNOWN entity with suggestions for user intervention
+              console.log(
+                `[EntityManager] 💡 Found ${smartResult.suggestions.length} suggestions for "${entity.value}"`
+              );
+              const unknownWithSuggestions: CachedEntity = {
+                type: EntityType.UNKNOWN,
+                value: entity.value,
+                smartSuggestions: smartResult.suggestions,
+                resolvedAt: Date.now(),
+              };
+              await this.cacheEntity(cacheKey, unknownWithSuggestions);
+              resolvedEntities.push(unknownWithSuggestions);
+              console.log(
+                `[EntityManager] Created UNKNOWN entity with smart suggestions: ${smartResult.message}`
+              );
+              continue;
+            }
+
+            // If we get here, even smart resolution failed
+            console.log(
+              `[EntityManager] ❌ Smart resolution also failed for: ${entity.value}, creating UNKNOWN entity`
             );
             break;
           }

@@ -1,7 +1,7 @@
 import { OpenAI } from "openai";
 import { OpenAIToolSet } from "composio-core";
 import { ExecutionContextType } from "../types/action-planning.types";
-import { UnifiedToolResponse } from "../types/unified-response.types";
+import { UnifiedToolResponse } from "@omnii/validators";
 
 export enum GoogleServiceType {
   CALENDAR = "CALENDAR",

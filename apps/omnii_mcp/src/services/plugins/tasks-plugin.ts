@@ -10,7 +10,7 @@ import { GoogleTasksAction } from "../../types/composio-enums";
 import {
   UnifiedToolResponse,
   UnifiedResponseBuilder,
-} from "../../types/unified-response.types";
+} from "@omnii/validators";
 import {
   ServiceType,
   TaskData, 

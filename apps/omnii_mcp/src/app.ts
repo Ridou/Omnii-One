@@ -179,6 +179,12 @@ app.get("/", ({ request }) => {
     health: "/health",
     websocket: "/ws",
     docs: "/swagger",
+    services: {
+      neo4j: "/api/neo4j",
+      sms: "/api/sms", 
+      rdf: "/api/rdf",
+      trpc: "/api/trpc"
+    },
     timestamp: new Date().toISOString(),
   };
 });

@@ -12,6 +12,7 @@ import {
 import { InterventionManager } from "./intervention-manager";
 import { productionBrainService } from "./memory/production-brain-service";
 import { BrainMemoryContext } from "../types/brain-memory-schemas";
+import { RDFService } from "./rdf-service";
 
 export class SimpleSMSAI {
   private openai: OpenAI;
@@ -19,11 +20,18 @@ export class SimpleSMSAI {
   private actionPlanner: ActionPlanner;
   private interventionManager: InterventionManager;
   private entityManager: EntityManager;
+  private rdfService: RDFService | null;
 
-  // Phone number to email mapping
+  // Phone number to user UUID mapping (for OAuth and contact lookups)
+  private phoneToUUIDMap: Record<string, string> = {
+    "+16286885388": "edenchan717@gmail.com", // TODO: Replace with actual UUID when available
+    "+18582260766": "cd9bdc60-35af-4bb6-b87e-1932e96fb354", // Santino's UUID
+  };
+
+  // Phone number to email mapping (for legacy compatibility)
   private phoneToEmailMap: Record<string, string> = {
     "+16286885388": "edenchan717@gmail.com",
-    "+18582260766": "santino62@gmail.com", // cd9bdc60-35af-4bb6-b87e-1932e96fb354
+    "+18582260766": "santino62@gmail.com",
   };
 
   constructor() {
@@ -36,7 +44,14 @@ export class SimpleSMSAI {
     this.actionPlanner = new ActionPlanner(this.interventionManager);
     this.entityManager = new EntityManager();
 
-    console.log('🧠 SimpleSMSAI initialized with brain memory integration');
+    // Initialize RDF service if available
+    try {
+      this.rdfService = new RDFService();
+      console.log('🧠 SimpleSMSAI initialized with brain memory + RDF integration');
+    } catch (error) {
+      console.warn('⚠️ RDF service unavailable for SMS, continuing without semantic reasoning:', error.message);
+      this.rdfService = null;
+    }
   }
 
   async processMessage(
@@ -50,6 +65,24 @@ export class SimpleSMSAI {
     brainMemoryUsed?: boolean;
     memoryStrength?: number;
     relatedConversations?: number;
+    rdfEnhancement?: {
+      reasoning_applied: boolean;
+      extracted_concepts: Array<{
+        concept_name: string;
+        confidence: number;
+        concept_type: string;
+      }>;
+      intent_analysis: {
+        primary_intent: string;
+        confidence: number;
+        urgency_level: string;
+      };
+      processing_metadata: {
+        processing_time_ms: number;
+        concepts_extracted: number;
+        analysis_depth: string;
+      };
+    };
   }> {
     try {
       console.log(`[SimpleSMSAI] 🧠 Processing with brain memory: "${message}" from ${phoneNumber}`);
@@ -68,9 +101,12 @@ export class SimpleSMSAI {
         return interventionResult;
       }
 
-      // Map phone number to email for entity ID
+      // Map phone number to email for entity ID (brain memory)
       const entityId = this.phoneToEmailMap[phoneNumber];
-      if (!entityId) {
+      // Map phone number to UUID for contact/OAuth operations
+      const userUUID = this.phoneToUUIDMap[phoneNumber];
+      
+      if (!entityId || !userUUID) {
         return {
           success: true,
           message:
@@ -78,7 +114,7 @@ export class SimpleSMSAI {
         };
       }
 
-      console.log(`[SimpleSMSAI] Using entity ID: ${entityId}`);
+      console.log(`[SimpleSMSAI] Using entity ID: ${entityId}, UUID: ${userUUID}`);
 
       // Check if user needs timezone setup first
       if (this.timezoneManager.needsTimezoneSetup(phoneNumber)) {
@@ -116,11 +152,12 @@ export class SimpleSMSAI {
         brainMemoryUsed = false;
       }
 
-      // Use action planner with brain memory enhancement
+      // Use action planner with brain memory and RDF enhancement
       const result = await this.handleWithActionPlanner(
         message,
         phoneNumber,
         entityId,
+        userUUID, // Pass UUID for contact resolution
         localDatetime,
         brainMemoryContext // Pass brain context to action planner
       );
@@ -137,12 +174,13 @@ export class SimpleSMSAI {
         console.warn(`[SimpleSMSAI] ⚠️ Failed to store SMS in brain memory:`, error);
       });
 
-      // Enhance response with brain memory insights
+      // Enhance response with brain memory and RDF insights
       return {
         ...result,
         brainMemoryUsed,
         memoryStrength: brainMemoryContext?.consolidation_metadata.memory_strength,
-        relatedConversations: brainMemoryContext?.working_memory.recent_messages.length || 0
+        relatedConversations: brainMemoryContext?.working_memory.recent_messages.length || 0,
+        rdfEnhancement: result.rdfEnhancement
       };
 
     } catch (error) {
@@ -274,18 +312,37 @@ export class SimpleSMSAI {
   }
 
   /**
-   * Handle messages using action planner (enhanced with brain memory)
+   * Handle messages using action planner (enhanced with brain memory and RDF)
    */
   private async handleWithActionPlanner(
     message: string,
     phoneNumber: string,
     entityId: string,
+    userUUID: string,
     localDatetime?: string,
-    brainMemoryContext?: BrainMemoryContext | null // NEW: Brain memory context
+    brainMemoryContext?: BrainMemoryContext | null // Brain memory context
   ): Promise<{
     success: boolean;
     message: string;
     error?: string;
+    rdfEnhancement?: {
+      reasoning_applied: boolean;
+      extracted_concepts: Array<{
+        concept_name: string;
+        confidence: number;
+        concept_type: string;
+      }>;
+      intent_analysis: {
+        primary_intent: string;
+        confidence: number;
+        urgency_level: string;
+      };
+      processing_metadata: {
+        processing_time_ms: number;
+        concepts_extracted: number;
+        analysis_depth: string;
+      };
+    };
   }> {
     try {
       // Generate session ID for this interaction
@@ -299,17 +356,71 @@ export class SimpleSMSAI {
         this.timezoneManager.getUserTimezone(phoneNumber) ||
         "America/Los_Angeles";
 
-      // Extract and resolve entities
+      // RDF Analysis (semantic reasoning) - happens before entity resolution
+      let rdfInsights: any = null;
+      let rdfSuccess = false;
+      let rdfEnhancement: any = undefined;
+      const rdfStartTime = Date.now();
+
+      if (this.rdfService) {
+        try {
+          console.log(`[SimpleSMSAI] 🧠 Running RDF analysis on SMS: "${message}"`);
+          rdfInsights = await this.rdfService.processHumanInputToOmniiMCP(message);
+          rdfSuccess = true;
+          
+          const rdfProcessingTime = Date.now() - rdfStartTime;
+          console.log(`[SimpleSMSAI] ✅ RDF analysis complete (${rdfProcessingTime}ms):`, rdfInsights);
+
+          // Create RDF enhancement metadata from complex nested structure
+          const aiReasoning = rdfInsights.data?.structured?.ai_reasoning || rdfInsights.ai_reasoning;
+          const structuredActions = rdfInsights.data?.structured?.structured_actions || rdfInsights.structured_actions || [];
+          
+          rdfEnhancement = {
+            reasoning_applied: true,
+            extracted_concepts: (aiReasoning?.extracted_concepts || []).map(concept => ({
+              concept_name: concept.concept_name,
+              confidence: concept.confidence,
+              concept_type: concept.insight_type || 'semantic_connection'
+            })),
+            intent_analysis: aiReasoning?.intent_analysis || {
+              primary_intent: structuredActions[0]?.action_type || 'unknown',  
+              confidence: structuredActions[0]?.confidence || 0.5,
+              urgency_level: aiReasoning?.intent_analysis?.urgency_level || 'medium'
+            },
+            processing_metadata: {
+              processing_time_ms: rdfProcessingTime,
+              concepts_extracted: (aiReasoning?.extracted_concepts || []).length,
+              analysis_depth: rdfInsights.reasoning_depth || rdfInsights.data?.structured?.reasoning_depth || 'standard'
+            }
+          };
+        } catch (error) {
+          console.warn(`[SimpleSMSAI] ⚠️ RDF analysis failed, continuing without semantic reasoning:`, error);
+          rdfEnhancement = {
+            reasoning_applied: false,
+            extracted_concepts: [],
+            intent_analysis: { primary_intent: 'unknown', confidence: 0, urgency_level: 'medium' },
+            processing_metadata: {
+              processing_time_ms: Date.now() - rdfStartTime,
+              concepts_extracted: 0,
+              analysis_depth: 'failed'
+            }
+          };
+        }
+      }
+
+      // Extract and resolve entities (pass userUUID for contact resolution)
       const resolvedEntities = await this.entityManager.resolveEntities(
         message,
-        ExecutionContextType.SMS
+        ExecutionContextType.SMS,
+        userUUID
       );
       console.log(`[SimpleSMSAI] Resolved entities:`, resolvedEntities);
 
-      // Create execution context with brain memory enhancement
+      // Create execution context with brain memory and RDF enhancement
       const context: ExecutionContext = {
         entityId,
         phoneNumber,
+        userUUID, // Include UUID for OAuth and contact operations
         userTimezone,
         localDatetime,
         stepResults: new Map(),
@@ -319,7 +430,14 @@ export class SimpleSMSAI {
         planState: PlanState.PENDING,
         context: ExecutionContextType.SMS,
         brainMemoryContext: brainMemoryContext || undefined,
-        communicationChannel: 'sms'
+        communicationChannel: 'sms',
+        rdfInsights,
+        rdfSuccess,
+        enhancedIntent: rdfInsights ? {
+          primary_intent: rdfInsights.action_type || 'unknown',
+          confidence: rdfInsights.reasoning_confidence || 0.5,
+          urgency_level: rdfInsights.urgency_level || 'medium'
+        } : undefined
       };
 
       // Create and execute plan (ActionPlanner will use brain memory context if available)
@@ -333,6 +451,7 @@ export class SimpleSMSAI {
         success: result.success,
         message: result.message,
         error: result.error,
+        rdfEnhancement,
       };
     } catch (error) {
       console.error(`[SimpleSMSAI] Action planner error:`, error);
