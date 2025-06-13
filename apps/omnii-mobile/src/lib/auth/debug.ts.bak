@@ -338,7 +338,7 @@ export const testEnvironmentDetection = () => {
     console.log('   - https://omnii.net/auth/callback');
     console.log('   - https://test.omnii.net/auth/callback');
     console.log('   - http://localhost:*/auth/callback (for development)');
-    if (Platform.OS !== "ios") {
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
       console.log('   - omnii-mobile://auth/callback (for mobile app)');
     }
     console.log('   - Your ngrok URLs (for tunneling)');

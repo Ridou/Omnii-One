@@ -1,4 +1,4 @@
-import { Platform, Dimensions, AccessibilityInfo } from 'react-native';
+import { Platform, Dimensions } from 'react-native';
 import { TYPOGRAPHY_VARIANTS, FONT_SIZES, type TypographyVariant, FONT_WEIGHTS } from '../constants/Typography';
 import { getSystemFontFallback } from '../hooks/useCustomFonts';
 import { cn } from './cn';
@@ -10,23 +10,6 @@ import { cn } from './cn';
 
 // Get screen dimensions for responsive typography
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// Dynamic Type scale multipliers (iOS standard)
-const DYNAMIC_TYPE_SCALES = {
-  'accessibility-extra-small': 0.8,
-  'extra-small': 0.85,
-  'small': 0.9,
-  'medium': 1.0,    // Default
-  'large': 1.15,
-  'extra-large': 1.3,
-  'extra-extra-large': 1.5,
-  'extra-extra-extra-large': 1.75,
-  'accessibility-medium': 2.0,
-  'accessibility-large': 2.4,
-  'accessibility-extra-large': 3.0,
-} as const;
-
-type DynamicTypeSize = keyof typeof DYNAMIC_TYPE_SCALES;
 
 // Enhanced typography class mappings with font integration
 export const TYPOGRAPHY_CLASSES = {
@@ -121,7 +104,7 @@ export function getAccessibleTypographyClass(
     modifiers.push('font-system');
   }
   
-  // Accessibility enhancements
+  // Simple accessibility enhancements
   if (highContrast) {
     modifiers.push('high-contrast');
   }
@@ -190,80 +173,6 @@ export function getTypographyClass(
 }
 
 /**
- * Get current Dynamic Type scale from system accessibility settings
- */
-export const getDynamicTypeScale = async (): Promise<number> => {
-  if (Platform.OS !== 'ios') {
-    return 1.0;
-  }
-  
-  try {
-    // Enhanced detection using multiple accessibility indicators
-    const isScreenReaderEnabled = await AccessibilityInfo.isScreenReaderEnabled();
-    const isReduceMotionEnabled = await AccessibilityInfo.isReduceMotionEnabled();
-    const isBoldTextEnabled = await AccessibilityInfo.isBoldTextEnabled?.() ?? false;
-    
-    // Determine scale based on accessibility settings
-    if (isScreenReaderEnabled && isBoldTextEnabled) {
-      return DYNAMIC_TYPE_SCALES['accessibility-extra-large'];
-    }
-    if (isScreenReaderEnabled) {
-      return DYNAMIC_TYPE_SCALES['accessibility-large'];
-    }
-    if (isBoldTextEnabled) {
-      return DYNAMIC_TYPE_SCALES['extra-large'];
-    }
-    
-    return DYNAMIC_TYPE_SCALES.medium;
-  } catch (error) {
-    console.warn('Failed to get Dynamic Type scale:', error);
-    return 1.0;
-  }
-};
-
-/**
- * Get accessibility info for typography adjustments
- */
-export const getAccessibilityInfo = async () => {
-  try {
-    const [
-      isScreenReaderEnabled,
-      isReduceMotionEnabled,
-      isBoldTextEnabled,
-      isGrayscaleEnabled,
-      isInvertColorsEnabled,
-      isReduceTransparencyEnabled,
-    ] = await Promise.all([
-      AccessibilityInfo.isScreenReaderEnabled(),
-      AccessibilityInfo.isReduceMotionEnabled(),
-      AccessibilityInfo.isBoldTextEnabled?.() ?? false,
-      AccessibilityInfo.isGrayscaleEnabled?.() ?? false,
-      AccessibilityInfo.isInvertColorsEnabled?.() ?? false,
-      AccessibilityInfo.isReduceTransparencyEnabled?.() ?? false,
-    ]);
-
-    return {
-      isScreenReaderEnabled,
-      isReduceMotionEnabled,
-      isBoldTextEnabled,
-      isGrayscaleEnabled,
-      isInvertColorsEnabled,
-      isReduceTransparencyEnabled,
-    };
-  } catch (error) {
-    console.warn('Failed to get accessibility info:', error);
-    return {
-      isScreenReaderEnabled: false,
-      isReduceMotionEnabled: false,
-      isBoldTextEnabled: false,
-      isGrayscaleEnabled: false,
-      isInvertColorsEnabled: false,
-      isReduceTransparencyEnabled: false,
-    };
-  }
-};
-
-/**
  * Calculate responsive font size based on screen width
  * Useful for making typography scale appropriately on different devices
  */
@@ -277,187 +186,6 @@ export const getResponsiveFontSize = (baseFontSize: number, scaleFactor = 1): nu
   const maxSize = baseFontSize * 1.3;
   
   return Math.max(minSize, Math.min(maxSize, newSize));
-};
-
-/**
- * Apply Dynamic Type scaling to font size with enhanced accessibility
- */
-export const applyDynamicTypeScaling = (
-  baseFontSize: number,
-  dynamicTypeScale = 1.0,
-  enforceMinimum = true
-): number => {
-  const scaledSize = baseFontSize * dynamicTypeScale;
-  
-  // Enforce minimum 17pt for accessibility (Apple guidelines)
-  if (enforceMinimum && Platform.OS === 'ios') {
-    return Math.max(17, scaledSize);
-  }
-  
-  // For Android, ensure minimum 14sp
-  if (enforceMinimum && Platform.OS === 'android') {
-    return Math.max(14, scaledSize);
-  }
-  
-  return scaledSize;
-};
-
-/**
- * Get typography style with comprehensive accessibility support
- */
-export const getAccessibleTypographyStyle = async (
-  variant: TypographyVariant,
-  options: {
-    color?: string;
-    responsive?: boolean;
-    scaleFactor?: number;
-    fontsLoaded?: boolean;
-    fontError?: boolean;
-    minFontSize?: number;
-    highContrast?: boolean;
-    enforceMinimum?: boolean;
-  } = {}
-) => {
-  const {
-    color = '#000000',
-    responsive = false,
-    scaleFactor = 1,
-    fontsLoaded = true,
-    fontError = false,
-    minFontSize = Platform.OS === 'ios' ? 17 : 14,
-    highContrast = false,
-    enforceMinimum = true,
-  } = options;
-
-  const variantStyle = TYPOGRAPHY_VARIANTS[variant];
-  const accessibilityInfo = await getAccessibilityInfo();
-  const dynamicTypeScale = await getDynamicTypeScale();
-  
-  // Calculate font size with all scaling factors
-  let fontSize = variantStyle.fontSize;
-  
-  if (responsive) {
-    fontSize = getResponsiveFontSize(fontSize, scaleFactor);
-  }
-  
-  fontSize = applyDynamicTypeScaling(fontSize, dynamicTypeScale, enforceMinimum);
-  fontSize = Math.max(fontSize, minFontSize);
-  
-  // Adjust font weight for bold text accessibility setting
-  let fontWeight = variantStyle.fontWeight;
-  if (accessibilityInfo.isBoldTextEnabled) {
-    const weightMap: Record<string, string> = {
-      '300': '500',
-      '400': '600',
-      '500': '700',
-      '600': '900',
-      '700': '900',
-      '800': '900',
-      '900': '900',
-    };
-    const mappedWeight = weightMap[fontWeight];
-    if (mappedWeight) {
-      fontWeight = mappedWeight;
-    }
-  }
-  
-  // Adjust colors for accessibility
-  let textColor = color;
-  if (highContrast || accessibilityInfo.isInvertColorsEnabled) {
-    textColor = accessibilityInfo.isInvertColorsEnabled ? '#FFFFFF' : '#000000';
-  }
-  
-  // Calculate optimal line height for accessibility
-  const accessibleLineHeight = Math.max(
-    variantStyle.lineHeight, 
-    fontSize * 1.4, // WCAG recommendation
-    fontSize + 8 // Minimum spacing
-  );
-  
-  return {
-    ...variantStyle,
-    fontSize: Math.round(fontSize), // Ensure integer values for better rendering
-    fontWeight: fontWeight,
-    fontFamily: fontsLoaded && !fontError 
-      ? variantStyle.fontFamily 
-      : getSystemFontFallback(fontWeight),
-    color: textColor,
-    lineHeight: Math.round(accessibleLineHeight),
-    // Add accessibility-specific properties
-    includeFontPadding: Platform.OS === 'android' ? false : undefined,
-    textAlignVertical: Platform.OS === 'android' ? 'center' : undefined,
-  };
-};
-
-/**
- * Get typography style with responsive sizing (synchronous version)
- */
-export const getResponsiveTypographyStyle = (
-  variant: TypographyVariant,
-  options: {
-    color?: string;
-    responsive?: boolean;
-    scaleFactor?: number;
-    fontsLoaded?: boolean;
-    fontError?: boolean;
-    dynamicTypeScale?: number;
-    enforceMinimum?: boolean;
-  } = {}
-) => {
-  const {
-    color = '#000000',
-    responsive = false,
-    scaleFactor = 1,
-    fontsLoaded = true,
-    fontError = false,
-    dynamicTypeScale = 1.0,
-    enforceMinimum = true,
-  } = options;
-
-  const variantStyle = TYPOGRAPHY_VARIANTS[variant];
-  
-  let fontSize = variantStyle.fontSize;
-  
-  if (responsive) {
-    fontSize = getResponsiveFontSize(fontSize, scaleFactor);
-  }
-  
-  fontSize = applyDynamicTypeScaling(fontSize, dynamicTypeScale, enforceMinimum);
-  
-  const accessibleLineHeight = Math.max(
-    variantStyle.lineHeight, 
-    fontSize * 1.4
-  );
-  
-  return {
-    ...variantStyle,
-    fontSize: Math.round(fontSize),
-    fontFamily: fontsLoaded && !fontError 
-      ? variantStyle.fontFamily 
-      : getSystemFontFallback(variantStyle.fontWeight),
-    color,
-    lineHeight: Math.round(accessibleLineHeight),
-    includeFontPadding: Platform.OS === 'android' ? false : undefined,
-    textAlignVertical: Platform.OS === 'android' ? 'center' : undefined,
-  };
-};
-
-/**
- * Platform-specific typography adjustments
- */
-export const getPlatformTypographyStyle = (variant: TypographyVariant) => {
-  const baseStyle = TYPOGRAPHY_VARIANTS[variant];
-  
-  if (Platform.OS === 'android') {
-    // Android-specific adjustments
-    return {
-      ...baseStyle,
-      // Android typically needs slightly larger line heights
-      lineHeight: baseStyle.lineHeight * 1.1,
-    };
-  }
-  
-  return baseStyle;
 };
 
 /**
@@ -484,7 +212,7 @@ export const createCustomTypographyStyle = (
 };
 
 /**
- * Accessibility-enhanced typography presets
+ * Simple typography presets
  */
 export const TYPOGRAPHY_PRESETS = {
   // Navigation and headers
@@ -503,14 +231,12 @@ export const TYPOGRAPHY_PRESETS = {
     color: '#FF3B30',
   }),
   
-  // Buttons (minimum 44pt touch target)
+  // Buttons
   primaryButton: createCustomTypographyStyle('buttonMedium', {
     color: '#FFFFFF',
-    fontSize: Math.max(TYPOGRAPHY_VARIANTS.buttonMedium.fontSize, 17), // Accessibility minimum
   }),
   secondaryButton: createCustomTypographyStyle('buttonMedium', {
     color: '#007AFF',
-    fontSize: Math.max(TYPOGRAPHY_VARIANTS.buttonMedium.fontSize, 17), // Accessibility minimum
   }),
   
   // Cards and lists
@@ -550,18 +276,6 @@ export const TYPOGRAPHY_PRESETS = {
   warningText: createCustomTypographyStyle('body2', {
     color: '#FF9500',
   }),
-  
-  // Accessibility-specific presets
-  accessibilityLarge: createCustomTypographyStyle('body1', {
-    fontSize: 22, // Large accessibility size
-    lineHeight: 30,
-    fontWeight: FONT_WEIGHTS.medium,
-  }),
-  accessibilityButton: createCustomTypographyStyle('buttonMedium', {
-    fontSize: 20, // Larger for accessibility
-    lineHeight: 28,
-    fontWeight: FONT_WEIGHTS.semibold,
-  }),
 } as const;
 
 /**
@@ -586,7 +300,7 @@ export const isLargeFontSize = (fontSize: number): boolean => {
 };
 
 /**
- * Get minimum touch target size for accessibility
+ * Get minimum touch target size for accessibility (iOS guideline: 44pt)
  */
 export const getMinimumTouchTarget = () => ({
   minHeight: 44,
@@ -615,40 +329,4 @@ export const applyTypographyScale = (
   scale: keyof typeof TYPOGRAPHY_SCALE
 ): number => {
   return baseFontSize * TYPOGRAPHY_SCALE[scale];
-};
-
-/**
- * Accessibility color utilities
- */
-export const ACCESSIBILITY_COLORS = {
-  highContrastText: '#000000',
-  highContrastBackground: '#FFFFFF',
-  minimumContrast: '#4A4A4A', // Meets WCAG AA standard
-  errorColor: '#D70015', // High contrast error
-  successColor: '#1B5E20', // High contrast success
-  warningColor: '#E65100', // High contrast warning
-} as const;
-
-/**
- * Get color with accessibility considerations
- */
-export const getAccessibleColor = (
-  color: string,
-  options: {
-    highContrast?: boolean;
-    isInvertColors?: boolean;
-    background?: 'light' | 'dark';
-  } = {}
-): string => {
-  const { highContrast = false, isInvertColors = false, background = 'light' } = options;
-  
-  if (isInvertColors) {
-    return background === 'light' ? '#000000' : '#FFFFFF';
-  }
-  
-  if (highContrast) {
-    return ACCESSIBILITY_COLORS.highContrastText;
-  }
-  
-  return color;
 }; 

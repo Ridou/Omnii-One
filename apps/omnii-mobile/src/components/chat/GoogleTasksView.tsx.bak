@@ -1,0 +1,1217 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Dimensions,
+  Pressable,
+  Modal,
+  Platform,
+} from 'react-native';
+
+import { CrossPlatformDatePicker, DatePickerButton } from '~/components/common/CrossPlatformDatePicker';
+import { useTheme } from '~/context/ThemeContext';
+import { cn } from '~/utils/cn';
+import { useResponsiveDesign } from '~/utils/responsive';
+import type {
+  CompleteTaskOverview,
+  TaskListWithTasks,
+  TaskData,
+} from '@omnii/validators';
+import { TaskDetailScreen } from './TaskDetailScreen';
+
+interface GoogleTasksViewProps {
+  overview: CompleteTaskOverview;
+  onAction?: (action: string, data: any) => void;
+}
+
+const screenWidth = Dimensions.get('window').width;
+
+export const GoogleTasksView: React.FC<GoogleTasksViewProps> = ({
+  overview,
+  onAction,
+}) => {
+  const { isDark } = useTheme();
+  const responsive = useResponsiveDesign();
+  const [selectedListId, setSelectedListId] = useState<string | null>(
+    overview.taskLists[0]?.id || null,
+  );
+  const [showAddTaskInList, setShowAddTaskInList] = useState<string | null>(
+    null,
+  );
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskNotes, setNewTaskNotes] = useState('');
+  const [newTaskDue, setNewTaskDue] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<{
+    task: TaskData;
+    list: TaskListWithTasks;
+  } | null>(null);
+
+  // Calculate column width based on screen size
+  const getColumnWidth = () => {
+    if (responsive.effectiveIsDesktop) {
+      return 320; // Fixed width for desktop
+    }
+    if (responsive.effectiveIsTablet) {
+      return (screenWidth - 48) / 2 - 8; // Two columns on tablet
+    }
+    return screenWidth - 32; // Full width on mobile
+  };
+
+  const columnWidth = getColumnWidth();
+
+  const handleAddTask = (listId: string) => {
+    if (newTaskTitle.trim()) {
+      onAction?.('create_task_in_list', {
+        listId,
+        title: newTaskTitle.trim(),
+        notes: newTaskNotes.trim(),
+        due: newTaskDue,
+      });
+      setNewTaskTitle('');
+      setNewTaskNotes('');
+      setNewTaskDue(null);
+      setShowAddTaskInList(null);
+    }
+  };
+
+  const handleToggleTask = (task: TaskData, listId: string) => {
+    onAction?.(
+      task.status === 'completed' ? 'mark_incomplete' : 'mark_complete',
+      { task, listId },
+    );
+  };
+
+  // Group tasks by parent for subtask display
+  const getTasksGroupedByParent = (tasks: TaskData[]) => {
+    const rootTasks = tasks.filter((t) => !t.parent);
+    const subtasksByParent = tasks.reduce(
+      (acc, task) => {
+        if (task.parent) {
+          if (!acc[task.parent]) acc[task.parent] = [];
+          acc[task.parent]!.push(task);
+        }
+        return acc;
+      },
+      {} as Record<string, TaskData[]>,
+    );
+
+    return { rootTasks, subtasksByParent };
+  };
+
+  // Handle viewing task details on mobile
+  const handleViewTask = (task: TaskData, list: TaskListWithTasks) => {
+    if (!responsive.effectiveIsDesktop && !responsive.effectiveIsTablet) {
+      setSelectedTask({ task, list });
+    }
+  };
+
+  // Get subtasks for a specific task
+  const getSubtasksForTask = (
+    taskId: string,
+    list: TaskListWithTasks,
+  ): TaskData[] => {
+    return list.tasks.filter((t) => t.parent === taskId);
+  };
+
+  return (
+    <View className={cn('flex-1', isDark ? 'bg-slate-900' : 'bg-gray-50')}>
+      {/* Header */}
+      <View
+        className={cn(
+          'px-4 py-3 border-b',
+          isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white',
+        )}
+      >
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text
+              className={cn(
+                'text-xl font-semibold',
+                isDark ? 'text-white' : 'text-gray-900',
+              )}
+            >
+              My Tasks
+            </Text>
+            <Text
+              className={cn(
+                'text-sm',
+                isDark ? 'text-slate-400' : 'text-gray-600',
+              )}
+            >
+              {overview.totalTasks} tasks • {overview.totalCompleted} completed
+            </Text>
+          </View>
+
+          {/* Action buttons */}
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={() => onAction?.('refresh_overview', null)}
+              className={cn(
+                'px-3 py-2 rounded-lg',
+                isDark ? 'bg-slate-700' : 'bg-gray-100',
+              )}
+            >
+              <Text
+                className={cn(
+                  'text-sm',
+                  isDark ? 'text-white' : 'text-gray-700',
+                )}
+              >
+                🔄 Refresh
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => onAction?.('create_task_list', null)}
+              className={cn(
+                'px-3 py-2 rounded-lg',
+                isDark ? 'bg-indigo-600' : 'bg-indigo-500',
+              )}
+            >
+              <Text className="text-sm text-white">+ New List</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Task List Tabs - Mobile Only */}
+      {!responsive.effectiveIsDesktop &&
+        !responsive.effectiveIsTablet &&
+        overview.taskLists.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className={cn(
+              'border-b',
+              isDark
+                ? 'border-slate-700 bg-slate-800'
+                : 'border-gray-200 bg-white',
+            )}
+          >
+            {overview.taskLists.map((list) => (
+              <TouchableOpacity
+                key={list.id}
+                onPress={() => setSelectedListId(list.id)}
+                className={cn(
+                  'px-4 py-3 border-b-2',
+                  selectedListId === list.id
+                    ? isDark
+                      ? 'border-indigo-500'
+                      : 'border-indigo-600'
+                    : 'border-transparent',
+                )}
+              >
+                <Text
+                  className={cn(
+                    'text-sm font-medium',
+                    selectedListId === list.id
+                      ? isDark
+                        ? 'text-indigo-400'
+                        : 'text-indigo-600'
+                      : isDark
+                        ? 'text-slate-300'
+                        : 'text-gray-600',
+                  )}
+                >
+                  {list.title}
+                </Text>
+                <Text
+                  className={cn(
+                    'text-xs',
+                    selectedListId === list.id
+                      ? isDark
+                        ? 'text-indigo-400/70'
+                        : 'text-indigo-600/70'
+                      : isDark
+                        ? 'text-slate-500'
+                        : 'text-gray-500',
+                  )}
+                >
+                  {list.pendingCount} pending
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+      {/* Task Lists - Different views for mobile vs desktop/tablet */}
+      {responsive.effectiveIsDesktop || responsive.effectiveIsTablet ? (
+        // Desktop/Tablet: Horizontal scroll with multiple columns
+        <ScrollView
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+          className="flex-1"
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
+        >
+          {overview.taskLists.map((list, index) => (
+            <TaskListColumn
+              key={list.id}
+              list={list}
+              width={columnWidth}
+              isLast={index === overview.taskLists.length - 1}
+              showAddTask={showAddTaskInList === list.id}
+              newTaskTitle={newTaskTitle}
+              newTaskNotes={newTaskNotes}
+              newTaskDue={newTaskDue}
+              onToggleTask={(task) => handleToggleTask(task, list.id)}
+              onViewTask={handleViewTask}
+              onAddTaskClick={() => {
+                setShowAddTaskInList(list.id);
+                setNewTaskTitle('');
+                setNewTaskNotes('');
+                setNewTaskDue(null);
+              }}
+              onAddTaskCancel={() => {
+                setShowAddTaskInList(null);
+                setNewTaskTitle('');
+                setNewTaskNotes('');
+                setNewTaskDue(null);
+              }}
+              onAddTaskSubmit={() => handleAddTask(list.id)}
+              onNewTaskTitleChange={setNewTaskTitle}
+              onNewTaskNotesChange={setNewTaskNotes}
+              onNewTaskDueChange={setNewTaskDue}
+              onAction={onAction}
+              isDark={isDark}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        // Mobile: Show only selected list
+        <ScrollView className="flex-1">
+          {overview.taskLists
+            .filter((list) => list.id === selectedListId)
+            .map((list) => (
+              <TaskListColumn
+                key={list.id}
+                list={list}
+                width={screenWidth}
+                isLast={true}
+                showAddTask={showAddTaskInList === list.id}
+                newTaskTitle={newTaskTitle}
+                newTaskNotes={newTaskNotes}
+                newTaskDue={newTaskDue}
+                  onToggleTask={(task) => handleToggleTask(task, list.id)}
+                onViewTask={handleViewTask}
+                onAddTaskClick={() => {
+                  setShowAddTaskInList(list.id);
+                  setNewTaskTitle('');
+                  setNewTaskNotes('');
+                  setNewTaskDue(null);
+                }}
+                onAddTaskCancel={() => {
+                  setShowAddTaskInList(null);
+                  setNewTaskTitle('');
+                  setNewTaskNotes('');
+                  setNewTaskDue(null);
+                  }}
+                onAddTaskSubmit={() => handleAddTask(list.id)}
+                onNewTaskTitleChange={setNewTaskTitle}
+                onNewTaskNotesChange={setNewTaskNotes}
+                onNewTaskDueChange={setNewTaskDue}
+                  onAction={onAction}
+                isDark={isDark}
+              />
+            ))}
+        </ScrollView>
+      )}
+
+      {/* Task Detail Modal for Mobile */}
+      {selectedTask && (
+        <Modal
+          visible={!!selectedTask}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setSelectedTask(null)}
+        >
+          <TaskDetailScreen
+            task={selectedTask.task}
+            list={selectedTask.list}
+            subtasks={getSubtasksForTask(
+              selectedTask.task.id,
+              selectedTask.list,
+            )}
+            onClose={() => setSelectedTask(null)}
+            onAction={(action, data) => {
+              // Handle actions and refresh if needed
+              onAction?.(action, data);
+              // Handle navigation to another task
+              if (action === 'view_task' && data?.task) {
+                setSelectedTask({ task: data.task, list: selectedTask.list });
+              }
+            }}
+          />
+        </Modal>
+      )}
+    </View>
+  );
+};
+
+interface TaskListColumnProps {
+  list: TaskListWithTasks;
+  width: number;
+  isLast: boolean;
+  showAddTask: boolean;
+  newTaskTitle: string;
+  newTaskNotes: string;
+  newTaskDue: string | null;
+  onToggleTask: (task: TaskData) => void;
+  onViewTask: (task: TaskData, list: TaskListWithTasks) => void;
+  onAddTaskClick: () => void;
+  onAddTaskCancel: () => void;
+  onAddTaskSubmit: () => void;
+  onNewTaskTitleChange: (text: string) => void;
+  onNewTaskNotesChange: (text: string) => void;
+  onNewTaskDueChange: (date: string | null) => void;
+  onAction?: (action: string, data: any) => void;
+  isDark: boolean;
+}
+
+const TaskListColumn: React.FC<TaskListColumnProps> = ({
+  list,
+  width,
+  isLast,
+  showAddTask,
+  newTaskTitle,
+  newTaskNotes,
+  newTaskDue,
+  onToggleTask,
+  onViewTask,
+  onAddTaskClick,
+  onAddTaskCancel,
+  onAddTaskSubmit,
+  onNewTaskTitleChange,
+  onNewTaskNotesChange,
+  onNewTaskDueChange,
+  onAction,
+  isDark,
+}) => {
+  const responsive = useResponsiveDesign();
+  const isMobile =
+    !responsive.effectiveIsDesktop && !responsive.effectiveIsTablet;
+  const pendingTasks = list.tasks.filter((t) => t.status !== 'completed');
+  const completedTasks = list.tasks.filter((t) => t.status === 'completed');
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [openMenuTaskId, setOpenMenuTaskId] = useState<string | null>(null);
+
+  // Helper function to group tasks by parent
+  const getTasksGroupedByParent = (tasks: TaskData[]) => {
+    const rootTasks = tasks.filter((t) => !t.parent);
+    const subtasksByParent = tasks.reduce(
+      (acc, task) => {
+        if (task.parent) {
+          if (!acc[task.parent]) acc[task.parent] = [];
+          acc[task.parent]!.push(task);
+        }
+        return acc;
+      },
+      {} as Record<string, TaskData[]>,
+    );
+
+    return { rootTasks, subtasksByParent };
+  };
+
+  // Group tasks for hierarchical display
+  const { rootTasks: pendingRootTasks, subtasksByParent: pendingSubtasks } =
+    getTasksGroupedByParent(pendingTasks);
+  const { rootTasks: completedRootTasks, subtasksByParent: completedSubtasks } =
+    getTasksGroupedByParent(completedTasks);
+
+  const isMobileFullWidth = width === screenWidth;
+
+  return (
+    <View
+      style={{ width }}
+      className={cn(
+        'h-full',
+        !isMobileFullWidth && 'rounded-2xl border',
+        !isMobileFullWidth &&
+          (isDark
+            ? 'bg-slate-800 border-slate-700'
+            : 'bg-white border-gray-200'),
+        !isLast && !isMobileFullWidth && 'mr-4',
+      )}
+    >
+      {/* List Header - Hide on mobile when using tabs */}
+      {!isMobileFullWidth && (
+        <View
+          className={cn(
+            'px-4 py-3 border-b',
+            isDark ? 'border-slate-700' : 'border-gray-200',
+          )}
+        >
+          <Text
+            className={cn(
+              'text-lg font-semibold',
+              isDark ? 'text-white' : 'text-gray-900',
+            )}
+          >
+            {list.title}
+          </Text>
+          <Text
+            className={cn(
+              'text-xs',
+              isDark ? 'text-slate-400' : 'text-gray-600',
+            )}
+          >
+            {list.taskCount} tasks • {list.completedCount} completed
+          </Text>
+        </View>
+      )}
+
+      {/* Task Content */}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Add Task Button */}
+        <TouchableOpacity
+          onPress={onAddTaskClick}
+          className={cn(
+            'flex-row items-center px-4 py-3 border-b',
+            isDark ? 'border-slate-700' : 'border-gray-100',
+          )}
+        >
+          <View
+            className={cn(
+              'w-5 h-5 rounded-full border-2 items-center justify-center mr-3',
+              isDark ? 'border-blue-400' : 'border-blue-500',
+            )}
+          >
+            <Text
+              className={cn(
+                'text-xs font-bold',
+                isDark ? 'text-blue-400' : 'text-blue-500',
+              )}
+            >
+              +
+            </Text>
+          </View>
+          <Text
+            className={cn(
+              'text-base',
+              isDark ? 'text-blue-400' : 'text-blue-500',
+            )}
+          >
+            Add a task
+          </Text>
+        </TouchableOpacity>
+
+        {/* Add Task Form */}
+        {showAddTask && (
+          <View
+            className={cn(
+              'px-4 py-3 border-b',
+              isDark
+                ? 'border-slate-700 bg-slate-900/50'
+                : 'border-gray-100 bg-gray-50',
+            )}
+          >
+            <TextInput
+              placeholder="Task title"
+              value={newTaskTitle}
+              onChangeText={onNewTaskTitleChange}
+              className={cn(
+                'text-base px-3 py-2 rounded-lg border mb-2',
+                isDark
+                  ? 'bg-slate-800 border-slate-600 text-white placeholder:text-slate-400'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-500',
+              )}
+              autoFocus
+              placeholderTextColor={isDark ? '#94a3b8' : '#9ca3af'}
+            />
+            <TextInput
+              placeholder="Add details (optional)"
+              value={newTaskNotes}
+              onChangeText={onNewTaskNotesChange}
+              multiline
+              numberOfLines={2}
+              className={cn(
+                'text-sm px-3 py-2 rounded-lg border mb-2',
+                isDark
+                  ? 'bg-slate-800 border-slate-600 text-white placeholder:text-slate-400'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-500',
+              )}
+              placeholderTextColor={isDark ? '#94a3b8' : '#9ca3af'}
+            />
+            {/* Due Date Picker */}
+            <DatePickerButton
+              date={newTaskDue ? new Date(newTaskDue) : null}
+              onDateChange={(date) => onNewTaskDueChange(date ? date.toISOString() : null)}
+              placeholder="Set due date (optional)"
+              minimumDate={new Date()}
+              className="mb-2"
+            />
+
+            <View className="flex-row justify-end gap-2">
+              <TouchableOpacity
+                onPress={onAddTaskCancel}
+                className="px-3 py-1.5"
+              >
+                <Text
+                  className={cn(
+                    'text-sm',
+                    isDark ? 'text-slate-400' : 'text-gray-600',
+                  )}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onAddTaskSubmit}
+                className={cn(
+                  'px-4 py-1.5 rounded-lg',
+                  newTaskTitle.trim()
+                    ? 'bg-blue-600'
+                    : isDark
+                      ? 'bg-slate-700'
+                      : 'bg-gray-300',
+                )}
+                disabled={!newTaskTitle.trim()}
+              >
+                <Text
+                  className={cn(
+                    'text-sm font-medium',
+                    newTaskTitle.trim()
+                      ? 'text-white'
+                      : isDark
+                        ? 'text-slate-500'
+                        : 'text-gray-500',
+                  )}
+                >
+                  Add
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Pending Tasks */}
+        <View className="px-4 py-2">
+          {pendingTasks.length === 0 && !showAddTask && (
+            <Text
+              className={cn(
+                'text-sm text-center py-8',
+                isDark ? 'text-slate-500' : 'text-gray-500',
+              )}
+            >
+              No tasks yet. Add one above!
+            </Text>
+          )}
+
+          {pendingRootTasks.map((task, index) => (
+            <View key={task.id} style={{ position: 'relative', zIndex: pendingRootTasks.length - index }}>
+              <TaskItem
+                task={task}
+                onToggle={() => onToggleTask(task)}
+                onAction={onAction}
+                onTaskPress={() => onViewTask(task, list)}
+                listId={list.id}
+                isDark={isDark}
+                isMenuOpen={openMenuTaskId === task.id}
+                onMenuToggle={(open) =>
+                  setOpenMenuTaskId(open ? task.id : null)
+                }
+                isMobile={isMobile}
+              />
+              {/* Render subtasks */}
+              {pendingSubtasks[task.id]?.map((subtask, subIndex) => (
+                <View key={subtask.id} style={{ paddingLeft: 24, position: 'relative', zIndex: (pendingSubtasks[task.id]?.length || 0) - subIndex }}>
+                  <TaskItem
+                    task={subtask}
+                    onToggle={() => onToggleTask(subtask)}
+                    onAction={onAction}
+                    onTaskPress={() => onViewTask(subtask, list)}
+                    listId={list.id}
+                    isDark={isDark}
+                    isMenuOpen={openMenuTaskId === subtask.id}
+                    onMenuToggle={(open) =>
+                      setOpenMenuTaskId(open ? subtask.id : null)
+                    }
+                    isSubtask={true}
+                    isMobile={isMobile}
+                  />
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+
+        {/* Completed Tasks Section */}
+        {completedTasks.length > 0 && (
+          <View className="px-4 pb-4">
+            <TouchableOpacity
+              onPress={() => setShowCompleted(!showCompleted)}
+              className="flex-row items-center py-2"
+            >
+              <Text
+                className={cn(
+                  'text-sm font-medium',
+                  isDark ? 'text-slate-400' : 'text-gray-600',
+                )}
+              >
+                {showCompleted ? '▼' : '▶'} Completed ({completedTasks.length})
+              </Text>
+            </TouchableOpacity>
+
+            {showCompleted && (
+              <View>
+                {completedRootTasks.map((task, index) => (
+                  <View key={task.id} style={{ position: 'relative', zIndex: completedRootTasks.length - index }}>
+                    <TaskItem
+                      task={task}
+                      onToggle={() => onToggleTask(task)}
+                      onAction={onAction}
+                      onTaskPress={() => onViewTask(task, list)}
+                      listId={list.id}
+                      isDark={isDark}
+                      isMenuOpen={openMenuTaskId === task.id}
+                      onMenuToggle={(open) =>
+                        setOpenMenuTaskId(open ? task.id : null)
+                      }
+                      isMobile={isMobile}
+                    />
+                    {/* Render completed subtasks */}
+                    {completedSubtasks[task.id]?.map((subtask, subIndex) => (
+                      <View key={subtask.id} style={{ paddingLeft: 24, position: 'relative', zIndex: (completedSubtasks[task.id]?.length || 0) - subIndex }}>
+                        <TaskItem
+                          task={subtask}
+                          onToggle={() => onToggleTask(subtask)}
+                          onAction={onAction}
+                          onTaskPress={() => onViewTask(subtask, list)}
+                          listId={list.id}
+                          isDark={isDark}
+                          isMenuOpen={openMenuTaskId === subtask.id}
+                          onMenuToggle={(open) =>
+                            setOpenMenuTaskId(open ? subtask.id : null)
+                          }
+                          isSubtask={true}
+                          isMobile={isMobile}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+};
+
+interface TaskItemProps {
+  task: TaskData;
+  onToggle: () => void;
+  onAction?: (action: string, data: any) => void;
+  onTaskPress?: () => void;
+  listId: string;
+  isDark: boolean;
+  isMenuOpen: boolean;
+  onMenuToggle: (open: boolean) => void;
+  isSubtask?: boolean;
+  isMobile?: boolean;
+}
+
+const TaskItem: React.FC<TaskItemProps> = ({
+  task,
+  onToggle,
+  onAction,
+  onTaskPress,
+  listId,
+  isDark,
+  isMenuOpen,
+  onMenuToggle,
+  isSubtask = false,
+  isMobile = false,
+}) => {
+  const isCompleted = task.status === 'completed';
+  const isOverdue = task.due && new Date(task.due) < new Date() && !isCompleted;
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
+  const [editedNotes, setEditedNotes] = useState(task.notes || '');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showAddSubtask, setShowAddSubtask] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newSubtaskNotes, setNewSubtaskNotes] = useState('');
+  const [newSubtaskDue, setNewSubtaskDue] = useState<string | null>(null);
+
+  const handleTitleSubmit = () => {
+    if (editedTitle.trim() && editedTitle !== task.title) {
+      onAction?.('edit_task', {
+        task,
+        listId,
+        newTitle: editedTitle.trim(),
+        newNotes: task.notes,
+      });
+    } else {
+      setEditedTitle(task.title); // Reset if empty
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleNotesSubmit = () => {
+    if (editedNotes !== task.notes) {
+      onAction?.('edit_task', {
+        task,
+        listId,
+        newTitle: task.title,
+        newNotes: editedNotes.trim(),
+      });
+    }
+    setIsEditingNotes(false);
+  };
+
+  const handleDelete = () => {
+    onMenuToggle(false);
+    onAction?.('delete_task', { task, listId });
+  };
+
+  const handlePress = () => {
+    if (isMobile && onTaskPress) {
+      onTaskPress();
+    }
+  };
+
+  const handleSubtaskCreate = () => {
+    if (newSubtaskTitle.trim()) {
+      onAction?.('create_subtask_detailed', {
+        parentTask: task,
+        listId,
+        title: newSubtaskTitle.trim(),
+        notes: newSubtaskNotes.trim(),
+        due: newSubtaskDue
+      });
+      setShowAddSubtask(false);
+      setNewSubtaskTitle('');
+      setNewSubtaskNotes('');
+      setNewSubtaskDue(null);
+    }
+  };
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      className={cn(
+        'py-3 border-b',
+        isDark ? 'border-slate-700/50' : 'border-gray-100',
+      )}
+      style={({ pressed }) => ({
+        opacity: pressed && isMobile ? 0.7 : 1,
+        position: 'relative',
+        zIndex: isMenuOpen ? 999 : 1,
+      })}
+    >
+      <View className="flex-row items-start">
+        {/* Subtask indicator */}
+        {isSubtask && (
+          <View className="mr-2">
+            <Text
+              className={cn(
+                'text-xs',
+                isDark ? 'text-slate-500' : 'text-gray-400',
+              )}
+            >
+              └
+            </Text>
+          </View>
+        )}
+
+        <TouchableOpacity 
+          onPress={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }} 
+          className="mr-3 mt-0.5"
+        >
+          <View
+            className={cn(
+              'w-5 h-5 rounded-full border-2 items-center justify-center',
+              isCompleted
+                ? 'bg-blue-600 border-blue-600'
+                : isDark
+                  ? 'border-slate-400'
+                  : 'border-gray-400',
+            )}
+          >
+            {isCompleted && <Text className="text-white text-xs">✓</Text>}
+          </View>
+        </TouchableOpacity>
+
+        <View className="flex-1">
+          {/* Editable Title */}
+          {isEditingTitle ? (
+            <TextInput
+              value={editedTitle}
+              onChangeText={setEditedTitle}
+              onBlur={handleTitleSubmit}
+              onSubmitEditing={handleTitleSubmit}
+              autoFocus
+              className={cn(
+                'text-base px-2 py-1 rounded border',
+                isDark
+                  ? 'bg-slate-800 border-slate-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-900',
+              )}
+              style={{ marginLeft: -8, marginRight: -8 }}
+              placeholderTextColor={isDark ? '#94a3b8' : '#9ca3af'}
+            />
+          ) : (
+            <Pressable
+              onPress={() => {
+                if (!isMobile && !isCompleted) {
+                  setIsEditingTitle(true);
+                } else if (isMobile) {
+                  handlePress();
+                }
+              }}
+            >
+              <Text
+                className={cn(
+                  'text-base',
+                  isCompleted && 'line-through',
+                  isCompleted
+                    ? isDark
+                      ? 'text-slate-500'
+                      : 'text-gray-500'
+                    : isDark
+                      ? 'text-white'
+                      : 'text-gray-900',
+                )}
+              >
+                {task.title}
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Editable Notes */}
+          {isEditingNotes ? (
+            <TextInput
+              value={editedNotes}
+              onChangeText={setEditedNotes}
+              onBlur={handleNotesSubmit}
+              onSubmitEditing={handleNotesSubmit}
+              autoFocus
+              multiline
+              className={cn(
+                'text-sm mt-1 px-2 py-1 rounded border',
+                isDark
+                  ? 'bg-slate-800 border-slate-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-900',
+              )}
+              style={{ marginLeft: -8, marginRight: -8 }}
+              placeholderTextColor={isDark ? '#94a3b8' : '#9ca3af'}
+            />
+          ) : (
+            <Pressable
+              onPress={() => {
+                if (!isMobile && !isCompleted) {
+                  setIsEditingNotes(true);
+                } else if (isMobile && task.notes) {
+                  handlePress();
+                }
+              }}
+            >
+              <Text
+                className={cn(
+                  'text-sm mt-1',
+                  isDark ? 'text-slate-400' : 'text-gray-600',
+                )}
+              >
+                {task.notes || (!isCompleted ? 'Add details' : '')}
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Due Date Picker Pill */}
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            className={cn(
+              'flex-row items-center self-start mt-2 px-2 py-1 rounded-full',
+              task.due
+                ? isOverdue
+                  ? 'bg-red-500/10'
+                  : isDark
+                    ? 'bg-slate-700'
+                    : 'bg-gray-100'
+                : isDark
+                  ? 'bg-slate-800 border border-slate-700'
+                  : 'bg-gray-50 border border-gray-200',
+            )}
+          >
+            <Text
+              className={cn(
+                'text-xs',
+                task.due
+                  ? isOverdue
+                    ? 'text-red-500'
+                    : isDark
+                      ? 'text-slate-300'
+                      : 'text-gray-700'
+                  : isDark
+                    ? 'text-slate-400'
+                    : 'text-gray-500',
+              )}
+            >
+              {task.due
+                ? isOverdue
+                  ? `⚠️ Overdue: ${new Date(task.due).toLocaleDateString()}`
+                  : `📅 ${new Date(task.due).toLocaleDateString()}`
+                : '📅 Add date'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Menu Button and Mobile Chevron */}
+        <View className="flex-row items-center">
+          {isMobile && (
+            <Text
+              className={cn(
+                'text-lg mr-2',
+                isDark ? 'text-slate-400' : 'text-gray-400',
+              )}
+            >
+              ›
+            </Text>
+          )}
+          <View style={{ position: 'relative', zIndex: isMenuOpen ? 1000 : 10 }}>
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                onMenuToggle(!isMenuOpen);
+              }}
+              className="p-1"
+            >
+              <Text
+                className={cn(
+                  'text-base',
+                  isDark ? 'text-slate-400' : 'text-gray-400',
+                )}
+              >
+                ⋮
+              </Text>
+            </TouchableOpacity>
+
+            {/* Dropdown Menu */}
+            {isMenuOpen && (
+              <>
+              {/* Transparent overlay to catch outside clicks */}
+              <Pressable
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 1001,
+                }}
+                onPress={() => onMenuToggle(false)}
+              />
+
+              {/* Dropdown menu */}
+              <View
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 24,
+                  zIndex: 1002,
+                  minWidth: 120,
+                  // iOS shadow
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 3.84,
+                  // Android elevation
+                  elevation: 5,
+                }}
+                className={cn(
+                  'rounded-lg border',
+                  isDark
+                    ? 'bg-slate-800 border-slate-700'
+                    : 'bg-white border-gray-200',
+                )}
+              >
+                {!isSubtask && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      onMenuToggle(false);
+                      setShowAddSubtask(true);
+                    }}
+                    className={cn(
+                      'px-4 py-2 border-b',
+                      isDark ? 'border-slate-700' : 'border-gray-100',
+                    )}
+                  >
+                    <Text
+                      className={cn(
+                        'text-sm',
+                        isDark ? 'text-white' : 'text-gray-700',
+                      )}
+                    >
+                      ➕ Add Subtask
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {task.due && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      onMenuToggle(false);
+                      onAction?.('clear_due_date', { task, listId });
+                    }}
+                    className={cn(
+                      'px-4 py-2 border-b',
+                      isDark ? 'border-slate-700' : 'border-gray-100',
+                    )}
+                  >
+                    <Text
+                      className={cn(
+                        'text-sm',
+                        isDark ? 'text-white' : 'text-gray-700',
+                      )}
+                    >
+                      ❌ Clear Due Date
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  className={cn(
+                    'px-4 py-2 border-b',
+                    isDark ? 'border-slate-700' : 'border-gray-100',
+                  )}
+                >
+                  <Text className={cn('text-sm', 'text-red-500')}>
+                    Delete Task
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onMenuToggle(false)}
+                  className="px-4 py-2"
+                >
+                  <Text
+                    className={cn(
+                      'text-sm',
+                      isDark ? 'text-slate-300' : 'text-gray-700',
+                    )}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+          </View>
+        </View>
+      </View>
+
+      {/* Inline Subtask Creation */}
+      {showAddSubtask && !isSubtask && (
+        <View className={cn(
+          'px-8 py-3 border-t',
+          isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50/50'
+        )}>
+          <View className="flex-row items-start">
+            <Text className={cn(
+              'text-xs mr-2 mt-2',
+              isDark ? 'text-slate-500' : 'text-gray-400'
+            )}>
+              └
+            </Text>
+            <View className="flex-1">
+              <TextInput
+                placeholder="Subtask title"
+                value={newSubtaskTitle}
+                onChangeText={setNewSubtaskTitle}
+                onBlur={() => {
+                  // Only close if we're not clicking on another part of the form
+                  setTimeout(() => {
+                    if (!newSubtaskTitle.trim() && !newSubtaskNotes.trim()) {
+                      setShowAddSubtask(false);
+                    }
+                  }, 200);
+                }}
+                onSubmitEditing={handleSubtaskCreate}
+                autoFocus
+                className={cn(
+                  'text-base px-2 py-1 rounded',
+                  isDark
+                    ? 'text-white placeholder:text-slate-400'
+                    : 'text-gray-900 placeholder:text-gray-500'
+                )}
+                placeholderTextColor={isDark ? '#94a3b8' : '#9ca3af'}
+              />
+              <TextInput
+                placeholder="Add details (optional)"
+                value={newSubtaskNotes}
+                onChangeText={setNewSubtaskNotes}
+                multiline
+                className={cn(
+                  'text-sm px-2 py-1 mt-1 rounded',
+                  isDark
+                    ? 'text-slate-300 placeholder:text-slate-500'
+                    : 'text-gray-700 placeholder:text-gray-400'
+                )}
+                placeholderTextColor={isDark ? '#64748b' : '#9ca3af'}
+              />
+              {/* Subtask Due Date Picker */}
+              <DatePickerButton
+                date={newSubtaskDue ? new Date(newSubtaskDue) : null}
+                onDateChange={(date) => setNewSubtaskDue(date ? date.toISOString() : null)}
+                placeholder="Add date (optional)"
+                minimumDate={new Date()}
+                className="self-start mt-2"
+              />
+              <View className="flex-row gap-2 mt-2">
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowAddSubtask(false);
+                    setNewSubtaskTitle('');
+                    setNewSubtaskNotes('');
+                    setNewSubtaskDue(null);
+                  }}
+                  className="px-2 py-1"
+                >
+                  <Text className={cn(
+                    'text-xs',
+                    isDark ? 'text-slate-400' : 'text-gray-600'
+                  )}>Cancel</Text>
+                </TouchableOpacity>
+                {newSubtaskTitle.trim() && (
+                  <TouchableOpacity
+                    onPress={handleSubtaskCreate}
+                    className={cn(
+                      'px-3 py-1 rounded',
+                      isDark ? 'bg-blue-600' : 'bg-blue-500'
+                    )}
+                  >
+                    <Text className="text-xs text-white font-medium">Save</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+      
+      {/* DateTimePicker for Task Due Date */}
+      <CrossPlatformDatePicker
+        visible={showDatePicker}
+        value={task.due ? new Date(task.due) : new Date()}
+        onChange={(selectedDate) => {
+          onAction?.('set_due_date', { 
+            task, 
+            listId,
+            dueDate: selectedDate.toISOString()
+          });
+        }}
+        onClose={() => setShowDatePicker(false)}
+        minimumDate={new Date()}
+        title="Select Due Date"
+      />
+      
+    </Pressable>
+  );
+};

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo, ReactNode } from 'react';
-import { useColorScheme, AccessibilityInfo } from 'react-native';
+import { useColorScheme } from 'react-native';
 import type { ThemeSettings } from '~/types/profile';
 
 // Safe hook to optionally use profile context
@@ -123,15 +123,13 @@ export function useThemeIntegration() {
     const { state, updateTheme } = useProfile();
     const { theme, isDark } = useTheme();
     
-    // ACCESSIBILITY: Announce theme changes to screen readers
+    // Simple theme change handler
     const handleThemeChange = async (newTheme: ThemeSettings['colorScheme']) => {
       try {
         updateTheme({ colorScheme: newTheme });
         
-        // Announce to screen readers
-        const announcement = `Theme changed to ${newTheme} mode`;
-          
-        AccessibilityInfo.announceForAccessibility(announcement);
+        // Simple theme change without accessibility announcements
+        console.log(`Theme changed to ${newTheme} mode`);
       } catch (error) {
         console.warn('Theme change failed:', error);
       }

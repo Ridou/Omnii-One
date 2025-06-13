@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
 import { GmailIcon, CalendarIcon, ContactsIcon, TasksIcon } from '~/icons/ChatIcons';
 import { ComponentAction } from '~/types/chat';
 import { cn } from '~/utils/cn';
 import { useTheme } from '~/context/ThemeContext';
+import { GoogleTasksView } from './GoogleTasksView';
 
 // ✅ ZOD-INFERRED TYPES: Always use validated types from Zod schemas
 import type {
-  EmailData, TaskListData,
-  TaskListsData, CompleteTaskOverview,
+  EmailData, TaskListData, TaskData,
+  TaskListsData, TaskListWithTasks, CompleteTaskOverview,
   CalendarData, ContactData
 } from '@omnii/validators';
 
@@ -1107,180 +1108,642 @@ const CalendarEventCard: React.FC<{
   );
 };
 
-// ✅ NEW: CompleteTaskOverviewComponent - Using Native Tailwind Classes
+// ✅ NEW: Calendar Component Factory - Routes calendar data to appropriate component
+export const createCalendarComponent = (calendarData: any, props: any) => {
+  console.log('[CalendarComponentFactory] Creating calendar component with data:', calendarData);
+  
+  // Handle null/undefined data
+  if (!calendarData) {
+    console.warn('[CalendarComponentFactory] No calendar data provided');
+    return null;
+  }
+
+  // Check if it's a calendar list response (multiple events)
+  if (calendarData.events && Array.isArray(calendarData.events)) {
+    console.log('[CalendarComponentFactory] Detected calendar list with', calendarData.events.length, 'events');
+    return (
+      <CalendarListComponent
+        events={calendarData.events}
+        totalCount={calendarData.totalCount || calendarData.events.length}
+        hasMore={calendarData.hasMore}
+        timeRange={calendarData.timeRange}
+        onAction={props.onAction}
+      />
+    );
+  }
+
+  // Check if it's a single calendar event
+  if (calendarData.eventId || calendarData.start || calendarData.title) {
+    console.log('[CalendarComponentFactory] Detected single calendar event:', calendarData.title);
+    return (
+      <CalendarComponent
+        id={calendarData.eventId || 'calendar-event'}
+        timestamp={calendarData.start || new Date().toISOString()}
+        status="success"
+        data={calendarData}
+        onAction={props.onAction}
+      />
+    );
+  }
+
+  // If we can't determine the structure, show debug info
+  console.warn('[CalendarComponentFactory] Unknown calendar data structure:', Object.keys(calendarData));
+  return (
+    <View className="rounded-xl p-4 my-2 border border-orange-500 bg-orange-50">
+      <Text className="text-sm font-semibold text-orange-800 mb-2">
+        📅 Calendar Data (Unknown Format)
+      </Text>
+      <Text className="text-xs text-orange-600">
+        Keys: {Object.keys(calendarData).join(', ')}
+      </Text>
+      <Text className="text-xs text-orange-600 mt-1">
+        Type: {Array.isArray(calendarData) ? 'Array' : typeof calendarData}
+      </Text>
+    </View>
+  );
+};
+
+// ============================================================================
+// GOOGLE TASKS-STYLE MODAL COMPONENT
+// ============================================================================
+
+interface TasksModalProps {
+  visible: boolean;
+  onClose: () => void;
+  overview: CompleteTaskOverview;
+  onAction?: (action: string, data: any) => void;
+}
+
+export const TasksModal: React.FC<TasksModalProps> = ({ 
+  visible, 
+  onClose, 
+  overview, 
+  onAction 
+}) => {
+  const { isDark } = useTheme();
+  const [selectedListId, setSelectedListId] = useState<string>(overview.taskLists[0]?.id || '');
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskNotes, setNewTaskNotes] = useState('');
+
+  const selectedList = overview.taskLists.find(list => list.id === selectedListId);
+
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    
+    await onAction?.('create_task_in_list', {
+      listId: selectedListId,
+      title: newTaskTitle.trim(),
+      notes: newTaskNotes.trim()
+    });
+    
+    setNewTaskTitle('');
+    setNewTaskNotes('');
+    setShowAddTask(false);
+  };
+
+  const handleEditTask = (task: TaskData) => {
+    Alert.prompt(
+      'Edit Task',
+      'Enter new title:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Save', 
+          onPress: (title) => {
+            if (title?.trim()) {
+              onAction?.('edit_task', {
+                task,
+                listId: selectedListId,
+                newTitle: title.trim()
+              });
+            }
+          }
+        }
+      ],
+      'plain-text',
+      task.title
+    );
+  };
+
+  const handleDeleteTask = (task: TaskData) => {
+    Alert.alert(
+      'Delete Task',
+      `Are you sure you want to delete "${task.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => onAction?.('delete_task', { task, listId: selectedListId })
+        }
+      ]
+    );
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+    >
+      <View className={cn(
+        "flex-1",
+        isDark ? "bg-slate-900" : "bg-white"
+      )}>
+        {/* Header - Fixed */}
+        <View className={cn(
+          "flex-row items-center justify-between px-4 py-3 border-b",
+          isDark ? "border-slate-700" : "border-gray-200"
+        )}>
+          <Text className={cn(
+            "text-xl font-semibold",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
+            My Tasks
+          </Text>
+          <TouchableOpacity 
+            onPress={onClose}
+            className="p-2"
+          >
+            <Text className={cn(
+              "text-lg",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Task List Selector */}
+        {overview.taskLists.length > 1 && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            className={cn(
+              "px-4 py-2 border-b",
+              isDark ? "border-slate-700" : "border-gray-200"
+            )}
+          >
+            {overview.taskLists.map((list) => (
+              <TouchableOpacity
+                key={list.id}
+                onPress={() => setSelectedListId(list.id)}
+                className={cn(
+                  "px-4 py-2 rounded-full mr-3 border",
+                  selectedListId === list.id
+                    ? "bg-blue-600 border-blue-600"
+                    : isDark 
+                      ? "bg-slate-800 border-slate-600" 
+                      : "bg-gray-100 border-gray-300"
+                )}
+              >
+                <Text className={cn(
+                  "text-sm font-medium",
+                  selectedListId === list.id
+                    ? "text-white"
+                    : isDark ? "text-white" : "text-gray-900"
+                )}>
+                  {list.title} ({list.taskCount})
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Add Task Button - Google Tasks Style */}
+        <TouchableOpacity 
+          onPress={() => setShowAddTask(true)}
+          className={cn(
+            "flex-row items-center px-4 py-4 border-b",
+            isDark ? "border-slate-700" : "border-gray-200"
+          )}
+        >
+          <View className="w-6 h-6 rounded-full border-2 border-blue-500 items-center justify-center mr-4">
+            <Text className="text-blue-500 text-lg font-light">+</Text>
+          </View>
+          <Text className={cn(
+            "text-base text-blue-500"
+          )}>
+            Add a task
+          </Text>
+        </TouchableOpacity>
+
+        {/* Add Task Form */}
+        {showAddTask && (
+          <View className={cn(
+            "px-4 py-3 border-b",
+            isDark ? "border-slate-700 bg-slate-800" : "border-gray-200 bg-gray-50"
+          )}>
+            <TextInput
+              placeholder="Task title"
+              value={newTaskTitle}
+              onChangeText={setNewTaskTitle}
+              className={cn(
+                "text-base p-3 rounded-lg border mb-2",
+                isDark 
+                  ? "bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                  : "bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
+              )}
+              autoFocus
+            />
+            <TextInput
+              placeholder="Add details (optional)"
+              value={newTaskNotes}
+              onChangeText={setNewTaskNotes}
+              multiline
+              numberOfLines={2}
+              className={cn(
+                "text-sm p-3 rounded-lg border mb-3",
+                isDark 
+                  ? "bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                  : "bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
+              )}
+            />
+            <View className="flex-row justify-end gap-3">
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowAddTask(false);
+                  setNewTaskTitle('');
+                  setNewTaskNotes('');
+                }}
+                className="px-4 py-2"
+              >
+                <Text className={cn(
+                  "text-base",
+                  isDark ? "text-slate-400" : "text-gray-600"
+                )}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handleAddTask}
+                className={cn(
+                  "px-6 py-2 rounded-lg",
+                  newTaskTitle.trim() 
+                    ? "bg-blue-600" 
+                    : isDark ? "bg-slate-700" : "bg-gray-300"
+                )}
+                disabled={!newTaskTitle.trim()}
+              >
+                <Text className={cn(
+                  "text-base font-medium",
+                  newTaskTitle.trim() ? "text-white" : isDark ? "text-slate-500" : "text-gray-500"
+                )}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Tasks List - Google Tasks Style */}
+        <ScrollView className="flex-1 px-4">
+          {selectedList?.tasks.length === 0 ? (
+            <View className="items-center justify-center py-16">
+              <Text className={cn(
+                "text-base text-center",
+                isDark ? "text-slate-400" : "text-gray-500"
+              )}>
+                No tasks yet.{'\n'}Add one above to get started.
+              </Text>
+            </View>
+          ) : (
+            selectedList?.tasks.map((task) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                onToggle={() => onAction?.(
+                  task.status === 'completed' ? 'mark_incomplete' : 'mark_complete',
+                  { task, listId: selectedListId }
+                )}
+                onEdit={() => handleEditTask(task)}
+                onDelete={() => handleDeleteTask(task)}
+              />
+            ))
+          )}
+        </ScrollView>
+
+        {/* Bottom Actions */}
+        <View className={cn(
+          "flex-row justify-around py-3 border-t",
+          isDark ? "border-slate-700 bg-slate-800" : "border-gray-200 bg-gray-50"
+        )}>
+          <TouchableOpacity 
+            onPress={() => onAction?.('refresh_overview', null)}
+            className="items-center py-2 px-4"
+          >
+            <Text className="text-2xl mb-1">🔄</Text>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>Refresh</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            onPress={() => {
+              Alert.prompt(
+                'New Task List',
+                'Enter list name:',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { 
+                    text: 'Create', 
+                    onPress: (title) => {
+                      if (title?.trim()) {
+                        onAction?.('create_task_list', { title: title.trim() });
+                      }
+                    }
+                  }
+                ]
+              );
+            }}
+            className="items-center py-2 px-4"
+          >
+            <Text className="text-2xl mb-1">📋</Text>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>New List</Text>
+          </TouchableOpacity>
+
+          {overview.totalCompleted > 0 && (
+            <TouchableOpacity 
+              onPress={() => onAction?.('clear_completed', null)}
+              className="items-center py-2 px-4"
+            >
+              <Text className="text-2xl mb-1">🗑️</Text>
+              <Text className={cn(
+                "text-xs",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Clear Done</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+// ============================================================================
+// INDIVIDUAL TASK ITEM - GOOGLE TASKS STYLE
+// ============================================================================
+
+interface TaskItemProps {
+  task: TaskData;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete }) => {
+  const { isDark } = useTheme();
+  const [showActions, setShowActions] = useState(false);
+  
+  const isCompleted = task.status === 'completed';
+  const isOverdue = task.due && new Date(task.due) < new Date() && !isCompleted;
+
+  return (
+    <View className={cn(
+      "py-4 border-b",
+      isDark ? "border-slate-700" : "border-gray-100"
+    )}>
+      <View className="flex-row items-start">
+        {/* Completion Circle */}
+        <TouchableOpacity 
+          onPress={onToggle}
+          className="mr-4 mt-1"
+        >
+          <View className={cn(
+            "w-6 h-6 rounded-full border-2 items-center justify-center",
+            isCompleted 
+              ? "bg-blue-600 border-blue-600" 
+              : isDark 
+                ? "border-slate-400" 
+                : "border-gray-400"
+          )}>
+            {isCompleted && (
+              <Text className="text-white text-sm">✓</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Task Content */}
+        <View className="flex-1 mr-2">
+          <Text className={cn(
+            "text-base leading-6",
+            isCompleted 
+              ? isDark ? "text-slate-500 line-through" : "text-gray-500 line-through"
+              : isDark ? "text-white" : "text-gray-900"
+          )}>
+            {task.title}
+          </Text>
+          
+          {task.notes && (
+            <Text className={cn(
+              "text-sm mt-1 leading-5",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>
+              {task.notes}
+            </Text>
+          )}
+
+          {/* Task Metadata */}
+          <View className="flex-row items-center mt-2">
+            {task.due && (
+              <View className={cn(
+                "px-2 py-1 rounded mr-2",
+                isOverdue 
+                  ? "bg-red-100" 
+                  : isDark ? "bg-slate-800" : "bg-gray-100"
+              )}>
+                <Text className={cn(
+                  "text-xs",
+                  isOverdue 
+                    ? "text-red-600" 
+                    : isDark ? "text-slate-400" : "text-gray-600"
+                )}>
+                  {isOverdue ? 'Overdue' : new Date(task.due).toLocaleDateString()}
+                </Text>
+              </View>
+            )}
+            
+            {task.updated && (
+              <Text className={cn(
+                "text-xs",
+                isDark ? "text-slate-500" : "text-gray-500"
+              )}>
+                {Math.ceil((Date.now() - new Date(task.updated).getTime()) / (1000 * 60 * 60 * 24))} days ago
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Actions Menu */}
+        <TouchableOpacity 
+          onPress={() => setShowActions(!showActions)}
+          className="p-2"
+        >
+          <Text className={cn(
+            "text-lg",
+            isDark ? "text-slate-400" : "text-gray-400"
+          )}>⋮</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Action Buttons */}
+      {showActions && (
+        <View className={cn(
+          "mt-3 p-3 rounded-lg",
+          isDark ? "bg-slate-800" : "bg-gray-50"
+        )}>
+          <View className="flex-row justify-around">
+            <TouchableOpacity 
+              onPress={() => {
+                onEdit();
+                setShowActions(false);
+              }}
+              className="items-center py-2 px-4"
+            >
+              <Text className="text-xl mb-1">✏️</Text>
+              <Text className={cn(
+                "text-xs",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Edit</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => {
+                onDelete();
+                setShowActions(false);
+              }}
+              className="items-center py-2 px-4"
+            >
+              <Text className="text-xl mb-1">🗑️</Text>
+              <Text className={cn(
+                "text-xs",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Delete</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => setShowActions(false)}
+              className="items-center py-2 px-4"
+            >
+              <Text className="text-xl mb-1">✕</Text>
+              <Text className={cn(
+                "text-xs",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+};
+
+// ============================================================================
+// ENHANCED COMPLETE TASK OVERVIEW COMPONENT WITH MODAL
+// ============================================================================
+
 export const CompleteTaskOverviewComponent: React.FC<{
   overview: CompleteTaskOverview;
   onAction?: (action: string, data: any) => void;
 }> = ({ overview, onAction }) => {
   const { isDark } = useTheme();
-  const [expandedLists, setExpandedLists] = useState<Set<string>>(new Set());
-  const [showAllLists, setShowAllLists] = useState(false);
-  
-  const toggleListExpansion = (listId: string) => {
-    const newExpanded = new Set(expandedLists);
-    if (newExpanded.has(listId)) {
-      newExpanded.delete(listId);
-    } else {
-      newExpanded.add(listId);
-    }
-    setExpandedLists(newExpanded);
-  };
+  const [expanded, setExpanded] = useState(true); // Show expanded by default
 
   const hasOverdueTasks = overview.totalOverdue > 0;
   const hasFailures = overview.partialFailures && overview.partialFailures.length > 0;
-  
-  // Show only first 2 task lists initially, with option to expand
-  const displayLists = showAllLists ? overview.taskLists : overview.taskLists.slice(0, 2);
 
-  return (
-    <View className={cn(
-      "w-full rounded-lg p-2 my-1 border max-h-60 min-h-30",
-      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-    )}>
-      {/* Compact Overview Summary */}
-      <View className={cn(
-        "flex-row items-center pb-1.5 border-b mb-1.5 w-full",
-        isDark ? "border-slate-700" : "border-gray-100"
-      )}>
-        <TasksIcon size={18} />
-        <Text className={cn(
-          "text-sm font-semibold ml-1.5 flex-1 min-w-0",
-          isDark ? "text-white" : "text-gray-900"
-        )}>
-          📋 {overview.totalTasks} tasks • {overview.totalLists} lists
-        </Text>
-        {hasOverdueTasks && (
-          <Text className="text-xs text-red-500 font-semibold min-w-10">
-            ⚠️ {overview.totalOverdue}
-          </Text>
-        )}
-      </View>
-
-      {/* Scrollable Task Lists - More Compact */}
-      <ScrollView 
-        className="w-full max-h-36 flex-1"
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-      >
-        {displayLists.map((taskListWithTasks) => (
-          <View key={taskListWithTasks.id} className={cn(
-            "rounded mb-1 border w-full",
-            isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
-          )}>
-            <TouchableOpacity 
-              className="flex-row items-center p-2 w-full"
-              onPress={() => toggleListExpansion(taskListWithTasks.id)}
-            >
-              <Text className={cn(
-                "text-xs mr-1.5 w-4 text-center",
-                isDark ? "text-slate-400" : "text-gray-600"
-              )}>
-                {expandedLists.has(taskListWithTasks.id) ? '▼' : '▶'}
-              </Text>
-              <Text className={cn(
-                "text-sm font-medium flex-1 min-w-0",
-                isDark ? "text-white" : "text-gray-900"
-              )} numberOfLines={1}>
-                {taskListWithTasks.title}
-              </Text>
-              <Text className={cn(
-                "text-xs mr-2 min-w-5 text-right",
-                isDark ? "text-slate-400" : "text-gray-600"
-              )}>
-                {taskListWithTasks.taskCount}
-              </Text>
-              {taskListWithTasks.overdueCount > 0 && (
-                <Text className="text-xs text-red-500 font-semibold min-w-7">
-                  ⚠️{taskListWithTasks.overdueCount}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Compact Expanded Tasks */}
-            {expandedLists.has(taskListWithTasks.id) && (
-              <View className="px-2 pb-2 w-full">
-                {taskListWithTasks.tasks.length === 0 ? (
-                  <Text className={cn(
-                    "text-xs italic w-full text-center",
-                    isDark ? "text-slate-400" : "text-gray-600"
-                  )}>No tasks</Text>
-                ) : (
-                  taskListWithTasks.tasks.slice(0, 5).map((task) => (
-                    <View key={task.id} className="py-1 px-2 mb-0.5 w-full">
-                      <Text className={cn(
-                        "text-xs mb-0.5 w-full flex-wrap",
-                        isDark ? "text-white" : "text-gray-900"
-                      )} numberOfLines={1}>
-                        {task.status === 'completed' ? '✅' : '⭕'} {task.title}
-                      </Text>
-                      {task.due && (
-                        <Text className={cn(
-                          "text-xs w-full",
-                          isDark ? "text-slate-400" : "text-gray-600"
-                        )}>
-                          📅 {new Date(task.due).toLocaleDateString()}
-                        </Text>
-                      )}
-                    </View>
-                  ))
-                )}
-                {taskListWithTasks.tasks.length > 5 && (
-                  <Text className={cn(
-                    "text-xs italic text-center py-1 w-full",
-                    isDark ? "text-slate-400" : "text-gray-600"
-                  )}>
-                    +{taskListWithTasks.tasks.length - 5} more tasks
-                  </Text>
-                )}
-              </View>
-            )}
-          </View>
-        ))}
-        
-        {/* Show More Lists Button */}
-        {overview.taskLists.length > 2 && (
-          <TouchableOpacity 
-            className="p-2 items-center w-full"
-            onPress={() => setShowAllLists(!showAllLists)}
-          >
-            <Text className={cn(
-              "text-xs font-medium",
-              isDark ? "text-slate-400" : "text-gray-600"
-            )}>
-              {showAllLists ? 'Show Less' : `+${overview.taskLists.length - 2} More Lists`}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </ScrollView>
-
-      {/* Compact Actions */}
-      <View className={cn(
-        "flex-row justify-between pt-1.5 border-t mt-1.5 w-full px-2",
-        isDark ? "border-slate-700" : "border-gray-100"
-      )}>
-        <TouchableOpacity 
+  // If expanded, show the Google Tasks view
+  if (expanded) {
+    return (
+      <View className="my-2">
+        <GoogleTasksView 
+          overview={overview} 
+          onAction={onAction}
+        />
+        <TouchableOpacity
+          onPress={() => setExpanded(false)}
           className={cn(
-            "px-4 py-2 rounded-full border min-w-11 w-2/5 items-center",
-            isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+            "mx-4 mt-2 px-4 py-2 rounded-lg items-center",
+            isDark ? "bg-slate-700" : "bg-gray-200"
           )}
-          onPress={() => onAction?.('refresh_overview', null)}
         >
           <Text className={cn(
-            "text-base text-center",
-            isDark ? "text-white" : "text-gray-900"
-          )}>🔄</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          className="bg-green-600 border-green-600 px-4 py-2 rounded-full border min-w-11 w-2/5 items-center"
-          onPress={() => onAction?.('create_task', null)}
-        >
-          <Text className={cn(
-            "text-base text-center",
-            isDark ? "text-white" : "text-gray-900"
-          )}>➕</Text>
+            "text-sm font-medium",
+            isDark ? "text-white" : "text-gray-700"
+          )}>Collapse View</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    );
+  }
+
+  // Compact preview card
+  return (
+    <TouchableOpacity 
+      onPress={() => setExpanded(true)}
+      className={cn(
+        "w-full rounded-lg p-4 my-2 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+      )}
+    >
+      {/* Header */}
+      <View className="flex-row items-center justify-between mb-3">
+        <View className="flex-row items-center">
+          <TasksIcon size={24} />
+          <Text className={cn(
+            "text-lg font-semibold ml-2",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
+            My Tasks
+          </Text>
+        </View>
+        {hasOverdueTasks && (
+          <View className="bg-red-100 px-2 py-1 rounded">
+            <Text className="text-red-600 text-xs font-semibold">
+              {overview.totalOverdue} overdue
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Quick Stats */}
+      <View className="flex-row items-center justify-between mb-3">
+        <Text className={cn(
+          "text-base",
+          isDark ? "text-slate-300" : "text-gray-700"
+        )}>
+          {overview.totalTasks} tasks across {overview.totalLists} lists
+        </Text>
+        <Text className={cn(
+          "text-sm",
+          isDark ? "text-slate-400" : "text-gray-500"
+        )}>
+          Tap to expand →
+        </Text>
+      </View>
+
+      {/* Progress Bar */}
+      {overview.totalTasks > 0 && (
+        <View className={cn(
+          "h-2 rounded-full mb-2",
+          isDark ? "bg-slate-700" : "bg-gray-200"
+        )}>
+          <View 
+            className="h-full bg-green-500 rounded-full"
+            style={{ 
+              width: `${(overview.totalCompleted / overview.totalTasks) * 100}%` 
+            }}
+          />
+        </View>
+      )}
+
+      {/* Status Line */}
+      <Text className={cn(
+        "text-sm text-center",
+        isDark ? "text-slate-400" : "text-gray-600"
+      )}>
+        {overview.totalCompleted} completed • {overview.totalPending} pending
+        {hasOverdueTasks && ` • ${overview.totalOverdue} overdue`}
+      </Text>
+    </TouchableOpacity>
   );
 };
 

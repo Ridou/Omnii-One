@@ -1,1303 +1,182 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-    View,
-    Text,
-    TouchableOpacity,
-    ScrollView,
-    Animated,
-    TextInput,
-    KeyboardAvoidingView,
-    Platform,
-    FlatList,
-    Alert
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import React from 'react';
+import { View, Text } from 'react-native';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
-import { useChat } from '~/hooks/useChat';
-import { ChatMessage } from '~/components/chat/ChatMessage';
-import { PendingMessage } from '~/components/chat/PendingMessage';
-import { ConnectionError } from '~/components/chat/ConnectionError';
-import { WebSocketDebug } from '~/components/chat/WebSocketDebug';
+import { useXPContext } from '~/context/XPContext';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
 import { XPProgressBar } from '~/components/common/XPProgressBar';
-import {
-    MascotSize,
-    CheeringTrigger,
-    getMascotStageByLevel
-} from '~/types/mascot';
+import { MascotSize, CheeringTrigger, getMascotStageByLevel } from '~/types/mascot';
 import { cn } from '~/utils/cn';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
-import type { ChatTab, ChatTabConfig } from '~/types/chat';
-import { UpArrowIcon, CalendarIcon, GmailIcon, ContactsIcon, TasksIcon } from '~/icons/ChatIcons';
-import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
-import { ResponsiveChatInput, DesktopChatContent, TabletChatContent } from '~/components/common/DesktopChatComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
+import type { ChatTab } from '~/types/chat';
 
+// Hooks
+import { useTasks, useTaskMutations } from '~/hooks/useTasks';
+import { useCalendar } from '~/hooks/useCalendar';
+import { useChatState } from '~/hooks/useChatState';
+import { useChatAnimations } from '~/hooks/useChatAnimations';
+import { useChatActions } from '~/hooks/useChatActions';
 
-import { useXPContext } from '~/context/XPContext';
-import { useTasks } from '~/hooks/useTasks';
-import { createTaskComponent } from '~/components/chat/MessageComponents';
+// Components
+import { ChatLayout } from '~/components/chat/ChatLayout';
+import { ConversationContent } from '~/components/chat/ConversationContent';
+import { ActionsContent } from '~/components/chat/ActionsContent';
+import { ReferencesContent } from '~/components/chat/ReferencesContent';
+import { MemoryContent } from '~/components/chat/MemoryContent';
 
+// Constants
+import { CHAT_TABS } from '~/constants/chat';
 
-// Updated tab configuration following profile.tsx pattern
-const chatTabs: ChatTabConfig[] = [
-    {
-        key: 'conversation',
-        label: 'Chat',
-        icon: '💬',
-        gradient: ['#4ECDC4', '#44A08D'] // Light teal (like Easy in approvals)
-    },
-    {
-        key: 'actions',
-        label: 'Actions',
-        icon: '⚡',
-        gradient: ['#667eea', '#764ba2'] // Purple (like Smart in approvals)
-    },
-    {
-        key: 'references',
-        label: 'References',
-        icon: '📚',
-        gradient: ['#FF7043', '#FF5722'] // Orange (like Complex in approvals)
-    },
-    {
-        key: 'memory',
-        label: 'Memory',
-        icon: '🧠',
-        gradient: ['#FF3B30', '#DC143C'] // Red (like Priority in approvals)
-    }
-];
-
-
+/**
+ * Main Chat Screen Component
+ * 
+ * This component serves as the primary interface for AI-powered chat interactions.
+ * It integrates with various data sources (tasks, calendar, email) and provides
+ * a multi-tab interface for different types of interactions.
+ */
 export default function ChatScreen() {
+    // Context hooks
     const { user } = useAuth();
     const { isDark } = useTheme();
-    const responsive = useResponsiveDesign();
-  
     const { currentLevel, currentXP } = useXPContext();
-    const router = useRouter();
+    const responsive = useResponsiveDesign();
 
- 
-
-
-    // Mascot state management
+    // Mascot hooks
     const { cheeringState, triggerCheering } = useMascotCheering();
     const mascotStage = getMascotStageByLevel(currentLevel);
 
-    // ✅ ACTUAL tRPC TASKS INTEGRATION:
-    const { 
-        tasksOverview, 
-        isLoading: tasksLoading, 
-        hasError: tasksError,
-        totalTasks,
-        totalLists,
-        totalCompleted,
-        totalPending,
-        totalOverdue,
-        refetch: refetchTasks
-    } = useTasks();
-    
-    console.log('[Chat] tasksOverview:', tasksOverview);
-    console.log('[Chat] tasksLoading:', tasksLoading);
-    console.log('[Chat] tasksError:', tasksError);
-    console.log('[Chat] totalTasks:', totalTasks);
-    
-    // Log tasks data when available (for debugging)
-    if (tasksOverview) {
-        console.log(`📋 Tasks loaded via tRPC: ${totalTasks} tasks across ${totalLists} lists`);
-        console.log(`✅ Completed: ${totalCompleted}, ⏳ Pending: ${totalPending}, ⚠️ Overdue: ${totalOverdue}`);
-    }
+    // Data hooks
+    const tasksData = useTasks();
+    const calendarData = useCalendar();
+    const taskMutations = useTaskMutations();
 
+    // Chat state and handlers
+    const chatState = useChatState();
+    const { scaleAnimations, animateTabPress } = useChatAnimations();
+    const { handleTaskAction, handleCalendarAction, handleContactAction, handleEmailAction } = useChatActions();
 
-
-    
-
-    // Use WebSocket chat hook instead of mock data
-    const {
-        messages,
-        isConnected,
-        isTyping,
-        error,
-        sendMessage,
-        clearError,
-        clearMessages,
-        handleEmailAction,
-        reconnect
-    } = useChat();
-
-    const [selectedTab, setSelectedTab] = useState<ChatTab>('conversation');
-    const [messageInput, setMessageInput] = useState('');
-    const [pendingAction, setPendingAction] = useState<string | null>(null);
-    const [showToolDropdown, setShowToolDropdown] = useState<string | null>(null); // 'add' | 'search' | null
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordingDuration, setRecordingDuration] = useState(0);
-    const flatListRef = useRef<FlatList>(null);
-
-    // Mock data for other tabs (until WebSocket provides this)
-    const context = {
-        todayMetrics: { tasksCompleted: 0, focusTime: 0, energy: 0 },
-        userState: 'productive',
-        currentProjects: []
-    };
-
-    // Updated quickActions array - removed Drive, added Tasks
-    const quickActions: {
-        id: string;
-        icon?: string;
-        iconComponent?: React.ReactNode;
-        label: string;
-        description: string;
-        command: string;
-    }[] = [
-            { id: '1', iconComponent: <GmailIcon size={20} />, label: 'Gmail', description: 'Check latest emails', command: 'check my latest emails' },
-            { id: '2', iconComponent: <CalendarIcon size={20} color="white" />, label: 'Calendar', description: 'View today\'s events', command: 'show my calendar for this past week and this week and next week' },
-            { id: '3', iconComponent: <ContactsIcon size={20} />, label: 'Contacts', description: 'Find contacts', command: 'list all contacts' },
-            { id: '4', iconComponent: <TasksIcon size={20} />, label: 'Tasks', description: 'Manage tasks', command: 'show my tasks' },
-        ];
-
-    const achievements: {
-        id: string;
-        title: string;
-        description: string;
-        progress: string;
-        icon: string;
-    }[] = [];
-
-    // Animation refs (SIMPLIFIED - no more glow effects)
-    const scaleAnimations = useRef(
-        chatTabs.reduce((acc, tab) => {
-            acc[tab.key] = new Animated.Value(1);
-            return acc;
-        }, {} as Record<ChatTab, Animated.Value>)
-    ).current;
-
+    // Handle tab press with animation
     const handleTabPress = (tabKey: ChatTab) => {
-        const scaleAnim = scaleAnimations[tabKey];
-
-        Animated.sequence([
-            Animated.timing(scaleAnim, {
-                toValue: 0.95,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-            Animated.timing(scaleAnim, {
-                toValue: 1,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-        ]).start();
-
-        setSelectedTab(tabKey);
+        animateTabPress(tabKey);
+        chatState.setSelectedTab(tabKey);
     };
 
-    const handleSendMessage = () => {
-        if (messageInput.trim() && isConnected) {
-            const message = messageInput.trim();
-            sendMessage(message);
-            setMessageInput('');
-            // Set pending action based on message content
-            setPendingAction(message);
-            
-            // Only trigger mascot cheering on mobile to prevent layout issues on desktop
-            if (!responsive.effectiveIsDesktop) {
-                triggerCheering(CheeringTrigger.TASK_COMPLETE);
-            }
-        }
-    };
-
-    // Enhanced send button state logic
-    const getSendButtonState = () => {
-        if (isTyping || pendingAction) return 'loading'; // ⏳
-        if (!messageInput.trim() || !isConnected) return 'disabled'; // 🔼 grayed
-        return 'enabled'; // 🔼 colored
-    };
-
-    // Smart placeholder logic
-    const getPlaceholder = () => {
-        if (!isConnected) return "Connecting...";
-        if (isTyping || pendingAction) return "Processing...";
-        return "💬 Ask me anything...";
-    };
-
-    // Handle quick action tap
-    const handleQuickAction = (command: string) => {
-        setMessageInput(command);
-        // Focus the input after setting the command
-        setTimeout(() => {
-            if (command.endsWith(' ')) {
-                // Commands ending with space (like "find contact ") should focus for user to continue typing
-                return;
-            }
-            // Commands that are complete can be sent immediately if connected
-            if (isConnected && command.trim()) {
-                sendMessage(command);
-                setMessageInput('');
-                setPendingAction(command);
-                
-                // Only trigger mascot cheering on mobile to prevent layout issues on desktop
-                if (!responsive.effectiveIsDesktop) {
-                    triggerCheering(CheeringTrigger.TASK_COMPLETE);
-                }
-            }
-        }, 100);
-    };
-
-    // Handle tool button taps
-    const handleToolButton = (tool: string) => {
-        if (showToolDropdown === tool) {
-            // Close dropdown if already open
-            setShowToolDropdown(null);
-        } else {
-            // Open the selected dropdown
-            setShowToolDropdown(tool);
-        }
-    };
-
-    // Tool dropdown actions - removed Drive references
-    const toolDropdownActions = {
-        add: [
-            { id: 'email', iconComponent: <GmailIcon size={18} />, label: 'Compose Email', command: 'compose a new email' },
-            { id: 'calendar', iconComponent: <CalendarIcon size={18} color="white" />, label: 'Create Event', command: 'create a calendar event' },
-            { id: 'contact', iconComponent: <ContactsIcon size={18} />, label: 'Add Contact', command: 'add a new contact' },
-            { id: 'task', iconComponent: <TasksIcon size={18} />, label: 'Create Task', command: 'create a new task' },
-        ],
-        search: [
-            { id: 'gmail', iconComponent: <GmailIcon size={18} />, label: 'Search Gmail', command: 'search my emails for ' },
-            { id: 'calendar', iconComponent: <CalendarIcon size={18} color="white" />, label: 'Find Events', command: 'find calendar events for ' },
-            { id: 'contacts', iconComponent: <ContactsIcon size={18} />, label: 'Find Contacts', command: 'find contact ' },
-            { id: 'tasks', iconComponent: <TasksIcon size={18} />, label: 'Search Tasks', command: 'search my tasks for ' },
-        ],
-    } as const;
-
-    // Handle dropdown action selection
-    const handleDropdownAction = (action: any) => {
-        handleQuickAction(action.command);
-        setShowToolDropdown(null); // Close dropdown
-    };
-
-    // Handle action card tap (for Actions tab)
-    const handleActionTap = (action: any) => {
-        if (action.command) {
-            handleQuickAction(action.command);
-            // Switch to conversation tab to see the result
-            setSelectedTab('conversation');
-        }
-    };
-
-    // Handle task actions including navigation
-    const handleTaskAction = (action: string, data: any) => {
-        console.log('[Chat] Task action:', action, data);
-        
-        if (action === 'navigate_to_profile_connect') {
-            // Navigate to Profile tab with Connect section
-            router.push('/(tabs)/profile?tab=connect');
-        } else {
-            // Handle other task actions
-            console.log('[Chat] Unhandled task action:', action, data);
-        }
-    };
-
-    // Auto-scroll to TOP on new messages (stack behavior)
-    useEffect(() => {
-        if (messages.length > 0 && selectedTab === 'conversation') {
-
-            // Scroll to TOP (index 0) where newest messages are
-            setTimeout(() => {
-                try {
-                    flatListRef.current?.scrollToIndex({ index: 0, animated: true });
-                } catch (error) {
-                    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-                }
-            }, 300);
-        }
-    }, [messages, selectedTab]);
-
-    // Watch for new user messages to set pending state
-    useEffect(() => {
-        if (messages.length > 0) {
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage && lastMessage.sender === 'user' && !pendingAction) {
-                setPendingAction(lastMessage.content);
-            }
-        }
-    }, [messages, pendingAction]);
-
-    // Clear pending action when we receive a new AI message
-    useEffect(() => {
-        if (messages.length > 0) {
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage && lastMessage.sender === 'ai' && pendingAction) {
-                setPendingAction(null);
-            }
-        }
-    }, [messages, pendingAction]);
-
-    // Recording timer effect
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (isRecording) {
-            interval = setInterval(() => {
-                setRecordingDuration(prev => prev + 1);
-            }, 1000);
-        } else {
-            setRecordingDuration(0);
-        }
-        return () => clearInterval(interval);
-    }, [isRecording]);
-
-    // REMOVED: Glow effects as requested - clean, professional design
-    // Chat tabs component
-    const ChatTabs = () => (
-        <View className="flex-row px-5 pb-5 pt-2 gap-3">
-            {chatTabs.map((tab) => {
-                const isActive = selectedTab === tab.key;
-
-                return (
-                    <TouchableOpacity
-                        key={tab.key}
-                        className="flex-1 h-20 rounded-xl overflow-hidden"
-                        style={[
-                            isActive && {
-                                elevation: 4,
-                                shadowColor: tab.gradient[0],
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.3,
-                                shadowRadius: 8,
-                            }
-                        ]}
-                        onPress={() => handleTabPress(tab.key)}
-                    >
-                        <Animated.View
-                            className="flex-1 relative overflow-hidden rounded-xl"
-                            style={{
-                                transform: [{ scale: scaleAnimations[tab.key] }],
-                            }}
-                        >
-                            <Svg width="100%" height="100%" className="absolute inset-0">
-                                <Defs>
-                                    <LinearGradient
-                                        id={`gradient-${tab.key}`}
-                                        x1="0%"
-                                        y1="0%"
-                                        x2="100%"
-                                        y2="100%"
-                                    >
-                                        <Stop offset="0%" stopColor={tab.gradient[0]} />
-                                        <Stop offset="100%" stopColor={tab.gradient[1]} />
-                                    </LinearGradient>
-                                </Defs>
-                                <Rect
-                                    width="100%"
-                                    height="100%"
-                                    fill={`url(#gradient-${tab.key})`}
-                                    rx="12"
-                                />
-                            </Svg>
-                            <View className="absolute inset-0 flex-1 justify-center items-center" style={{ zIndex: 20 }}>
-                                <Text 
-                                    className="text-2xl font-bold mb-0.5"
-                                    style={{ 
-                                        textShadowColor: 'rgba(0, 0, 0, 0.3)',
-                                        textShadowOffset: { width: 0, height: 1 },
-                                        textShadowRadius: 2,
-                                    }}
-                                >
-                                    {tab.icon}
-                                </Text>
-                                <Text 
-                                    className="text-xs font-bold text-white text-center"
-                                    style={{ 
-                                        textShadowColor: 'rgba(0, 0, 0, 0.5)',
-                                        textShadowOffset: { width: 0, height: 1 },
-                                        textShadowRadius: 1,
-                                    }}
-                                >
-                                    {tab.label}
-                                </Text>
-                            </View>
-                        </Animated.View>
-                    </TouchableOpacity>
-                );
-            })}
-        </View>
-    );
-
-    // Tab content implementations
+    // Render tab content based on selected tab
     const renderTabContent = () => {
-        switch (selectedTab) {
+        switch (chatState.selectedTab) {
             case 'conversation':
-                return <>
-                <ConversationContent />;
-                </>
+                return (
+                    <ConversationContent
+                        messages={chatState.messages}
+                        error={chatState.error}
+                        isConnected={chatState.isConnected}
+                        isTyping={chatState.isTyping}
+                        pendingAction={chatState.pendingAction}
+                        flatListRef={chatState.flatListRef}
+                        onRetry={chatState.reconnect}
+                        onEmailAction={chatState.handleEmailAction}
+                        onTaskAction={handleTaskAction}
+                        onPromptSelect={chatState.setMessageInput}
+                        tasksOverview={tasksData.tasksOverview}
+                    />
+                );
             case 'actions':
-                return <ActionsContent />;
+                return (
+                    <ActionsContent
+                        tasksOverview={tasksData.tasksOverview}
+                        tasksLoading={tasksData.isLoading}
+                        tasksError={tasksData.hasError}
+                        calendarData={calendarData.calendarData}
+                        calendarLoading={calendarData.isLoading}
+                        calendarError={calendarData.hasError}
+                        totalEvents={calendarData.totalEvents}
+                        getUpcomingEvents={calendarData.getUpcomingEvents}
+                        getTodaysEvents={calendarData.getTodaysEvents}
+                        onRefetchTasks={tasksData.refetch}
+                        onRefetchCalendar={calendarData.refetch}
+                        onActionTap={chatState.handleActionTap}
+                    />
+                );
             case 'references':
                 return <ReferencesContent />;
             case 'memory':
-                return <MemoryContent />;
+                return (
+                    <MemoryContent
+                        tasksOverview={tasksData.tasksOverview}
+                        calendarData={calendarData.calendarData}
+                        onTaskAction={handleTaskAction}
+                        onCalendarAction={handleCalendarAction}
+                        onContactAction={handleContactAction}
+                        onEmailAction={handleEmailAction}
+                    />
+                );
             default:
                 return null;
         }
     };
 
-    const ConversationContent = () => {
-        return (
+    // Desktop/Tablet responsive content renderer
+    const renderResponsiveContent = () => {
+        // For now, just return the tab content directly
+        // In the future, we can add desktop-specific layouts here
+        return renderTabContent();
+    };
+
+    // Chat header component
+    const ChatHeader = () => (
+        <View className="flex-row items-start justify-between">
             <View className="flex-1">
-                {error && !isConnected ? (
-                    <ConnectionError error={error} onRetry={reconnect} />
-                ) : messages.length === 0 ? (
-                    <ScrollView
-                        className="flex-1 px-5"
-                        contentContainerStyle={{ paddingVertical: 20 }}
-                        showsVerticalScrollIndicator={false}
-                    >
-
-                        {JSON.stringify(tasksOverview || {"not loaded": "not loaded"})}
-                        {/* WebSocket Debug Panel */}
-                        {__DEV__ && <WebSocketDebug />}
-
-                        {/* Simple Debug List */}
-                        {__DEV__ && (
-                            <View className={cn(
-                                "rounded-xl p-4 mb-4 border",
-                                isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                            )}>
-                                <Text className={cn(
-                                    "text-lg font-semibold mb-2",
-                                    isDark ? "text-white" : "text-gray-900"
-                                )}>
-                                    🐛 DEBUG: Messages array is empty (length: {messages.length})
-                                </Text>
-                                <Text className={cn(
-                                    "text-sm",
-                                    isDark ? "text-slate-400" : "text-gray-600"
-                                )}>
-                                    Showing nudges instead of FlatList
-                                </Text>
-                            </View>
-                        )}
-
-                        {/* Wayfinders - Shape of AI Nudges Pattern */}
-                        <View className="mb-6">
-                            <Text className={cn(
-                                "text-xl font-bold mb-4",
-                                isDark ? "text-white" : "text-gray-900"
-                            )}>💡 Try asking me...</Text>
-                            <View className="gap-2">
-                                <TouchableOpacity
-                                    className={cn(
-                                        "rounded-xl p-4 border",
-                                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                                    )}
-                                    onPress={() => setMessageInput("What should I focus on today?")}
-                                >
-                                    <Text className={cn(
-                                        "text-sm",
-                                        isDark ? "text-white" : "text-gray-900"
-                                    )}>&quot;What should I focus on today?&quot;</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    className={cn(
-                                        "rounded-xl p-4 border",
-                                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                                    )}
-                                    onPress={() => setMessageInput("Help me plan tomorrow")}
-                                >
-                                    <Text className={cn(
-                                        "text-sm",
-                                        isDark ? "text-white" : "text-gray-900"
-                                    )}>&quot;Help me plan tomorrow&quot;</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    className={cn(
-                                        "rounded-xl p-4 border",
-                                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                                    )}
-                                    onPress={() => setMessageInput("list my calendar events")}
-                                >
-                                    <Text className={cn(
-                                        "text-sm",
-                                        isDark ? "text-white" : "text-gray-900"
-                                    )}>&quot;List my calendar events&quot;</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    className={cn(
-                                        "rounded-xl p-4 border",
-                                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                                    )}
-                                    onPress={() => setMessageInput("fetch my latest emails")}
-                                >
-                                    <Text className={cn(
-                                        "text-sm",
-                                        isDark ? "text-white" : "text-gray-900"
-                                    )}>&quot;Fetch my latest emails&quot;</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </ScrollView>
-                ) : (
-                    (() => {
-                        const reversedMessages = [...messages].reverse();
-                        
-                        return (
-                            <>
-                            {createTaskComponent(tasksOverview, {
-                            onEmailAction: () => {},
-                            onAction: handleTaskAction,
-                            data: tasksOverview
-                        })}
-
-                            <FlatList
-                                ref={flatListRef}
-                                data={reversedMessages}
-                                keyExtractor={(item) => {
-                                    return item.id;
-                                }}
-                                renderItem={({ item, index }) => {
-                                    return <ChatMessage message={item} onEmailAction={handleEmailAction} onTaskAction={handleTaskAction} />;
-                                }}
-                                contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 16, flexGrow: 1 }}
-                                showsVerticalScrollIndicator={false}
-                                extraData={messages.length}
-                                removeClippedSubviews={false}
-                                ListHeaderComponent={
-                                    (() => {
-
-                                        if (pendingAction) {
-                                            return <PendingMessage action={pendingAction} />;
-                                        }
-
-                                        if (isTyping) {
-                                            return (
-                                                <View className={cn(
-                                                    "rounded-xl p-4 mb-4 border",
-                                                    isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                                                )}>
-                                                    <Text className={cn(
-                                                        "text-sm",
-                                                        isDark ? "text-white" : "text-gray-900"
-                                                    )}>AI is thinking...</Text>
-                                                </View>
-                                            );
-                                        }
-
-                                        return null;
-                                    })()
-                                }
-                            />
-                            </>
-                        );
-                    })()
-                )}
-            </View>
-        );
-    };
-
-    const ActionsContent = () => (
-        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-            <View className="py-4">
-                {/* AI Context Enhancement Notice */}
-                <View className={cn(
-                    "mb-4 p-3 rounded-lg border",
-                    isDark ? "bg-blue-900/20 border-blue-800" : "bg-blue-50 border-blue-200"
-                )}>
-                    <Text className={cn(
-                        "text-sm font-medium",
-                        isDark ? "text-blue-300" : "text-blue-800"
-                    )}>
-                        🤖 AI Context Enhancement
-                    </Text>
-                    <Text className={cn(
-                        "text-xs mt-1",
-                        isDark ? "text-blue-400" : "text-blue-600"
-                    )}>
-                        I analyze your Gmail, Calendar, and Tasks to provide personalized assistance and actionable insights.
-                    </Text>
-                </View>
-
                 <Text className={cn(
-                    "text-2xl font-bold mb-2",
+                    "text-3xl font-bold mb-1",
                     isDark ? "text-white" : "text-gray-900"
-                )}>⚡ Quick Actions</Text>
-                <Text className={cn(
-                    "text-base mb-6",
-                    isDark ? "text-slate-400" : "text-gray-600"
-                )}>Tap to execute common tasks</Text>
-
-                {/* ✅ REAL tRPC TASKS DATA DISPLAY - Using Existing TaskComponent */}
-                {tasksOverview && (
-                    <View className="mb-6">
-                        {/* Debug Info */}
-                        {__DEV__ && (
-                            <View className={cn(
-                                "rounded-xl p-3 mb-3 border",
-                                isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                            )}>
-                                <Text className={cn(
-                                    "text-xs font-mono",
-                                    isDark ? "text-green-400" : "text-green-600"
-                                )}>
-                                    🐛 DEBUG: tasksOverview structure:
-                                </Text>
-                                <Text className={cn(
-                                    "text-xs font-mono mt-1",
-                                    isDark ? "text-slate-300" : "text-gray-700"
-                                )}>
-                                    Type: {typeof tasksOverview}
-                                </Text>
-                                <Text className={cn(
-                                    "text-xs font-mono",
-                                    isDark ? "text-slate-300" : "text-gray-700"
-                                )}>
-                                    Has taskLists: {tasksOverview?.taskLists ? 'YES' : 'NO'}
-                                </Text>
-                                <Text className={cn(
-                                    "text-xs font-mono",
-                                    isDark ? "text-slate-300" : "text-gray-700"
-                                )}>
-                                    Total Tasks: {tasksOverview?.totalTasks}
-                                </Text>
-                                <Text className={cn(
-                                    "text-xs font-mono",
-                                    isDark ? "text-slate-300" : "text-gray-700"
-                                )}>
-                                    Keys: {Object.keys(tasksOverview || {}).join(', ')}
-                                </Text>
-                            </View>
-                        )}
-                        
-                        {createTaskComponent(tasksOverview, {
-                            onEmailAction: () => {},
-                            data: tasksOverview
-                        })}
-                        
-                        {/* Refresh Button */}
-                        <TouchableOpacity 
-                            className="mt-3 p-2 bg-blue-500 rounded-lg"
-                            onPress={() => refetchTasks()}
-                            disabled={tasksLoading}
-                        >
-                            <Text className="text-white text-center font-semibold">
-                                {tasksLoading ? "Refreshing..." : "🔄 Refresh Tasks"}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                {tasksLoading && !tasksOverview && (
-                    <View className={cn(
-                        "rounded-2xl p-4 mb-6 border",
-                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                    )}>
-                        <Text className={cn(
-                            "text-center text-sm",
-                            isDark ? "text-slate-400" : "text-gray-600"
-                        )}>🔄 Loading tasks via tRPC...</Text>
-                    </View>
-                )}
-
-                {tasksError && (
-                    <View className={cn(
-                        "rounded-2xl p-4 mb-6 border border-red-500",
-                        isDark ? "bg-red-900/20" : "bg-red-50"
-                    )}>
-                        <Text className="text-red-500 text-center text-sm">
-                            ❌ Failed to load tasks via tRPC
-                        </Text>
-                        <TouchableOpacity 
-                            className="mt-2 p-2 bg-red-500 rounded-lg"
-                            onPress={() => refetchTasks()}
-                        >
-                            <Text className="text-white text-center font-semibold">
-                                🔄 Retry
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-                
-                <View className="gap-3">
-                    {quickActions.map((action) => (
-                        <TouchableOpacity
-                            key={action.id}
-                            className={cn(
-                                "flex-row items-center p-4 rounded-xl border",
-                                isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                            )}
-                            onPress={() => handleActionTap(action)}
-                        >
-                            <View className="w-10 h-10 rounded-lg bg-indigo-600 items-center justify-center mr-3">
-                                {action.iconComponent}
-                            </View>
-                            <View className="flex-1">
-                                <Text className={cn(
-                                    "font-semibold text-base mb-1",
-                                    isDark ? "text-white" : "text-gray-900"
-                                )}>{action.label}</Text>
-                                <Text className={cn(
-                                    "text-sm",
-                                    isDark ? "text-slate-400" : "text-gray-600"
-                                )}>{action.description}</Text>
-                            </View>
-                            <View className="w-6 h-6 rounded-full bg-indigo-600 items-center justify-center">
-                                <Text className="text-white text-xs">→</Text>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                )}>💬 Chat</Text>
+                <XPProgressBar 
+                    variant="compact"
+                    size="small" 
+                    showText={true} 
+                    showLevel={true}
+                />
             </View>
-        </ScrollView>
-    );
-
-    const ReferencesContent = () => (
-        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-            <View className="py-4">
-                <Text className={cn(
-                    "text-2xl font-bold mb-2",
-                    isDark ? "text-white" : "text-gray-900"
-                )}>📚 References</Text>
-                <Text className={cn(
-                    "text-base mb-6",
-                    isDark ? "text-slate-400" : "text-gray-600"
-                )}>Data sources the AI uses for context</Text>
-                
-                {/* Current Context Card */}
-                <View className={cn(
-                    "rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-blue-500",
-                    isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                )}>
-                    <View className="flex-row items-center mb-4">
-                        <View className={cn(
-                            "w-12 h-12 rounded-xl items-center justify-center mr-4",
-                            isDark ? "bg-blue-900/30" : "bg-blue-100"
-                        )}>
-                            <Text className="text-2xl">🎯</Text>
-                        </View>
-                        <View>
-                            <Text className={cn(
-                                "text-xl font-bold",
-                                isDark ? "text-white" : "text-gray-900"
-                            )}>Current Context</Text>
-                            <Text className={cn(
-                                "text-sm",
-                                isDark ? "text-slate-400" : "text-gray-600"
-                            )}>What the AI knows right now</Text>
-                        </View>
-                    </View>
-                    
-                    <View className="gap-3">
-                        <View className={cn(
-                            "flex-row justify-between items-center py-2 border-b",
-                            isDark ? "border-slate-700" : "border-gray-100"
-                        )}>
-                            <Text className={cn(
-                                "text-sm font-semibold",
-                                isDark ? "text-slate-300" : "text-gray-700"
-                            )}>Recent Emails:</Text>
-                            <Text className={cn(
-                                "text-sm font-medium",
-                                isDark ? "text-blue-400" : "text-blue-600"
-                            )}>12 unread (last 24h)</Text>
-                        </View>
-                        <View className={cn(
-                            "flex-row justify-between items-center py-2 border-b",
-                            isDark ? "border-slate-700" : "border-gray-100"
-                        )}>
-                            <Text className={cn(
-                                "text-sm font-semibold",
-                                isDark ? "text-slate-300" : "text-gray-700"
-                            )}>Calendar Events:</Text>
-                            <Text className={cn(
-                                "text-sm font-medium",
-                                isDark ? "text-green-400" : "text-green-600"
-                            )}>5 events (next 7 days)</Text>
-                        </View>
-                        <View className={cn(
-                            "flex-row justify-between items-center py-2 border-b",
-                            isDark ? "border-slate-700" : "border-gray-100"
-                        )}>
-                            <Text className={cn(
-                                "text-sm font-semibold",
-                                isDark ? "text-slate-300" : "text-gray-700"
-                            )}>Active Tasks:</Text>
-                            <Text className={cn(
-                                "text-sm font-medium",
-                                isDark ? "text-purple-400" : "text-purple-600"
-                            )}>8 pending</Text>
-                        </View>
-                        <View className="flex-row justify-between items-center py-2">
-                            <Text className={cn(
-                                "text-sm font-semibold",
-                                isDark ? "text-slate-300" : "text-gray-700"
-                            )}>Work Patterns:</Text>
-                            <Text className={cn(
-                                "text-sm font-medium",
-                                isDark ? "text-orange-400" : "text-orange-600"
-                            )}>Morning focused</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Chat History Card */}
-                <View className={cn(
-                    "rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-green-500",
-                    isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                )}>
-                    <View className="flex-row items-center mb-3">
-                        <View className={cn(
-                            "w-10 h-10 rounded-lg items-center justify-center mr-3",
-                            isDark ? "bg-green-900/30" : "bg-green-100"
-                        )}>
-                            <Text className="text-xl">💬</Text>
-                        </View>
-                        <Text className={cn(
-                            "text-lg font-bold",
-                            isDark ? "text-white" : "text-gray-900"
-                        )}>Chat History</Text>
-                    </View>
-                    <Text className={cn(
-                        "text-sm leading-6 mb-4",
-                        isDark ? "text-slate-300" : "text-gray-600"
-                    )}>
-                        Conversation context from recent sessions to maintain continuity.
-                    </Text>
-                    <View className={cn(
-                        "px-3 py-2 rounded-lg self-start",
-                        isDark ? "bg-green-900/20" : "bg-green-100"
-                    )}>
-                        <Text className={cn(
-                            "text-xs font-semibold",
-                            isDark ? "text-green-400" : "text-green-700"
-                        )}>Active</Text>
-                    </View>
-                </View>
-
-                {/* Data Sources Card */}
-                <View className={cn(
-                    "rounded-2xl p-6 mb-6 border shadow-sm border-l-4 border-l-purple-500",
-                    isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                )}>
-                    <View className="flex-row items-center mb-3">
-                        <View className={cn(
-                            "w-10 h-10 rounded-lg items-center justify-center mr-3",
-                            isDark ? "bg-purple-900/30" : "bg-purple-100"
-                        )}>
-                            <Text className="text-xl">🔗</Text>
-                        </View>
-                        <Text className={cn(
-                            "text-lg font-bold",
-                            isDark ? "text-white" : "text-gray-900"
-                        )}>Connected Sources</Text>
-                    </View>
-                    <Text className={cn(
-                        "text-sm leading-6 mb-4",
-                        isDark ? "text-slate-300" : "text-gray-600"
-                    )}>
-                        External services providing real-time data for personalized assistance.
-                    </Text>
-                    <View className="gap-2">
-                        <View className="flex-row items-center">
-                            <View className="w-2 h-2 bg-green-500 rounded-full mr-3"></View>
-                            <Text className={cn(
-                                "text-sm font-medium flex-1",
-                                isDark ? "text-slate-400" : "text-gray-600"
-                            )}>Google Calendar - Events & scheduling</Text>
-                        </View>
-                        <View className="flex-row items-center">
-                            <View className="w-2 h-2 bg-green-500 rounded-full mr-3"></View>
-                            <Text className={cn(
-                                "text-sm font-medium flex-1",
-                                isDark ? "text-slate-400" : "text-gray-600"
-                            )}>Gmail - Email communication</Text>
-                        </View>
-                        <View className="flex-row items-center">
-                            <View className="w-2 h-2 bg-green-500 rounded-full mr-3"></View>
-                            <Text className={cn(
-                                "text-sm font-medium flex-1",
-                                isDark ? "text-slate-400" : "text-gray-600"
-                            )}>Google Contacts - Contact information</Text>
-                        </View>
-                    </View>
-                </View>
-            </View>
-        </ScrollView>
-    );
-
-    const MemoryContent = () => {
-        const handleStartRecording = () => {
-            setIsRecording(true);
-            // TODO: Start actual recording with Neo4j integration
-        };
-
-        const handleStopRecording = () => {
-            setIsRecording(false);
-            Alert.alert(
-                "Recording Saved",
-                `Your ${recordingDuration}s recording has been saved to long-term memory for AI context.`,
-                [{ text: "OK", style: "default" }]
-            );
-            // TODO: Process recording and save to Neo4j
-        };
-
-        const formatTime = (seconds: number) => {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        };
-
-        return (
-            <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-                <View className="py-4">
-                    <Text className={cn(
-                        "text-2xl font-bold mb-2",
-                        isDark ? "text-white" : "text-gray-900"
-                    )}>🧠 Memory</Text>
-                    <Text className={cn(
-                        "text-base mb-6",
-                        isDark ? "text-slate-400" : "text-gray-600"
-                    )}>Long-term context and personal recordings</Text>
-                    
-                    {/* Voice Recording Card */}
-                    <View className={cn(
-                        "rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-red-500",
-                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                    )}>
-                        <View className="flex-row items-center mb-4">
-                            <View className={cn(
-                                "w-12 h-12 rounded-xl items-center justify-center mr-4",
-                                isDark ? "bg-red-900/30" : "bg-red-100"
-                            )}>
-                                <Text className="text-2xl">🎤</Text>
-                            </View>
-                            <View>
-                                <Text className={cn(
-                                    "text-xl font-bold",
-                                    isDark ? "text-white" : "text-gray-900"
-                                )}>Voice Recording</Text>
-                                <Text className={cn(
-                                    "text-sm",
-                                    isDark ? "text-slate-400" : "text-gray-600"
-                                )}>Record context for AI memory</Text>
-                            </View>
-                        </View>
-                        
-                        <Text className={cn(
-                            "text-base leading-6 mb-5",
-                            isDark ? "text-slate-300" : "text-gray-700"
-                        )}>
-                            Record voice notes about your work patterns, preferences, and context that the AI should remember for future conversations.
-                        </Text>
-
-                        {isRecording && (
-                            <View className={cn(
-                                "rounded-xl p-4 mb-4",
-                                isDark ? "bg-red-900/20" : "bg-red-50"
-                            )}>
-                                <View className="flex-row items-center justify-center">
-                                    <View className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></View>
-                                    <Text className={cn(
-                                        "text-sm font-semibold",
-                                        isDark ? "text-red-400" : "text-red-600"
-                                    )}>
-                                        Recording: {formatTime(recordingDuration)}
-                                    </Text>
-                                </View>
-                            </View>
-                        )}
-                        
-                        <TouchableOpacity
-                            className={cn(
-                                "px-6 py-4 rounded-xl flex-row items-center justify-center shadow-lg",
-                                isRecording 
-                                    ? "bg-red-600" 
-                                    : "bg-indigo-600"
-                            )}
-                            onPress={isRecording ? handleStopRecording : handleStartRecording}
-                        >
-                            <Text className="text-white text-base font-bold mr-2">
-                                {isRecording ? "🛑 Stop Recording" : "🎤 Start Recording"}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Memory Graph Card */}
-                    <View className={cn(
-                        "rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-blue-500",
-                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                    )}>
-                        <View className="flex-row items-center mb-3">
-                            <View className={cn(
-                                "w-10 h-10 rounded-lg items-center justify-center mr-3",
-                                isDark ? "bg-blue-900/30" : "bg-blue-100"
-                            )}>
-                                <Text className="text-xl">🕸️</Text>
-                            </View>
-                            <Text className={cn(
-                                "text-lg font-bold",
-                                isDark ? "text-white" : "text-gray-900"
-                            )}>Memory Graph</Text>
-                        </View>
-                        <Text className={cn(
-                            "text-sm leading-6 mb-4",
-                            isDark ? "text-slate-300" : "text-gray-600"
-                        )}>
-                            Knowledge graph powered by Neo4j for long-term context and relationship mapping.
-                        </Text>
-                        <View className="gap-2">
-                            <View className="flex-row items-center">
-                                <View className="w-2 h-2 bg-blue-500 rounded-full mr-3"></View>
-                                <Text className={cn(
-                                    "text-sm font-medium flex-1",
-                                    isDark ? "text-slate-400" : "text-gray-600"
-                                )}>Work patterns and preferences</Text>
-                            </View>
-                            <View className="flex-row items-center">
-                                <View className="w-2 h-2 bg-green-500 rounded-full mr-3"></View>
-                                <Text className={cn(
-                                    "text-sm font-medium flex-1",
-                                    isDark ? "text-slate-400" : "text-gray-600"
-                                )}>Project relationships</Text>
-                            </View>
-                            <View className="flex-row items-center">
-                                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3"></View>
-                                <Text className={cn(
-                                    "text-sm font-medium flex-1",
-                                    isDark ? "text-slate-400" : "text-gray-600"
-                                )}>Goal hierarchies</Text>
-                            </View>
-                        </View>
-                        <View className={cn(
-                            "px-3 py-2 rounded-lg self-start mt-4",
-                            isDark ? "bg-orange-900/20" : "bg-orange-100"
-                        )}>
-                            <Text className={cn(
-                                "text-xs font-semibold",
-                                isDark ? "text-orange-400" : "text-orange-700"
-                            )}>Coming Soon</Text>
-                        </View>
-                    </View>
-
-                    {/* Personal Context Card */}
-                    <View className={cn(
-                        "rounded-2xl p-6 mb-6 border shadow-sm border-l-4 border-l-green-500",
-                        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-                    )}>
-                        <View className="flex-row items-center mb-3">
-                            <View className={cn(
-                                "w-10 h-10 rounded-lg items-center justify-center mr-3",
-                                isDark ? "bg-green-900/30" : "bg-green-100"
-                            )}>
-                                <Text className="text-xl">👤</Text>
-                            </View>
-                            <Text className={cn(
-                                "text-lg font-bold",
-                                isDark ? "text-white" : "text-gray-900"
-                            )}>Personal Context</Text>
-                        </View>
-                        <Text className={cn(
-                            "text-sm leading-6 mb-4",
-                            isDark ? "text-slate-300" : "text-gray-600"
-                        )}>
-                            Manage what the AI remembers about your preferences and working style.
-                        </Text>
-                        <TouchableOpacity className={cn(
-                            "px-4 py-3 rounded-lg border",
-                            isDark ? "bg-slate-700 border-slate-600" : "bg-gray-50 border-gray-200"
-                        )}>
-                            <Text className={cn(
-                                "text-sm font-medium text-center",
-                                isDark ? "text-white" : "text-gray-900"
-                            )}>View & Edit Context</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </ScrollView>
-        );
-    };
-
-      // Use responsive layout for browsers (including mobile) and larger screens
-  if (responsive.shouldUseResponsiveLayout) {
-        // Enhanced content rendering for tablet/desktop only
-        const renderResponsiveContent = () => {
-            if (responsive.effectiveIsDesktop) {
-                return (
-                    <DesktopChatContent 
-                        selectedTab={selectedTab}
-                        renderTabContent={renderTabContent}
-                        messages={messages}
-                        flatListRef={flatListRef}
-                        onQuickAction={handleQuickAction}
-                    />
-                );
-            }
             
-            if (responsive.effectiveIsTablet) {
-                return (
-                    <TabletChatContent 
-                        selectedTab={selectedTab}
-                        renderTabContent={renderTabContent}
-                    />
-                );
-            }
-            
-            return renderTabContent();
-        };
-
-        // Header component for tablet/desktop
-        const ChatHeader = () => (
-            <View className="flex-row items-start justify-between">
-                <View className="flex-1">
-                    <Text className={cn(
-                        "text-3xl font-bold mb-1",
-                        isDark ? "text-white" : "text-gray-900"
-                    )}>💬 Chat</Text>
-                    <XPProgressBar 
-                        variant="compact"
-                        size="small" 
-                        showText={true} 
+            <View style={{ width: 80, alignItems: 'flex-end' }}>
+                <MascotContainer position="header">
+                    <Mascot
+                        stage={mascotStage}
+                        level={currentLevel}
+                        size={MascotSize.STANDARD}
                         showLevel={true}
+                        enableInteraction={true}
+                        enableCheering={!responsive.effectiveIsDesktop}
+                        cheeringTrigger={cheeringState.trigger}
+                        onTap={() => !responsive.effectiveIsDesktop && triggerCheering(CheeringTrigger.TAP_INTERACTION)}
                     />
-                </View>
-                
-                {/* Fixed width container for desktop to prevent layout shifts */}
-                <View style={{ width: 80, alignItems: 'flex-end' }}>
-                    <MascotContainer position="header">
-                        <Mascot
-                            stage={mascotStage}
-                            level={currentLevel}
-                            size={MascotSize.STANDARD}
-                            showLevel={true}
-                            enableInteraction={true}
-                            enableCheering={false} // Disable cheering on desktop to prevent layout shifts
-                            cheeringTrigger={cheeringState.trigger}
-                            onTap={() => {}} // Disable cheering trigger on desktop
-                        />
-                    </MascotContainer>
-                </View>
+                </MascotContainer>
             </View>
-        );
+        </View>
+    );
 
-        // Input area for tablet/desktop
-        const chatInputArea = selectedTab === 'conversation' ? (
-            <ResponsiveChatInput 
-                messageInput={messageInput}
-                setMessageInput={setMessageInput}
-                onSend={handleSendMessage}
-                getSendButtonState={getSendButtonState}
-                getPlaceholder={getPlaceholder}
-                isTyping={isTyping}
-                pendingAction={pendingAction}
-            />
-        ) : undefined;
+    // Input props for conversation tab
+    const inputProps = chatState.selectedTab === 'conversation' ? {
+        messageInput: chatState.messageInput,
+        setMessageInput: chatState.setMessageInput,
+        onSend: chatState.handleSendMessage,
+        getSendButtonState: chatState.getSendButtonState,
+        getPlaceholder: chatState.getPlaceholder,
+        isTyping: chatState.isTyping,
+        pendingAction: chatState.pendingAction
+    } : undefined;
 
-        return (
-            <ResponsiveTabLayout
-                tabs={chatTabs}
-                selectedTab={selectedTab}
-                onTabPress={handleTabPress}
-                scaleAnimations={scaleAnimations}
-                header={<ChatHeader />}
-                renderTabContent={renderResponsiveContent}
-                inputArea={chatInputArea}
-                inputInMainArea={true}
-            />
-        );
-    }
-
-    // MOBILE: Keep original layout exactly as it was
+    // Use unified layout
     return (
-        <SafeAreaView className={cn(
-            "flex-1",
-            isDark ? "bg-slate-900" : "bg-white"
-        )}>
-            {/* Header */}
-            <View className={cn(
-                "px-5 py-4 border-b",
-                isDark ? "border-slate-600" : "border-gray-200"
-            )}>
-                <View className="flex-row items-start justify-between">
-                    <View className="flex-1">
-                        <Text className={cn(
-                            "text-3xl font-bold mb-1",
-                            isDark ? "text-white" : "text-gray-900"
-                        )}>💬 Chat</Text>
-                        <XPProgressBar
-                            variant="compact"
-                            size="small"
-                            showText={true}
-                            showLevel={true}
-                        />
-                    </View>
-                    
-                    {/* Mascot in header */}
-                    <MascotContainer position="header">
-                        <Mascot
-                            stage={mascotStage}
-                            level={currentLevel}
-                            size={MascotSize.STANDARD}
-                            showLevel={true}
-                            enableInteraction={true}
-                            enableCheering={cheeringState.isActive}
-                            cheeringTrigger={cheeringState.trigger}
-                            onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
-                        />
-                    </MascotContainer>
-                </View>
-            </View>
-
-            {/* Tabs */}
-            <ChatTabs />
-
-            {/* Content */}
-            <View className="flex-1">
-                {renderTabContent()}
-            </View>
-
-            {/* Input Area - only show for conversation tab */}
-            {selectedTab === 'conversation' && (
-                <KeyboardAvoidingView 
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    className={cn(
-                        "px-5 py-4 border-t",
-                        isDark ? "border-slate-600 bg-slate-900" : "border-gray-200 bg-white"
-                    )}
-                >
-                    <View className="flex-row items-center space-x-3">
-                        <View className="flex-1">
-                            <TextInput
-                                className={cn(
-                                    "rounded-xl px-4 py-3 text-base border",
-                                    isDark 
-                                        ? "bg-slate-800 border-slate-600 text-white placeholder:text-slate-400" 
-                                        : "bg-white border-gray-200 text-gray-900 placeholder:text-gray-500"
-                                )}
-                                placeholder={getPlaceholder()}
-                                value={messageInput}
-                                onChangeText={setMessageInput}
-                                multiline
-                                maxLength={500}
-                                editable={!isTyping && !pendingAction}
-                                placeholderTextColor={isDark ? '#94a3b8' : '#6b7280'}
-                            />
-                        </View>
-                        <TouchableOpacity
-                            className={cn(
-                                "w-12 h-12 rounded-xl items-center justify-center",
-                                getSendButtonState() === 'enabled' 
-                                    ? "bg-indigo-600" 
-                                    : isDark ? "bg-slate-700" : "bg-gray-200"
-                            )}
-                            onPress={handleSendMessage}
-                            disabled={getSendButtonState() !== 'enabled'}
-                        >
-                            <UpArrowIcon 
-                                size={20} 
-                                color={getSendButtonState() === 'enabled' ? 'white' : isDark ? '#64748b' : '#9ca3af'} 
-                            />
-                        </TouchableOpacity>
-                    </View>
-                </KeyboardAvoidingView>
-            )}
-        </SafeAreaView>
+        <ChatLayout
+            header={<ChatHeader />}
+            selectedTab={chatState.selectedTab}
+            onTabPress={handleTabPress}
+            scaleAnimations={scaleAnimations}
+            showInput={chatState.selectedTab === 'conversation'}
+            inputProps={inputProps}
+        >
+            {renderTabContent()}
+        </ChatLayout>
     );
 }

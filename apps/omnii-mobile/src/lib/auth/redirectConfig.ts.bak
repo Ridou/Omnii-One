@@ -97,7 +97,7 @@ export const detectEnvironment = (): EnvironmentConfig => {
     
     return {
       environment: OAuthEnvironment.MOBILE,
-      platform: OAuthPlatform.IOS,
+      platform: Platform.OS === 'ios' ? OAuthPlatform.IOS : OAuthPlatform.ANDROID,
       hostname: Platform.OS,
       oauthRedirectUrl: mobileRedirectUrl,
       finalDestinationUrl: mobileRedirectUrl, // Mobile handles internal routing

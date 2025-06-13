@@ -12,8 +12,25 @@ import { supabase } from "~/lib/supabase";
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // ...
+      // Data stays fresh for 30 seconds
+      staleTime: 30 * 1000,
+      
+      // Keep in cache for 10 minutes
+      gcTime: 10 * 60 * 1000,
+      
+      // Only refetch on window focus if data is stale
+      refetchOnWindowFocus: 'always',
+      
+      // Retry failed requests once
+      retry: 1,
+      
+      // Don't refetch on reconnect if data is fresh
+      refetchOnReconnect: 'always'
     },
+    mutations: {
+      // Retry failed mutations once
+      retry: 1,
+    }
   },
 });
 

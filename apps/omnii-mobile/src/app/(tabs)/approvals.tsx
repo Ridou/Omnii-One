@@ -1,16 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
-  ScrollView,
-  Animated,
+  TouchableOpacity, Animated,
   Dimensions,
   RefreshControl,
-  SafeAreaView,
-  Platform,
-  Linking,
-  FlatList,
+  SafeAreaView, FlatList
 } from 'react-native';
 import { Link } from 'expo-router';
 import { cn } from '~/utils/cn';
@@ -20,20 +15,16 @@ import { useRouter } from 'expo-router';
 import { useXPContext } from '~/context/XPContext';
 import SimpleSwipeCard from '~/components/approvals/SimpleSwipeCard';
 import StreamlinedApprovalCard from '~/components/approvals/StreamlinedApprovalCard';
-import EmptyState from '~/components/EmptyState';
 import DebugPanel from '~/components/common/DebugPanel';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
 import { XPProgressBar } from '~/components/common/XPProgressBar';
-import { 
-  MascotStage, 
-  MascotSize, 
-  CheeringTrigger, 
-  getMascotStageByLevel 
+import {
+  MascotSize,
+  CheeringTrigger,
+  getMascotStageByLevel
 } from '~/types/mascot';
-import { AppColors } from '~/constants/Colors';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useXPSystem } from '~/hooks/useXPSystem';
-import { XPSystemUtils, XP_REWARDS } from '~/constants/XPSystem';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { DesktopApprovalsContent, TabletApprovalsContent } from '~/components/common/DesktopApprovalsComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
@@ -461,7 +452,7 @@ export default function ApprovalsScreen() {
           <Text className={cn(
             "text-3xl font-bold mb-1",
             isDark ? "text-white" : "text-gray-900"
-          )}>⏳ Approvals</Text>
+          )}>Tasks</Text>
           <XPProgressBar
             variant="compact"
             size="small"

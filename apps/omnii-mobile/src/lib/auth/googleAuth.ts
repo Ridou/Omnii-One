@@ -242,11 +242,6 @@ export const signInWithGoogleImmediate = async (): Promise<void> => {
         ...(Platform.OS === 'ios' && {
           preferEphemeralSession: true,
         }),
-        ...(Platform.OS === 'android' && {
-          showTitle: false,
-          enableUrlBarHiding: true,
-          enableDefaultShare: false,
-        }),
       }
     );
 
@@ -390,12 +385,6 @@ export const signInWithGoogle = async (): Promise<void> => {
         ...(Platform.OS === 'ios' && {
           // iOS specific options
           preferEphemeralSession: true,
-        }),
-        ...(Platform.OS === 'android' && {
-          // Android specific options
-          showTitle: false,
-          enableUrlBarHiding: true,
-          enableDefaultShare: false,
         }),
       }
     );
