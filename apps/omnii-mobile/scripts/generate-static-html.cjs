@@ -224,7 +224,7 @@ function generateStaticHTML(route, data) {
   <meta name="twitter:image" content="https://omnii.net/icon-512.png">
   
   <!-- Favicon -->
-  <link rel="icon" href="/favicon.svg">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   
   <!-- Structured Data -->
@@ -1434,7 +1434,7 @@ console.log('✅ Generated: sitemap.xml (dist-static)');
 
 // Copy static assets from public to dist-static
 const publicDir = path.join(__dirname, '../public');
-const staticAssets = ['robots.txt', 'favicon.ico', 'favicon.svg', 'apple-touch-icon.png'];
+const staticAssets = ['robots.txt', 'favicon.ico', 'apple-touch-icon.png'];
 
 if (fs.existsSync(publicDir)) {
   staticAssets.forEach(asset => {

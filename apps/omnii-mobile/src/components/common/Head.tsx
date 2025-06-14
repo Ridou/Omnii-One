@@ -70,8 +70,7 @@ export function AppHead({
       <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
       
       {/* Favicon and Icons */}
-      <link rel="icon" href="/favicon.ico" />
-      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      <link rel="icon" type="image/x-icon" href="/favicon.ico" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/manifest.json" />
       

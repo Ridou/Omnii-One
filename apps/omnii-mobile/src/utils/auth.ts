@@ -64,8 +64,8 @@ export const authClient = createAuthClient({
   baseURL: getBaseUrl(),
   plugins: [
     expoClient({
-      scheme: "expo",
-      storagePrefix: "expo",
+      scheme: "omnii-mobile",
+      storagePrefix: "omnii",
       storage: createPlatformStorage(),
     }),
   ],

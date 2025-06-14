@@ -45,32 +45,32 @@ interface Task {
 // Tab configuration with AI-focused productivity patterns (Shape of AI inspired)
 const taskTabs = [
   {
-    key: 'easy',
-    label: 'Easy',
-    icon: '⚡',
-    gradient: ['#4ECDC4', '#44A08D'], // Light teal for easy
-    description: 'Easy'
-  },
-  {
-    key: 'smart',
-    label: 'Smart',
+    key: 'auto',
+    label: 'Auto',
     icon: '🤖',
-    gradient: ['#667eea', '#764ba2'], // Purple for AI
-    description: 'Smart'
+    gradient: ['#667eea', '#764ba2'], // Purple for AI automation
+    description: 'Auto'
   },
   {
-    key: 'complex',
-    label: 'Complex',
-    icon: '📝',
-    gradient: ['#FF7043', '#FF5722'], // Orange for attention
-    description: 'Complex'
+    key: 'collab',
+    label: 'Collab',
+    icon: '👥',
+    gradient: ['#4ECDC4', '#44A08D'], // Teal for collaboration
+    description: 'Collab'
   },
   {
-    key: 'priority',
-    label: 'Priority',
-    icon: '🔥',
-    gradient: ['#FF3B30', '#DC143C'], // Red for urgent
-    description: 'Priority'
+    key: 'daily',
+    label: 'Daily',
+    icon: '📅',
+    gradient: ['#FF7043', '#FF5722'], // Orange for daily tasks
+    description: 'Daily'
+  },
+  {
+    key: 'goal',
+    label: 'Goal',
+    icon: '🎯',
+    gradient: ['#FF3B30', '#DC143C'], // Red for goal-oriented
+    description: 'Goal'
   }
 ];
 
@@ -117,7 +117,7 @@ export default function TasksScreen() {
   const mascotStage = getMascotStageByLevel(currentLevel);
   
   const [tasks, setTasks] = useState<Task[]>(mockTasks);
-  const [selectedFilter, setSelectedFilter] = useState('smart');
+  const [selectedFilter, setSelectedFilter] = useState('auto');
   const [refreshing, setRefreshing] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const router = useRouter();
@@ -194,35 +194,47 @@ export default function TasksScreen() {
   // AI-powered filtering logic
   const getAIFilteredTasks = (tasks: Task[], filter: string): Task[] => {
     switch (filter) {
-      case 'easy':
-        // Easy wins - prioritize low complexity items for momentum
-        return tasks
-          .filter(task => task.priority === 'low')
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-          
-      case 'smart':
-        // AI-curated recommendations (mix of priorities for balance)
+      case 'auto':
+        // AI-automated recommendations - smart task suggestions
         return tasks
           .sort((a, b) => {
-            const getSmartScore = (task: Task): number => {
+            const getAutoScore = (task: Task): number => {
               let score = 0;
               if (task.priority === 'medium') score += 5; // Balanced difficulty
-              if (task.priority === 'high') score += 3; // Still important
-              if (task.priority === 'low') score += 2; // Easy wins
+              if (task.priority === 'high') score += 3; // Important items
+              if (task.priority === 'low') score += 2; // Quick wins
+              // Favor recent tasks for automation
+              const daysDiff = Math.floor((Date.now() - new Date(task.created_at).getTime()) / (1000 * 60 * 60 * 24));
+              if (daysDiff <= 1) score += 2;
               return score;
             };
-            return getSmartScore(b) - getSmartScore(a);
+            return getAutoScore(b) - getAutoScore(a);
           });
           
-      case 'complex':
-        // Items needing more context - high complexity tasks
+      case 'collab':
+        // Collaborative tasks - items that require team input or approval
         return tasks
-          .filter(task => task.priority === 'high')
+          .filter(task => 
+            task.type.toLowerCase().includes('request') || 
+            task.description.toLowerCase().includes('approval') ||
+            task.description.toLowerCase().includes('team') ||
+            task.description.toLowerCase().includes('collaborative')
+          )
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
           
-      case 'priority':
-        // AI suggests high-impact items (high priority first, then by recency)
+      case 'daily':
+        // Daily tasks - routine items and recent submissions
         return tasks
+          .filter(task => {
+            const daysDiff = Math.floor((Date.now() - new Date(task.created_at).getTime()) / (1000 * 60 * 60 * 24));
+            return daysDiff <= 1; // Tasks from today/yesterday
+          })
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          
+      case 'goal':
+        // Goal-oriented tasks - high-impact and strategic items
+        return tasks
+          .filter(task => task.priority === 'high')
           .sort((a, b) => {
             const priorityOrder = { high: 0, medium: 1, low: 2 };
             const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
@@ -239,10 +251,10 @@ export default function TasksScreen() {
 
   // Updated stats for AI-focused tabs
   const stats = {
-    easy: getAIFilteredTasks(tasks, 'easy').length,
-    smart: getAIFilteredTasks(tasks, 'smart').length,
-    complex: getAIFilteredTasks(tasks, 'complex').length,
-    priority: getAIFilteredTasks(tasks, 'priority').length,
+    auto: getAIFilteredTasks(tasks, 'auto').length,
+    collab: getAIFilteredTasks(tasks, 'collab').length,
+    daily: getAIFilteredTasks(tasks, 'daily').length,
+    goal: getAIFilteredTasks(tasks, 'goal').length,
   };
 
   // Enhanced Filter Tabs component with AI descriptions
@@ -265,7 +277,7 @@ export default function TasksScreen() {
                 shadowRadius: 8,
               }
             ]}
-            onPress={() => handleTabPress(tab.key as 'easy' | 'smart' | 'complex' | 'priority')}
+            onPress={() => handleTabPress(tab.key as 'auto' | 'collab' | 'daily' | 'goal')}
           >
             <Animated.View
               className="flex-1 relative overflow-hidden rounded-xl"

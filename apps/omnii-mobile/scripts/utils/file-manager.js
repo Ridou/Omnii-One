@@ -47,7 +47,6 @@ export async function cleanupOldAssets() {
   const pathsToClean = [
     '../assets/images/generated/',
     '../public/favicon.ico',
-    '../public/favicon.svg',
     '../public/manifest.json'
   ];
   
@@ -105,7 +104,7 @@ export async function countGeneratedAssets() {
     }
 
     // Count Web assets (in public directory)
-    const webFiles = ['favicon.ico', 'favicon.svg', 'manifest.json'];
+    const webFiles = ['favicon.ico', 'manifest.json'];
     for (const file of webFiles) {
       if (await fs.pathExists(`${ASSET_PATHS.web}/${file}`)) {
         stats.web++;

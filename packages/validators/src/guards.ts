@@ -163,10 +163,8 @@ export function isGeneralData(data: unknown): data is GeneralData {
 export function isValidXPUpdate(data: unknown): data is XPUpdate {
   const result = XPUpdateSchema.safeParse(data);
   if (result.success) {
-    console.log("[XPValidation] ✅ Valid XPUpdate detected");
     return true;
   }
-  console.log("[XPValidation] ❌ Invalid XPUpdate:", result.error.message);
   return false;
 }
 
@@ -190,13 +188,8 @@ export function isValidXPRealtimeUpdate(
 export function isValidAchievementData(data: unknown): data is AchievementData {
   const result = AchievementDataSchema.safeParse(data);
   if (result.success) {
-    console.log("[AchievementValidation] ✅ Valid AchievementData detected");
     return true;
   }
-  console.log(
-    "[AchievementValidation] ❌ Invalid AchievementData:",
-    result.error.message,
-  );
   return false;
 }
 
@@ -214,36 +207,19 @@ export function isValidAchievementStats(
 
 // ✅ VALIDATION FUNCTIONS: Safe parsing with error handling
 export function validateXPUpdate(data: unknown): XPUpdate {
-  console.log("[XPValidation] 🔍 Validating XPUpdate with Zod...");
-
   try {
     const validated = XPUpdateSchema.parse(data);
-    console.log("[XPValidation] ✅ XPUpdate validation successful");
-
     return validated;
   } catch (error) {
-    console.error("[XPValidation] ❌ XPUpdate validation failed:", error);
     throw error;
   }
 }
 
 export function validateAchievementData(data: unknown): AchievementData {
-  console.log(
-    "[AchievementValidation] 🔍 Validating AchievementData with Zod...",
-  );
-
   try {
     const validated = AchievementDataSchema.parse(data);
-    console.log(
-      "[AchievementValidation] ✅ AchievementData validation successful",
-    );
-
     return validated;
   } catch (error) {
-    console.error(
-      "[AchievementValidation] ❌ AchievementData validation failed:",
-      error,
-    );
     throw error;
   }
 }
@@ -251,43 +227,19 @@ export function validateAchievementData(data: unknown): AchievementData {
 export function validateAchievementProgressResult(
   data: unknown,
 ): AchievementProgressResult {
-  console.log(
-    "[AchievementValidation] 🔍 Validating AchievementProgressResult with Zod...",
-  );
-
   try {
     const validated = AchievementProgressResultSchema.parse(data);
-    console.log(
-      "[AchievementValidation] ✅ AchievementProgressResult validation successful",
-    );
-
     return validated;
   } catch (error) {
-    console.error(
-      "[AchievementValidation] ❌ AchievementProgressResult validation failed:",
-      error,
-    );
     throw error;
   }
 }
 
 export function validateAchievementStats(data: unknown): AchievementStats {
-  console.log(
-    "[AchievementValidation] 🔍 Validating AchievementStats with Zod...",
-  );
-
   try {
     const validated = AchievementStatsSchema.parse(data);
-    console.log(
-      "[AchievementValidation] ✅ AchievementStats validation successful",
-    );
-
     return validated;
   } catch (error) {
-    console.error(
-      "[AchievementValidation] ❌ AchievementStats validation failed:",
-      error,
-    );
     throw error;
   }
 }

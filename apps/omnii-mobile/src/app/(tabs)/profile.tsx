@@ -506,9 +506,9 @@ export default function ProfileScreen() {
                     isDark ? "text-slate-400" : "text-gray-600")}>Casual</Text>
                   <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
                     isDark ? "bg-slate-700" : "bg-gray-200")}>
-                    <View className="absolute top-0 left-0 bottom-0 bg-indigo-600 rounded-2xl" style={{ width: '65%' }} />
-                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
-                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '58%' }} />
+                    <View className="absolute top-0 left-0 bottom-0 bg-indigo-600 rounded-2xl w-[65%]" />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm left-[58%]", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} />
                   </View>
                   <Text className={cn("text-sm font-semibold", 
                     isDark ? "text-slate-400" : "text-gray-600")}>Professional</Text>
@@ -526,9 +526,9 @@ export default function ProfileScreen() {
                     isDark ? "text-slate-400" : "text-gray-600")}>Brief</Text>
                   <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
                     isDark ? "bg-slate-700" : "bg-gray-200")}>
-                    <View className="absolute top-0 left-0 bottom-0 bg-green-500 rounded-2xl" style={{ width: '40%' }} />
-                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
-                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '32%' }} />
+                    <View className="absolute top-0 left-0 bottom-0 bg-green-500 rounded-2xl w-[40%]" />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm left-[32%]", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} />
                   </View>
                   <Text className={cn("text-sm font-semibold", 
                     isDark ? "text-slate-400" : "text-gray-600")}>Detailed</Text>
@@ -546,9 +546,9 @@ export default function ProfileScreen() {
                     isDark ? "text-slate-400" : "text-gray-600")}>Reactive</Text>
                   <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
                     isDark ? "bg-slate-700" : "bg-gray-200")}>
-                    <View className="absolute top-0 left-0 bottom-0 bg-orange-500 rounded-2xl" style={{ width: '80%' }} />
-                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
-                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '72%' }} />
+                    <View className="absolute top-0 left-0 bottom-0 bg-orange-500 rounded-2xl w-[80%]" />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm left-[72%]", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} />
                   </View>
                   <Text className={cn("text-sm font-semibold", 
                     isDark ? "text-slate-400" : "text-gray-600")}>Proactive</Text>
@@ -585,9 +585,9 @@ export default function ProfileScreen() {
                     isDark ? "text-slate-400" : "text-gray-600")}>Interrupt</Text>
                   <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
                     isDark ? "bg-slate-700" : "bg-gray-200")}>
-                    <View className="absolute top-0 left-0 bottom-0 rounded-2xl" style={{ width: '90%', backgroundColor: '#4ECDC4' }} />
-                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
-                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '82%' }} />
+                    <View className="absolute top-0 left-0 bottom-0 rounded-2xl w-[90%] bg-[#4ECDC4]" />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm left-[82%]", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} />
                   </View>
                   <Text className={cn("text-sm font-semibold", 
                     isDark ? "text-slate-400" : "text-gray-600")}>Respect</Text>
@@ -605,9 +605,9 @@ export default function ProfileScreen() {
                     isDark ? "text-slate-400" : "text-gray-600")}>Low</Text>
                   <View className={cn("flex-1 h-6 rounded-2xl overflow-hidden relative", 
                     isDark ? "bg-slate-700" : "bg-gray-200")}>
-                    <View className="absolute top-0 left-0 bottom-0 rounded-2xl" style={{ width: '60%', backgroundColor: '#FF7043' }} />
-                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm", 
-                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} style={{ left: '52%' }} />
+                    <View className="absolute top-0 left-0 bottom-0 rounded-2xl w-[60%] bg-[#FF7043]" />
+                    <View className={cn("absolute top-0 bottom-0 w-6 h-6 rounded-full border-2 shadow-sm left-[52%]", 
+                      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-300")} />
                   </View>
                   <Text className={cn("text-sm font-semibold", 
                     isDark ? "text-slate-400" : "text-gray-600")}>High</Text>

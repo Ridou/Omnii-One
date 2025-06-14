@@ -84,6 +84,7 @@ function isTransformationError(error: any): boolean {
   return (
     message.includes('Unable to transform response') ||
     message.includes('Invalid JSON response') ||
+    message.includes('Already read') ||
     message.includes('superjson') ||
     message.includes('serialize') ||
     message.includes('deserialize')
@@ -133,6 +134,9 @@ export const queryClient = new QueryClient({
 
       // Global error handler for queries
       onError: (error: any) => {
+        // Don't redirect on transformation or fetch errors
+        if (isTransformationError(error)) return;
+        
         if (shouldRedirectOnAPIError(error)) {
           redirectToRoot();
         }
@@ -153,6 +157,9 @@ export const queryClient = new QueryClient({
 
       // Global error handler for mutations
       onError: (error: any) => {
+        // Don't redirect on transformation or fetch errors
+        if (isTransformationError(error)) return;
+        
         if (shouldRedirectOnAPIError(error)) {
           redirectToRoot();
         }
@@ -170,18 +177,26 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
     links: [
       loggerLink({
         enabled: (opts) => {
-          // Don't log transformation errors - they're handled gracefully
+          // Only log critical errors in development
           if (opts.direction === "down" && opts.result instanceof Error) {
             const errorMessage = opts.result.message || '';
+            
+            // Don't log transformation errors - they're handled gracefully
             if (isTransformationError(opts.result)) {
               return false;
             }
+            
+            // Don't log "Already read" errors - they're handled gracefully
+            if (errorMessage.includes('Already read')) {
+              return false;
+            }
+            
+            // Only log critical errors that need attention
+            return process.env.NODE_ENV === "development" && shouldRedirectOnAPIError(opts.result);
           }
           
-          return (
-            process.env.NODE_ENV === "development" ||
-            (opts.direction === "down" && opts.result instanceof Error)
-          );
+          // Don't log any successful queries or requests
+          return false;
         },
         colorMode: "ansi",
       }),
@@ -221,53 +236,22 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
               credentials: 'include',
             });
 
-            // If the response is not ok, handle it properly
+            // For error responses, let tRPC handle the parsing
+            // Don't read the response body here to avoid "Already read" errors
             if (!response.ok) {
-              const contentType = response.headers.get('content-type');
-              
-              // Try to parse as JSON first
-              if (contentType?.includes('application/json')) {
-                try {
-                  const errorData = await response.json();
-                  // Create a proper tRPC error structure
-                  const error = new Error(errorData.message || `HTTP ${response.status}`);
-                  (error as any).data = {
-                    httpStatus: response.status,
-                    code: errorData.code || 'HTTP_ERROR',
-                    ...errorData
-                  };
-                  throw error;
-                } catch (parseError) {
-                  // If JSON parsing fails, fall back to text
-                  const text = await response.text();
-                  throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
-                }
-              } else {
-                // Non-JSON response (likely HTML error page)
-                const text = await response.text();
-                throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
-              }
+              // Just throw a basic error and let tRPC handle the response parsing
+              const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+              (error as any).data = {
+                httpStatus: response.status,
+                code: 'HTTP_ERROR'
+              };
+              throw error;
             }
 
-            // For successful responses, check if it's valid JSON
-            const contentType = response.headers.get('content-type');
-            if (contentType?.includes('application/json')) {
-              // Clone the response to read it without consuming the original
-              const clonedResponse = response.clone();
-              try {
-                const testJson = await clonedResponse.json();
-                // If we can parse it as JSON, return the original response
-                return response;
-              } catch (jsonError) {
-                // If JSON parsing fails, create a structured error response
-                const text = await response.text();
-                throw new Error(`Invalid JSON response: ${text}`);
-              }
-            }
-
+            // For successful responses, return as-is and let tRPC handle parsing
             return response;
           } catch (error) {
-            // Re-throw with more context for debugging
+            // Re-throw with context but don't modify the error if it's already structured
             if (error instanceof Error) {
               // Don't wrap already wrapped errors
               if (error.message.startsWith('tRPC fetch error:')) {
