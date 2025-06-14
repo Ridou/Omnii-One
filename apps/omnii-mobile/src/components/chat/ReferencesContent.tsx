@@ -22,10 +22,10 @@ const ReferenceCard: React.FC<ReferenceCardProps> = ({
   
   return (
     <View className={cn(
-      "rounded-2xl p-6 mb-4 border shadow-sm border-l-4",
+      "rounded-2xl p-4 mb-3 border shadow-sm border-l-4",
       isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
     )} style={{ borderLeftColor: borderColor }}>
-      <View className="flex-row items-center mb-3">
+      <View className="flex-row items-center mb-2">
         <View className={cn(
           "w-10 h-10 rounded-lg items-center justify-center mr-3",
           isDark ? "bg-gray-800" : "bg-gray-100"
@@ -54,14 +54,14 @@ export const ReferencesContent: React.FC = () => {
   const { isDark } = useTheme();
 
   return (
-    <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-      <View className="py-4">
+    <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
+      <View className="py-3">
         <Text className={cn(
-          "text-2xl font-bold mb-2",
+          "text-2xl font-bold mb-1",
           isDark ? "text-white" : "text-gray-900"
         )}>📚 References</Text>
         <Text className={cn(
-          "text-base mb-6",
+          "text-base mb-3",
           isDark ? "text-slate-400" : "text-gray-600"
         )}>Data sources the AI uses for context</Text>
         
@@ -72,7 +72,7 @@ export const ReferencesContent: React.FC = () => {
           subtitle="What the AI knows right now"
           borderColor="#3B82F6"
         >
-          <View className="gap-3">
+          <View className="gap-2">
             <ContextRow label="Recent Emails:" value="12 unread (last 24h)" color="#3B82F6" />
             <ContextRow label="Calendar Events:" value="5 events (next 7 days)" color="#10B981" />
             <ContextRow label="Active Tasks:" value="8 pending" color="#8B5CF6" />
@@ -87,7 +87,7 @@ export const ReferencesContent: React.FC = () => {
           borderColor="#10B981"
         >
           <Text className={cn(
-            "text-sm leading-6 mb-4",
+            "text-sm leading-5 mb-3",
             isDark ? "text-slate-300" : "text-gray-600"
           )}>
             Conversation context from recent sessions to maintain continuity.
@@ -110,12 +110,12 @@ export const ReferencesContent: React.FC = () => {
           borderColor="#8B5CF6"
         >
           <Text className={cn(
-            "text-sm leading-6 mb-4",
+            "text-sm leading-5 mb-3",
             isDark ? "text-slate-300" : "text-gray-600"
           )}>
             External services providing real-time data for personalized assistance.
           </Text>
-          <View className="gap-2">
+          <View className="gap-1.5">
             <ConnectedSource name="Google Calendar - Events & scheduling" />
             <ConnectedSource name="Gmail - Email communication" />
             <ConnectedSource name="Google Contacts - Contact information" />

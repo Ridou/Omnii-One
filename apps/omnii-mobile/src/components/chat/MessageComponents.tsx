@@ -482,12 +482,15 @@ export const createTaskComponent = (taskData: any, props: any) => {
   
   if (isTaskData(taskData)) {
     console.log('[TaskComponentFactory] Rendering individual task data');
-    return (
-      <View className="flex-1 ">
-        <Text className="text-sm">Individual Task</Text>
-        <Text className="text-sm">{JSON.stringify(taskData, null, 2)}</Text>
-      </View>
-    );
+    // ✅ Convert individual task to clean display instead of showing JSON
+    const cleanTaskListData: TaskListData = {
+      listId: 'unknown',
+      listTitle: 'Task',
+      totalCount: 1,
+      completedCount: taskData.status === 'completed' ? 1 : 0,
+      tasks: [taskData]
+    };
+    return <TaskListDataComponent taskListData={cleanTaskListData} onAction={props.onAction} />;
   }
   
   // Fallback: show Google connection prompt for unknown data types
@@ -561,36 +564,89 @@ export const EmailListComponent: React.FC<{
 
       {/* Email preview cards */}
       {displayEmails.map((email, index) => (
-        <View key={email.id || index} className={cn(
-          "p-3 rounded-lg mb-2 border",
-          !email.isRead && "border-l-4 border-l-blue-500",
-          isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
-        )}>
-          <View className="flex-row justify-between items-center mb-1">
-            <Text className={cn(
-              "text-xs font-semibold flex-1",
-              isDark ? "text-white" : "text-gray-900"
-            )} numberOfLines={1}>
-              {email.from}
-            </Text>
-            <Text className={cn(
-              "text-xs",
-              isDark ? "text-slate-400" : "text-gray-600"
-            )}>{email.date}</Text>
+        <TouchableOpacity 
+          key={email.id || index} 
+          className={cn(
+            "p-4 rounded-xl mb-3 border shadow-sm",
+            !email.isRead && "border-l-4 border-l-blue-500 bg-blue-50/30",
+            isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+          )}
+          onPress={() => onAction?.('open_email', email)}
+          activeOpacity={0.7}
+        >
+          {/* Email Header */}
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-row items-center flex-1">
+              <View className={cn(
+                "w-8 h-8 rounded-full items-center justify-center mr-3",
+                !email.isRead ? "bg-blue-600" : (isDark ? "bg-slate-700" : "bg-gray-300")
+              )}>
+                <Text className={cn(
+                  "text-sm font-bold",
+                  !email.isRead ? "text-white" : (isDark ? "text-slate-400" : "text-gray-600")
+                )}>
+                  {email.from.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View className="flex-1">
+                <Text className={cn(
+                  "text-sm font-semibold",
+                  !email.isRead ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-slate-300" : "text-gray-700")
+                )} numberOfLines={1}>
+                  {email.from}
+                </Text>
+                <Text className={cn(
+                  "text-xs",
+                  isDark ? "text-slate-400" : "text-gray-500"
+                )}>
+                  {email.date}
+                </Text>
+              </View>
+            </View>
+            {!email.isRead && (
+              <View className="w-2 h-2 rounded-full bg-blue-500" />
+            )}
           </View>
+          
+          {/* Email Subject */}
           <Text className={cn(
-            "text-sm font-semibold mb-1",
-            isDark ? "text-white" : "text-gray-900"
-          )} numberOfLines={1}>
+            "text-base font-semibold mb-2",
+            !email.isRead ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-slate-300" : "text-gray-700")
+          )} numberOfLines={2}>
             {email.subject}
           </Text>
+          
+          {/* Email Preview */}
           <Text className={cn(
-            "text-xs leading-4",
+            "text-sm leading-5",
             isDark ? "text-slate-400" : "text-gray-600"
-          )} numberOfLines={2}>
+          )} numberOfLines={3}>
             {email.body}
           </Text>
-        </View>
+          
+          {/* Email Footer */}
+          <View className="flex-row items-center justify-between mt-3 pt-2 border-t border-slate-600/20">
+            <View className="flex-row items-center">
+              {email.attachments && email.attachments.length > 0 && (
+                <View className="flex-row items-center mr-3">
+                  <Text className="text-sm mr-1">📎</Text>
+                  <Text className={cn(
+                    "text-xs",
+                    isDark ? "text-slate-400" : "text-gray-500"
+                  )}>
+                    {email.attachments.length} attachment{email.attachments.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-500" : "text-gray-400"
+            )}>
+              Tap to view →
+            </Text>
+          </View>
+        </TouchableOpacity>
       ))}
 
       {/* Expand/collapse toggle */}
@@ -611,36 +667,7 @@ export const EmailListComponent: React.FC<{
         </TouchableOpacity>
       )}
 
-      {/* Actions */}
-      <View className="flex-row justify-between gap-2">
-        <TouchableOpacity 
-          className={cn(
-            "px-3 py-1.5 rounded-md",
-            isDark ? "bg-slate-900" : "bg-gray-50"
-          )}
-          onPress={() => onAction?.('reply_first', emails[0])}
-        >
-          <Text className={cn(
-            "text-xs font-medium",
-            isDark ? "text-white" : "text-gray-900"
-          )}>Reply to First</Text>
-        </TouchableOpacity>
-        
-        {hasMore && (
-          <TouchableOpacity 
-            className={cn(
-              "px-3 py-1.5 rounded-md",
-              isDark ? "bg-slate-900" : "bg-gray-50"
-            )}
-            onPress={() => onAction?.('load_more', null)}
-          >
-            <Text className={cn(
-              "text-xs font-medium",
-              isDark ? "text-white" : "text-gray-900"
-            )}>Load More</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+
     </View>
   );
 };
@@ -700,49 +727,7 @@ export const ContactListComponent: React.FC<{
         </TouchableOpacity>
       )}
 
-      {/* Actions */}
-      <View className="flex-row justify-between gap-2 mt-2">
-        <TouchableOpacity 
-          className={cn(
-            "px-3 py-1.5 rounded-md",
-            isDark ? "bg-slate-900" : "bg-gray-50"
-          )}
-          onPress={() => onAction?.('search_contacts', null)}
-        >
-          <Text className={cn(
-            "text-xs font-medium",
-            isDark ? "text-white" : "text-gray-900"
-          )}>🔍 Search</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          className={cn(
-            "px-3 py-1.5 rounded-md",
-            isDark ? "bg-slate-900" : "bg-gray-50"
-          )}
-          onPress={() => onAction?.('create_contact', null)}
-        >
-          <Text className={cn(
-            "text-xs font-medium",
-            isDark ? "text-white" : "text-gray-900"
-          )}>➕ Create</Text>
-        </TouchableOpacity>
 
-        {hasMore && (
-          <TouchableOpacity 
-            className={cn(
-              "px-3 py-1.5 rounded-md",
-              isDark ? "bg-slate-900" : "bg-gray-50"
-            )}
-            onPress={() => onAction?.('load_more', { nextPageToken })}
-          >
-            <Text className={cn(
-              "text-xs font-medium",
-              isDark ? "text-white" : "text-gray-900"
-            )}>Load More</Text>
-          </TouchableOpacity>
-        )}
-      </View>
     </View>
   );
 };
@@ -922,49 +907,7 @@ export const CalendarListComponent: React.FC<{
         </TouchableOpacity>
       )}
 
-      {/* Actions */}
-      <View className="flex-row justify-between gap-2 mt-2">
-        <TouchableOpacity 
-          className={cn(
-            "px-3 py-1.5 rounded-md",
-            isDark ? "bg-slate-900" : "bg-gray-50"
-          )}
-          onPress={() => onAction?.('create_event', null)}
-        >
-          <Text className={cn(
-            "text-xs font-medium",
-            isDark ? "text-white" : "text-gray-900"
-          )}>➕ Create Event</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          className={cn(
-            "px-3 py-1.5 rounded-md",
-            isDark ? "bg-slate-900" : "bg-gray-50"
-          )}
-          onPress={() => onAction?.('view_calendar', null)}
-        >
-          <Text className={cn(
-            "text-xs font-medium",
-            isDark ? "text-white" : "text-gray-900"
-          )}>🗓️ Open Calendar</Text>
-        </TouchableOpacity>
 
-        {hasMore && (
-          <TouchableOpacity 
-            className={cn(
-              "px-3 py-1.5 rounded-md",
-              isDark ? "bg-slate-900" : "bg-gray-50"
-            )}
-            onPress={() => onAction?.('load_more_events', null)}
-          >
-            <Text className={cn(
-              "text-xs font-medium",
-              isDark ? "text-white" : "text-gray-900"
-            )}>Load More</Text>
-          </TouchableOpacity>
-        )}
-      </View>
     </View>
   );
 };
@@ -1646,7 +1589,7 @@ export const CompleteTaskOverviewComponent: React.FC<{
   onAction?: (action: string, data: any) => void;
 }> = ({ overview, onAction }) => {
   const { isDark } = useTheme();
-  const [expanded, setExpanded] = useState(true); // Show expanded by default
+  const [expanded, setExpanded] = useState(false); // Show compact by default
 
   const hasOverdueTasks = overview.totalOverdue > 0;
   const hasFailures = overview.partialFailures && overview.partialFailures.length > 0;
@@ -1938,14 +1881,27 @@ export const TaskListDataComponent: React.FC<{
             "p-3 rounded-lg mb-2 border",
             isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
           )}>
-            <Text className={cn(
-              "text-sm font-semibold",
-              isDark ? "text-white" : "text-gray-900"
-            )}>{task.title}</Text>
-            <Text className={cn(
-              "text-xs",
-              isDark ? "text-slate-400" : "text-gray-600"
-            )}>Status: {task.status}</Text>
+            <View className="flex-row items-center mb-1">
+              <View className={cn(
+                "w-4 h-4 rounded-full border mr-2 items-center justify-center",
+                task.status === 'completed' 
+                  ? "bg-green-600 border-green-600" 
+                  : isDark 
+                    ? "border-slate-400" 
+                    : "border-gray-400"
+              )}>
+                {task.status === 'completed' && (
+                  <Text className="text-white text-xs">✓</Text>
+                )}
+              </View>
+              <Text className={cn(
+                "text-sm font-semibold flex-1",
+                task.status === 'completed' ? "line-through" : "",
+                task.status === 'completed' 
+                  ? isDark ? "text-slate-500" : "text-gray-500"
+                  : isDark ? "text-white" : "text-gray-900"
+              )} numberOfLines={1}>{task.title}</Text>
+            </View>
             {task.due && <Text className={cn(
               "text-xs",
               isDark ? "text-slate-400" : "text-gray-600"

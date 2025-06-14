@@ -51,3 +51,62 @@ export interface TransformOptions {
   includeMetadata?: boolean;
   maxConfidence?: number;
 }
+
+// Enhanced Multi-Request Support Types
+export interface RequestContext {
+  id: string;
+  content: string;
+  timestamp: number;
+  priority: RequestPriority;
+  status: RequestStatus;
+  progress?: AIProgressStage;
+  metadata?: any;
+}
+
+export interface PriorityRequest {
+  id: string;
+  content: string;
+  priority: RequestPriority;
+  timestamp: number;
+  metadata?: any;
+}
+
+export interface AIProgressStage {
+  stage: 'context_analysis' | 'rdf_processing' | 'response_generation' | 'task_creation' | 'completed' | 'idle';
+  percentage: number;
+  details: string;
+  timestamp?: number;
+  requestId?: string;
+  variations?: number;
+  citations?: number;
+}
+
+export enum RequestPriority {
+  LOW = 1,
+  NORMAL = 2,
+  HIGH = 3,
+  URGENT = 4
+}
+
+export enum RequestStatus {
+  QUEUED = 'queued',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed'
+}
+
+// Shape of AI - Enhanced Events
+export interface EnhancedChatServiceEvents extends ChatServiceEvents {
+  progress: (stage: AIProgressStage) => void;
+  queueUpdate: (queueLength: number, activeRequests: number) => void;
+  multiRequestStart: (requestIds: string[]) => void;
+  multiRequestComplete: (results: RequestResult[]) => void;
+}
+
+export interface RequestResult {
+  id: string;
+  status: RequestStatus;
+  response?: ChatMessage;
+  error?: Error;
+  completedAt: number;
+}

@@ -12,6 +12,13 @@ import {
   ChatServiceEvents,
   QueuedMessage,
   OutgoingMessage,
+  RequestContext,
+  PriorityRequest,
+  AIProgressStage,
+  RequestPriority,
+  RequestStatus,
+  EnhancedChatServiceEvents,
+  RequestResult,
 } from '~/types/chat-service.types';
 import { 
   isValidUnifiedToolResponse,
@@ -74,6 +81,16 @@ export class ChatService {
   private reconnectDelay = 1000;
   private listeners: Map<string, Set<Function>> = new Map();
   private pingSequence = 0;
+  
+  // Enhanced Multi-Request Support
+  private activeRequests: Map<string, RequestContext> = new Map();
+  private requestQueue: PriorityRequest[] = [];
+  private maxConcurrentRequests = 3;
+  private currentProcessingStages: Map<string, AIProgressStage> = new Map();
+  
+  // Shape of AI - Progress Tracking
+  private progressHistory: AIProgressStage[] = [];
+  private isProcessingMultipleRequests = false;
 
   constructor(config: ChatServiceConfig) {
     console.log('🏗️ [ChatService] *** CONSTRUCTOR CALLED ***');
@@ -85,6 +102,11 @@ export class ChatService {
     });
     this.config = config;
     this.loadQueuedMessages();
+    this.loadRequestQueue(); // Enhanced: Load priority request queue
+    
+    // Enhanced: Setup cleanup interval
+    setInterval(() => this.cleanupCompletedRequests(), 60000); // Every minute
+    
     console.log('✅ [ChatService] Constructor completed');
   }
 
@@ -140,7 +162,8 @@ export class ChatService {
     this.reconnectAttempts = 0;
     this.emit('connected');
     // this.startHeartbeat();
-    this.processQueuedMessages();
+    this.processQueuedMessages(); // Legacy queue
+    this.processQueuedRequests(); // Enhanced priority queue
     console.log('✅ [ChatService] handleOpen complete');
   };
 
@@ -658,15 +681,46 @@ export class ChatService {
     console.log('[ChatService] Content:', content);
     console.log('[ChatService] isConnected:', this.isConnected);
     
-    const message: OutgoingMessage = {
-      id: this.generateId(),
+    // Enhanced: Create request with priority
+    const requestId = this.generateId();
+    const priority = this.determinePriority(content, metadata);
+    
+    const request: RequestContext = {
+      id: requestId,
       content,
+      timestamp: Date.now(),
+      priority,
+      status: RequestStatus.QUEUED,
       metadata,
+    };
+
+    // Add to active requests tracking
+    this.activeRequests.set(requestId, request);
+    
+    // Emit queue update
+    this.emitQueueUpdate();
+
+    const message: OutgoingMessage = {
+      id: requestId,
+      content,
+      metadata: {
+        ...metadata,
+        requestId,
+        priority,
+      },
       timestamp: Date.now(),
     };
 
-    if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
+    if (this.isConnected && this.ws?.readyState === WebSocket.OPEN && this.canProcessNewRequest()) {
       console.log('✅ [ChatService] Connection is good, sending message');
+      
+      // Update request status
+      request.status = RequestStatus.PROCESSING;
+      this.activeRequests.set(requestId, request);
+      
+      // Start progress tracking
+      this.startProgressTracking(requestId, content);
+      
       const wsMessage: WebSocketMessage = {
         type: WebSocketMessageType.COMMAND,
         payload: {
@@ -674,7 +728,7 @@ export class ChatService {
           message: content,
           userId: this.config.userId,
           userTimezone: this.config.timezone,
-          metadata,
+          metadata: message.metadata,
         },
         timestamp: Date.now(),
       };
@@ -683,8 +737,185 @@ export class ChatService {
       this.ws.send(JSON.stringify(wsMessage));
       this.emit('typing', true);
     } else {
-      console.log('❌ [ChatService] Connection not ready, queueing message');
-      await this.queueMessage(message);
+      console.log('❌ [ChatService] Connection not ready or max concurrent reached, queueing message');
+      await this.queuePriorityMessage(request);
+    }
+  }
+
+  // Enhanced: Priority-based queueing
+  private async queuePriorityMessage(request: RequestContext): Promise<void> {
+    const priorityRequest: PriorityRequest = {
+      id: request.id,
+      content: request.content,
+      priority: request.priority,
+      timestamp: request.timestamp,
+      metadata: request.metadata,
+    };
+    
+    // Insert based on priority
+    const insertIndex = this.requestQueue.findIndex(r => r.priority < priorityRequest.priority);
+    if (insertIndex === -1) {
+      this.requestQueue.push(priorityRequest);
+    } else {
+      this.requestQueue.splice(insertIndex, 0, priorityRequest);
+    }
+    
+    await this.saveRequestQueue();
+    this.emitQueueUpdate();
+  }
+
+  // Enhanced: Determine request priority
+  private determinePriority(content: string, metadata?: any): RequestPriority {
+    // High priority keywords
+    const urgentKeywords = ['urgent', 'emergency', 'asap', 'critical'];
+    const highKeywords = ['important', 'deadline', 'meeting', 'schedule'];
+    
+    const lowerContent = content.toLowerCase();
+    
+    if (metadata?.priority) {
+      return metadata.priority;
+    }
+    
+    if (urgentKeywords.some(keyword => lowerContent.includes(keyword))) {
+      return RequestPriority.URGENT;
+    }
+    
+    if (highKeywords.some(keyword => lowerContent.includes(keyword))) {
+      return RequestPriority.HIGH;
+    }
+    
+    return RequestPriority.NORMAL;
+  }
+
+  // Enhanced: Check if we can process new requests
+  private canProcessNewRequest(): boolean {
+    const processingCount = Array.from(this.activeRequests.values())
+      .filter(req => req.status === RequestStatus.PROCESSING).length;
+    return processingCount < this.maxConcurrentRequests;
+  }
+
+  // Enhanced: Start progress tracking for a request
+  private startProgressTracking(requestId: string, content: string): void {
+    const initialStage: AIProgressStage = {
+      stage: 'context_analysis',
+      percentage: 10,
+      details: 'Analyzing your request...',
+      timestamp: Date.now(),
+      requestId,
+    };
+    
+    this.currentProcessingStages.set(requestId, initialStage);
+    this.progressHistory.push(initialStage);
+    this.emitProgress(initialStage);
+    
+    // Simulate progress updates (in real implementation, these would come from WebSocket)
+    this.simulateProgressUpdates(requestId);
+  }
+
+  // Enhanced: Simulate progress updates (remove in production)
+  private simulateProgressUpdates(requestId: string): void {
+    const stages: Array<Partial<AIProgressStage>> = [
+      { stage: 'context_analysis', percentage: 25, details: 'Context analysis complete...' },
+      { stage: 'rdf_processing', percentage: 50, details: 'Processing knowledge graph...' },
+      { stage: 'response_generation', percentage: 75, details: 'Generating AI response...' },
+      { stage: 'task_creation', percentage: 90, details: 'Creating tasks and updates...' },
+    ];
+    
+    stages.forEach((stageUpdate, index) => {
+      setTimeout(() => {
+        const currentStage = this.currentProcessingStages.get(requestId);
+        if (currentStage) {
+          const updatedStage: AIProgressStage = {
+            ...currentStage,
+            ...stageUpdate,
+            timestamp: Date.now(),
+          } as AIProgressStage;
+          
+          this.currentProcessingStages.set(requestId, updatedStage);
+          this.progressHistory.push(updatedStage);
+          this.emitProgress(updatedStage);
+        }
+      }, (index + 1) * 1500); // Stagger updates
+    });
+  }
+
+  // Enhanced: Emit progress updates
+  private emitProgress(stage: AIProgressStage): void {
+    this.emit('progress' as any, stage);
+  }
+
+  // Enhanced: Emit queue updates
+  private emitQueueUpdate(): void {
+    const activeCount = Array.from(this.activeRequests.values())
+      .filter(req => req.status === RequestStatus.PROCESSING).length;
+    this.emit('queueUpdate' as any, this.requestQueue.length, activeCount);
+  }
+
+  // Enhanced: Save request queue
+  private async saveRequestQueue(): Promise<void> {
+    try {
+      await AsyncStorage.setItem('chat_request_queue', JSON.stringify(this.requestQueue));
+    } catch (error) {
+      console.error('[ChatService] Failed to save request queue:', error);
+    }
+  }
+
+  // Enhanced: Load request queue
+  private async loadRequestQueue(): Promise<void> {
+    try {
+      const data = await AsyncStorage.getItem('chat_request_queue');
+      if (data) {
+        this.requestQueue = JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('[ChatService] Failed to load request queue:', error);
+    }
+  }
+
+  // Enhanced: Process queued requests
+  private async processQueuedRequests(): Promise<void> {
+    while (this.requestQueue.length > 0 && this.canProcessNewRequest() && this.isConnected) {
+      const priorityRequest = this.requestQueue.shift()!;
+      
+      // Convert back to full request context
+      const request: RequestContext = {
+        ...priorityRequest,
+        status: RequestStatus.PROCESSING,
+      };
+      
+      this.activeRequests.set(request.id, request);
+      await this.sendMessage(request.content, request.metadata);
+    }
+    await this.saveRequestQueue();
+  }
+
+  // Enhanced: Get current progress for header
+  getCurrentProgress(): AIProgressStage | undefined {
+    const processingRequests = Array.from(this.currentProcessingStages.values());
+    if (processingRequests.length === 0) return undefined;
+    
+    // Return the latest/highest percentage progress
+    return processingRequests.reduce((latest, current) => 
+      current.percentage > latest.percentage ? current : latest
+    );
+  }
+
+  // Enhanced: Get progress history
+  getProgressHistory(): AIProgressStage[] {
+    return [...this.progressHistory];
+  }
+
+  // Enhanced: Clear completed requests
+  private cleanupCompletedRequests(): void {
+    const now = Date.now();
+    const maxAge = 5 * 60 * 1000; // 5 minutes
+    
+    for (const [id, request] of this.activeRequests.entries()) {
+      if (request.status === RequestStatus.COMPLETED && 
+          now - request.timestamp > maxAge) {
+        this.activeRequests.delete(id);
+        this.currentProcessingStages.delete(id);
+      }
     }
   }
 

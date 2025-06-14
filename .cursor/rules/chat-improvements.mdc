@@ -1,0 +1,699 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Chat UI/UX Improvements Implementation Plan
+
+## Overview
+This document outlines comprehensive improvements to the chat interface to create a modern, intuitive, and responsive user experience that follows best UX practices.
+
+## Core Issues to Address
+
+### 1. Chat Scroll Behavior Fix
+**Problem**: Chat scrolls opposite of user expectations
+**Solution**: 
+- Implement proper scroll-to-bottom behavior on new messages
+- Auto-scroll to latest message when user sends a message
+- Add "scroll to bottom" floating button when user scrolls up
+- Ensure smooth scrolling animations
+- Handle scroll position preservation when keyboard opens/closes on mobile
+
+### 2. AI Processing Progress System
+**Problem**: Users wait without feedback after sending messages
+**Solution**: 
+- Replace waiting state with transparent progress tracking
+- Implement real-time progress indicators showing AI processing steps
+- Create progress measurement system for AI pipeline stages:
+  - Message received and validated
+  - Context analysis in progress
+  - RDF processing (if applicable)
+  - Response generation
+  - Task creation/updates
+- Show estimated time remaining when possible
+
+### 3. Background Processing & Task Integration
+**Problem**: Users feel blocked waiting for AI responses
+**Solution**:
+- Implement non-blocking chat experience
+- Show progress indicator while AI works in background
+- Inform user that detailed results will appear in Task screen
+- Allow users to continue chatting while AI processes previous requests
+- Create seamless handoff between Chat and Task screens
+
+### 4. Sleek Input Design
+**Problem**: Too much space between input elements
+**Solution**:
+- Redesign input area with minimal, modern spacing
+- Create floating input bar with proper padding/margins
+- Implement auto-expanding text input
+- Add subtle shadows and borders for depth
+- Ensure input scales properly across devices
+
+### 5. Keyboard Integration
+**Problem**: Send button not connected to Enter key
+**Solution**:
+- Map Enter key to send message (desktop)
+- Map keyboard send button to submit (mobile)
+- Implement Shift+Enter for new lines
+- Add visual feedback when Enter is pressed
+- Handle IME (Input Method Editor) properly for international users
+
+### 6. Multi-Request Support
+**Problem**: Chat doesn't handle multiple concurrent requests well
+**Solution**:
+- Queue system for multiple user requests
+- Clear visual indication of which requests are being processed
+- Allow users to send follow-up messages while AI processes
+- Implement request prioritization (newest requests get priority)
+- Show status for each request in queue
+
+### 7. Header Progress Indicator
+**Problem**: Progress feedback not prominently visible
+**Solution**:
+- Add circular progress indicator in header center
+- Make it expandable on tap/click to show detailed progress
+- Use subtle animations to indicate active processing
+- Color-code progress states (processing, completed, error)
+- Include progress percentage and current step description
+
+## Shape of AI UX Patterns Integration
+
+Based on [shapeof.ai](mdc:https:/www.shapeof.ai) patterns, we'll implement modern AI UX patterns:
+
+### 8. Wayfinders (Getting Started Patterns)
+- **Follow up**: Context-aware follow-up questions when initial prompt is unclear
+- **Nudges**: Smart suggestions for AI capabilities when users are idle
+- **Suggestions**: Pre-built prompt suggestions to solve blank canvas problem
+- **Templates**: Structured templates for common tasks (email, calendar, contacts)
+
+### 9. Inputs (Enhanced Prompt Patterns)
+- **Auto Fill**: Smart completion for multi-field inputs
+- **Inline action**: Contextual AI actions based on current screen content  
+- **Madlibs**: Structured prompts with fill-in-the-blank for consistent results
+- **Open input**: Natural language prompting with enhanced parsing
+- **Remix/Blend**: Combine previous prompts or responses for new results
+- **Summary**: Quick distillation of complex information
+- **Synthesis**: Reorganize information into simple structures
+- **Token layering**: Visual prompt construction with building blocks
+
+### 10. Tuners (Refinement Patterns)
+- **Filters**: Constrain AI inputs/outputs by type, source, modality
+- **Inpainting**: Target specific areas for regeneration/improvement
+- **Model management**: User control over which AI model processes requests
+- **Parameters**: Include constraints and preferences in prompts
+- **Personal voice**: Consistent tone and style matching user preferences
+- **Primary sources**: Reference specific documents/sources for responses
+- **References**: Manage and display source materials used
+- **Workflows**: Chain generative steps for complex automated tasks
+
+### 11. Governors (User Agency Patterns)
+- **Citations**: Inline source annotations for transparency
+- **Controls**: Mid-stream pausing and prompt adjustment
+- **Footprints**: Trace AI's reasoning from prompt to result
+- **Prompt transparency**: Show actual prompts sent to AI
+- **Regenerate**: Reproduce responses without additional input
+- **Sample response**: Preview AI intent before execution
+- **Show the work**: Display AI reasoning steps before execution
+- **Token transparency**: Reveal tokens used in response generation  
+- **Variations**: Multiple response options to choose from
+
+### 12. Trust Indicators (Confidence Patterns)
+- **Incognito mode**: Private interactions without data storage
+- **Memory**: Control what AI remembers about user
+- **Watermarks**: Identify AI-generated content
+- **Caveat**: Inform users about AI limitations and risks
+
+### 13. Identifiers (AI Distinction Patterns)
+- **Color scheme**: Visual cues for AI features vs regular features
+- **Disclosure**: Clear marking of AI-guided content and interactions
+- **Initial CTA**: Large, inviting first interaction prompts
+- **Name**: Consistent AI persona naming
+- **Personality**: Distinguished AI characteristics and vibe
+- **Symbols**: Recognizable AI representation in interface
+
+### 14. Message State Management
+- **Sending**: Show message immediately with "sending" indicator
+- **Processing**: Real-time progress with AI pipeline stages
+- **Completed**: Mark as done with link to Task screen results
+- **Error**: Clear error states with retry options
+- **Variations**: Show multiple AI response options
+
+### 15. Visual Hierarchy & Typography
+- Implement proper message grouping with timestamps
+- Use consistent typography scale following design system
+- Implement dark/light theme support with AI-specific colors
+- Use proper color coding for different AI vs user message types
+
+### 16. Responsive Design Patterns
+- Optimize for mobile-first AI interaction experience
+- Implement proper touch targets (44px minimum)
+- Add swipe gestures for AI response actions (retry, variations)
+- Handle keyboard appearance/disappearance smoothly
+- Optimize for tablet landscape/portrait modes
+
+### 17. Micro-interactions & Animations
+- Smooth message appearance animations
+- AI thinking indicators with breathing animations
+- Progress bar animations with easing functions
+- Subtle hover states on AI suggestions
+- Loading states that build anticipation
+
+### 18. Performance Optimizations
+- Virtual scrolling for long chat histories
+- Message lazy loading
+- Image/attachment optimization
+- Efficient re-rendering strategies
+- Memory management for long sessions
+
+## Implementation Priority
+
+### Phase 1: Core Functionality (High Priority)
+1. Fix chat scroll behavior
+2. Implement basic progress indicators with AI pipeline stages
+3. Add Enter key support  
+4. Reduce input spacing with sleek design
+5. Enable multi-request support with queueing
+6. **Shape of AI - Wayfinders**: Add smart suggestions and nudges
+7. **Shape of AI - Identifiers**: Implement AI color scheme and disclosure
+
+### Phase 2: Enhanced UX & AI Patterns (Medium Priority)  
+1. Add header progress indicator with expandable details
+2. Implement background processing with Task integration
+3. Add message state management with variations
+4. **Shape of AI - Inputs**: Auto-fill, inline actions, and prompt templates
+5. **Shape of AI - Governors**: Show the work, regenerate, and controls
+6. **Shape of AI - Trust Indicators**: Citations and transparency features
+7. Improve visual hierarchy with AI-specific styling
+
+### Phase 3: Advanced AI Features & Polish (Low Priority)
+1. **Shape of AI - Tuners**: Filters, parameters, and workflow chaining
+2. **Shape of AI - Governors**: Token transparency and footprints  
+3. Add micro-interactions with AI-specific animations
+4. Add performance optimizations
+5. Create comprehensive AI theming system
+
+## Technical Considerations
+
+### State Management
+- Track progress for multiple concurrent AI requests with pipeline stages
+- Manage message states (sending, processing, completed, variations)
+- Handle real-time updates from AI processing pipeline via WebSocket
+- Sync with Task screen data and store AI interaction history
+- **Shape of AI Integration**: Track user preferences, AI model selection, and conversation context
+
+### API Integration & WebSocket Enhancement
+- Extend existing `ChatService.ts` with progress tracking events
+- Enhance WebSocket message types for AI pipeline stages
+- Implement real-time progress updates from `websocket-handler.service.ts`
+- Add Shape of AI pattern support to WebSocket message format:
+  ```typescript
+  interface AIProgressMessage {
+    type: 'ai_progress';
+    stage: 'context_analysis' | 'rdf_processing' | 'response_generation' | 'task_creation';
+    percentage: number;
+    details: string;
+    variations?: AIResponse[];
+    citations?: Source[];
+  }
+  ```
+
+### Component Architecture  
+- Extend existing `ChatMessage.tsx` to support AI pattern components
+- Create Shape of AI pattern components:
+  - `SuggestionCards.tsx` - For wayfinders and nudges
+  - `ProgressIndicator.tsx` - With expandable AI pipeline details
+  - `AIResponseVariations.tsx` - Multiple response options
+  - `CitationBar.tsx` - Source transparency
+  - `RegenerateButton.tsx` - Response regeneration
+  - `AIPersonality.tsx` - Consistent AI branding
+- Build on existing responsive design in `ChatLayout.tsx`
+- Enhance `ChatInput.tsx` with template support and auto-fill
+
+### Testing Strategy
+- Unit tests for AI progress tracking logic and Shape of AI patterns
+- Integration tests for keyboard shortcuts and WebSocket enhancements
+- E2E tests for multi-request scenarios with AI pipeline stages
+- Performance testing for long chat sessions with progress indicators
+- User testing for Shape of AI pattern effectiveness (wayfinders, governors, etc.)
+
+## Implementation Feasibility Assessment
+
+### ✅ Highly Feasible (Existing Architecture Supports)
+- **Progress Indicators**: Current `ChatService.ts` already has event system
+- **Multi-Request Support**: WebSocket service supports message queuing
+- **Scroll Improvements**: `ConversationContent.tsx` has FlatList with scroll controls
+- **Enter Key Support**: `ChatInput.tsx` ready for keyboard event handlers
+- **Background Processing**: Current WebSocket architecture supports async processing
+- **Shape of AI - Identifiers**: Theme system in place for AI-specific styling
+
+### ✅ Moderately Feasible (Minor Extensions Required)
+- **Shape of AI - Wayfinders**: Can extend existing prompt suggestions in `ConversationContent.tsx`
+- **Shape of AI - Governors**: Progress transparency fits existing WebSocket message flow
+- **Message State Management**: Current message types can be extended
+- **Header Progress**: Can integrate with existing header in `ChatLayout.tsx`
+
+### ⚠️ Requires Significant Development
+- **Shape of AI - Tuners**: Complex filtering and workflow systems
+- **Token Transparency**: Needs backend AI service modifications
+- **Advanced Variations**: Multiple AI response generation
+
+### 🏗️ Implementation Notes
+- Use existing `useChatState.ts` hook for state management extensions
+- Leverage current `MessageComponents.tsx` architecture for AI pattern components  
+- Build on responsive design patterns in `DesktopChatComponents.tsx`
+- Extend current WebSocket message types in backend `websocket-handler.service.ts`
+- Memory: User prefers Bun as test runner instead of Jest
+
+## Success Metrics
+- Reduced user wait time perception through transparent AI progress
+- Increased user engagement with Shape of AI wayfinder patterns
+- Improved task completion rates via better AI guidance
+- Higher user confidence through trust indicators and transparency
+- Positive user feedback on modern AI chat experience
+
+## Implementation Code
+
+### Memory Section Optimization (Shape of AI Patterns)
+
+Based on [shapeof.ai](mdc:https:/www.shapeof.ai) patterns, here's the optimized Memory section:
+
+#### Enhanced MemoryContent.tsx
+
+```typescript
+// apps/omnii-mobile/src/components/chat/MemoryContent.tsx
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Pressable } from 'react-native';
+import { useTheme } from '~/context/ThemeContext';
+import { cn } from '~/utils/cn';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring,
+  interpolate 
+} from 'react-native-reanimated';
+
+interface MemoryContentProps {
+  tasksOverview: any;
+  calendarData: any;
+  onTaskAction: (action: string, data?: any) => void;
+  onCalendarAction: (action: string, data?: any) => void;
+  onContactAction?: (action: string, data?: any) => void;
+  onEmailAction?: (action: string, data?: any) => void;
+}
+
+export const MemoryContent: React.FC<MemoryContentProps> = ({
+  tasksOverview,
+  calendarData,
+  onTaskAction,
+  onCalendarAction,
+  onContactAction,
+  onEmailAction
+}) => {
+  const { isDark } = useTheme();
+
+  return (
+    <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
+      <View className="py-6">
+        {/* Shape of AI - Identifiers: Clear AI Memory Section */}
+        <View className="mb-6">
+          <View className="flex-row items-center mb-3">
+            <View className={cn(
+              "w-12 h-12 rounded-2xl items-center justify-center mr-4",
+              "bg-gradient-to-br from-purple-500 to-blue-600"
+            )}>
+              <Text className="text-2xl">🧠</Text>
+            </View>
+            <View className="flex-1">
+              <Text className={cn(
+                "text-2xl font-bold",
+                isDark ? "text-white" : "text-gray-900"
+              )}>AI Memory</Text>
+              <View className="flex-row items-center mt-1">
+                <View className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+                <Text className={cn(
+                  "text-sm font-medium",
+                  isDark ? "text-green-400" : "text-green-600"
+                )}>Active & Learning</Text>
+              </View>
+            </View>
+          </View>
+          
+          {/* Shape of AI - Disclosure: AI Content Marking */}
+          <View className={cn(
+            "px-3 py-2 rounded-lg border-l-4 border-l-blue-500",
+            isDark ? "bg-blue-950/30 bg-opacity-50" : "bg-blue-50"
+          )}>
+            <Text className={cn(
+              "text-xs font-medium",
+              isDark ? "text-blue-400" : "text-blue-700"
+            )}>🤖 AI-Managed Context • Updated continuously for better assistance</Text>
+          </View>
+        </View>
+
+        {/* Memory Categories Grid */}
+        <View className="gap-4">
+          <MemorySummaryCard
+            icon="👤"
+            title="Personal Context"
+            items={["Work patterns", "Preferences", "Communication style"]}
+            color="blue"
+            onExpand={() => {/* Show personal context details */}}
+          />
+          
+          <MemorySummaryCard
+            icon="📋"
+            title="Task Patterns"
+            items={[
+              `${tasksOverview?.taskLists?.length || 0} active lists`,
+              `${tasksOverview?.totalTasks || 0} total tasks`,
+              "Work scheduling habits"
+            ]}
+            color="purple"
+            onExpand={() => onTaskAction('view_all')}
+            expandedContent={<TaskMemoryDetails data={tasksOverview} />}
+          />
+
+          <MemorySummaryCard
+            icon="📅"
+            title="Calendar Intelligence"
+            items={[
+              "Meeting patterns",
+              "Schedule preferences", 
+              "Time blocking habits"
+            ]}
+            color="green"
+            onExpand={() => onCalendarAction('view_patterns')}
+          />
+
+          <MemorySummaryCard
+            icon="👥"
+            title="Contact Network"
+            items={[
+              "Communication frequency",
+              "Relationship mapping",
+              "Interaction patterns"
+            ]}
+            color="orange"
+            onExpand={() => onContactAction?.('view_network')}
+          />
+
+          <MemorySummaryCard
+            icon="📧"
+            title="Email Intelligence"
+            items={[
+              "Response patterns",
+              "Priority keywords",
+              "Communication style"
+            ]}
+            color="red"
+            onExpand={() => onEmailAction?.('view_patterns')}
+          />
+        </View>
+
+        {/* Shape of AI - Trust Indicators: Memory Controls */}
+        <MemoryControlsSection />
+      </View>
+    </ScrollView>
+  );
+};
+
+// Shape of AI - Memory Pattern: Expandable Summary Cards
+interface MemorySummaryCardProps {
+  icon: string;
+  title: string;
+  items: string[];
+  color: 'blue' | 'purple' | 'green' | 'orange' | 'red';
+  onExpand: () => void;
+  expandedContent?: React.ReactNode;
+}
+
+const MemorySummaryCard: React.FC<MemorySummaryCardProps> = ({
+  icon,
+  title,
+  items,
+  color,
+  onExpand,
+  expandedContent
+}) => {
+  const { isDark } = useTheme();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const expandAnimation = useSharedValue(0);
+
+  const colorConfig = {
+    blue: { bg: 'bg-blue-500', border: 'border-l-blue-500', accent: isDark ? 'bg-blue-950/30' : 'bg-blue-50' },
+    purple: { bg: 'bg-purple-500', border: 'border-l-purple-500', accent: isDark ? 'bg-purple-950/30' : 'bg-purple-50' },
+    green: { bg: 'bg-green-500', border: 'border-l-green-500', accent: isDark ? 'bg-green-950/30' : 'bg-green-50' },
+    orange: { bg: 'bg-orange-500', border: 'border-l-orange-500', accent: isDark ? 'bg-orange-950/30' : 'bg-orange-50' },
+    red: { bg: 'bg-red-500', border: 'border-l-red-500', accent: isDark ? 'bg-red-950/30' : 'bg-red-50' }
+  };
+
+  const handleToggle = () => {
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    expandAnimation.value = withSpring(newState ? 1 : 0);
+    if (newState) onExpand();
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(expandAnimation.value, [0, 1], [0, 180])}deg` }]
+  }));
+
+  return (
+    <View className={cn(
+      "rounded-2xl border shadow-sm border-l-4",
+      colorConfig[color].border,
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
+      {/* Summary Header */}
+      <Pressable onPress={handleToggle} className="p-4">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center flex-1">
+            <View className={cn(
+              "w-10 h-10 rounded-xl items-center justify-center mr-3",
+              colorConfig[color].accent
+            )}>
+              <Text className="text-xl">{icon}</Text>
+            </View>
+            <View className="flex-1">
+              <Text className={cn(
+                "text-lg font-semibold",
+                isDark ? "text-white" : "text-gray-900"
+              )}>{title}</Text>
+              <Text className={cn(
+                "text-sm",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>{items.length} insights</Text>
+            </View>
+          </View>
+          
+          <Animated.View style={animatedStyle}>
+            <Text className={cn(
+              "text-lg",
+              isDark ? "text-slate-400" : "text-gray-500"
+            )}>⌄</Text>
+          </Animated.View>
+        </View>
+
+        {/* Quick Preview */}
+        <View className="mt-3 gap-1">
+          {items.slice(0, 2).map((item, index) => (
+            <View key={index} className="flex-row items-center">
+              <View className={cn("w-1.5 h-1.5 rounded-full mr-2", colorConfig[color].bg)} />
+              <Text className={cn(
+                "text-sm",
+                isDark ? "text-slate-300" : "text-gray-700"
+              )}>{item}</Text>
+            </View>
+          ))}
+          {items.length > 2 && (
+            <Text className={cn(
+              "text-xs ml-3.5 mt-1",
+              isDark ? "text-slate-500" : "text-gray-500"
+            )}>+{items.length - 2} more insights</Text>
+          )}
+        </View>
+      </Pressable>
+
+      {/* Expanded Content */}
+      {isExpanded && expandedContent && (
+        <View className={cn(
+          "px-4 pb-4 border-t",
+          isDark ? "border-slate-700" : "border-gray-200"
+        )}>
+          {expandedContent}
+        </View>
+      )}
+    </View>
+  );
+};
+
+// Shape of AI - Trust Indicators & Controls
+const MemoryControlsSection: React.FC = () => {
+  const { isDark } = useTheme();
+
+  return (
+    <View className="mt-8">
+      <Text className={cn(
+        "text-lg font-semibold mb-4",
+        isDark ? "text-white" : "text-gray-900"
+      )}>Memory Controls</Text>
+      
+      <View className="gap-3">
+        {/* Shape of AI - Memory Control */}
+        <TouchableOpacity className={cn(
+          "flex-row items-center justify-between p-4 rounded-xl border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}>
+          <View className="flex-row items-center">
+            <Text className="text-xl mr-3">🔒</Text>
+            <View>
+              <Text className={cn(
+                "font-medium",
+                isDark ? "text-white" : "text-gray-900"
+              )}>Privacy Settings</Text>
+              <Text className={cn(
+                "text-sm",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Control what AI remembers</Text>
+            </View>
+          </View>
+          <Text className={cn(
+            "text-sm",
+            isDark ? "text-slate-400" : "text-gray-500"
+          )}>→</Text>
+        </TouchableOpacity>
+
+        {/* Shape of AI - Data Ownership */}
+        <TouchableOpacity className={cn(
+          "flex-row items-center justify-between p-4 rounded-xl border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}>
+          <View className="flex-row items-center">
+            <Text className="text-xl mr-3">📊</Text>
+            <View>
+              <Text className={cn(
+                "font-medium",
+                isDark ? "text-white" : "text-gray-900"
+              )}>Export Memory</Text>
+              <Text className={cn(
+                "text-sm",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Download your AI context data</Text>
+            </View>
+          </View>
+          <Text className={cn(
+            "text-sm",
+            isDark ? "text-slate-400" : "text-gray-500"
+          )}>→</Text>
+        </TouchableOpacity>
+
+        {/* Shape of AI - Incognito Mode */}
+        <TouchableOpacity className={cn(
+          "flex-row items-center justify-between p-4 rounded-xl border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}>
+          <View className="flex-row items-center">
+            <Text className="text-xl mr-3">🕶️</Text>
+            <View>
+              <Text className={cn(
+                "font-medium",
+                isDark ? "text-white" : "text-gray-900"
+              )}>Private Mode</Text>
+              <Text className={cn(
+                "text-sm",
+                isDark ? "text-slate-400" : "text-gray-600"
+              )}>Chat without storing context</Text>
+            </View>
+          </View>
+          <View className={cn(
+            "w-12 h-6 rounded-full border-2",
+            isDark ? "border-slate-600 bg-slate-700" : "border-gray-300 bg-gray-200"
+          )}>
+            <View className={cn(
+              "w-4 h-4 rounded-full mt-0.5 ml-0.5",
+              isDark ? "bg-slate-500" : "bg-white"
+            )} />
+          </View>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+// Detailed Task Memory Component
+const TaskMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
+  const { isDark } = useTheme();
+  
+  return (
+    <View className="mt-4 gap-3">
+      <Text className={cn(
+        "font-medium text-sm",
+        isDark ? "text-white" : "text-gray-900"
+      )}>Task Intelligence Summary</Text>
+      
+      <View className="gap-2">
+        <View className={cn(
+          "p-3 rounded-lg",
+          isDark ? "bg-slate-700" : "bg-gray-50"
+        )}>
+          <Text className={cn(
+            "text-sm font-medium mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>📈 Productivity Patterns</Text>
+          <Text className={cn(
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>Most active: Weekday mornings • Peak efficiency: 9-11 AM</Text>
+        </View>
+        
+        <View className={cn(
+          "p-3 rounded-lg",
+          isDark ? "bg-slate-700" : "bg-gray-50"
+        )}>
+          <Text className={cn(
+            "text-sm font-medium mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>🎯 Priority Keywords</Text>
+          <Text className={cn(
+            "text-xs",
+            isDark ? "text-slate-400" : "text-gray-600"
+          )}>urgent, deadline, review, meeting prep, follow-up</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+```
+
+#### NativeWind V4 Theme Integration
+
+```typescript
+// Add to tailwind.config.js for AI-specific colors
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        'ai': {
+          primary: '#6366f1',
+          secondary: '#8b5cf6', 
+          accent: '#06b6d4',
+          muted: '#64748b'
+        }
+      },
+      animation: {
+        'ai-pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'ai-bounce': 'bounce 1s infinite',
+      }
+    }
+  }
+}
+```
+
+## Notes
+- All improvements should maintain backward compatibility with existing WebSocket protocol
+- Consider progressive enhancement for older devices
+- Follow existing design system patterns in `/apps/omnii-mobile/src/styles/`
+- Ensure changes work across mobile, tablet, and desktop layouts
+- Document new Shape of AI patterns for future development
+- Integration with existing RDF system and Task screen workflows

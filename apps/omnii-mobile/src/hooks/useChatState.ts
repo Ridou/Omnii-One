@@ -75,14 +75,32 @@ export const useChatState = () => {
     }
   }, [handleQuickAction]);
 
-  // Auto-scroll to top on new messages
+  const handleEditMessage = useCallback((messageId: string, newContent: string) => {
+    // Just update the message content in place - don't send a new message
+    if (chat.editMessage) {
+      chat.editMessage(messageId, newContent);
+    }
+    
+    // Optional: If you want to send the edited message as a new request, uncomment below
+    // if (newContent.trim() && chat.isConnected) {
+    //   chat.sendMessage(newContent.trim());
+    //   setPendingAction(newContent.trim());
+    //   
+    //   if (!responsive.effectiveIsDesktop) {
+    //     triggerCheering(CheeringTrigger.TASK_COMPLETE);
+    //   }
+    // }
+  }, [chat.editMessage]);
+
+  // Auto-scroll to bottom on new messages or tab switch
   useEffect(() => {
     if (chat.messages.length > 0 && selectedTab === 'conversation') {
       setTimeout(() => {
         try {
-          flatListRef.current?.scrollToIndex({ index: 0, animated: true });
+          flatListRef.current?.scrollToEnd({ animated: true });
         } catch (error) {
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          // Fallback to offset calculation for scrolling to bottom
+          flatListRef.current?.scrollToOffset({ offset: 999999, animated: true });
         }
       }, 300);
     }
@@ -145,6 +163,7 @@ export const useChatState = () => {
     handleToolButton,
     handleDropdownAction,
     handleActionTap,
+    handleEditMessage,
     
     // Chat props
     ...chat

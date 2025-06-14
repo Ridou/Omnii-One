@@ -145,35 +145,7 @@ export const GoogleTasksView: React.FC<GoogleTasksViewProps> = ({
             </Text>
           </View>
 
-          {/* Action buttons */}
-          <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={() => onAction?.('refresh_overview', null)}
-              className={cn(
-                'px-3 py-2 rounded-lg',
-                isDark ? 'bg-slate-700' : 'bg-gray-100',
-              )}
-            >
-              <Text
-                className={cn(
-                  'text-sm',
-                  isDark ? 'text-white' : 'text-gray-700',
-                )}
-              >
-                🔄 Refresh
-              </Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => onAction?.('create_task_list', null)}
-              className={cn(
-                'px-3 py-2 rounded-lg',
-                isDark ? 'bg-indigo-600' : 'bg-indigo-500',
-              )}
-            >
-              <Text className="text-sm text-white">+ New List</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </View>
 

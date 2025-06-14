@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Platform, TouchableOpacity, TextInput } from 'react-native';
 import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
 import type { ChatMessage as ChatMessageType } from '~/types/chat';
@@ -16,173 +16,109 @@ import {
 
 interface ChatMessageProps {
   message: ChatMessageType;
+  isLastUserMessage?: boolean;
   onEmailAction?: (action: string, data: any) => void;
   onTaskAction?: (action: string, data: any) => void;
   onContactAction?: (action: string, data: any) => void;
   onCalendarAction?: (action: string, data: any) => void;
+  onEditMessage?: (messageId: string, newContent: string) => void;
 }
 
-// Simple response card using processed display data from service
-function ResponseCard({ metadata }: { metadata?: any }) {
-  const { isDark } = useTheme();
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  if (!metadata?.display?.hasResponse) return null;
-
-  const { display } = metadata;
-
-  return (
-    <View className={cn(
-      "mt-3 p-3 rounded-lg border",
-      isDark ? "bg-slate-700 border-slate-600" : "bg-gray-50 border-gray-200"
-    )}>
-      {/* Header with pre-processed category and result */}
-      <View className="flex-row justify-between items-center mb-2">
-        <Text className={cn(
-          "text-xs font-semibold",
-          isDark ? "text-slate-300" : "text-gray-700"
-        )}>
-          {display.categoryIcon} {display.categoryName}
-        </Text>
-        {display.resultEmoji && (
-          <Text className={cn(
-            "text-xs",
-            isDark ? "text-slate-300" : "text-gray-700"
-          )}>
-            {display.resultEmoji} {display.resultName}
-          </Text>
-        )}
-      </View>
-
-      {/* Expandable raw response */}
-      <TouchableOpacity
-        onPress={() => setIsExpanded(!isExpanded)}
-        className="py-1"
-      >
-        <Text className="text-xs text-indigo-600 font-medium">
-          {isExpanded ? '▼ Hide Details' : '▶ Show Details'}
-        </Text>
-      </TouchableOpacity>
-
-      {isExpanded && (
-        <ScrollView 
-          className={cn(
-            "mt-2 max-h-[150px] rounded p-2",
-            isDark ? "bg-slate-800" : "bg-gray-100"
-          )}
-          nestedScrollEnabled
-        >
-          <Text 
-            className={cn(
-              "text-xs leading-4",
-              isDark ? "text-slate-400" : "text-gray-600"
-            )}
-            style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}
-          >
-            {JSON.stringify(metadata.rawResponse, null, 2)}
-          </Text>
-        </ScrollView>
-      )}
-    </View>
-  );
-}
-
-export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAction, onCalendarAction }: ChatMessageProps) {
+export function ChatMessage({ message, isLastUserMessage, onEmailAction, onTaskAction, onContactAction, onCalendarAction, onEditMessage }: ChatMessageProps) {
   const { isDark } = useTheme();
   const isUser = message.sender === 'user';
-  // ✅ PHASE 3: Fix type comparison - check metadata only to avoid type conflicts
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(message.content);
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // ✅ IMPROVED: Check if message has rich content that should be expandable
+  const hasRichContent = !!(
+    message.metadata?.componentData || 
+    message.sources?.length || 
+    message.confidence
+  );
+  
+  // ✅ IMPROVED: Only truncate text messages when they're long AND don't have rich content
+  // If they have rich content, the rich content provides the value, not the truncated text
+  const isLongTextMessage = message.content.length > 150;
+  const shouldTruncate = isLongTextMessage && !isExpanded && !hasRichContent;
+  const displayContent = shouldTruncate 
+    ? message.content.substring(0, 150) + '...' 
+    : message.content;
+  
+  // ✅ IMPROVED: Only show truncation button for long text messages without rich content
+  const showTruncationToggle = isLongTextMessage && !hasRichContent;
+  
+  // Check if this is a system/action message
   const isSystemOrAction = message.metadata?.category === 'system' || message.metadata?.category === 'action';
 
-  // ✅ PHASE 3: Static email detection using enhanced ChatService categories
+  // Handle edit functionality  
+  const handleStartEdit = () => {
+    setIsEditing(true);
+    setEditedContent(message.content);
+  };
+
+  const handleSaveEdit = () => {
+    if (editedContent.trim() && onEditMessage) {
+      onEditMessage(message.id, editedContent.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedContent(message.content);
+  };
+
+  // ✅ Component detection using enhanced ChatService categories
   const isEmailList = message.metadata?.category === ResponseCategory.EMAIL_LIST;
-  const isEmailSingle = message.metadata?.category === ResponseCategory.EMAIL_SINGLE;
   const emailListData = isEmailList && message.metadata?.componentData && isEmailListData(message.metadata.componentData) 
     ? message.metadata.componentData 
     : null;
 
-  // ✅ NEW: Complete task overview detection using Zod type guard
+  // ✅ Complete task overview detection using Zod type guard
   const isCompleteTaskOverviewDetected = message.metadata?.category === ResponseCategory.TASK_COMPLETE_OVERVIEW || 
     (message.metadata?.category === ResponseCategory.TASK_SINGLE && message.metadata?.componentData && isCompleteTaskOverview(message.metadata.componentData));
   const completeTaskOverviewData = isCompleteTaskOverviewDetected && message.metadata?.componentData && isCompleteTaskOverview(message.metadata.componentData)
     ? message.metadata.componentData
     : null;
 
-  // ✅ NEW: Contact list detection using Zod type guard
+  // ✅ Contact list detection using Zod type guard
   const isContactList = message.metadata?.category === ResponseCategory.CONTACT_LIST || 
     (message.metadata?.category === ResponseCategory.CONTACT_SINGLE && message.metadata?.componentData && isContactListData(message.metadata.componentData));
   const contactListData = isContactList && message.metadata?.componentData && isContactListData(message.metadata.componentData)
     ? message.metadata.componentData
     : null;
 
-  // ✅ NEW: Calendar list detection using Zod type guard
+  // ✅ Calendar list detection using Zod type guard
   const isCalendarList = message.metadata?.category === ResponseCategory.CALENDAR_LIST || 
     (message.metadata?.category === ResponseCategory.CALENDAR_EVENT && message.metadata?.componentData && isCalendarListData(message.metadata.componentData));
   const calendarListData = isCalendarList && message.metadata?.componentData && isCalendarListData(message.metadata.componentData)
     ? message.metadata.componentData
     : null;
 
-  console.log('[ChatMessage] 🔍 ANALYZING MESSAGE:');
-  console.log('[ChatMessage] - Category:', message.metadata?.category);
-  console.log('[ChatMessage] - Is Email List:', isEmailList);
-  console.log('[ChatMessage] - Has Email Data:', !!emailListData);
-  console.log('[ChatMessage] - Email Count:', emailListData?.emails?.length || 0);
-  console.log('[ChatMessage] - Is Complete Task Overview:', isCompleteTaskOverviewDetected);
-  console.log('[ChatMessage] - Has Complete Task Data:', !!completeTaskOverviewData);
-  console.log('[ChatMessage] - Total Tasks:', (completeTaskOverviewData as any)?.totalTasks || 0);
-  console.log('[ChatMessage] - Is Contact List:', isContactList);
-  console.log('[ChatMessage] - Has Contact Data:', !!contactListData);
-  console.log('[ChatMessage] - Contact Count:', contactListData?.contacts?.length || 0);
-  console.log('[ChatMessage] - Contact List Validation Result:', contactListData ? isContactListData(contactListData) : 'no data');
-  console.log('[ChatMessage] - Contact Data Sample:', contactListData?.contacts?.[0] ? {
-    name: contactListData.contacts[0].name,
-    hasEmails: contactListData.contacts[0].emails?.length > 0,
-    hasPhones: contactListData.contacts[0].phones?.length > 0
-  } : 'no sample');
-  console.log('[ChatMessage] - Is Calendar List:', isCalendarList);
-  console.log('[ChatMessage] - Has Calendar Data:', !!calendarListData);
-  console.log('[ChatMessage] - Calendar Count:', calendarListData?.events?.length || 0);
-
-  // ✅ FINAL STEP: Handle email action interactions using real handler
+  // ✅ Action handlers
   const handleEmailAction = (action: string, data: any) => {
     console.log('[ChatMessage] Email action triggered:', action, data);
-    // ✅ Use the real email action handler from useChat
-    if (onEmailAction) {
-      onEmailAction(action, data);
-    } else {
-      console.log('[ChatMessage] ⚠️ No email action handler provided');
-    }
+    onEmailAction?.(action, data);
   };
 
-  // ✅ NEW: Handle task action interactions
   const handleTaskAction = (action: string, data: any) => {
     console.log('[ChatMessage] Task action triggered:', action, data);
-    if (onTaskAction) {
-      onTaskAction(action, data);
-    } else {
-      console.log('[ChatMessage] ⚠️ No task action handler provided');
-    }
+    onTaskAction?.(action, data);
   };
 
-  // ✅ NEW: Handle contact action interactions
   const handleContactAction = (action: string, data: any) => {
     console.log('[ChatMessage] Contact action triggered:', action, data);
-    if (onContactAction) {
-      onContactAction(action, data);
-    } else {
-      console.log('[ChatMessage] ⚠️ No contact action handler provided');
-    }
+    onContactAction?.(action, data);
   };
 
-  // ✅ NEW: Handle calendar action interactions
   const handleCalendarAction = (action: string, data: any) => {
     console.log('[ChatMessage] Calendar action triggered:', action, data);
-    if (onCalendarAction) {
-      onCalendarAction(action, data);
-    } else {
-      console.log('[ChatMessage] ⚠️ No calendar action handler provided');
-    }
+    onCalendarAction?.(action, data);
   };
 
+  // System/Action message styling
   if (isSystemOrAction) {
     return (
       <View className="items-center my-2 mx-0">
@@ -223,96 +159,157 @@ export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAct
             ? "bg-slate-800 border-slate-600 rounded-bl-sm"
             : "bg-white border-gray-200 rounded-bl-sm"
       )}>
-        <Text className={cn(
-          "text-base leading-6",
-          isUser ? "text-white" : isDark ? "text-white" : "text-gray-900"
-        )}>
-          {message.content}
-        </Text>
-
-        {/* ✅ PHASE 3: Render email list if available */}
-        {isEmailList && emailListData && (
-          <EmailListComponent
-            emails={emailListData.emails}
-            totalCount={emailListData.totalCount}
-            unreadCount={emailListData.unreadCount}
-            hasMore={emailListData.hasMore}
-            onAction={handleEmailAction}
-          />
-        )}
-
-        {/* ✅ NEW: Render complete task overview if available */}
-        {isCompleteTaskOverviewDetected && completeTaskOverviewData && (
-          <CompleteTaskOverviewComponent
-            overview={completeTaskOverviewData}
-            onAction={handleTaskAction}
-          />
-        )}
-
-        {/* ✅ NEW: Render contact list if available */}
-        {isContactList && contactListData && (
-          <ContactListComponent
-            contacts={contactListData.contacts}
-            totalCount={contactListData.totalCount}
-            hasMore={contactListData.hasMore}
-            nextPageToken={contactListData.nextPageToken}
-            onAction={handleContactAction}
-          />
-        )}
-
-        {/* ✅ NEW: Render calendar list if available */}
-        {isCalendarList && calendarListData && (
-          <CalendarListComponent
-            events={calendarListData.events}
-            totalCount={calendarListData.totalCount}
-            hasMore={calendarListData.hasMore}
-            // nextPageToken={calendarListData.nextPageToken}
-            onAction={handleCalendarAction}
-          />
-        )}
-
-        {/* Confidence indicator for AI messages */}
-        {!isUser && message.confidence && (
-          <View className="mt-2">
-            <View className={cn(
-              "h-0.5 rounded-sm overflow-hidden mb-1",
-              isDark ? "bg-slate-600" : "bg-gray-200"
-            )}>
-              <View
-                className="h-full bg-indigo-600 rounded-sm"
-                style={{ width: `${message.confidence}%` }}
-              />
+        {/* Message Content or Edit Input */}
+        {isUser && isEditing ? (
+          <View className="w-full">
+            <TextInput
+              value={editedContent}
+              onChangeText={setEditedContent}
+              multiline
+              autoFocus
+              className={cn(
+                "text-base leading-6 p-2 border border-white/20 rounded-lg",
+                "text-white bg-white/10"
+              )}
+              style={{ minHeight: 40 }}
+              placeholderTextColor="rgba(255,255,255,0.6)"
+            />
+            <View className="flex-row justify-end mt-2 gap-2">
+              <TouchableOpacity 
+                onPress={handleCancelEdit}
+                className="px-3 py-1 rounded-lg bg-white/20"
+              >
+                <Text className="text-white text-sm font-medium">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handleSaveEdit}
+                className="px-3 py-1 rounded-lg bg-white/30"
+                disabled={!editedContent.trim()}
+              >
+                <Text className={cn(
+                  "text-sm font-medium",
+                  editedContent.trim() ? "text-white" : "text-white/50"
+                )}>Save</Text>
+              </TouchableOpacity>
             </View>
+          </View>
+        ) : (
+          <View>
+            {/* ✅ IMPROVED: Clean message text display */}
             <Text className={cn(
-              "text-xs",
-              isDark ? "text-slate-400" : "text-gray-600"
+              "text-base leading-6",
+              isUser ? "text-white" : isDark ? "text-white" : "text-gray-900"
             )}>
-              {message.confidence}% confident
+              {displayContent}
             </Text>
+            
+            {/* ✅ IMPROVED: Only show truncation toggle for long text messages */}
+            {showTruncationToggle && (
+              <TouchableOpacity 
+                onPress={() => setIsExpanded(!isExpanded)}
+                className="mt-2 self-start"
+              >
+                <Text className={cn(
+                  "text-sm font-medium",
+                  isUser ? "text-white/80" : isDark ? "text-indigo-400" : "text-indigo-600"
+                )}>
+                  {shouldTruncate ? "Show more" : "Show less"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
-        {/* Sources */}
-        {message.sources && message.sources.length > 0 && (
-          <View className={cn(
-            "mt-2 pt-2 border-t",
-            isDark ? "border-slate-600" : "border-gray-200"
-          )}>
-            <Text className={cn(
-              "text-xs font-semibold mb-1",
-              isDark ? "text-white" : "text-gray-900"
-            )}>
-              Sources:
-            </Text>
-            {message.sources.map((source, index) => (
-              <Text key={source.id || index} className={cn(
-                "text-xs ml-2 leading-5",
-                isDark ? "text-slate-400" : "text-gray-600"
-              )}>
-                • {source.name}
-              </Text>
-            ))}
+        {/* ✅ IMPROVED: Rich Content Components - Always visible when available */}
+        {isEmailList && emailListData && (
+          <View className="mt-3">
+            <EmailListComponent
+              emails={emailListData.emails}
+              totalCount={emailListData.totalCount}
+              unreadCount={emailListData.unreadCount}
+              hasMore={emailListData.hasMore}
+              onAction={handleEmailAction}
+            />
           </View>
+        )}
+
+        {isCompleteTaskOverviewDetected && completeTaskOverviewData && (
+          <View className="mt-3">
+            <CompleteTaskOverviewComponent
+              overview={completeTaskOverviewData}
+              onAction={handleTaskAction}
+            />
+          </View>
+        )}
+
+        {isContactList && contactListData && (
+          <View className="mt-3">
+            <ContactListComponent
+              contacts={contactListData.contacts}
+              totalCount={contactListData.totalCount}
+              hasMore={contactListData.hasMore}
+              nextPageToken={contactListData.nextPageToken}
+              onAction={handleContactAction}
+            />
+          </View>
+        )}
+
+        {isCalendarList && calendarListData && (
+          <View className="mt-3">
+            <CalendarListComponent
+              events={calendarListData.events}
+              totalCount={calendarListData.totalCount}
+              hasMore={calendarListData.hasMore}
+              onAction={handleCalendarAction}
+            />
+          </View>
+        )}
+
+        {/* ✅ IMPROVED: Optional metadata - only show when expanded AND available */}
+        {isExpanded && (
+          <>
+            {!isUser && message.confidence && (
+              <View className="mt-3">
+                <View className={cn(
+                  "h-0.5 rounded-sm overflow-hidden mb-1",
+                  isDark ? "bg-slate-600" : "bg-gray-200"
+                )}>
+                  <View
+                    className="h-full bg-indigo-600 rounded-sm"
+                    style={{ width: `${message.confidence}%` }}
+                  />
+                </View>
+                <Text className={cn(
+                  "text-xs",
+                  isDark ? "text-slate-400" : "text-gray-600"
+                )}>
+                  {message.confidence}% confident
+                </Text>
+              </View>
+            )}
+
+            {message.sources && message.sources.length > 0 && (
+              <View className={cn(
+                "mt-3 pt-2 border-t",
+                isDark ? "border-slate-600" : "border-gray-200"
+              )}>
+                <Text className={cn(
+                  "text-xs font-semibold mb-1",
+                  isDark ? "text-white" : "text-gray-900"
+                )}>
+                  Sources:
+                </Text>
+                {message.sources.map((source, index) => (
+                  <Text key={source.id || index} className={cn(
+                    "text-xs ml-2 leading-5",
+                    isDark ? "text-slate-400" : "text-gray-600"
+                  )}>
+                    • {source.name}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </>
         )}
 
         {/* XP Earned */}
@@ -323,20 +320,32 @@ export function ChatMessage({ message, onEmailAction, onTaskAction, onContactAct
             </Text>
           </View>
         )}
-
-        {/* Response Card using processed display data */}
-        <ResponseCard metadata={message.metadata} />
       </View>
 
-      <Text className={cn(
-        "text-xs mt-1 mx-1",
-        isDark ? "text-slate-400" : "text-gray-600"
+      {/* Timestamp and Edit Button */}
+      <View className={cn(
+        "flex-row items-center mt-1 mx-1",
+        isUser ? "justify-end" : "justify-start"
       )}>
-        🕐 {new Date(message.timestamp).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
-      </Text>
+        <Text className={cn(
+          "text-xs",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>
+          🕐 {new Date(message.timestamp).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </Text>
+        
+        {isUser && isLastUserMessage && !isEditing && onEditMessage && (
+          <TouchableOpacity 
+            onPress={handleStartEdit}
+            className="ml-2 px-2 py-1 rounded-lg bg-indigo-600/20"
+          >
+            <Text className="text-xs text-indigo-600 font-medium">✏️ Edit</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }

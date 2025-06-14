@@ -23,6 +23,7 @@ import { ConversationContent } from '~/components/chat/ConversationContent';
 import { ActionsContent } from '~/components/chat/ActionsContent';
 import { ReferencesContent } from '~/components/chat/ReferencesContent';
 import { MemoryContent } from '~/components/chat/MemoryContent';
+import { ProgressIndicator } from '~/components/chat/ProgressIndicator';
 
 // Constants
 import { CHAT_TABS } from '~/constants/chat';
@@ -74,8 +75,11 @@ export default function ChatScreen() {
                         pendingAction={chatState.pendingAction}
                         flatListRef={chatState.flatListRef}
                         onRetry={chatState.reconnect}
-                        onEmailAction={chatState.handleEmailAction}
+                        onEmailAction={chatState.handleEmailAction || handleEmailAction}
                         onTaskAction={handleTaskAction}
+                        onContactAction={handleContactAction}
+                        onCalendarAction={handleCalendarAction}
+                        onEditMessage={chatState.handleEditMessage}
                         onPromptSelect={chatState.setMessageInput}
                         tasksOverview={tasksData.tasksOverview}
                     />
@@ -83,17 +87,6 @@ export default function ChatScreen() {
             case 'actions':
                 return (
                     <ActionsContent
-                        tasksOverview={tasksData.tasksOverview}
-                        tasksLoading={tasksData.isLoading}
-                        tasksError={tasksData.hasError}
-                        calendarData={calendarData.calendarData}
-                        calendarLoading={calendarData.isLoading}
-                        calendarError={calendarData.hasError}
-                        totalEvents={calendarData.totalEvents}
-                        getUpcomingEvents={calendarData.getUpcomingEvents}
-                        getTodaysEvents={calendarData.getTodaysEvents}
-                        onRefetchTasks={tasksData.refetch}
-                        onRefetchCalendar={calendarData.refetch}
                         onActionTap={chatState.handleActionTap}
                     />
                 );
@@ -135,6 +128,27 @@ export default function ChatScreen() {
                     size="small" 
                     showText={true} 
                     showLevel={true}
+                />
+            </View>
+            
+            {/* Shape of AI - Header Progress Indicator (Center) */}
+            <View className="items-center justify-center px-4">
+                <ProgressIndicator
+                    isProcessing={chatState.isTyping || !!chatState.pendingAction}
+                    currentStage={
+                        chatState.isTyping ? {
+                            stage: 'response_generation',
+                            percentage: 75,
+                            details: 'AI is generating response...'
+                        } : chatState.pendingAction ? {
+                            stage: 'context_analysis',
+                            percentage: 25,
+                            details: 'Processing your request...'
+                        } : undefined
+                    }
+                    stages={[]} // TODO: Implement stage history
+                    activeRequestCount={chatState.isTyping ? 1 : 0}
+                    queueLength={0} // TODO: Connect to actual queue
                 />
             </View>
             

@@ -303,6 +303,16 @@ export function useChat() {
     setState((prev) => ({ ...prev, messages: [] }));
   }, []);
 
+  const editMessage = useCallback((messageId: string, newContent: string) => {
+    console.log('[useChat] ✏️ Edit message called:', messageId, newContent);
+    setState((prev) => ({
+      ...prev,
+      messages: prev.messages.map((msg) =>
+        msg.id === messageId ? { ...msg, content: newContent } : msg
+      ),
+    }));
+  }, []);
+
   // ✅ FINAL STEP: Email action handler for rich email interactions
   const handleEmailAction = useCallback((action: string, data: any) => {
     console.log('[useChat] 📧 Email action triggered:', action, data);
@@ -359,6 +369,7 @@ export function useChat() {
     sendMessage,
     clearError,
     clearMessages,
+    editMessage,
     handleEmailAction,
     reconnect,
   };
