@@ -4,8 +4,8 @@ import { AppColors } from '~/constants/Colors';
 import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
 
-interface StreamlinedApprovalCardProps {
-  approval: {
+interface StreamlinedTaskCardProps {
+  task: {
     id: string;
     title: string;
     description: string;
@@ -17,10 +17,10 @@ interface StreamlinedApprovalCardProps {
   onPress?: () => void;
 }
 
-export default function StreamlinedApprovalCard({ 
-  approval, 
+export default function StreamlinedTaskCard({ 
+  task, 
   onPress 
-}: StreamlinedApprovalCardProps) {
+}: StreamlinedTaskCardProps) {
   const { isDark } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -73,7 +73,7 @@ export default function StreamlinedApprovalCard({
     }
   };
 
-  const priorityConfig = getPriorityConfig(approval.priority);
+  const priorityConfig = getPriorityConfig(task.priority);
 
   return (
     <TouchableOpacity
@@ -109,7 +109,7 @@ export default function StreamlinedApprovalCard({
           "text-lg font-semibold mb-2 leading-6",
           isDark ? "text-white" : "text-gray-900"
         )}>
-          {priorityConfig.emoji} {approval.title}
+          {priorityConfig.emoji} {task.title}
         </Text>
 
         {/* Description */}
@@ -117,7 +117,7 @@ export default function StreamlinedApprovalCard({
           "text-sm leading-5 mb-4",
           isDark ? "text-slate-400" : "text-gray-600"
         )}>
-          {approval.description}
+          {task.description}
         </Text>
 
         {/* Meta Information */}

@@ -3,11 +3,11 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useResponsiveDesign } from '~/utils/responsive';
 import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
-import SimpleSwipeCard from '~/components/approvals/SimpleSwipeCard';
-import StreamlinedApprovalCard from '~/components/approvals/StreamlinedApprovalCard';
+import SimpleSwipeCard from '~/components/tasks/SimpleSwipeCard';
+import StreamlinedTaskCard from '~/components/tasks/StreamlinedTaskCard';
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle } from 'react-native-svg';
 
-interface Approval {
+interface Task {
   id: string;
   title: string;
   description: string;
@@ -17,16 +17,16 @@ interface Approval {
   type: string;
 }
 
-// Enhanced Desktop Approvals Content
-interface DesktopApprovalsContentProps {
-  filteredTasks: Approval[];
-  handleApprove: (approval: Approval) => void;
-  handleReject: (approval: Approval) => void;
+// Enhanced Desktop Tasks Content
+interface DesktopTasksContentProps {
+  filteredTasks: Task[];
+  handleApprove: (task: Task) => void;
+  handleReject: (task: Task) => void;
   selectedFilter: string;
   stats: Record<string, number>;
 }
 
-export const DesktopApprovalsContent: React.FC<DesktopApprovalsContentProps> = ({
+export const DesktopTasksContent: React.FC<DesktopTasksContentProps> = ({
   filteredTasks,
   handleApprove,
   handleReject,
@@ -67,12 +67,12 @@ export const DesktopApprovalsContent: React.FC<DesktopApprovalsContentProps> = (
         ) : (
           <View className="space-y-4 max-w-6xl">
             <View className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {filteredTasks.map((approval, index) => (
-                <EnhancedApprovalCard
-                  key={approval.id}
-                  approval={approval}
-                  onApprove={() => handleApprove(approval)}
-                  onReject={() => handleReject(approval)}
+              {filteredTasks.map((task, index) => (
+                <EnhancedTaskCard
+                  key={task.id}
+                  task={task}
+                  onApprove={() => handleApprove(task)}
+                  onReject={() => handleReject(task)}
                   index={index}
                 />
               ))}
@@ -84,13 +84,13 @@ export const DesktopApprovalsContent: React.FC<DesktopApprovalsContentProps> = (
   );
 };
 
-// Enhanced Approval Card with better styling
-const EnhancedApprovalCard: React.FC<{
-  approval: Approval;
+// Enhanced Task Card with better styling
+const EnhancedTaskCard: React.FC<{
+  task: Task;
   onApprove: () => void;
   onReject: () => void;
   index: number;
-}> = ({ approval, onApprove, onReject, index }) => {
+}> = ({ task, onApprove, onReject, index }) => {
   const { isDark } = useTheme();
   
   const priorityConfig = {
@@ -117,7 +117,7 @@ const EnhancedApprovalCard: React.FC<{
     }
   };
   
-  const config = priorityConfig[approval.priority as keyof typeof priorityConfig] || priorityConfig.medium;
+  const config = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
   const aiConfidence = Math.floor(Math.random() * 15) + 85;
   
   return (
@@ -158,14 +158,14 @@ const EnhancedApprovalCard: React.FC<{
               "text-lg font-bold leading-6 mb-2",
               isDark ? "text-white" : "text-gray-900"
             )}>
-              {approval.title}
+              {task.title}
             </Text>
             
             <Text className={cn(
               "text-sm leading-5",
               isDark ? "text-slate-400" : "text-gray-600"
             )}>
-              {approval.description}
+              {task.description}
             </Text>
           </View>
           
@@ -194,7 +194,7 @@ const EnhancedApprovalCard: React.FC<{
               "text-sm font-medium",
               isDark ? "text-slate-300" : "text-gray-700"
             )}>
-              {approval.requested_by}
+              {task.requested_by}
             </Text>
           </View>
           
@@ -209,7 +209,7 @@ const EnhancedApprovalCard: React.FC<{
               "text-sm",
               isDark ? "text-slate-400" : "text-gray-600"
             )}>
-              {new Date(approval.created_at).toLocaleDateString()}
+              {new Date(task.created_at).toLocaleDateString()}
             </Text>
           </View>
         </View>
@@ -373,7 +373,7 @@ const getFilterDescription = (filter: string): string => {
     complex: 'Items requiring deeper analysis and careful consideration',
     priority: 'High-impact tasks that need immediate attention'
   };
-  return descriptions[filter as keyof typeof descriptions] || 'All available tasks and approvals';
+  return descriptions[filter as keyof typeof descriptions] || 'All available tasks';
 };
 
 const getEmptyStateMessage = (filter: string): string => {
@@ -386,23 +386,23 @@ const getEmptyStateMessage = (filter: string): string => {
   return messages[filter as keyof typeof messages] || 'No tasks available in this category at the moment.';
 };
 
-// Tablet Approvals Content
-export const TabletApprovalsContent: React.FC<{
-  filteredTasks: Approval[];
-  handleApprove: (approval: Approval) => void;
-  handleReject: (approval: Approval) => void;
+// Tablet Tasks Content
+export const TabletTasksContent: React.FC<{
+  filteredTasks: Task[];
+  handleApprove: (task: Task) => void;
+  handleReject: (task: Task) => void;
 }> = ({ filteredTasks, handleApprove, handleReject }) => {
   return (
     <View className="flex-1 px-6">
       <View className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredTasks.map((approval) => (
+        {filteredTasks.map((task) => (
           <SimpleSwipeCard
-            key={approval.id}
-            onSwipeLeft={() => handleReject(approval)}
-            onSwipeRight={() => handleApprove(approval)}
+            key={task.id}
+            onSwipeLeft={() => handleReject(task)}
+            onSwipeRight={() => handleApprove(task)}
           >
-            <StreamlinedApprovalCard
-              approval={approval}
+            <StreamlinedTaskCard
+              task={task}
               onPress={() => {
                 // Handle press if needed
               }}

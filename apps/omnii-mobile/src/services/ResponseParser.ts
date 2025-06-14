@@ -59,7 +59,6 @@ export const parseToolResponse = (response: ToolResponse) => {
       parsedData = parseTaskResponse(data);
       break;
     default:
-      console.warn(`Unknown response type: ${type}`);
       return null;
   }
 

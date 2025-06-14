@@ -9,6 +9,7 @@ import { MascotSize, CheeringTrigger, getMascotStageByLevel } from '~/types/masc
 import { cn } from '~/utils/cn';
 import { useResponsiveDesign } from '~/utils/responsive';
 import type { ChatTab } from '~/types/chat';
+import { AuthGuard } from '~/components/common/AuthGuard';
 
 // Hooks
 import { useTasks, useTaskMutations } from '~/hooks/useTasks';
@@ -180,17 +181,19 @@ export default function ChatScreen() {
         pendingAction: chatState.pendingAction
     } : undefined;
 
-    // Use unified layout
+    // Use unified layout with authentication guard
     return (
-        <ChatLayout
-            header={<ChatHeader />}
-            selectedTab={chatState.selectedTab}
-            onTabPress={handleTabPress}
-            scaleAnimations={scaleAnimations}
-            showInput={chatState.selectedTab === 'conversation'}
-            inputProps={inputProps}
-        >
-            {renderTabContent()}
-        </ChatLayout>
+        <AuthGuard>
+            <ChatLayout
+                header={<ChatHeader />}
+                selectedTab={chatState.selectedTab}
+                onTabPress={handleTabPress}
+                scaleAnimations={scaleAnimations}
+                showInput={chatState.selectedTab === 'conversation'}
+                inputProps={inputProps}
+            >
+                {renderTabContent()}
+            </ChatLayout>
+        </AuthGuard>
     );
 }

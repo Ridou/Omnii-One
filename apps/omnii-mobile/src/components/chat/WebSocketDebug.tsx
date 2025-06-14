@@ -8,15 +8,11 @@ export function WebSocketDebug() {
   const [connectionTest, setConnectionTest] = useState<string>('');
 
   useEffect(() => {
-    console.log('🔧 [WebSocketDebug] Getting WebSocket URL...');
     const url = getWebSocketUrl();
-    console.log('🔧 [WebSocketDebug] URL result:', url);
     setWsUrl(url);
   }, []);
 
   const testConnection = () => {
-    console.log('🧪 [WebSocketDebug] Testing direct WebSocket connection...');
-    console.log('🧪 [WebSocketDebug] URL:', wsUrl);
     
     if (!wsUrl) {
       setConnectionTest('❌ No WebSocket URL');
@@ -27,23 +23,19 @@ export function WebSocketDebug() {
       const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
-        console.log('✅ [WebSocketDebug] Direct connection successful!');
         setConnectionTest('✅ Connection successful!');
         ws.close();
       };
       
       ws.onerror = (error) => {
-        console.log('❌ [WebSocketDebug] Direct connection failed:', error);
         setConnectionTest('❌ Connection failed');
       };
       
       ws.onclose = (event) => {
-        console.log('🔌 [WebSocketDebug] Direct connection closed:', event.code, event.reason);
       };
       
       setConnectionTest('⏳ Testing connection...');
     } catch (error) {
-      console.log('❌ [WebSocketDebug] Connection error:', error);
       setConnectionTest('❌ Connection error');
     }
   };

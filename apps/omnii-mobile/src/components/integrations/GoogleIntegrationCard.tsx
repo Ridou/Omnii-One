@@ -41,7 +41,6 @@ export const GoogleIntegrationCard: React.FC<GoogleIntegrationCardProps> = ({
       setStatus(result);
       onStatusChange?.(result.isValid);
     } catch (error) {
-      console.error('Failed to check Google status:', error);
       setStatus({ isValid: false, needsReconnection: true, services: [] });
       onStatusChange?.(false);
     } finally {
@@ -59,7 +58,6 @@ export const GoogleIntegrationCard: React.FC<GoogleIntegrationCardProps> = ({
       
       Alert.alert('Success', 'Google Workspace connected successfully!');
     } catch (error) {
-      console.error('Failed to connect Google:', error);
       Alert.alert('Connection Failed', 'Please try again. Make sure to grant all permissions.');
     } finally {
       setIsConnecting(false);

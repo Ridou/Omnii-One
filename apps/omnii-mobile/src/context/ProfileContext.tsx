@@ -352,7 +352,6 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
           dispatch({ type: 'LOAD_STATE', payload: parsedState });
         }
       } catch (error) {
-        console.error('Failed to load profile state:', error);
       }
     };
     
@@ -365,7 +364,6 @@ export function ProfileProvider({ children }: ProfileProviderProps) {
       try {
         await AsyncStorage.setItem('@omnii_profile_state', JSON.stringify(state));
       } catch (error) {
-        console.error('Failed to save profile state:', error);
       }
     };
     

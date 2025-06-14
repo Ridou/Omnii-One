@@ -19,7 +19,7 @@ export type LevelUpCallback = (fromLevel: number, toLevel: number, totalXP: numb
 
 // Helper function to get all available features (no level restrictions)
 function getUnlockedFeaturesForLevel(level: number): string[] {
-  return ['approvals', 'achievements', 'chat', 'analytics', 'profile']; // All features always available
+  return ['tasks', 'achievements', 'chat', 'analytics', 'profile']; // All features always available
 }
 
 // Helper function to create contextual nudges for newly unlocked features
@@ -149,7 +149,7 @@ export function XPProvider({ children }: XPProviderProps) {
   const [celebrationQueue, setCelebrationQueue] = useState<LevelProgression[]>([]);
   
   // Feature unlocking state - all features always available
-  const [unlockedFeatures, setUnlockedFeatures] = useState<string[]>(['approvals', 'achievements', 'chat', 'analytics', 'profile']);
+  const [unlockedFeatures, setUnlockedFeatures] = useState<string[]>(['tasks', 'achievements', 'chat', 'analytics', 'profile']);
   
   // Feature exploration and nudge state
   const [featureExploration, setFeatureExploration] = useState<{ [feature: string]: FeatureExploration }>({});
@@ -187,12 +187,6 @@ export function XPProvider({ children }: XPProviderProps) {
       return;
     }
 
-    console.log('🎉 [XPContext] Level up detected - creating celebrations:', {
-      fromLevel: oldLevel,
-      toLevel: newLevel,
-      totalXP: newTotalXP
-    });
-
     // CREATE ACTUAL CELEBRATIONS: Add level progressions to the queue for each level gained
     const newCelebrations: LevelProgression[] = [];
     
@@ -212,23 +206,11 @@ export function XPProvider({ children }: XPProviderProps) {
       };
 
       newCelebrations.push(celebration);
-
-      console.log('🎊 [XPContext] Created celebration for level:', {
-        level,
-        fromLevel: level - 1,
-        toLevel: level,
-        celebrationId: celebration.id
-      });
     }
 
     // ADD CELEBRATIONS TO QUEUE: This is what was missing!
     if (newCelebrations.length > 0) {
       setCelebrationQueue(prev => [...prev, ...newCelebrations]);
-      console.log('🎉 [XPContext] Added celebrations to queue:', {
-        count: newCelebrations.length,
-        levels: newCelebrations.map(c => c.to_level),
-        queueLength: newCelebrations.length
-      });
     }
 
     // Trigger callback if set
@@ -256,7 +238,7 @@ export function XPProvider({ children }: XPProviderProps) {
 
   const getTabsForLevel = useCallback((level: number) => {
     return getUnlockedFeaturesForLevel(level).filter(feature => 
-      ['approvals', 'achievements', 'chat', 'analytics', 'profile'].includes(feature)
+      ['tasks', 'achievements', 'chat', 'analytics', 'profile'].includes(feature)
     );
   }, []);
 
@@ -270,9 +252,7 @@ export function XPProvider({ children }: XPProviderProps) {
   }, []);
 
   const clearCelebrationStorage = useCallback(async () => {
-    console.log('🧹 [XPContext] Clearing celebration cache...');
     setCelebrationQueue([]);
-    console.log('✅ [XPContext] Celebration cache cleared');
   }, []);
 
   // Feature exploration functions
@@ -401,13 +381,11 @@ export function XPProvider({ children }: XPProviderProps) {
     const CACHE_DURATION = 30000; // 30 seconds cache
     
     if (!forceRefresh && timeSinceLastFetch < CACHE_DURATION && hasInitialLoad.current) {
-      console.log('⚡ [XPContext] Using cached XP data (fresh data available)');
       return;
     }
 
     // Debounce: If already fetching, don't start another fetch
     if (isFetching.current) {
-      console.log('⏳ [XPContext] XP fetch already in progress, skipping duplicate');
       return;
     }
 
@@ -422,9 +400,7 @@ export function XPProvider({ children }: XPProviderProps) {
     // Smart loading: Only show loading spinner on initial app load
     if (!hasInitialLoad.current) {
       setIsLoading(true);
-      console.log('🔄 [XPContext] Initial XP load - showing loading spinner');
     } else {
-      console.log('🔄 [XPContext] Updating XP data silently (no loading spinner)');
     }
 
     try {
@@ -436,7 +412,6 @@ export function XPProvider({ children }: XPProviderProps) {
       if (fetchError) {
         // Check if it's a function not found error - fall back silently
         if (fetchError.message?.includes('function') || fetchError.code === '42883') {
-          console.log('🔄 [XPContext] Using local XP system (Supabase functions not available)');
           
           // Use local fallback - maintain user's current progress silently
           const fallbackLevel = Math.max(1, currentLevel);
@@ -470,11 +445,7 @@ export function XPProvider({ children }: XPProviderProps) {
 
         // Initial sync: Prevent false celebrations on app startup
         if (!hasInitialLoad.current) {
-          console.log('🚀 [XPContext] Initial server sync - setting baseline level without celebrations:', {
-            serverLevel: newLevel,
-            currentLocalLevel: currentLevel,
-            preventing: `false celebrations for levels 1-${newLevel}`
-          });
+          // Preventing false celebrations during initial load
           
           // Set the server level as baseline without triggering celebrations
           setCurrentXP(newXP);
@@ -486,12 +457,10 @@ export function XPProvider({ children }: XPProviderProps) {
           lastFetchTime.current = now;
           hasInitialLoad.current = true;
           
-          console.log('✅ [XPContext] Initial sync complete - future level-ups will trigger celebrations');
           return; // Exit early, no level-up processing
         }
 
         if ((levelDifference > 2 || xpDifference > 200) && celebrationQueue.length > 0) {
-          console.log('🧹 [XPContext] Clearing stale celebrations due to significant state change');
           setCelebrationQueue([]);
         }
         
@@ -499,11 +468,7 @@ export function XPProvider({ children }: XPProviderProps) {
         if (newLevel > currentLevel && levelDifference <= 3) {
           triggerLevelUpIfNeeded(currentLevel, newLevel, newXP);
         } else if (levelDifference > 3) {
-          console.log('🚫 [XPContext] Skipping level celebration for large level jump (likely stale data):', {
-            from: currentLevel,
-            to: newLevel,
-            difference: levelDifference
-          });
+          // Large level jump detected - preventing false celebrations
         }
         
         setCurrentXP(newXP);
@@ -517,14 +482,7 @@ export function XPProvider({ children }: XPProviderProps) {
 
         // Immediately update unlocked features for instant unlock
         setUnlockedFeatures(getUnlockedFeaturesForLevel(newLevel));
-        
-        console.log('✅ [XPContext] XP data synced from server:', {
-          totalXP: newXP,
-          currentLevel: newLevel,
-          cached: true
-        });
       } else {
-        console.log('🔄 [XPContext] No server data, maintaining local state');
         setError(null);
         lastFetchTime.current = now;
         hasInitialLoad.current = true;
@@ -532,13 +490,12 @@ export function XPProvider({ children }: XPProviderProps) {
     } catch (err: any) {
       // Handle network errors silently for better UX - but preserve current state
       if (err.message?.includes('Network request failed') || err.message?.includes('fetch')) {
-        console.log('🌐 [XPContext] Network unavailable, preserving current XP state');
         
         // Only set defaults if we have no existing state (first time user)
         if (currentXP === 0 && currentLevel === 1 && !hasInitialLoad.current) {
           setCurrentXP(0);
           setCurrentLevel(1);
-          setUnlockedFeatures(['approvals']);
+          setUnlockedFeatures(['tasks']);
         }
         // Otherwise, keep existing state to prevent false level jumps
         
@@ -546,7 +503,6 @@ export function XPProvider({ children }: XPProviderProps) {
         lastFetchTime.current = now;
         hasInitialLoad.current = true;
       } else {
-        console.warn('⚠️ [XPContext] XP sync issue (preserving local state):', err.message);
         
         // For non-network errors, also preserve state
         setError(null);
@@ -575,7 +531,6 @@ export function XPProvider({ children }: XPProviderProps) {
     const lastAwardTime = recentXPAwards.current.get(awardKey);
     
     if (lastAwardTime && (now - lastAwardTime) < 2000) { // 2 second debounce
-      console.log('⚡ [XPContext] Debouncing duplicate XP award:', awardKey);
       return null;
     }
     
@@ -598,13 +553,6 @@ export function XPProvider({ children }: XPProviderProps) {
     try {
       // Optimistic update - immediately show XP increase
       setPendingXP(prev => prev + amount);
-      
-      console.log('💰 [XPContext] Awarding XP (optimistic):', {
-        amount,
-        reason,
-        category,
-        pendingTotal: pendingXP + amount
-      });
 
       // Try to call server function to award XP
       const { data, error: awardError } = await supabase.rpc('award_user_xp', {
@@ -617,7 +565,6 @@ export function XPProvider({ children }: XPProviderProps) {
       if (awardError) {
         // Check if it's a function not found error - fall back silently  
         if (awardError.message?.includes('function') || awardError.code === '42883') {
-          console.log('🔄 [XPContext] Using local XP calculation (server functions not available)');
           
           // Local XP calculation fallback
           const newTotalXP = currentXP + amount;
@@ -697,7 +644,6 @@ export function XPProvider({ children }: XPProviderProps) {
       }
       
       // If no valid data returned, use local fallback
-      console.warn('⚠️ [XPContext] No valid server response, using local calculation');
       const newTotalXP = currentXP + amount;
       const newLevel = XPSystemUtils.calculateLevelFromXP(newTotalXP);
       const levelUp = newLevel > currentLevel;
@@ -722,7 +668,6 @@ export function XPProvider({ children }: XPProviderProps) {
     } catch (err: any) {
       // Handle network errors with silent local fallback
       if (err.message?.includes('Network request failed') || err.message?.includes('fetch')) {
-        console.log('🌐 [XPContext] Network unavailable during XP award, using local calculation');
         
         // Local XP calculation fallback
         const newTotalXP = currentXP + amount;
@@ -737,13 +682,6 @@ export function XPProvider({ children }: XPProviderProps) {
         // Immediately update unlocked features for instant unlock
         setUnlockedFeatures(getUnlockedFeaturesForLevel(newLevel));
         
-        console.log('💰 [XPContext] Offline XP awarded:', {
-          amount,
-          newTotal: newTotalXP,
-          newLevel: newLevel,
-          levelUp: levelUp
-        });
-        
         triggerLevelUpIfNeeded(currentLevel, newLevel, newTotalXP);
         
         return {
@@ -754,7 +692,6 @@ export function XPProvider({ children }: XPProviderProps) {
         };
       }
       
-      console.warn('⚠️ [XPContext] XP award issue (reverting):', err.message);
       
       // Rollback optimistic update on unexpected errors
       setPendingXP(prev => Math.max(0, prev - amount));
@@ -767,7 +704,6 @@ export function XPProvider({ children }: XPProviderProps) {
    * Manual sync function - forces a fresh fetch
    */
   const syncXP = useCallback(async () => {
-    console.log('🔄 [XPContext] Manual XP sync requested');
     await fetchXPData(true); // Force refresh
   }, [fetchXPData]);
 
@@ -775,7 +711,6 @@ export function XPProvider({ children }: XPProviderProps) {
    * Refetch function - uses cache by default
    */
   const refetchXP = useCallback(async () => {
-    console.log('🔄 [XPContext] XP refetch requested');
     await fetchXPData(false); // Use cache
   }, [fetchXPData]);
 
@@ -807,7 +742,6 @@ export function XPProvider({ children }: XPProviderProps) {
       return;
     }
 
-    console.log('🔄 [XPContext] Attempting real-time XP subscription...');
     isSubscribedRef.current = true;
 
     const channelName = `xp_updates_${user.id}_${Date.now()}`;
@@ -823,7 +757,6 @@ export function XPProvider({ children }: XPProviderProps) {
           filter: `user_id=eq.${user.id}`
         },
         (payload: any) => {
-          console.log('🔔 [XPContext] Real-time XP update received');
           
           if (syncTimeoutRef.current) {
             clearTimeout(syncTimeoutRef.current);
@@ -843,16 +776,13 @@ export function XPProvider({ children }: XPProviderProps) {
           filter: `user_id=eq.${user.id}`
         },
         (payload: any) => {
-          console.log('🎉 [XPContext] Real-time level progression update');
           fetchXPData();
         }
       )
       .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
-          console.log('📡 [XPContext] Real-time XP sync active');
           setIsConnected(true);
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          console.log('📡 [XPContext] Real-time sync unavailable (using local XP system)');
           isSubscribedRef.current = false;
           setIsConnected(false);
         }
@@ -897,15 +827,13 @@ export function XPProvider({ children }: XPProviderProps) {
   useEffect(() => {
     if (user?.id) {
       // Only use cached version after initial load to prevent loading spam
-      console.log('🚀 [XPContext] Initializing XP system for user:', user.id);
       fetchXPData(false); // Use cache by default
       setupRealtimeSubscription();
     } else {
       // Reset state when user logs out
-      console.log('🔄 [XPContext] User logged out, resetting XP state');
       setCurrentXP(0);
       setCurrentLevel(1);
-      setUnlockedFeatures(['approvals']);
+      setUnlockedFeatures(['tasks']);
       setCelebrationQueue([]);
       setFeatureExploration({});
       setActiveNudges([]);

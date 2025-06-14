@@ -13,7 +13,6 @@ export const useEmail = (maxResults: number = 20, query: string = "newer_than:7d
   useEffect(() => {
     const checkAuth = async () => {
       const session = await debugAuthStatus();
-      console.log('[useEmail] Auth check complete:', !!session);
     };
     checkAuth();
   }, []);
@@ -70,14 +69,7 @@ export const useEmail = (maxResults: number = 20, query: string = "newer_than:7d
     return emails.filter(email => email.attachments && email.attachments.length > 0);
   };
 
-  console.log('[useEmail] Hook state:', {
-    emailsCount: emails.length,
-    totalEmails,
-    unreadCount,
-    isLoading,
-    hasError,
-    errorMessage: hasError ? errorMessage : null
-  });
+  // Email hook state logged for debugging
 
   return {
     // ✅ Email data

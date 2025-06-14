@@ -13,7 +13,6 @@ export const useContacts = (pageSize: number = 1000) => {
   useEffect(() => {
     const checkAuth = async () => {
       const session = await debugAuthStatus();
-      console.log('[useContacts] Auth check complete:', !!session);
     };
     checkAuth();
   }, []);
@@ -29,8 +28,6 @@ export const useContacts = (pageSize: number = 1000) => {
     pageSize,
   }));
 
-  console.log('[useContacts] Raw tRPC response:', data);
-  console.log('[useContacts] tRPC error:', error);
 
   // ✅ Handle the actual router return type (success/error wrapper)
   const contactsData = data?.success ? data.data : null;
@@ -39,9 +36,6 @@ export const useContacts = (pageSize: number = 1000) => {
     (data && !data.success ? data.error : null);
 
   // Log parsed results
-  console.log('[useContacts] Parsed contactsData:', contactsData);
-  console.log('[useContacts] Has error:', hasError);
-  console.log('[useContacts] Error message:', errorMessage);
 
   return {
     // Data - all properly typed by tRPC
@@ -110,7 +104,6 @@ export const useContactsSearch = (query: string = "", pageSize: number = 10) => 
     }),
   );
 
-  console.log('[useContactsSearch] Raw tRPC response for query:', query, data);
 
   // Handle the tRPC response wrapper
   const searchResults = data?.success ? data.data : null;

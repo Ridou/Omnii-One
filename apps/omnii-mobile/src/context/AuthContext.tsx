@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (mounted) {
           if (error) {
-            console.error('Error getting initial session:', error);
+            // Handle error silently
           } else {
             setSession(session);
             setUser(session?.user ? mapSupabaseUser(session.user) : null);
@@ -57,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoggingOut(false); // Clear any logout state on init
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
         if (mounted) {
           setIsInitialized(true);
           setIsLoggingOut(false);
@@ -69,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Handle deep links for OAuth callback (following Supabase docs)
     const handleDeepLink = (url: string) => {
-      console.log('🔗 Deep link received:', url);
       // The session creation is handled in googleAuth.ts createSessionFromUrl
       // This is just for logging and potential future use
     };
@@ -100,12 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: Session | null) => {
         if (mounted) {
-          console.log('Auth state changed:', event, session?.user?.email);
-          
           // 🆕 Handle token cleanup on sign out (non-blocking)
           if (event === 'SIGNED_OUT' && user?.id) {
             clearOAuthTokens(user.id).catch(error => {
-              console.error('⚠️ Token cleanup failed (non-critical):', error);
+              // Handle token cleanup errors silently
             });
           }
           
@@ -179,18 +175,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleSignOut = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      console.log('🚪 Starting logout process...');
-      
       // Clear any pending auth state before signout
       setUser(null);
       setSession(null);
       
       await authSignOut();
-      console.log('✅ Logout successful - handling platform-specific redirect');
       
       // Platform-specific handling for web vs mobile
       if (Platform.OS === 'web') {
-        console.log('🌐 Web platform detected - forcing navigation and reload');
         // On web, we need to be more aggressive with the redirect
         router.replace('/');
         
@@ -201,7 +193,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }, 500);
         }
       } else {
-        console.log('📱 Mobile platform detected - using standard navigation');
         // On mobile, use the standard router redirect
         setTimeout(() => {
           router.replace('/');
@@ -209,15 +200,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
     } catch (error) {
-      console.error('❌ Logout failed:', error);
-      
       // Force logout even if there's an error
       setUser(null);
       setSession(null);
       setIsLoading(false);
       
       // Emergency logout - go to landing page regardless
-      console.log('🚨 Emergency logout - forcing redirect to landing page');
       router.replace('/');
       
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -237,7 +225,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authRefreshSession();
     } catch (error) {
-      console.error('Session refresh failed:', error);
       throw error;
     }
   };

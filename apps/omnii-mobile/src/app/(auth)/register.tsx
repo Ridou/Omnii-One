@@ -167,7 +167,7 @@ export default function RegisterScreen() {
     setError('');
     try {
       await signUpWithEmail(email, password, name);
-      router.replace('/(tabs)/approvals');
+      router.replace('/(tabs)/tasks');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to register';
       setError(errorMessage);
@@ -178,9 +178,8 @@ export default function RegisterScreen() {
     try {
       if (provider === 'Google') {
         await signInWithGoogle();
-        router.replace('/(tabs)/approvals');
+        router.replace('/(tabs)/tasks');
       } else {
-        console.log(`Register with ${provider} not implemented yet`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : `Failed to register with ${provider}`;

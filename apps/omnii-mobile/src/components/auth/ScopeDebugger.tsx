@@ -7,17 +7,14 @@ import { logSupabaseScopeString } from '~/lib/auth/scopes';
 
 export default function ScopeDebugger() {
   const handleTestScopes = async () => {
-    console.log('🚀 Starting scope testing...');
     await testGrantedScopes();
   };
 
   const handleDebugScopes = () => {
-    console.log('🚀 Starting scope debugging...');
     debugScopes();
   };
 
   const handleSupabaseConfig = () => {
-    console.log('🚀 Generating Supabase configuration...');
     logSupabaseScopeString();
   };
 

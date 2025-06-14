@@ -75,11 +75,8 @@ export const authClient = createAuthClient({
 export const debugAuthStatus = async () => {
   try {
     const session = await authClient.getSession();
-    console.log('[Auth Debug] Session status:', !!session);
-    console.log('[Auth Debug] User ID:', session?.user?.id);
     return session;
   } catch (error) {
-    console.error('[Auth Debug] Failed to get session:', error);
     return null;
   }
 };

@@ -21,7 +21,6 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 
     return mapSupabaseUser(data.user);
   } catch (error) {
-    console.error('Email sign-in error:', error);
     throw error;
   }
 };
@@ -53,7 +52,6 @@ export const signUpWithEmail = async (
 
     return mapSupabaseUser(data.user);
   } catch (error) {
-    console.error('Email sign-up error:', error);
     throw error;
   }
 };
@@ -66,22 +64,17 @@ export const refreshSession = async (): Promise<void> => {
       throw new Error(error.message);
     }
   } catch (error) {
-    console.error('Session refresh error:', error);
     throw error;
   }
 };
 
 export const signOut = async (): Promise<void> => {
   try {
-    console.log('🚪 Starting sign out process...');
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('❌ Sign out error:', error);
       throw new Error(error.message);
     }
-    console.log('✅ Sign out successful');
   } catch (error) {
-    console.error('💥 Sign out error:', error);
     throw error;
   }
 };

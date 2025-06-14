@@ -3,7 +3,15 @@ import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform
 import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
 import { UpArrowIcon } from '~/icons/ChatIcons';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolateColor } from 'react-native-reanimated';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring, 
+  withTiming, 
+  withRepeat,
+  interpolateColor,
+  Easing
+} from 'react-native-reanimated';
 
 interface ChatInputProps {
   messageInput: string;
@@ -25,7 +33,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   pendingAction
 }) => {
   const { isDark } = useTheme();
-  const sendButtonState = getSendButtonState();
   const inputRef = useRef<TextInput>(null);
   const [inputHeight, setInputHeight] = useState(48);
   const [isFocused, setIsFocused] = useState(false);
@@ -67,8 +74,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   // Handle send button press with animation
   const handleSendPress = () => {
     if (messageInput.trim()) { // Allow sending multiple requests even when AI is processing
-      sendButtonScale.value = withSpring(0.95, { duration: 100 }, () => {
-        sendButtonScale.value = withSpring(1);
+      sendButtonScale.value = withTiming(0.95, { duration: 100 }, () => {
+        sendButtonScale.value = withTiming(1, { duration: 100 });
       });
       setIsFocused(false); // Hide helpers after sending
       inputRef.current?.blur(); // Remove focus from input
@@ -185,27 +192,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <InputHelpers onPromptSelect={setMessageInput} />
       )}
     </KeyboardAvoidingView>
-  );
-};
-
-// Shape of AI - Loading Indicator
-const LoadingSpinner: React.FC = () => {
-  const rotation = useSharedValue(0);
-  
-  React.useEffect(() => {
-    rotation.value = withSpring(360, { duration: 1000 }, () => {
-      rotation.value = 0;
-    });
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
-  }));
-
-  return (
-    <Animated.View style={animatedStyle}>
-      <View className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-    </Animated.View>
   );
 };
 

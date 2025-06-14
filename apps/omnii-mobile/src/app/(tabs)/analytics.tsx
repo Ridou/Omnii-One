@@ -32,6 +32,7 @@ import { useXPContext } from '~/context/XPContext';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { DesktopAnalyticsContent, TabletAnalyticsContent } from '~/components/common/DesktopAnalyticsComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
+import { AuthGuard } from '~/components/common/AuthGuard';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -41,25 +42,25 @@ const analyticsTabs: AnalyticsTabConfig[] = [
     key: 'dashboard',
     label: 'Today',
     icon: '📊',
-    gradient: ['#4ECDC4', '#44A08D'] // Light teal (like Easy in approvals)
+    gradient: ['#4ECDC4', '#44A08D'] // Light teal (like Easy in tasks)
   },
   {
     key: 'insights',
     label: 'Insights',
     icon: '🧠',
-    gradient: ['#667eea', '#764ba2'] // Purple (like Smart in approvals)
+    gradient: ['#667eea', '#764ba2'] // Purple (like Smart in tasks)
   },
   {
     key: 'trends',
     label: 'Trends',
     icon: '📈',
-    gradient: ['#FF7043', '#FF5722'] // Orange (like Complex in approvals)
+    gradient: ['#FF7043', '#FF5722'] // Orange (like Complex in tasks)
   },
   {
     key: 'reports',
     label: 'Reports',
     icon: '📋',
-    gradient: ['#FF3B30', '#DC143C'] // Red (like Priority in approvals)
+    gradient: ['#FF3B30', '#DC143C'] // Red (like Priority in tasks)
   }
 ];
 
@@ -400,11 +401,9 @@ export default function AnalyticsScreen() {
           key={insight.id}
           insight={insight}
           onAction={(action) => {
-            console.log('Action:', action);
             // Handle AI suggestion actions
           }}
           onDismiss={() => {
-            console.log('Dismissed insight:', insight.id);
             // Handle dismissing insights
           }}
         />
@@ -684,32 +683,7 @@ export default function AnalyticsScreen() {
     }
   };
 
-  // Authentication check using established pattern
-  if (!user) {
-    return (
-      <SafeAreaView className={cn(
-        "flex-1",
-        isDark ? "bg-slate-900" : "bg-white"
-      )}>
-        <View className="flex-1 justify-center items-center p-6">
-          <Text className={cn(
-            "text-3xl font-bold mt-4",
-            isDark ? "text-white" : "text-gray-900"
-          )}>Analytics</Text>
-          <Text className={cn(
-            "text-base text-center mt-2",
-            isDark ? "text-slate-400" : "text-gray-600"
-          )}>Please log in to view your analytics</Text>
-          
-          <Link href="/(auth)/login" asChild>
-            <TouchableOpacity className="bg-indigo-600 py-3 px-6 rounded-xl mt-4">
-              <Text className="text-white text-base font-semibold">Login</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Authentication protection is now handled by AuthGuard wrapper
 
   // Use responsive layout for browsers (including mobile) and larger screens
   if (responsive.shouldUseResponsiveLayout) {
@@ -770,23 +744,26 @@ export default function AnalyticsScreen() {
     );
 
     return (
-      <ResponsiveTabLayout
-        tabs={analyticsTabs}
-        selectedTab={selectedTab}
-        onTabPress={handleTabPress}
-        scaleAnimations={scaleAnimations}
-        header={<AnalyticsHeader />}
-        renderTabContent={renderResponsiveContent}
-      />
+      <AuthGuard>
+        <ResponsiveTabLayout
+          tabs={analyticsTabs}
+          selectedTab={selectedTab}
+          onTabPress={handleTabPress}
+          scaleAnimations={scaleAnimations}
+          header={<AnalyticsHeader />}
+          renderTabContent={renderResponsiveContent}
+        />
+      </AuthGuard>
     );
   }
 
-  // MOBILE: Keep original layout exactly as it was
+  // MOBILE: Keep original layout exactly as it was with authentication guard
   return (
-    <SafeAreaView className={cn(
-      "flex-1",
-      isDark ? "bg-slate-900" : "bg-white"
-    )}>
+    <AuthGuard>
+      <SafeAreaView className={cn(
+        "flex-1",
+        isDark ? "bg-slate-900" : "bg-white"
+      )}>
       {/* Header */}
       <View className={cn(
         "px-5 py-4 border-b",
@@ -830,5 +807,6 @@ export default function AnalyticsScreen() {
         {renderTabContent()}
       </View>
     </SafeAreaView>
+    </AuthGuard>
   );
 }

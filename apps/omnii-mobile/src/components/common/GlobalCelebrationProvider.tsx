@@ -24,12 +24,6 @@ export function GlobalCelebrationProvider({ children }: { children: React.ReactN
     const nextCelebration = getNextCelebration();
     
     if (nextCelebration && !showCelebrationModal) {
-      console.log('🎉 [GlobalCelebrationProvider] New level up celebration detected:', {
-        fromLevel: nextCelebration.from_level,
-        toLevel: nextCelebration.to_level,
-        celebrationId: nextCelebration.id
-      });
-      
       setCurrentCelebration(nextCelebration);
       setShowCelebrationModal(true);
     }
@@ -37,7 +31,6 @@ export function GlobalCelebrationProvider({ children }: { children: React.ReactN
 
   // Handle celebration completion
   const handleCelebrationComplete = useCallback(() => {
-    console.log('✅ [GlobalCelebrationProvider] Celebration completed:', currentCelebration?.id);
     
     if (currentCelebration) {
       // Remove the celebration from the queue
@@ -51,7 +44,6 @@ export function GlobalCelebrationProvider({ children }: { children: React.ReactN
 
   // Handle Discord CTA for level 5 milestone
   const handleDiscordCTA = useCallback(async () => {
-    console.log('🚀 [GlobalCelebrationProvider] Discord CTA clicked');
     // TODO: Implement Discord invite logic
     // For now, just complete the celebration
     handleCelebrationComplete();
@@ -59,7 +51,6 @@ export function GlobalCelebrationProvider({ children }: { children: React.ReactN
 
   // Handle navigation to newly unlocked features
   const handleNavigationCTA = useCallback((level: number) => {
-    console.log('🎯 [GlobalCelebrationProvider] Navigation CTA clicked for level:', level);
     
     // Navigate to the appropriate feature based on level
     switch (level) {

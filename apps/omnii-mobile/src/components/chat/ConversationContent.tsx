@@ -398,10 +398,12 @@ const AIThinkingIndicator: React.FC = () => {
         "mt-3 h-1 rounded-full",
         isDark ? "bg-slate-700" : "bg-gray-200"
       )}>
-        <View className={cn(
-          "h-full rounded-full bg-indigo-500 transition-all duration-1500",
-          `w-${Math.round(((currentStage + 1) / processingStages.length) * 100)}`
-        )} />
+        <View 
+          className="h-full rounded-full bg-indigo-500 transition-all duration-1500"
+          style={{
+            width: `${Math.round(((currentStage + 1) / processingStages.length) * 100)}%`
+          }}
+        />
       </View>
     </View>
   );

@@ -19,7 +19,6 @@ export function useFetchAchievements() {
 
   const fetchAchievements = useCallback(async () => {
     if (!user?.id) {
-      console.log('⚠️ [useFetchAchievements] No user available, skipping fetch');
       setLoading(false);
       setError(null);
       return;
@@ -29,7 +28,6 @@ export function useFetchAchievements() {
       setLoading(true);
       setError(null);
       
-      console.log('🏆 [useFetchAchievements] Fetching real achievement data for user:', user.id);
       
       // Fetch achievements and stats separately with individual error handling
       let achievements: any[] = [];
@@ -46,21 +44,14 @@ export function useFetchAchievements() {
       // Try to fetch achievements first
       try {
         achievements = await achievementService.getUserAchievements(user.id);
-        console.log('✅ [useFetchAchievements] Retrieved achievements:', achievements.length);
       } catch (achievementError) {
-        console.error('❌ [useFetchAchievements] Achievement fetch error (non-critical):', achievementError);
         // Continue with empty achievements array
       }
       
       // Try to fetch stats separately
       try {
         stats = await achievementService.getStats(user.id);
-        console.log('✅ [useFetchAchievements] Retrieved stats:', {
-          completedCount: stats.completed_achievements,
-          totalXP: stats.total_xp_from_achievements
-        });
       } catch (statsError) {
-        console.error('❌ [useFetchAchievements] Stats fetch error (non-critical):', statsError);
         // Use default stats calculated from achievements
         if (achievements.length > 0) {
           const completed = achievements.filter(a => a.completed);
@@ -73,7 +64,6 @@ export function useFetchAchievements() {
             longest_streak: 0,
             recent_unlocks: [] as any[]
           };
-          console.log('📊 [useFetchAchievements] Using calculated stats from achievements');
         }
       }
       
@@ -148,7 +138,6 @@ export function useFetchAchievements() {
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch achievements';
-      console.error('❌ [useFetchAchievements] Error:', errorMessage);
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -157,24 +146,20 @@ export function useFetchAchievements() {
 
   const recordProgress = useCallback(async (achievementId: string, increment = 1) => {
     if (!user?.id) {
-      console.warn('🚫 [useFetchAchievements] Cannot record progress - no user ID');
       return null;
     }
     
     try {
-      console.log('📈 [useFetchAchievements] Recording progress for achievement:', achievementId);
       
       const result = await achievementService.recordProgress(user.id, achievementId, increment);
       
       if (result.achievement_unlocked) {
-        console.log('🎉 [useFetchAchievements] Achievement unlocked! Refreshing data...');
         await fetchAchievements(); // Refresh all achievement data
       }
       
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to record progress';
-      console.error('❌ [useFetchAchievements] Progress recording error:', errorMessage);
       return null;
     }
   }, [user?.id, fetchAchievements]);

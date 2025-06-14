@@ -23,7 +23,6 @@ export class MessageQueue {
       const data = await AsyncStorage.getItem(this.QUEUE_KEY);
       return data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error('[MessageQueue] Failed to load queue:', error);
       return [];
     }
   }

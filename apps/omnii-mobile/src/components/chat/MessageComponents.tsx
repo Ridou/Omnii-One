@@ -371,8 +371,6 @@ const GoogleServicesConnectionPrompt: React.FC<{
 
 // ✅ PHASE 2: Task-Specific Component Factory with Type Detection
 export const createTaskComponent = (taskData: any, props: any) => {
-  console.log('[TaskComponentFactory] Detecting task data type:', typeof taskData, taskData);
-  console.log('[TaskComponentFactory] Data keys:', Object.keys(taskData || {}));
   
   // ✅ FIRST: Check if Google services are connected
   // This handles the case where Composio doesn't have access tokens
@@ -415,52 +413,33 @@ export const createTaskComponent = (taskData: any, props: any) => {
     );
     
     if (hasAuthFailure) {
-      console.warn('[TaskComponentFactory] Google services authentication issue detected:', {
-        syncSuccess: taskData.syncSuccess,
-        partialFailuresCount: taskData.partialFailures?.length || 0,
-        totalLists: taskData.totalLists,
-        totalTasks: taskData.totalTasks,
-        hasTaskLists: !!taskData.taskLists,
-        taskListsLength: taskData.taskLists?.length || 0,
-        // TEMP DEBUG: Log complete structure to understand the exact problem
-        fullTaskData: JSON.stringify(taskData, null, 2)
-      });
+      // Task data debug information logged for troubleshooting
       return <GoogleServicesConnectionPrompt onAction={props.onAction} />;
     }
   }
   
   // If no taskData at all, assume connection issue
   if (!taskData) {
-    console.warn('[TaskComponentFactory] No task data provided, showing Google connection prompt');
     return <GoogleServicesConnectionPrompt onAction={props.onAction} />;
   }
   
-  console.log('[TaskComponentFactory] Has taskLists?', 'taskLists' in (taskData || {}));
-  console.log('[TaskComponentFactory] taskLists is array?', Array.isArray(taskData?.taskLists));
-  console.log('[TaskComponentFactory] Has totalTasks?', 'totalTasks' in (taskData || {}));
-  console.log('[TaskComponentFactory] totalTasks type:', typeof taskData?.totalTasks);
   
   // Use type guards to determine component type
   const isCompleteOverview = isCompleteTaskOverview(taskData);
-  console.log('[TaskComponentFactory] isCompleteTaskOverview result:', isCompleteOverview);
   
   if (isCompleteOverview) {
-    console.log('[TaskComponentFactory] Rendering CompleteTaskOverviewComponent');
     return <CompleteTaskOverviewComponent overview={taskData} onAction={props.onAction} />;
   }
   
   if (isTaskListsData(taskData)) {
-    console.log('[TaskComponentFactory] Rendering TaskListsComponent');
     return <TaskListsComponent taskListsData={taskData} onAction={props.onAction} />;
   }
   
   if (isTaskListData(taskData)) {
-    console.log('[TaskComponentFactory] Rendering TaskListDataComponent');
     return <TaskListDataComponent taskListData={taskData} onAction={props.onAction} />;
   }
   
   if (isTaskListWithTasks(taskData)) {
-    console.log('[TaskComponentFactory] Rendering individual TaskListWithTasks as CompleteTaskOverview');
     // Convert single TaskListWithTasks to CompleteTaskOverview format
     const overviewData: CompleteTaskOverview = {
       taskLists: [taskData],
@@ -481,7 +460,6 @@ export const createTaskComponent = (taskData: any, props: any) => {
   }
   
   if (isTaskData(taskData)) {
-    console.log('[TaskComponentFactory] Rendering individual task data');
     // ✅ Convert individual task to clean display instead of showing JSON
     const cleanTaskListData: TaskListData = {
       listId: 'unknown',
@@ -494,13 +472,11 @@ export const createTaskComponent = (taskData: any, props: any) => {
   }
   
   // Fallback: show Google connection prompt for unknown data types
-  console.warn('[TaskComponentFactory] Unknown task data type, rendering Google connection prompt');
   return <GoogleServicesConnectionPrompt onAction={props.onAction} />;
 };
 
 // ✅ PHASE 3: Enhanced Component Factory with ServiceType enum and task detection
 export const createMessageComponent = (type: string, props: any) => {
-  console.log('[MessageComponentFactory] Creating component for type:', type, 'with data:', props.data);
   
   switch (type) {
     case ServiceType.EMAIL:
@@ -527,7 +503,6 @@ export const createMessageComponent = (type: string, props: any) => {
     case ServiceType.GENERAL:
     case 'general':
     default:
-      console.warn(`[MessageComponentFactory] Unknown component type: ${type}`);
       return null;
   }
 };
@@ -1053,17 +1028,14 @@ const CalendarEventCard: React.FC<{
 
 // ✅ NEW: Calendar Component Factory - Routes calendar data to appropriate component
 export const createCalendarComponent = (calendarData: any, props: any) => {
-  console.log('[CalendarComponentFactory] Creating calendar component with data:', calendarData);
   
   // Handle null/undefined data
   if (!calendarData) {
-    console.warn('[CalendarComponentFactory] No calendar data provided');
     return null;
   }
 
   // Check if it's a calendar list response (multiple events)
   if (calendarData.events && Array.isArray(calendarData.events)) {
-    console.log('[CalendarComponentFactory] Detected calendar list with', calendarData.events.length, 'events');
     return (
       <CalendarListComponent
         events={calendarData.events}
@@ -1077,7 +1049,6 @@ export const createCalendarComponent = (calendarData: any, props: any) => {
 
   // Check if it's a single calendar event
   if (calendarData.eventId || calendarData.start || calendarData.title) {
-    console.log('[CalendarComponentFactory] Detected single calendar event:', calendarData.title);
     return (
       <CalendarComponent
         id={calendarData.eventId || 'calendar-event'}
@@ -1090,7 +1061,6 @@ export const createCalendarComponent = (calendarData: any, props: any) => {
   }
 
   // If we can't determine the structure, show debug info
-  console.warn('[CalendarComponentFactory] Unknown calendar data structure:', Object.keys(calendarData));
   return (
     <View className="rounded-xl p-4 my-2 border border-orange-500 bg-orange-50">
       <Text className="text-sm font-semibold text-orange-800 mb-2">

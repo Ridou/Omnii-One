@@ -14,7 +14,6 @@ export const useTasks = () => {
   useEffect(() => {
     const checkAuth = async () => {
       const session = await debugAuthStatus();
-      console.log('[useTasks] Auth check complete:', !!session);
     };
     checkAuth();
   }, []);
@@ -29,19 +28,11 @@ export const useTasks = () => {
     isRefetching
   } = useQuery(trpc.tasks.getCompleteOverview.queryOptions());
 
-  console.log('[useTasks] Raw tRPC response:', data);
-  console.log('[useTasks] tRPC error:', error);
-
   // ✅ Handle the actual router return type (success/error wrapper)
   const tasksOverview = data?.success ? data.data : null;
   const hasError = !!error || (data && !data.success);
   const errorMessage = error?.message || 
     (data && !data.success ? data.error : null);
-
-  // Log parsed results
-  console.log('[useTasks] Parsed tasksOverview:', tasksOverview);
-  console.log('[useTasks] Has error:', hasError);
-  console.log('[useTasks] Error message:', errorMessage);
 
   return {
     // Data - all properly typed by tRPC
@@ -116,31 +107,28 @@ export const useTaskMutations = () => {
 
   const createTaskMutation = useMutation(trpc.tasks.createTask.mutationOptions({
     onSuccess: (result, variables) => {
-      console.log('[useTaskMutations] Task created successfully:', result);
       void queryClient.invalidateQueries({ queryKey: [['tasks', 'getCompleteOverview']] });
     },
     onError: (error) => {
-      console.error('[useTaskMutations] Create task failed:', error);
+      // Handle error silently
     }
   }));
 
   const updateTaskMutation = useMutation(trpc.tasks.updateTask.mutationOptions({
     onSuccess: (result, variables) => {
-      console.log('[useTaskMutations] Task updated successfully:', result);
       void queryClient.invalidateQueries({ queryKey: [['tasks', 'getCompleteOverview']] });
     },
     onError: (error) => {
-      console.error('[useTaskMutations] Update task failed:', error);
+      // Handle error silently
     }
   }));
 
   const deleteTaskMutation = useMutation(trpc.tasks.deleteTask.mutationOptions({
     onSuccess: (result, variables) => {
-      console.log('[useTaskMutations] Task deleted successfully:', result);
       void queryClient.invalidateQueries({ queryKey: [['tasks', 'getCompleteOverview']] });
     },
     onError: (error) => {
-      console.error('[useTaskMutations] Delete task failed:', error);
+      // Handle error silently
     }
   }));
 
@@ -150,7 +138,7 @@ export const useTaskMutations = () => {
       void queryClient.invalidateQueries({ queryKey: [['tasks', 'listTaskLists']] });
     },
     onError: (error) => {
-      console.error('[useTaskMutations] Create task list failed:', error);
+      // Handle error silently
     }
   }))
 

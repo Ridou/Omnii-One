@@ -230,7 +230,7 @@ export default function LoginScreen() {
     
     try {
       await signInWithGoogle();
-      router.replace('/(tabs)/approvals');
+      router.replace('/(tabs)/tasks');
     } catch (err) {
       
       let errorMessage = 'Failed to sign in with Google';
@@ -272,7 +272,7 @@ export default function LoginScreen() {
     try {
       await signInWithApple();
       
-      router.replace('/(tabs)/approvals');
+      router.replace('/(tabs)/tasks');
     } catch (err) {
       
       let errorMessage = 'Failed to sign in with Apple';
@@ -305,7 +305,7 @@ export default function LoginScreen() {
     try {
       await signInWithGoogleImmediate();
       
-      router.replace('/(tabs)/approvals');
+      router.replace('/(tabs)/tasks');
     } catch (err) {
       
       let errorMessage = 'Alternative login method also failed';

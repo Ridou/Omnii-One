@@ -74,16 +74,10 @@ export const XPProgressBar: React.FC<XPProgressBarProps> = ({
     XPSystemUtils.getNextLevelXP(displayLevel) :
     xpProgress.next_level_xp;
 
-  // Log debug info for progress bar updates (ONLY in development and only for errors)
+  // Debug info logged only for errors in development
   useEffect(() => {
     if (__DEV__ && error) {
-      console.log('🎯 [XPProgressBar] Progress Error:', {
-        displayXP,
-        displayLevel,
-        rawProgress: actualProgress,
-        clampedProgress,
-        error
-      });
+      // Error logging removed for production
     }
   }, [error, displayXP, displayLevel, actualProgress, clampedProgress]);
 

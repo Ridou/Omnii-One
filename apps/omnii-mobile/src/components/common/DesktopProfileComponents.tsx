@@ -45,7 +45,6 @@ export const DesktopProfileContent: React.FC<DesktopProfileContentProps> = ({
           {/* Google Integration Card */}
           <GoogleIntegrationCard 
             onStatusChange={(connected) => {
-              console.log('Google integration status:', connected ? 'Connected' : 'Disconnected');
             }}
           />
         </View>
@@ -116,7 +115,6 @@ export const DesktopProfileContent: React.FC<DesktopProfileContentProps> = ({
                 try {
                   await Linking.openURL('https://discord.gg/HPgAARkhkE');
                 } catch (error) {
-                  console.error('Failed to open Discord link:', error);
                 }
               }}
             >

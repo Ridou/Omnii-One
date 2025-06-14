@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 // TypeScript interface for approval data
-interface Approval {
+interface Task {
   id: string;
   title: string;
   description: string;
@@ -14,7 +14,7 @@ interface Approval {
 }
 
 // Mock approval data
-const mockApprovals: Approval[] = [
+const mockTasks: Task[] = [
   {
     id: '1',
     title: 'Production Database Access Request',
@@ -72,30 +72,28 @@ const mockApprovals: Approval[] = [
   },
 ];
 
-export function useFetchApprovals() {
-  const [approvals, setApprovals] = useState<Approval[]>([]);
+export function useFetchTasks() {
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
-  const requestCacheRef = useRef(new Map<string, { data: Approval[]; timestamp: number }>());
+  const requestCacheRef = useRef(new Map<string, { data: Task[]; timestamp: number }>());
   const isRequestInProgressRef = useRef(false);
 
-  const fetchApprovals = useCallback(async () => {
+  const fetchTasks = useCallback(async () => {
     // Prevent multiple simultaneous requests
     if (isRequestInProgressRef.current) {
-      console.log('🚫 Request already in progress, skipping duplicate call');
       return;
     }
 
-    const cacheKey = 'approvals';
+    const cacheKey = 'tasks';
     
     // Check cache first (5 second cache)
     if (requestCacheRef.current.has(cacheKey)) {
       const cached = requestCacheRef.current.get(cacheKey)!;
       if (Date.now() - cached.timestamp < 5000) {
-        console.log('📋 Using cached approvals data');
-        setApprovals(cached.data);
+        setTasks(cached.data);
         setIsLoading(false);
         return;
       }
@@ -127,27 +125,24 @@ export function useFetchApprovals() {
       
       // Check if component is still mounted and request wasn't aborted
       if (signal.aborted || !isMountedRef.current) {
-        console.log('🚫 Request cancelled or component unmounted');
         return;
       }
       
       // In a real app, this would fetch data from an API
-      setApprovals(mockApprovals);
+      setTasks(mockTasks);
       setError(null);
       
       // Cache the result
       requestCacheRef.current.set(cacheKey, {
-        data: mockApprovals,
+        data: mockTasks,
         timestamp: Date.now()
       });
       
-      console.log('✅ Approvals loaded successfully');
     } catch (err) {
       if (!signal.aborted && isMountedRef.current) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch approvals';
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tasks';
         if (errorMessage !== 'Request cancelled') {
           setError(errorMessage);
-          console.error('Error fetching approvals:', err);
         }
       }
     } finally {
@@ -160,7 +155,7 @@ export function useFetchApprovals() {
 
   useEffect(() => {
     isMountedRef.current = true;
-    fetchApprovals();
+    fetchTasks();
 
     // Cleanup function
     return () => {
@@ -169,7 +164,7 @@ export function useFetchApprovals() {
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchApprovals]);
+  }, [fetchTasks]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -181,9 +176,9 @@ export function useFetchApprovals() {
   }, []);
 
   return {
-    approvals,
+    tasks,
     isLoading,
     error,
-    refetch: fetchApprovals,
+    refetch: fetchTasks,
   };
 }

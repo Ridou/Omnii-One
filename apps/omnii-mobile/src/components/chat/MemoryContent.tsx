@@ -82,16 +82,18 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
               `${calendarData?.events?.filter((e: any) => new Date(e.start) > new Date()).length || 0} upcoming events`,
               `${calendarData?.totalCount || 0} total events loaded`,
               calendarData?.events?.length > 0 
-                ? `Peak day: ${calendarData.events.reduce((acc: any, event: any) => {
-                    const day = new Date(event.start).toLocaleDateString('en-US', { weekday: 'long' });
-                    acc[day] = (acc[day] || 0) + 1;
-                    return acc;
-                  }, {} as Record<string, number>).entries ? 
-                  Object.entries(calendarData.events.reduce((acc: any, event: any) => {
-                    const day = new Date(event.start).toLocaleDateString('en-US', { weekday: 'long' });
-                    acc[day] = (acc[day] || 0) + 1;
-                    return acc;
-                  }, {} as Record<string, number>)).sort(([,a], [,b]) => b - a)[0]?.[0] || 'Monday' : 'Monday'}`
+                ? (() => {
+                    const counts = calendarData.events.reduce((acc: any, event: any) => {
+                      const day = new Date(event.start).toLocaleDateString('en-US', { weekday: 'long' });
+                      acc[day] = (acc[day] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+                    const entries = Object.entries(counts);
+                    const peakDay = entries.length > 0 
+                      ? entries.sort(([,a], [,b]) => b - a)[0]?.[0] || 'Monday'
+                      : 'Monday';
+                    return `Peak day: ${peakDay}`;
+                  })()
                 : "Peak day: Monday",
               calendarData?.events?.length > 0 
                 ? `${Math.round(calendarData.events.filter((e: any) => !!e.meetingLink).length / calendarData.events.length * 100) || 0}% virtual meetings`

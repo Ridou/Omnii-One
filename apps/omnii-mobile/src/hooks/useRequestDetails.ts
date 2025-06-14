@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 
-// Combine mock data from both approvals and history
-import { useFetchApprovals } from './useFetchApprovals';
+// Combine mock data from both tasks and history
+import { useFetchTasks } from './useFetchTasks';
 import { useFetchHistory } from './useFetchHistory';
 
 export function useRequestDetails(id: string) {
@@ -11,7 +11,7 @@ export function useRequestDetails(id: string) {
   const [error, setError] = useState(null);
   const router = useRouter();
 
-  const { approvals } = useFetchApprovals();
+  const { tasks } = useFetchTasks();
   const { history } = useFetchHistory();
 
   useEffect(() => {
@@ -22,10 +22,10 @@ export function useRequestDetails(id: string) {
         await new Promise(resolve => setTimeout(resolve, 800));
         
         // In a real app, this would fetch detailed data from an API
-        // For the mock, we'll combine our approvals and history data
+        // For the mock, we'll combine our tasks and history data
         
-        // Check approvals first (pending requests)
-        const pendingRequest = approvals.find(item => item.id === id);
+        // Check tasks first (pending requests)
+        const pendingRequest = tasks.find(item => item.id === id);
         if (pendingRequest) {
           setRequest({
             ...pendingRequest,
@@ -50,7 +50,6 @@ export function useRequestDetails(id: string) {
         setRequest(null);
       } catch (err) {
         setError(err.message || 'Failed to fetch request details');
-        console.error('Error fetching request details:', err);
       } finally {
         setIsLoading(false);
       }
@@ -59,7 +58,7 @@ export function useRequestDetails(id: string) {
     if (id) {
       fetchRequestDetails();
     }
-  }, [id, approvals, history]);
+  }, [id, tasks, history]);
 
   const processRequest = async (action: 'approve' | 'decline', comment: string) => {
     try {
@@ -67,13 +66,11 @@ export function useRequestDetails(id: string) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // In a real app, this would send the approval/decline action to an API
-      console.log(`Request ${id} ${action}d with comment: ${comment}`);
       
-      // Navigate back to approvals screen
-      router.replace('/(tabs)/approvals');
+      // Navigate back to tasks screen
+      router.replace('/(tabs)/tasks');
     } catch (err) {
       setError(err.message || `Failed to ${action} request`);
-      console.error(`Error ${action}ing request:`, err);
     }
   };
 

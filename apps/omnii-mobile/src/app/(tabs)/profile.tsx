@@ -37,10 +37,11 @@ import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { DesktopProfileContent, TabletProfileContent } from '~/components/common/DesktopProfileComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
 import { GoogleIntegrationCard } from '~/components/integrations/GoogleIntegrationCard';
+import { AuthGuard } from '~/components/common/AuthGuard';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Tab configuration following approvals screen pattern
+// Tab configuration following tasks screen pattern
 const profileTabs: TabConfig[] = [
   {
     key: 'connect',
@@ -130,13 +131,10 @@ export default function ProfileScreen() {
     
     // Direct logout action - AuthContext will handle redirect automatically
     try {
-      console.log('🚪 === STANDARD LOGOUT ===');
       await signOut();
-      console.log('✅ Logout successful - AuthContext will handle redirect');
       // AuthContext will automatically redirect to landing page
     } catch (error) {
-      console.error('❌ Logout failed:', error);
-      console.log('Failed to logout. Please try again.');
+      // Silent error handling
     }
   };
 
@@ -148,7 +146,7 @@ export default function ProfileScreen() {
   }, []);
 
   const handleTabPress = (tabKey: ProfileTab) => {
-    // Scale animation on press (identical to approvals screen)
+    // Scale animation on press (identical to tasks screen)
     const scaleAnim = scaleAnimations[tabKey];
     
     Animated.sequence([
@@ -257,7 +255,6 @@ export default function ProfileScreen() {
             <GoogleIntegrationCard 
               onStatusChange={(connected) => {
                 // Optional: Track connection status changes
-                console.log('Google integration status:', connected ? 'Connected' : 'Disconnected');
               }}
             />
 
@@ -319,7 +316,7 @@ export default function ProfileScreen() {
                     try {
                       await Linking.openURL('https://discord.gg/HPgAARkhkE');
                     } catch (error) {
-                      console.error('Failed to open Discord link:', error);
+                      // Silently handle URL open errors
                     }
                   }}
                 >
@@ -820,60 +817,64 @@ export default function ProfileScreen() {
     );
 
     return (
-      <ResponsiveTabLayout
-        tabs={profileTabs}
-        selectedTab={selectedTab}
-        onTabPress={handleTabPress}
-        scaleAnimations={scaleAnimations}
-        header={<ProfileHeader />}
-        renderTabContent={renderResponsiveContent}
-      />
+      <AuthGuard>
+        <ResponsiveTabLayout
+          tabs={profileTabs}
+          selectedTab={selectedTab}
+          onTabPress={handleTabPress}
+          scaleAnimations={scaleAnimations}
+          header={<ProfileHeader />}
+          renderTabContent={renderResponsiveContent}
+        />
+      </AuthGuard>
     );
   }
 
-  // MOBILE: Keep original layout exactly as it was
+  // MOBILE: Keep original layout exactly as it was with authentication guard
   return (
-    <SafeAreaView className={cn("flex-1", isDark ? "bg-slate-900" : "bg-white")} key={`profile-theme-${isDark}`}>
-      {/* Header */}
-      <View className={cn(
-        "px-5 py-4 border-b",
-        isDark ? "border-slate-600" : "border-gray-200"
-      )}>
-        <View className="flex-row items-start justify-between">
-          <View className="flex-1">
-            <Text className={cn(
-              "text-3xl font-bold mb-1",
-              isDark ? "text-white" : "text-gray-900"
-            )}>👤 Profile</Text>
-            <XPProgressBar
-              variant="compact"
-              size="small"
-              showText={true}
-              showLevel={true}
-            />
+    <AuthGuard>
+      <SafeAreaView className={cn("flex-1", isDark ? "bg-slate-900" : "bg-white")} key={`profile-theme-${isDark}`}>
+        {/* Header */}
+        <View className={cn(
+          "px-5 py-4 border-b",
+          isDark ? "border-slate-600" : "border-gray-200"
+        )}>
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1">
+              <Text className={cn(
+                "text-3xl font-bold mb-1",
+                isDark ? "text-white" : "text-gray-900"
+              )}>👤 Profile</Text>
+              <XPProgressBar
+                variant="compact"
+                size="small"
+                showText={true}
+                showLevel={true}
+              />
+            </View>
+            
+            {/* Mascot in header */}
+            <MascotContainer position="header">
+              <Mascot
+                stage={mascotStage}
+                level={level}
+                size={MascotSize.STANDARD}
+                showLevel={true}
+                enableInteraction={true}
+                enableCheering={cheeringState.isActive}
+                cheeringTrigger={cheeringState.trigger}
+                onTap={handleMascotTap}
+              />
+            </MascotContainer>
           </View>
-          
-          {/* Mascot in header */}
-          <MascotContainer position="header">
-            <Mascot
-              stage={mascotStage}
-              level={level}
-              size={MascotSize.STANDARD}
-              showLevel={true}
-              enableInteraction={true}
-              enableCheering={cheeringState.isActive}
-              cheeringTrigger={cheeringState.trigger}
-              onTap={handleMascotTap}
-            />
-          </MascotContainer>
         </View>
-      </View>
 
-      {/* Tab Navigation */}
-      <ProfileTabs />
+        {/* Tab Navigation */}
+        <ProfileTabs />
 
-      {/* Tab Content */}
-      {renderTabContent()}
-    </SafeAreaView>
+        {/* Tab Content */}
+        {renderTabContent()}
+      </SafeAreaView>
+    </AuthGuard>
   );
 }

@@ -133,9 +133,7 @@ export const TasksMemoryCard: React.FC<TasksMemoryCardProps> = ({
                   'Created via CRUD testing in Memory tab',
                   new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Due tomorrow
                 );
-                console.log('[CRUD Test] Task created:', result);
               } catch (error) {
-                console.error('[CRUD Test] Create failed:', error);
               }
             }}
             disabled={isCreatingTask}
@@ -163,9 +161,7 @@ export const TasksMemoryCard: React.FC<TasksMemoryCardProps> = ({
               try {
                 const testListTitle = `Test List ${new Date().toLocaleTimeString()}`;
                 const result = await createTaskList({ title: testListTitle });
-                console.log('[CRUD Test] Task list created:', result);
               } catch (error) {
-                console.error('[CRUD Test] Create list failed:', error);
               }
             }}
             disabled={isCreatingTaskList}

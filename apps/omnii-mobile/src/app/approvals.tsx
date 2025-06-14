@@ -1,7 +1,7 @@
 import { Redirect } from 'expo-router';
 
-// Clean URL route that redirects to the tab-based approvals page
+// Clean URL route that redirects to the tab-based tasks page
 export default function ApprovalsRedirect() {
   // Use Expo Router's Redirect component for clean, safe navigation
-  return <Redirect href="/(tabs)/approvals" />;
+  return <Redirect href="/(tabs)/tasks" />;
 } 

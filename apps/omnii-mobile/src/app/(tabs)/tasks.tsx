@@ -13,8 +13,8 @@ import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { useXPContext } from '~/context/XPContext';
-import SimpleSwipeCard from '~/components/approvals/SimpleSwipeCard';
-import StreamlinedApprovalCard from '~/components/approvals/StreamlinedApprovalCard';
+import SimpleSwipeCard from '~/components/tasks/SimpleSwipeCard';
+import StreamlinedTaskCard from '~/components/tasks/StreamlinedTaskCard';
 import DebugPanel from '~/components/common/DebugPanel';
 import { Mascot, MascotContainer, useMascotCheering } from '~/components/common/Mascot';
 import { XPProgressBar } from '~/components/common/XPProgressBar';
@@ -26,13 +26,13 @@ import {
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useXPSystem } from '~/hooks/useXPSystem';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
-import { DesktopApprovalsContent, TabletApprovalsContent } from '~/components/common/DesktopApprovalsComponents';
+import { DesktopTasksContent, TabletTasksContent } from '~/components/common/DesktopTasksComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
 
 
 const { width: screenWidth } = Dimensions.get('window');
 
-interface Approval {
+interface Task {
   id: string;
   title: string;
   description: string;
@@ -43,7 +43,7 @@ interface Approval {
 }
 
 // Tab configuration with AI-focused productivity patterns (Shape of AI inspired)
-const approvalTabs = [
+const taskTabs = [
   {
     key: 'easy',
     label: 'Easy',
@@ -75,7 +75,7 @@ const approvalTabs = [
 ];
 
 // Mock data for testing - Adding back for stable state
-const mockApprovals: Approval[] = [
+const mockTasks: Task[] = [
   {
     id: '1',
     title: 'Production Database Access Request',
@@ -105,7 +105,7 @@ const mockApprovals: Approval[] = [
   },
 ];
 
-export default function ApprovalsScreen() {
+export default function TasksScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
   const responsive = useResponsiveDesign();
@@ -116,7 +116,7 @@ export default function ApprovalsScreen() {
   const { cheeringState, triggerCheering } = useMascotCheering();
   const mascotStage = getMascotStageByLevel(currentLevel);
   
-  const [approvals, setApprovals] = useState<Approval[]>(mockApprovals);
+  const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [selectedFilter, setSelectedFilter] = useState('smart');
   const [refreshing, setRefreshing] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
@@ -124,43 +124,39 @@ export default function ApprovalsScreen() {
 
   // Animation refs for each tab
   const scaleAnimations = useRef(
-    approvalTabs.reduce((acc, tab) => {
+    taskTabs.reduce((acc, tab) => {
       acc[tab.key] = new Animated.Value(1);
       return acc;
     }, {} as Record<string, Animated.Value>)
   ).current;
 
-  const handleApprove = useCallback(async (approval: Approval) => {
-    // Handle regular approval - award XP for engagement
-    const approvalXP = 15; // Standard approval XP
+  const handleTaskApprove = useCallback(async (task: Task) => {
+    // Handle regular task approval - award XP for engagement
+    const taskXP = 15; // Standard task XP
     
     try {
-      await awardXP(approvalXP, 'Task Approval', 'productivity');
-      console.log('✅ [Unified XP] Task approval XP awarded:', approvalXP);
+      await awardXP(taskXP, 'Task Approval', 'productivity');
     } catch (error) {
-      console.error('❌ Failed to award approval XP:', error);
     }
     
     // Remove from list immediately
-    setApprovals(prev => prev.filter(a => a.id !== approval.id));
+    setTasks(prev => prev.filter(t => t.id !== task.id));
     
-    // Trigger mascot cheering for approval
+    // Trigger mascot cheering for task completion
     triggerCheering(CheeringTrigger.TASK_COMPLETE);
   }, [awardXP, triggerCheering]);
 
-  const handleReject = useCallback(async (approval: Approval) => {
-    // Handle regular approval rejection - still award some XP for engagement
+  const handleTaskReject = useCallback(async (task: Task) => {
+    // Handle regular task rejection - still award some XP for engagement
     const engagementXP = 5; // Small XP for engagement even when declining
     
     try {
       await awardXP(engagementXP, 'Task Review', 'productivity');
-      console.log('✅ [Unified XP] Task decline XP awarded:', engagementXP);
     } catch (error) {
-      console.error('❌ Failed to award decline XP:', error);
     }
     
     // Remove from list immediately
-    setApprovals(prev => prev.filter(a => a.id !== approval.id));
+    setTasks(prev => prev.filter(t => t.id !== task.id));
     
     // Trigger mascot cheering for engagement
     triggerCheering(CheeringTrigger.TASK_COMPLETE);
@@ -196,37 +192,37 @@ export default function ApprovalsScreen() {
   };
 
   // AI-powered filtering logic
-  const getAIFilteredTasks = (approvals: Approval[], filter: string): Approval[] => {
+  const getAIFilteredTasks = (tasks: Task[], filter: string): Task[] => {
     switch (filter) {
       case 'easy':
         // Easy wins - prioritize low complexity items for momentum
-        return approvals
-          .filter(approval => approval.priority === 'low')
+        return tasks
+          .filter(task => task.priority === 'low')
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
           
       case 'smart':
         // AI-curated recommendations (mix of priorities for balance)
-        return approvals
+        return tasks
           .sort((a, b) => {
-            const getSmartScore = (approval: Approval): number => {
+            const getSmartScore = (task: Task): number => {
               let score = 0;
-              if (approval.priority === 'medium') score += 5; // Balanced difficulty
-              if (approval.priority === 'high') score += 3; // Still important
-              if (approval.priority === 'low') score += 2; // Easy wins
+              if (task.priority === 'medium') score += 5; // Balanced difficulty
+              if (task.priority === 'high') score += 3; // Still important
+              if (task.priority === 'low') score += 2; // Easy wins
               return score;
             };
             return getSmartScore(b) - getSmartScore(a);
           });
           
       case 'complex':
-        // Items needing more context - high complexity approvals
-        return approvals
-          .filter(approval => approval.priority === 'high')
+        // Items needing more context - high complexity tasks
+        return tasks
+          .filter(task => task.priority === 'high')
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
           
       case 'priority':
         // AI suggests high-impact items (high priority first, then by recency)
-        return approvals
+        return tasks
           .sort((a, b) => {
             const priorityOrder = { high: 0, medium: 1, low: 2 };
             const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
@@ -235,24 +231,24 @@ export default function ApprovalsScreen() {
           });
           
       default:
-        return approvals;
+        return tasks;
     }
   };
 
-  const filteredApprovals = getAIFilteredTasks(approvals, selectedFilter);
+  const filteredTasks = getAIFilteredTasks(tasks, selectedFilter);
 
   // Updated stats for AI-focused tabs
   const stats = {
-    easy: getAIFilteredTasks(approvals, 'easy').length,
-    smart: getAIFilteredTasks(approvals, 'smart').length,
-    complex: getAIFilteredTasks(approvals, 'complex').length,
-    priority: getAIFilteredTasks(approvals, 'priority').length,
+    easy: getAIFilteredTasks(tasks, 'easy').length,
+    smart: getAIFilteredTasks(tasks, 'smart').length,
+    complex: getAIFilteredTasks(tasks, 'complex').length,
+    priority: getAIFilteredTasks(tasks, 'priority').length,
   };
 
   // Enhanced Filter Tabs component with AI descriptions
   const FilterTabs = () => (
     <View className="flex-row px-5 pb-5 pt-2 gap-3">
-      {approvalTabs.map((tab) => {
+      {taskTabs.map((tab) => {
         const isActive = selectedFilter === tab.key;
         const count = stats[tab.key as keyof typeof stats];
         
@@ -344,10 +340,10 @@ export default function ApprovalsScreen() {
   const renderResponsiveContent = () => {
     if (responsive.effectiveIsDesktop) {
       return (
-        <DesktopApprovalsContent
-          filteredTasks={filteredApprovals}
-          handleApprove={handleApprove}
-          handleReject={handleReject}
+        <DesktopTasksContent
+          filteredTasks={filteredTasks}
+          handleApprove={handleTaskApprove}
+          handleReject={handleTaskReject}
           selectedFilter={selectedFilter}
           stats={stats}
         />
@@ -356,17 +352,17 @@ export default function ApprovalsScreen() {
     
     if (responsive.effectiveIsTablet) {
       return (
-        <TabletApprovalsContent
-          filteredTasks={filteredApprovals}
-          handleApprove={handleApprove}
-          handleReject={handleReject}
+        <TabletTasksContent
+          filteredTasks={filteredTasks}
+          handleApprove={handleTaskApprove}
+          handleReject={handleTaskReject}
         />
       );
     }
     
     return (
       <View className="flex-1">
-        {filteredApprovals.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <View className="flex-1 justify-center items-center px-5">
             <View className={cn(
               "rounded-xl p-8 items-center border max-w-sm",
@@ -380,12 +376,12 @@ export default function ApprovalsScreen() {
               <Text className={cn(
                 "text-sm text-center",
                 isDark ? "text-slate-400" : "text-gray-600"
-              )}>No pending approvals at the moment. Great work!</Text>
+              )}>No pending tasks at the moment. Great work!</Text>
             </View>
           </View>
         ) : (
           <FlatList
-            data={filteredApprovals}
+            data={filteredTasks}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ padding: 20 }}
@@ -403,16 +399,15 @@ export default function ApprovalsScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: Approval }) => (
+  const renderItem = ({ item }: { item: Task }) => (
     <View className="mb-2">
       <SimpleSwipeCard
-        onSwipeLeft={() => handleReject(item)}
-        onSwipeRight={() => handleApprove(item)}
+        onSwipeLeft={() => handleTaskReject(item)}
+        onSwipeRight={() => handleTaskApprove(item)}
       >
-        <StreamlinedApprovalCard
-          approval={item} 
+        <StreamlinedTaskCard
+          task={item} 
           onPress={() => {
-            console.log('Navigating to task details:', item.id);
             router.push(`/request/${item.id}`);
           }}
         />
@@ -431,7 +426,7 @@ export default function ApprovalsScreen() {
             "text-base text-center mt-4",
             isDark ? "text-white" : "text-gray-900"
           )}>
-            Please log in to view your approvals.
+            Please log in to view your tasks.
           </Text>
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity className="bg-indigo-600 rounded-xl py-3 px-6 mt-4">
@@ -446,7 +441,7 @@ export default function ApprovalsScreen() {
   // Use responsive layout for browsers (including mobile) and larger screens
   if (responsive.shouldUseResponsiveLayout) {
     // Header component for tablet/desktop
-    const ApprovalsHeader = () => (
+    const TasksHeader = () => (
       <View className="flex-row items-start justify-between">
         <View className="flex-1">
           <Text className={cn(
@@ -478,11 +473,11 @@ export default function ApprovalsScreen() {
 
     return (
       <ResponsiveTabLayout
-        tabs={approvalTabs}
+        tabs={taskTabs}
         selectedTab={selectedFilter}
         onTabPress={handleTabPress}
         scaleAnimations={scaleAnimations}
-        header={<ApprovalsHeader />}
+        header={<TasksHeader />}
         renderTabContent={renderResponsiveContent}
       />
     );
@@ -504,7 +499,7 @@ export default function ApprovalsScreen() {
             <Text className={cn(
               "text-3xl font-bold mb-1",
               isDark ? "text-white" : "text-gray-900"
-            )}>⏳ Approvals</Text>
+            )}>⏳ Tasks</Text>
             <XPProgressBar
               variant="compact"
               size="small"
@@ -534,7 +529,7 @@ export default function ApprovalsScreen() {
 
       {/* Content */}
       <View className="flex-1">
-        {filteredApprovals.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <View className="flex-1 justify-center items-center px-5">
             <View className={cn(
               "rounded-xl p-8 items-center border max-w-sm",
@@ -548,12 +543,12 @@ export default function ApprovalsScreen() {
               <Text className={cn(
                 "text-sm text-center",
                 isDark ? "text-slate-400" : "text-gray-600"
-              )}>No pending approvals at the moment. Great work!</Text>
+              )}>No pending tasks at the moment. Great work!</Text>
             </View>
           </View>
         ) : (
           <FlatList
-            data={filteredApprovals}
+            data={filteredTasks}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ padding: 20 }}

@@ -168,7 +168,6 @@ export function useFetchAnalytics() {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch analytics');
-      console.error('Error fetching analytics:', err);
     } finally {
       setIsLoading(false);
     }

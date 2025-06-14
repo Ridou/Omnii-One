@@ -59,7 +59,6 @@ export const GOOGLE_SERVICES: GoogleService[] = [
  */
 export const checkGoogleTokenStatus = async (): Promise<GoogleTokenStatus> => {
   try {
-    console.log('🔍 Checking Google token status...');
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -70,14 +69,12 @@ export const checkGoogleTokenStatus = async (): Promise<GoogleTokenStatus> => {
     const tokens = await getMyOAuthTokens('google');
     
     if (!tokens || tokens.length === 0) {
-      console.log('❌ No Google tokens found');
       return { isValid: false, needsReconnection: true, services: [] };
     }
 
     const token = tokens[0];
     
     if (!token) {
-      console.log('❌ Token is undefined');
       return { isValid: false, needsReconnection: true, services: [] };
     }
     
@@ -85,19 +82,11 @@ export const checkGoogleTokenStatus = async (): Promise<GoogleTokenStatus> => {
     const isExpired = token.expires_at ? new Date(token.expires_at) < new Date() : false;
     
     if (isExpired && !token.refresh_token) {
-      console.log('⚠️ Token expired and no refresh token available');
       return { isValid: false, needsReconnection: true, services: [] };
     }
 
     // For now, assume token is valid if it exists and not expired or has refresh token
     const isValid = !isExpired || !!token.refresh_token;
-    
-    console.log('✅ Google token status:', {
-      isValid,
-      hasRefreshToken: !!token.refresh_token,
-      isExpired,
-      expiresAt: token.expires_at
-    });
     
     return {
       isValid,
@@ -108,7 +97,6 @@ export const checkGoogleTokenStatus = async (): Promise<GoogleTokenStatus> => {
     };
     
   } catch (error) {
-    console.error('❌ Failed to check Google token status:', error);
     return { isValid: false, needsReconnection: true, services: [] };
   }
 };
@@ -118,13 +106,11 @@ export const checkGoogleTokenStatus = async (): Promise<GoogleTokenStatus> => {
  */
 export const initiateGoogleOAuth = async (): Promise<void> => {
   try {
-    console.log('🚀 Initiating Google OAuth for integration...');
     
     // Use existing Google OAuth flow
     await connectGoogleIntegration();
     
   } catch (error) {
-    console.error('❌ Failed to initiate Google OAuth:', error);
     throw error;
   }
 };
@@ -134,7 +120,6 @@ export const initiateGoogleOAuth = async (): Promise<void> => {
  */
 export const getGoogleIntegrationStatus = async (): Promise<GoogleIntegrationStatus> => {
   try {
-    console.log('🔍 Checking Google integration status...');
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -162,7 +147,6 @@ export const getGoogleIntegrationStatus = async (): Promise<GoogleIntegrationSta
     };
     
   } catch (error) {
-    console.error('❌ Failed to check Google integration status:', error);
     return {
       isConnected: false,
       availableServices: []
@@ -176,7 +160,6 @@ export const getGoogleIntegrationStatus = async (): Promise<GoogleIntegrationSta
  */
 export const connectGoogleIntegration = async (): Promise<void> => {
   try {
-    console.log('🔗 Starting Google workspace integration...');
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -187,19 +170,15 @@ export const connectGoogleIntegration = async (): Promise<void> => {
     const isAppleUser = user.app_metadata?.provider === 'apple';
     
     if (isAppleUser) {
-      console.log('🍎 Apple user connecting Google workspace...');
     } else {
-      console.log('🔗 Google user reconnecting workspace...');
     }
 
     // Use the existing Google OAuth flow but store as integration tokens
     // This reuses the same OAuth flow but marks it as workspace integration
     await authSignInWithGoogle();
     
-    console.log('✅ Google workspace integration connected successfully');
     
   } catch (error) {
-    console.error('❌ Failed to connect Google integration:', error);
     throw error;
   }
 };
@@ -209,7 +188,6 @@ export const connectGoogleIntegration = async (): Promise<void> => {
  */
 export const disconnectGoogleIntegration = async (): Promise<void> => {
   try {
-    console.log('🔓 Disconnecting Google workspace integration...');
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -227,10 +205,8 @@ export const disconnectGoogleIntegration = async (): Promise<void> => {
       throw error;
     }
 
-    console.log('✅ Google workspace integration disconnected');
     
   } catch (error) {
-    console.error('❌ Failed to disconnect Google integration:', error);
     throw error;
   }
 };
@@ -243,7 +219,6 @@ export const isGoogleServiceAvailable = async (serviceName: string): Promise<boo
     const status = await getGoogleIntegrationStatus();
     return status.isConnected && status.availableServices.includes(serviceName);
   } catch (error) {
-    console.error(`❌ Failed to check ${serviceName} availability:`, error);
     return false;
   }
 };
@@ -269,7 +244,6 @@ export const needsGoogleIntegrationForAI = async (): Promise<boolean> => {
     
     return isAppleUser && !status.isConnected;
   } catch (error) {
-    console.error('❌ Failed to check AI integration needs:', error);
     return false;
   }
 }; 

@@ -29,11 +29,9 @@ export const achievementService = {
    */
   async getUserAchievements(userId: string): Promise<any[]> {
     if (!userId) {
-      console.log('⚠️ [AchievementService] No user ID provided, returning empty achievements');
       return [];
     }
 
-    console.log('🏆 [AchievementService] Fetching achievements for:', userId);
     
     try {
       const { data, error } = await supabase.rpc('get_user_achievements', {
@@ -41,15 +39,12 @@ export const achievementService = {
       });
       
       if (error) {
-        console.error('❌ [AchievementService] Database error:', error);
         // For column errors, this indicates the backend SQL needs fixing
         if (error.code === '42703') {
-          console.error('🔧 [AchievementService] Backend SQL function needs column fix - use a.id instead of a.achievement_id');
         }
         throw error; // Let the hook handle the error properly
       }
 
-      console.log('✅ [AchievementService] Retrieved', data?.length || 0, 'achievements');
 
       // Transform database format to client format for compatibility with existing types
       return data?.map((item: any) => ({
@@ -75,7 +70,6 @@ export const achievementService = {
         unlocksAt: 'seed' as const
       })) || [];
     } catch (networkError) {
-      console.error('❌ [AchievementService] Network error fetching achievements:', networkError);
       throw networkError; // Let the hook handle network errors
     }
   },
@@ -85,7 +79,6 @@ export const achievementService = {
    */
   async recordProgress(userId: string, achievementId: string, increment = 1): Promise<AchievementProgressResult> {
     if (!userId || !achievementId) {
-      console.log('⚠️ [AchievementService] Missing userId or achievementId, skipping progress recording');
       return {
         progress_updated: false,
         new_progress: 0,
@@ -96,11 +89,7 @@ export const achievementService = {
       };
     }
 
-    console.log('📈 [AchievementService] Recording progress:', {
-      userId,
-      achievementId,
-      increment
-    });
+    // Progress recording parameters logged for debugging
 
     try {
       const { data, error } = await supabase.rpc('record_achievement_progress', {
@@ -110,15 +99,12 @@ export const achievementService = {
       });
       
       if (error) {
-        console.error('❌ [AchievementService] Error recording progress:', error);
         if (error.code === '42703') {
-          console.error('🔧 [AchievementService] Backend SQL function needs column fix');
         }
         throw error;
       }
 
       if (!data || data.length === 0) {
-        console.log('⚠️ [AchievementService] No data returned from record_achievement_progress');
         return {
           progress_updated: false,
           new_progress: 0,
@@ -133,23 +119,13 @@ export const achievementService = {
       const result = validateAchievementProgressResult(data[0]);
       
       if (result.achievement_unlocked) {
-        console.log('🎉 [AchievementService] Achievement unlocked!', {
-          achievementId,
-          xpAwarded: result.xp_awarded,
-          levelUp: result.level_up,
-          newLevel: result.new_level
-        });
+        // Achievement unlock details logged for debugging
       } else {
-        console.log('📊 [AchievementService] Progress updated:', {
-          achievementId,
-          newProgress: result.new_progress,
-          progressUpdated: result.progress_updated
-        });
+        // Progress update details logged for debugging
       }
       
       return result;
     } catch (networkError) {
-      console.error('❌ [AchievementService] Network error recording progress:', networkError);
       throw networkError;
     }
   },
@@ -159,7 +135,6 @@ export const achievementService = {
    */
   async getStats(userId: string): Promise<AchievementStats> {
     if (!userId) {
-      console.log('⚠️ [AchievementService] No user ID provided for stats, returning default stats');
       return {
         total_achievements: 0,
         completed_achievements: 0,
@@ -171,7 +146,6 @@ export const achievementService = {
       };
     }
 
-    console.log('📊 [AchievementService] Fetching achievement stats for:', userId);
     
     try {
       const { data, error } = await supabase.rpc('get_user_achievement_stats', {
@@ -179,15 +153,12 @@ export const achievementService = {
       });
       
       if (error) {
-        console.error('❌ [AchievementService] Database error:', error);
         if (error.code === '42703') {
-          console.error('🔧 [AchievementService] Backend SQL function needs column fix - use a.id instead of a.achievement_id');
         }
         throw error;
       }
 
       if (!data || data.length === 0) {
-        console.log('⚠️ [AchievementService] No stats data returned');
         return {
           total_achievements: 0,
           completed_achievements: 0,
@@ -202,16 +173,10 @@ export const achievementService = {
       // Use the new validation function with fallback behavior
       const stats = validateAchievementStats(data[0]);
       
-      console.log('✅ [AchievementService] Stats retrieved:', {
-        totalAchievements: stats.total_achievements,
-        completedAchievements: stats.completed_achievements,
-        completionPercentage: stats.completion_percentage,
-        totalXP: stats.total_xp_from_achievements
-      });
+      // Achievement stats logged for debugging
       
       return stats;
     } catch (networkError) {
-      console.error('❌ [AchievementService] Network error fetching stats:', networkError);
       throw networkError;
     }
   },
@@ -225,7 +190,6 @@ export const achievementService = {
       const achievement = achievements.find(a => a.id === achievementId);
       return achievement ? achievement.canUnlock && !achievement.completed : false;
     } catch (error) {
-      console.error('❌ [AchievementService] Error checking unlock status:', error);
       return false;
     }
   }

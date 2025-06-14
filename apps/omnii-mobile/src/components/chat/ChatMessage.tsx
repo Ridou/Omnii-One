@@ -99,22 +99,18 @@ export function ChatMessage({ message, isLastUserMessage, onEmailAction, onTaskA
 
   // ✅ Action handlers
   const handleEmailAction = (action: string, data: any) => {
-    console.log('[ChatMessage] Email action triggered:', action, data);
     onEmailAction?.(action, data);
   };
 
   const handleTaskAction = (action: string, data: any) => {
-    console.log('[ChatMessage] Task action triggered:', action, data);
     onTaskAction?.(action, data);
   };
 
   const handleContactAction = (action: string, data: any) => {
-    console.log('[ChatMessage] Contact action triggered:', action, data);
     onContactAction?.(action, data);
   };
 
   const handleCalendarAction = (action: string, data: any) => {
-    console.log('[ChatMessage] Calendar action triggered:', action, data);
     onCalendarAction?.(action, data);
   };
 

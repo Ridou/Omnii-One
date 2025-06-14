@@ -85,7 +85,7 @@ export const FEATURE_UNLOCK_LEVELS = {
 } as const;
 
 export const TAB_UNLOCK_SEQUENCE = {
-  0: ['approvals', 'achievements', 'chat', 'analytics', 'profile'], // All features always available
+  0: ['tasks', 'achievements', 'chat', 'analytics', 'profile'], // All features always available
 } as const;
 
 // Feature exploration tracking

@@ -296,17 +296,7 @@ export default function LandingPageContent() {
   // Check if user is authenticated (using both user and session for reliability)
   const isAuthenticated = !!(user && session);
 
-  // Debug authentication state in development
-  useEffect(() => {
-    if (__DEV__) {
-      console.log('🏠 Landing Page Auth State:', {
-        user: user ? `${user.email} (${user.id})` : 'null',
-        session: session ? 'exists' : 'null',
-        isAuthenticated,
-        isInitialized
-      });
-    }
-  }, [user, session, isAuthenticated, isInitialized]);
+
   
   // Interpolate rotation value
   const logoRotation = logoRotateAnim.interpolate({
@@ -539,7 +529,7 @@ export default function LandingPageContent() {
                 </TouchableOpacity>
               </>
             ) : (
-              <Link href="/(tabs)/approvals" asChild>
+                              <Link href="/(tabs)/tasks" asChild>
                 <TouchableOpacity style={styles.primaryButton}>
                   <Text style={styles.primaryButtonText}>View Dashboard</Text>
                 </TouchableOpacity>

@@ -67,7 +67,6 @@ export function useFetchHistory() {
       setError(null);
     } catch (err) {
       setError(err.message || 'Failed to fetch history');
-      console.error('Error fetching history:', err);
     } finally {
       setIsLoading(false);
     }

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '~/context/AuthContext';
 import { useTheme } from '~/context/ThemeContext';
 import LandingPageContent from '~/components/landing/LandingPageContent';
+import { AuthGuard } from '~/components/common/AuthGuard';
 import { View, Text, ScrollView, TouchableOpacity, Animated, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cn } from '~/utils/cn';
@@ -32,25 +33,25 @@ const achievementTabs = [
     key: 'evolve',
     label: 'Evolve',
     icon: '🌱',
-    gradient: ['#4ECDC4', '#44A08D'] // Light teal (like Easy in approvals)
+    gradient: ['#4ECDC4', '#44A08D'] // Light teal (like Easy in tasks)
   },
   {
     key: 'discover',
     label: 'Discover', 
     icon: '🔍',
-    gradient: ['#667eea', '#764ba2'] // Purple (like Smart in approvals)
+    gradient: ['#667eea', '#764ba2'] // Purple (like Smart in tasks)
   },
   {
     key: 'gallery',
     label: 'Gallery',
     icon: '🏆',
-    gradient: ['#FF7043', '#FF5722'] // Orange (like Complex in approvals)
+    gradient: ['#FF7043', '#FF5722'] // Orange (like Complex in tasks)
   },
   {
     key: 'social',
     label: 'Social',
     icon: '👥',
-    gradient: ['#FF3B30', '#DC143C'] // Red (like Priority in approvals)
+    gradient: ['#FF3B30', '#DC143C'] // Red (like Priority in tasks)
   }
 ];
 
@@ -80,20 +81,9 @@ export default function HomeScreen() {
     social: useRef(new Animated.Value(1)).current,
   };
 
-  // Check if user is authenticated (using both user and session for reliability)
-  const isAuthenticated = !!(user && session);
 
-  // Debug authentication state in development
-  useEffect(() => {
-    if (__DEV__) {
-      console.log('🏆 Achievements Screen Auth State:', {
-        user: user ? `${user.email} (${user.id})` : 'null',
-        session: session ? 'exists' : 'null',
-        isAuthenticated,
-        isInitialized
-      });
-    }
-  }, [user, session, isAuthenticated, isInitialized]);
+
+
 
   // Handle tab selection with animation
   const handleTabPress = (tab: AchievementTab) => {
@@ -116,10 +106,7 @@ export default function HomeScreen() {
 
 
 
-  // Show landing page for non-authenticated users
-  if (!isAuthenticated) {
-    return <LandingPageContent />;
-  }
+  // Authentication protection is now handled by AuthGuard wrapper
 
   // Tab content components
   const EvolveContent = () => {
@@ -502,26 +489,29 @@ export default function HomeScreen() {
     );
 
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <ResponsiveTabLayout
-          tabs={achievementTabs}
-          selectedTab={selectedTab}
-          onTabPress={handleTabPress}
-          scaleAnimations={scaleAnimations}
-          header={<AchievementsHeader />}
-          renderTabContent={renderResponsiveContent}
-        />
-      </GestureHandlerRootView>
+      <AuthGuard>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <ResponsiveTabLayout
+            tabs={achievementTabs}
+            selectedTab={selectedTab}
+            onTabPress={handleTabPress}
+            scaleAnimations={scaleAnimations}
+            header={<AchievementsHeader />}
+            renderTabContent={renderResponsiveContent}
+          />
+        </GestureHandlerRootView>
+      </AuthGuard>
     );
   }
 
-  // MOBILE: Keep original layout exactly as it was
+  // MOBILE: Keep original layout exactly as it was with authentication guard
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView className={cn(
-        "flex-1",
-        isDark ? "bg-slate-900" : "bg-white"
-      )}>
+    <AuthGuard>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaView className={cn(
+          "flex-1",
+          isDark ? "bg-slate-900" : "bg-white"
+        )}>
         {/* Header */}
         <View className={cn(
           "px-5 py-4 border-b",
@@ -631,5 +621,6 @@ export default function HomeScreen() {
         {renderTabContent()}
       </SafeAreaView>
     </GestureHandlerRootView>
+    </AuthGuard>
   );
 }

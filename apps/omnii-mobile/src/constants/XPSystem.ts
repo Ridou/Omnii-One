@@ -45,7 +45,7 @@ export const LEVEL_TITLES: Record<number, string> = {
 
 // ✅ FEATURE UNLOCKS: What features unlock at each level
 export const FEATURE_UNLOCKS: Record<number, string[]> = {
-  1: ['Basic Approvals'],
+  1: ['Basic Tasks'],
   2: ['Achievements System'],
   3: ['Chat & Voice'],
   4: ['Analytics Dashboard'],

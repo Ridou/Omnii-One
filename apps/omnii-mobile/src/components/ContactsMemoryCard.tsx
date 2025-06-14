@@ -30,8 +30,6 @@ export const ContactsMemoryCard: React.FC<ContactsMemoryCardProps> = ({
   const displayedContacts = contacts.slice(0, displayCount);
   const hasMoreContacts = contacts.length > displayCount;
 
-  console.log('[ContactsMemoryCard] Contacts:', contacts);
-  console.log('[ContactsMemoryCard] Photo URLs:', contacts.map(c => c.photoUrl));
 
   const handleViewAllContacts = () => {
     onContactAction?.('view_all_contacts', null);

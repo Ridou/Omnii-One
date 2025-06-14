@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 // IMPORTANT: OAuth Flow Explanation
 // 1. Google OAuth → Supabase Auth Server (auth.omnii.net/auth/v1/callback)
 // 2. Supabase Auth Server → Your App (omnii.net/auth/callback) 
-// 3. Your App → Final Destination (omnii.net/approvals)
+// 3. Your App → Final Destination (omnii.net/tasks)
 //
 // The URLs in this file are for step 2-3 (Supabase → Your App → Final Destination)
 
@@ -44,7 +44,7 @@ export const OAUTH_CALLBACK_PATHS = {
 
 // Final destination paths (where users go after OAuth completes)
 export const OAUTH_DESTINATION_PATHS = {
-  WEB: '/approvals',
+  WEB: '/tasks',
   MOBILE: '/' // Mobile will handle routing internally
 } as const;
 
@@ -88,7 +88,6 @@ export interface EnvironmentConfig {
 export const detectEnvironment = (): EnvironmentConfig => {
   // Mobile platforms (React Native)
   if (Platform.OS === "ios") {
-    console.log('📱 Detected mobile platform:', Platform.OS);
     
     const mobileRedirectUrl = makeRedirectUri({
       scheme: OAUTH_HOSTS.MOBILE_SCHEME,
@@ -167,7 +166,6 @@ export const detectEnvironment = (): EnvironmentConfig => {
     }
     
     // Unknown web environment - fallback to production
-    console.warn('🔶 Unknown web environment, using production fallback');
     return {
       environment: OAuthEnvironment.UNKNOWN,
       platform: OAuthPlatform.WEB,
@@ -179,7 +177,6 @@ export const detectEnvironment = (): EnvironmentConfig => {
   }
 
   // Final fallback - assume mobile if no window object
-  console.warn('🔶 No window object detected, assuming mobile environment');
   const fallbackMobileUrl = OAUTH_REDIRECT_URLS.MOBILE_DEFAULT;
   
   return {
@@ -196,14 +193,6 @@ export const getOAuthRedirectUrl = (): string => {
   const config = detectEnvironment();
   
   if (__DEV__) {
-    console.log('🌍 OAuth Environment Configuration:');
-    console.log(`  Environment: ${config.environment}`);
-    console.log(`  Platform: ${config.platform}`);
-    console.log(`  Hostname: ${config.hostname || 'N/A'}`);
-    console.log(`  Port: ${config.port || 'N/A'}`);
-    console.log(`  OAuth Redirect: ${config.oauthRedirectUrl}`);
-    console.log(`  Final Destination: ${config.finalDestinationUrl}`);
-    console.log(`  Secure: ${config.isSecure ? '🔒' : '🔓'}`);
   }
   
   return config.oauthRedirectUrl;
@@ -244,28 +233,10 @@ export const getSupabaseRedirectUrlsForConfig = (): string[] => {
 
 // Helper to log configuration instructions
 export const logSupabaseSetupInstructions = (): void => {
-  console.log('🔧 OAUTH CONFIGURATION INSTRUCTIONS:');
-  console.log('');
-  console.log('📍 STEP 1: Google OAuth Configuration');
-  console.log('   Register this URL with Google OAuth:');
-  console.log('   🔗 https://auth.omnii.net/auth/v1/callback');
-  console.log('   (This is the Supabase Auth server URL)');
-  console.log('');
-  console.log('📍 STEP 2: Supabase Redirect URL Configuration');
-  console.log('   Add these URLs to your Supabase project\'s URL Configuration:');
-  console.log('   (Dashboard → Authentication → URL Configuration → Redirect URLs)');
-  console.log('');
   
   ALL_ALLOWED_REDIRECT_URLS.forEach((url, index) => {
-    console.log(`   ${index + 1}. ${url}`);
   });
   
-  console.log('');
-  console.log('💡 OAuth Flow:');
-  console.log('   1. User → Google OAuth → Supabase (auth.omnii.net/auth/v1/callback)');
-  console.log('   2. Supabase → Your App (omnii.net/auth/callback)');
-  console.log('   3. Your App → Final Destination (omnii.net/approvals)');
-  console.log('');
 };
 
 // Get the Google OAuth callback URL (what you register with Google)
@@ -286,14 +257,9 @@ export const getGoogleOAuthCallbackUrl = (): string => {
 export const handlePostOAuthNavigation = async (): Promise<void> => {
   const config = detectEnvironment();
   
-  console.log('🧭 Handling post-OAuth navigation...');
-  console.log(`   Environment: ${config.environment}`);
-  console.log(`   Platform: ${config.platform}`);
-  console.log(`   Final destination: ${config.finalDestinationUrl}`);
   
   // For mobile platforms, navigation is handled by the app's routing system
   if (config.environment === OAuthEnvironment.MOBILE) {
-    console.log('📱 Mobile platform: Navigation handled by app routing');
     return;
   }
   
@@ -303,11 +269,9 @@ export const handlePostOAuthNavigation = async (): Promise<void> => {
     const targetUrl = config.finalDestinationUrl;
     
     // Only redirect if we're not already at the target (check for both clean URL and hash route)
-    if (!currentUrl.includes(OAUTH_DESTINATION_PATHS.WEB) && !currentUrl.includes('/(tabs)/approvals')) {
-      console.log(`🌐 Redirecting to clean URL: ${targetUrl}`);
+    if (!currentUrl.includes(OAUTH_DESTINATION_PATHS.WEB) && !currentUrl.includes('/(tabs)/tasks')) {
       (globalThis as any).window.location.href = targetUrl;
     } else {
-      console.log('✅ Already at final destination');
     }
   }
 };
@@ -326,7 +290,7 @@ export const getSetupInstructions = (): {
     instructions: [
       '1. Add all redirect URLs to Supabase Dashboard → Authentication → URL Configuration',
       '2. Ensure Google OAuth client is configured for your environment',
-      '3. For web: OAuth redirects to /auth/callback, then navigates to /approvals',
+      '3. For web: OAuth redirects to /auth/callback, then navigates to /tasks',
       '4. For mobile: OAuth redirects to deep link, app handles internal routing',
       '5. Test OAuth flow in each environment (local, staging, production, mobile)'
     ]

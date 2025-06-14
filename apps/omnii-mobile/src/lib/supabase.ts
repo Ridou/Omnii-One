@@ -10,13 +10,7 @@ const isBrowser = typeof window !== 'undefined';
 const getEnvVars = () => {
   const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl;
   const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey;
-  console.log('supabaseUrl', Constants.expoConfig?.extra);
-  console.log('supabaseAnonKey', Constants.expoConfig?.extra?.supabaseAnonKey);
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase environment variables:', {
-      url: supabaseUrl ? 'present' : 'missing',
-      key: supabaseAnonKey ? 'present' : 'missing',
-    });
     throw new Error('Missing Supabase environment variables');
   }
 
@@ -62,7 +56,6 @@ let supabaseClient: any;
 if (Platform.OS === 'web' && !isBrowser) {
   // Server-side rendering: use mock client
   supabaseClient = createMockClient();
-  console.log('🔧 Using mock Supabase client for server-side rendering');
 } else {
   // Browser/mobile: use real client
   const env = getEnvVars();
@@ -91,7 +84,6 @@ export const getCurrentSession = async () => {
     error,
   } = await supabase.auth.getSession();
   if (error) {
-    console.error('Error getting session:', error);
     return null;
   }
   return session;
@@ -104,7 +96,6 @@ export const getCurrentUser = async () => {
     error,
   } = await supabase.auth.getUser();
   if (error) {
-    console.error('Error getting user:', error);
     return null;
   }
   return user;
@@ -114,7 +105,6 @@ export const getCurrentUser = async () => {
 export const signOut = async () => {
   const { error } = await supabase.auth.signOut();
   if (error) {
-    console.error('Error signing out:', error);
     throw error;
   }
 };

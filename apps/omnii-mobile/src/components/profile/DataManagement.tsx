@@ -100,7 +100,6 @@ export default function DataManagement({
 
   // Local consent management function
   const handleConsentChange = (newConsents: ConsentSettings) => {
-    console.log('Consent settings updated:', newConsents);
     // Here you could save to user preferences or send to backend
     // For now, we'll just update local state
     setConsents(newConsents);
@@ -111,14 +110,7 @@ export default function DataManagement({
     try {
       setIsExporting(true);
       
-      // Debug: Log session details
-      console.log('🔍 Debug - Session details:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        hasUser: !!user,
-        userId: user?.id,
-        sessionKeys: session ? Object.keys(session) : [],
-      });
+      // Debug: Session details logged for export troubleshooting
 
       if (!session?.access_token) {
         throw new Error('No valid session token available');
@@ -128,7 +120,6 @@ export default function DataManagement({
         throw new Error('No user ID available');
       }
       
-      console.log('🚀 Making export request via Supabase client...');
       
       const { data: exportResult, error } = await supabase.functions.invoke('export-user-data', {
         body: {
@@ -138,7 +129,6 @@ export default function DataManagement({
       });
 
       if (error) {
-        console.error('❌ Export function error:', error);
         throw new Error(`Failed to initiate data export: ${error.message}`);
       }
 
@@ -148,7 +138,6 @@ export default function DataManagement({
 
       setExportData(exportResult);
 
-      console.log('✅ Export result:', exportResult);
 
       Alert.alert(
         'Data Export Started',
@@ -157,7 +146,6 @@ export default function DataManagement({
       );
 
     } catch (error) {
-      console.error('Data export failed:', error);
       Alert.alert(
         'Export Failed',
         `Failed to initiate data export: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact support if the issue persists.`,
@@ -172,13 +160,7 @@ export default function DataManagement({
     try {
       setLoadingPreview(true);
       
-      // Debug: Log session details
-      console.log('🔍 Debug - Preview session details:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        hasUser: !!user,
-        userId: user?.id,
-      });
+      // Debug: Session details logged for preview troubleshooting
 
       if (!session?.access_token) {
         throw new Error('No valid session token available');
@@ -188,7 +170,6 @@ export default function DataManagement({
         throw new Error('No user ID available');
       }
       
-      console.log('🚀 Making preview request via Supabase client...');
       
       const { data: preview, error } = await supabase.functions.invoke('deletion-preview', {
         body: {
@@ -197,7 +178,6 @@ export default function DataManagement({
       });
 
       if (error) {
-        console.error('❌ Preview function error:', error);
         throw new Error(`Failed to load data preview: ${error.message}`);
       }
 
@@ -205,12 +185,10 @@ export default function DataManagement({
         throw new Error('No response from preview service');
       }
 
-      console.log('✅ Preview result:', preview);
       setPreviewData(preview);
       setShowDataPreview(true);
 
     } catch (error) {
-      console.error('Data preview failed:', error);
       Alert.alert(
         'Preview Failed',
         `Failed to load data preview: ${error instanceof Error ? error.message : 'Unknown error'}. You can still proceed with deletion if needed.`,
@@ -234,13 +212,7 @@ export default function DataManagement({
     try {
       setIsDeleting(true);
       
-      // Debug: Log session details
-      console.log('🔍 Debug - Delete session details:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        hasUser: !!user,
-        userId: user?.id,
-      });
+      // Debug: Session details logged for deletion troubleshooting
 
       if (!session?.access_token) {
         throw new Error('No valid session token available');
@@ -250,7 +222,6 @@ export default function DataManagement({
         throw new Error('No user ID available');
       }
       
-      console.log('🚀 Making delete request via Supabase client...');
       
       const { data: deleteResult, error } = await supabase.functions.invoke('delete-account', {
         body: {
@@ -262,7 +233,6 @@ export default function DataManagement({
       });
 
       if (error) {
-        console.error('❌ Delete function error:', error);
         throw new Error(`Failed to process account deletion: ${error.message}`);
       }
 
@@ -270,7 +240,6 @@ export default function DataManagement({
         throw new Error('No response from deletion service');
       }
 
-      console.log('✅ Delete result:', deleteResult);
 
       setShowDeleteConfirmation(false);
       setDeleteConfirmationText('');
@@ -293,7 +262,6 @@ export default function DataManagement({
       );
 
     } catch (error) {
-      console.error('Account deletion failed:', error);
       Alert.alert(
         'Deletion Failed',
         `Failed to process account deletion: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact support.`,
@@ -315,7 +283,6 @@ export default function DataManagement({
   };
 
   const contactSupport = () => {
-    console.log('Contact support: email privacy@omnii.net');
   };
 
   const DataSection = ({ title, children }: { title: string; children: React.ReactNode }) => (

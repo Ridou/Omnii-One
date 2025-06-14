@@ -14,6 +14,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '~/context/AuthContext';
 import { XPProvider } from '~/context/XPContext';
 import { ProfileProvider } from '~/context/ProfileContext';
+import { GlobalErrorHandler } from '~/components/common/GlobalErrorHandler';
 
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
 import { useFrameworkReady } from '~/hooks/useFrameworkReady';
@@ -55,15 +56,17 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeGestureProvider>
-        <AuthProvider>
-          <XPProvider>
-            <ProfileProvider>
-              <ThemeProvider>
-                <ThemedStack />
-              </ThemeProvider>
-            </ProfileProvider>
-          </XPProvider>
-        </AuthProvider>
+        <GlobalErrorHandler>
+          <AuthProvider>
+            <XPProvider>
+              <ProfileProvider>
+                <ThemeProvider>
+                  <ThemedStack />
+                </ThemeProvider>
+              </ProfileProvider>
+            </XPProvider>
+          </AuthProvider>
+        </GlobalErrorHandler>
       </SafeGestureProvider>
     </QueryClientProvider>
   );

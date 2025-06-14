@@ -211,9 +211,9 @@ export default function RequestDetailsScreen() {
         <View style={styles.emptyContainer}>
           <AlertCircle size={48} color="#666666" />
           <Text style={styles.emptyText}>Request not found or you don't have permission to view it.</Text>
-          <Link href="/(tabs)/approvals" asChild>
+          <Link href="/(tabs)/tasks" asChild>
             <TouchableOpacity style={[styles.actionButton, styles.approveButton, { marginTop: 24 }]}>
-              <Text style={styles.actionButtonText}>Go to Approvals</Text>
+              <Text style={styles.actionButtonText}>Go to Tasks</Text>
             </TouchableOpacity>
           </Link>
         </View>

@@ -10,7 +10,6 @@ export const useCalendar = (params?: { timeMin?: string; timeMax?: string }) => 
   useEffect(() => {
     const checkAuth = async () => {
       const session = await debugAuthStatus();
-      console.log('[useCalendar] Auth check complete:', !!session);
     };
     checkAuth();
   }, []);
@@ -26,17 +25,12 @@ export const useCalendar = (params?: { timeMin?: string; timeMax?: string }) => 
     timeMax: params?.timeMax,
   }));
 
-  console.log('[useCalendar] Raw tRPC response:', data);
-  console.log('[useCalendar] tRPC error:', error);
 
   const calendarData = data?.success ? data.data : null;
   const hasError = !!error || (data && !data.success);
   const errorMessage = error?.message || 
     (data && !data.success ? data.error : null);
 
-  console.log('[useCalendar] Parsed calendarData:', calendarData);
-  console.log('[useCalendar] Has error:', hasError);
-  console.log('[useCalendar] Error message:', errorMessage);
 
   return {
     calendarData,

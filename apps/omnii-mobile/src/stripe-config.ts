@@ -171,8 +171,6 @@ export const validateStripeConfig = () => {
 if (env.app.enableDebugMode) {
   try {
     validateStripeConfig();
-    console.log('✅ Stripe configuration validated successfully');
   } catch (error) {
-    console.error('❌ Stripe configuration validation failed:', error);
   }
 }

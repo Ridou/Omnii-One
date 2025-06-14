@@ -68,33 +68,13 @@ const validateEnvironmentVariables = (context: 'client' | 'server' = 'client') =
       // Different handling based on context and platform
       if (context === 'server') {
         // Server-side should always fail hard if missing required vars
-        console.error(errorMessage);
         if (process.env.NODE_ENV === 'production') {
           throw new Error(errorMessage);
-        }
-        console.warn('⚠️ Missing server environment variables in development mode');
-      } else {
-        // Client-side handling - more graceful for web deployments
-        console.warn(`⚠️ ${errorMessage}`);
-        
-        if (isWeb()) {
-          // For web, just log warning and continue - env vars might be loaded differently
-          console.warn('🌐 Web deployment detected - continuing with available environment variables');
-          console.warn('📝 Some features may have limited functionality until environment variables are properly configured');
-          console.warn('🔧 Check your deployment environment variables configuration');
-        } else {
-          // For mobile, be more strict in production but still don't throw
-          if (process.env.NODE_ENV === 'production') {
-            console.error('📱 Mobile production build missing critical environment variables');
-            console.error('🚨 This may cause runtime errors - please configure missing variables');
-          } else {
-            console.warn('📱 Mobile development build - missing environment variables');
-          }
         }
       }
     }
   } catch (error) {
-    console.error('Error validating environment variables:', error);
+    // Handle validation errors silently
   }
 };
 
@@ -220,9 +200,6 @@ export const getWebSocketUrl = () => {
   
   // For React Native development, replace localhost with accessible IP
   if (isReactNative && baseUrl.includes('localhost')) {
-    console.log('🔧 [getWebSocketUrl] Detected React Native development mode');
-    console.log('🔧 [getWebSocketUrl] Original baseUrl:', baseUrl);
-    
     // Try to get the Metro bundler host (where Expo is running from)
     const hostUri = Constants.expoConfig?.hostUri;
     
@@ -235,31 +212,27 @@ export const getWebSocketUrl = () => {
         const portMatch = baseUrl.match(/:(\d+)/);
         const port = portMatch ? portMatch[1] : '8000';
         const wsUrl = `ws://${expoIP}:${port}/ws`;
-        console.log('🔧 [getWebSocketUrl] Using Expo host IP:', expoIP);
-        console.log('🔧 [getWebSocketUrl] WebSocket URL:', wsUrl);
         return wsUrl;
       }
     }
     
     // Fallback: use the machine's IP we found
-    const localIP = '10.201.235.37';
+    const localIP =
+    process.env.EXPO_PUBLIC_DEV_LAN_IP ??
+    (hostUri?.split(':')[0] ?? '127.0.0.1');
     const portMatch = baseUrl.match(/:(\d+)/);
     const port = portMatch ? portMatch[1] : '8000';
     const fallbackUrl = `ws://${localIP}:${port}/ws`;
-    console.log('🔧 [getWebSocketUrl] Using fallback IP:', localIP);
-    console.log('🔧 [getWebSocketUrl] Fallback WebSocket URL:', fallbackUrl);
     return fallbackUrl;
   }
   
   // For web development, also check if we need to replace localhost
   if (baseUrl.includes('localhost')) {
-    console.log('🔧 [getWebSocketUrl] Web development mode with localhost detected');
     // Use the same IP that the server is running on
     const localIP = '10.201.235.37'; // From your server logs
     const portMatch = baseUrl.match(/:(\d+)/);
     const port = portMatch ? portMatch[1] : '8000';
     const wsUrl = `ws://${localIP}:${port}/ws`;
-    console.log('🔧 [getWebSocketUrl] Web development WebSocket URL:', wsUrl);
     return wsUrl;
   }
   
@@ -268,7 +241,6 @@ export const getWebSocketUrl = () => {
   if (!wsUrl.endsWith('/ws')) {
     wsUrl += '/ws';
   }
-  console.log('🔧 [getWebSocketUrl] Production/Web WebSocket URL:', wsUrl);
   return wsUrl;
 };
 
@@ -277,22 +249,6 @@ export const getWebSocketUrl = () => {
  */
 export const logEnvironmentInfo = () => {
   if (isDevelopment()) {
-    console.log('🔧 OMNII Environment Configuration:', {
-      version: env.app.version,
-      environment: env.app.environment,
-      backend: {
-        baseUrl: env.app.backendBaseUrl,
-        apiUrl: getApiUrl(),
-        websocketUrl: getWebSocketUrl(),
-      },
-      services: {
-        supabase: !!env.supabase.url,
-        stripe: !!env.stripe.publishableKey,
-        google: !!env.oauth.google.webClientId,
-      },
-      cors: {
-        origins: env.cors.origins,
-      },
-    });
+    // Environment info logging disabled
   }
 }; 

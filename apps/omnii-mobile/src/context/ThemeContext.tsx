@@ -74,7 +74,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       };
     } catch (error) {
       // FALLBACK: Safe defaults if anything fails (SSR-safe)
-      console.warn('ThemeContext error, using defaults:', error);
       
       const fallbackSystemTheme: 'light' | 'dark' | null = 
         systemColorScheme === 'dark' ? 'dark' 
@@ -129,9 +128,7 @@ export function useThemeIntegration() {
         updateTheme({ colorScheme: newTheme });
         
         // Simple theme change without accessibility announcements
-        console.log(`Theme changed to ${newTheme} mode`);
       } catch (error) {
-        console.warn('Theme change failed:', error);
       }
     };
     
@@ -146,7 +143,6 @@ export function useThemeIntegration() {
     const { theme, isDark } = useTheme();
     return {
       themeSettings: { colorScheme: 'light' as 'light' },
-      handleThemeChange: () => console.warn('Theme updates not available without ProfileProvider'),
       currentTheme: theme,
       isDark
     };

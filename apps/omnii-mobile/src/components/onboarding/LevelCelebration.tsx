@@ -12,9 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { cn } from '~/utils/cn';
 import { useTheme } from '~/context/ThemeContext';
 import { useResponsiveDesign } from '~/utils/responsive';
+import { useAuth } from '~/context/AuthContext';
 import type { LevelProgression } from '~/types/xp';
 import { LEVEL_REQUIREMENTS } from '~/types/xp';
 import { Mascot } from '~/components/common/Mascot';
@@ -26,6 +28,60 @@ import {
 } from '~/types/mascot';
 
 const { width, height } = Dimensions.get('window');
+
+// Storage key for tracking seen celebrations
+const SEEN_CELEBRATIONS_KEY = 'seen_level_celebrations';
+
+// Helper functions for persistent celebration tracking
+const getCelebrationKey = (userId: string, level: number): string => {
+  return `${userId}_level_${level}`;
+};
+
+const hasSeenCelebration = async (userId: string, level: number): Promise<boolean> => {
+  try {
+    const seenCelebrations = await AsyncStorage.getItem(SEEN_CELEBRATIONS_KEY);
+    if (!seenCelebrations) return false;
+    
+    const seen = JSON.parse(seenCelebrations);
+    const key = getCelebrationKey(userId, level);
+    return seen[key] === true;
+  } catch (error) {
+    return false;
+  }
+};
+
+const markCelebrationAsSeen = async (userId: string, level: number): Promise<void> => {
+  try {
+    const seenCelebrations = await AsyncStorage.getItem(SEEN_CELEBRATIONS_KEY);
+    const seen = seenCelebrations ? JSON.parse(seenCelebrations) : {};
+    
+    const key = getCelebrationKey(userId, level);
+    seen[key] = true;
+    
+    await AsyncStorage.setItem(SEEN_CELEBRATIONS_KEY, JSON.stringify(seen));
+  } catch (error) {
+    // Silently fail - celebration tracking is not critical
+  }
+};
+
+// Utility function to clear celebration history (useful for testing)
+export const clearCelebrationHistory = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(SEEN_CELEBRATIONS_KEY);
+  } catch (error) {
+    // Silently fail
+  }
+};
+
+// Utility function to get all seen celebrations (useful for debugging)
+export const getSeenCelebrations = async (): Promise<Record<string, boolean>> => {
+  try {
+    const seenCelebrations = await AsyncStorage.getItem(SEEN_CELEBRATIONS_KEY);
+    return seenCelebrations ? JSON.parse(seenCelebrations) : {};
+  } catch (error) {
+    return {};
+  }
+};
 
 interface LevelCelebrationProps {
   visible: boolean;
@@ -39,7 +95,7 @@ interface LevelCelebrationProps {
 const DesktopLevelToast: React.FC<{
   visible: boolean;
   levelProgression: LevelProgression;
-  onComplete: () => void;
+  onComplete: () => void | Promise<void>;
   xpGained: number;
   levelTitle: string;
   levelColors: { primary: string; secondary: string };
@@ -218,8 +274,42 @@ export default function LevelCelebration({
   const { isDark } = useTheme();
   const responsive = useResponsiveDesign();
   const router = useRouter();
+  const { user } = useAuth();
   const [animationPhase, setAnimationPhase] = useState<'entrance' | 'celebration' | 'features' | 'complete'>('entrance');
+  const [shouldShowCelebration, setShouldShowCelebration] = useState(false);
+  const [isCheckingCelebration, setIsCheckingCelebration] = useState(true);
   
+  // Check if this celebration has already been shown
+  useEffect(() => {
+    const checkCelebrationStatus = async () => {
+      if (!visible || !levelProgression || !user?.id) {
+        setIsCheckingCelebration(false);
+        setShouldShowCelebration(false);
+        return;
+      }
+
+      try {
+        const hasBeenSeen = await hasSeenCelebration(user.id, levelProgression.to_level);
+        setShouldShowCelebration(!hasBeenSeen);
+      } catch (error) {
+        // If we can't check, show the celebration to be safe
+        setShouldShowCelebration(true);
+      } finally {
+        setIsCheckingCelebration(false);
+      }
+    };
+
+    checkCelebrationStatus();
+  }, [visible, levelProgression, user?.id]);
+
+  // Handle completion and mark as seen
+  const handleComplete = async () => {
+    if (levelProgression && user?.id) {
+      await markCelebrationAsSeen(user.id, levelProgression.to_level);
+    }
+    onComplete();
+  };
+
   // Calculate the actual XP gained for this level up
   const calculateXPGained = (levelProgression: LevelProgression | null): number => {
     if (!levelProgression) return 0;
@@ -231,12 +321,7 @@ export default function LevelCelebration({
     
     // Validate that the user has enough XP for the claimed level
     if (currentLevelXP < toLevelRequirement) {
-      console.warn('⚠️ [LevelCelebration] Invalid progression data - insufficient XP for level:', {
-        currentXP: currentLevelXP,
-        requiredXP: toLevelRequirement,
-        claimedLevel: levelProgression.to_level,
-        fromLevel: levelProgression.from_level
-      });
+      // Invalid level progression data detected
       return 0; // This will cause the celebration to show 0 XP (indicating invalid data)
     }
     
@@ -246,16 +331,7 @@ export default function LevelCelebration({
     // For a cleaner display, show XP needed to level up (more intuitive)
     const xpToLevelUp = toLevelRequirement - fromLevelRequirement;
     
-    console.log('🎯 [LevelCelebration] XP Calculation:', {
-      fromLevel: levelProgression.from_level,
-      toLevel: levelProgression.to_level,
-      totalXP: currentLevelXP,
-      fromLevelReq: fromLevelRequirement,
-      toLevelReq: toLevelRequirement,
-      xpToLevelUp,
-      xpInPreviousLevel,
-      isValid: currentLevelXP >= toLevelRequirement
-    });
+    // Level progression calculations logged for debugging
     
     // Show the XP required to reach this level (more meaningful for user)
     return xpToLevelUp;
@@ -271,12 +347,12 @@ export default function LevelCelebration({
   const pulseAnim = useRef(new Animated.Value(1)).current; // New pulse animation for level badge
 
   useEffect(() => {
-    if (visible && levelProgression) {
+    if (visible && levelProgression && shouldShowCelebration) {
       startCelebrationSequence();
     } else {
       resetAnimations();
     }
-  }, [visible, levelProgression]);
+  }, [visible, levelProgression, shouldShowCelebration]);
 
   const resetAnimations = () => {
     scaleAnim.setValue(0);
@@ -419,13 +495,18 @@ export default function LevelCelebration({
 
   if (!visible || !levelProgression) return null;
 
+  // Don't show anything while checking if celebration has been seen
+  if (isCheckingCelebration) return null;
+
+  // Don't show if this celebration has already been seen
+  if (!shouldShowCelebration) return null;
+
   // ✅ VALIDATION: Don't show celebration if data is invalid
   const xpGained = calculateXPGained(levelProgression);
   if (xpGained === 0) {
-    console.warn('⚠️ [LevelCelebration] Closing celebration due to invalid progression data');
     // Auto-close invalid celebration after a brief delay
     setTimeout(() => {
-      onComplete();
+      handleComplete();
     }, 100);
     return null;
   }
@@ -438,7 +519,7 @@ export default function LevelCelebration({
       <DesktopLevelToast
         visible={visible}
         levelProgression={levelProgression}
-        onComplete={onComplete}
+        onComplete={handleComplete}
         xpGained={xpGained}
         levelTitle={getLevelTitle(levelProgression.to_level)}
         levelColors={levelColors}
@@ -613,7 +694,7 @@ export default function LevelCelebration({
                   {/* Continue Button */}
                   <TouchableOpacity 
                     className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-2xl py-3 px-8 shadow-xl active:scale-95 mb-6"
-                    onPress={onComplete}
+                    onPress={handleComplete}
                   >
                     <Text className="text-white text-base font-bold text-center">
                       ✨ Continue

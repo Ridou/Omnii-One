@@ -12,29 +12,21 @@ export default function EmergencyLogoutScreen() {
   useEffect(() => {
     const performEmergencyLogout = async () => {
       try {
-        console.log('🚨 Emergency logout initiated...');
 
         // 1. Sign out from Supabase
         try {
-          console.log('🔄 Signing out from Supabase...');
           await supabase.auth.signOut();
-          console.log('✅ Supabase sign out complete');
         } catch (supabaseError) {
-          console.error('⚠️ Supabase sign out failed:', supabaseError);
         }
 
         // 2. Clear AsyncStorage
         try {
-          console.log('🧹 Clearing AsyncStorage...');
           await AsyncStorage.clear();
-          console.log('✅ AsyncStorage cleared');
         } catch (storageError) {
-          console.error('⚠️ AsyncStorage clear failed:', storageError);
         }
 
         // 3. Clear any Supabase-specific storage keys
         try {
-          console.log('🧹 Clearing Supabase storage keys...');
           const keys = await AsyncStorage.getAllKeys();
           const supabaseKeys = keys.filter(key => 
             key.includes('supabase') || 
@@ -44,40 +36,29 @@ export default function EmergencyLogoutScreen() {
           );
           if (supabaseKeys.length > 0) {
             await AsyncStorage.multiRemove(supabaseKeys);
-            console.log('✅ Supabase keys cleared:', supabaseKeys);
           }
         } catch (keyError) {
-          console.error('⚠️ Key clearing failed:', keyError);
         }
 
-        console.log('✅ Emergency logout complete');
 
         // 4. 🔒 CONSISTENT REDIRECT: Always go to landing page after logout
-        console.log('🏠 Redirecting to landing page...');
         try {
           router.replace('/');
-          console.log('✅ Successfully redirected to landing page');
         } catch (navigationError) {
-          console.error('❌ Navigation to landing page failed:', navigationError);
           // Fallback: try to reload the page if web
           if (typeof window !== 'undefined') {
-            console.log('🔄 Fallback: Reloading page...');
             window.location.href = '/';
           }
         }
 
       } catch (error) {
-        console.error('💥 Emergency logout failed:', error);
         
         // 🔒 FALLBACK: Still try to go to landing page
         try {
-          console.log('🏠 Fallback: Trying to redirect to landing page...');
           router.replace('/');
         } catch (finalError) {
-          console.error('💥 Final redirect also failed:', finalError);
           // Last resort: reload page if on web
           if (typeof window !== 'undefined') {
-            console.log('🔄 Last resort: Reloading page...');
             window.location.href = '/';
           }
         }
@@ -93,7 +74,6 @@ export default function EmergencyLogoutScreen() {
       await AsyncStorage.clear();
       router.replace('/'); // 🔒 Consistent redirect to landing page
     } catch (error) {
-      console.error('Force logout failed:', error);
     }
   };
 
@@ -101,7 +81,6 @@ export default function EmergencyLogoutScreen() {
     try {
       router.replace('/'); // 🔒 Go to landing page instead of random routes
     } catch (error) {
-      console.error('Landing page navigation failed:', error);
     }
   };
 
@@ -109,7 +88,6 @@ export default function EmergencyLogoutScreen() {
     try {
       router.replace('/(auth)/login');
     } catch (error) {
-      console.error('Login navigation failed:', error);
     }
   };
 

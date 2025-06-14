@@ -38,7 +38,6 @@ export const signInWithApple = async () => {
     return data;
     
   } catch (error) {
-    console.error('🍎 Apple Sign In error:', error);
     throw error;
   }
 };
@@ -56,7 +55,6 @@ export const isAppleSignInAvailable = async (): Promise<boolean> => {
     const isAvailable = await AppleAuthentication.isAvailableAsync();
     return isAvailable;
   } catch (error) {
-    console.warn('🍎 Apple Sign In availability check failed:', error);
     return false;
   }
 }; 

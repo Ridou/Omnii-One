@@ -58,7 +58,6 @@ export default function TabLayout() {
   useEffect(() => {
     if (user?.id) {
       setVisitedFeatures(new Set());
-      console.log('🔄 [TabLayout] Reset visited features for user:', user.email);
     }
   }, [user?.id]);
 
@@ -66,7 +65,6 @@ export default function TabLayout() {
   const awardExplorationXP = async (feature: string) => {
     // ✅ CLIENT-SIDE PROTECTION: Check if we've already visited this feature
     if (visitedFeatures.has(feature)) {
-      console.log(`⚡ [TabLayout] Already visited ${feature}, skipping XP award`);
       return;
     }
 
@@ -75,9 +73,7 @@ export default function TabLayout() {
       setVisitedFeatures(prev => new Set(prev).add(feature));
       
       await recordFeatureVisit(feature);
-      console.log(`✨ [TabLayout] Recorded first visit to ${feature}`);
     } catch (error) {
-      console.error(`❌ [TabLayout] Failed to record visit to ${feature}:`, error);
       // On error, remove from visited set to allow retry
       setVisitedFeatures(prev => {
         const newSet = new Set(prev);
@@ -87,19 +83,8 @@ export default function TabLayout() {
     }
   };
 
-  const shouldShowTabBar = useMemo(() => {
+    const shouldShowTabBar = useMemo(() => {
     const show = isAuthenticated && user;
-    
-    if (__DEV__) {
-      console.log('📱 Tab Bar Auth State:', {
-        isAuthenticated,
-        user: user ? `${user.email} (${user.id})` : 'none',
-        session: user ? 'exists' : 'none',
-        isDark,
-        isInitialized: true,
-        shouldShowTabBar: show
-      });
-    }
     
     return show;
   }, [isAuthenticated, user, isDark]);
@@ -157,7 +142,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="approvals"
+          name="tasks"
           options={{
             tabBarIcon: ({ color, size, focused }) => (
               <HeaderLogo />
@@ -165,7 +150,7 @@ export default function TabLayout() {
           }}
           listeners={{
             tabPress: () => {
-              awardExplorationXP('approvals');
+              awardExplorationXP('tasks');
             },
           }}
         />

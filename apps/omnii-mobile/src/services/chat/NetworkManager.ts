@@ -3,7 +3,6 @@ export class NetworkManager {
   private isOnline = true;
   
   constructor() {
-    console.log('NetworkManager: Stub mode - NetInfo disabled');
   }
   
   on(event: string, callback: Function) {

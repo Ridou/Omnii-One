@@ -49,7 +49,7 @@ export default function LandingHero() {
       <View style={styles.overlay}>
         <Text style={styles.title}>ApprovalFlow</Text>
         <Text style={styles.subtitle}>
-          Streamline your workflow approvals with our mobile-first platform.
+          Streamline your workflow tasks with our mobile-first platform.
           Approve requests quickly, anywhere, anytime.
         </Text>
       </View>

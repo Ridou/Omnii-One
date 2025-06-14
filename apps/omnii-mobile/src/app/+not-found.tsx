@@ -1,33 +1,22 @@
-import { Link, Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 export default function NotFoundScreen() {
-  return (
-    <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <View style={styles.container}>
-        <Text style={styles.text}>This screen doesn't exist.</Text>
-        <Link href="/" style={styles.link}>
-          <Text>Go to home screen!</Text>
-        </Link>
-      </View>
-    </>
-  );
-}
+  const router = useRouter();
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  text: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-});
+  useEffect(() => {
+    // Automatically redirect to root for both web and mobile
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // For web/desktop: Hard redirect to avoid showing 404 page
+      window.location.href = '/';
+    } else {
+      // For mobile: Use router navigation
+      router.replace('/');
+    }
+  }, [router]);
+
+  // Return null since we're redirecting immediately
+  // This prevents any flash of 404 content
+  return null;
+}

@@ -79,11 +79,9 @@ export function useSmartBack(options: SmartBackOptions = {}) {
       }
       
       const finalRoute = fallbackRoute || '/';
-      console.log(`🔄 Smart Back: No history found, navigating to ${finalRoute}`);
       router.push(finalRoute);
       
     } catch (error) {
-      console.error('Smart Back Error:', error);
       // Ultimate fallback - just go home
       if (isStaticExport() && typeof window !== 'undefined') {
         window.location.href = '/';
@@ -145,11 +143,9 @@ export function createSmartBack(options: SmartBackOptions = {}) {
       }
       
       const finalRoute = fallbackRoute || '/';
-      console.log(`🔄 Smart Back: No history found, navigating to ${finalRoute}`);
       router.push(finalRoute);
       
     } catch (error) {
-      console.error('Smart Back Error:', error);
       // Ultimate fallback - just go home
       if (isStaticExport() && typeof window !== 'undefined') {
         window.location.href = '/';

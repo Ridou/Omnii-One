@@ -74,7 +74,6 @@ class PerformanceManager {
    */
   private initializePerformanceMonitoring(): void {
     if (__DEV__) {
-      console.log('🚀 Performance monitoring initialized');
     }
 
     // Track app launch time
@@ -99,7 +98,6 @@ class PerformanceManager {
     
     if (__DEV__) {
       const status = launchTime < 3000 ? '✅' : '⚠️';
-      console.log(`${status} App launch time: ${launchTime}ms (target: <3000ms)`);
     }
     
     // Log to analytics in production
@@ -134,7 +132,6 @@ class PerformanceManager {
           this.attemptMemoryCleanup();
         } else if (currentMemory > 150) {
           if (__DEV__) {
-            console.warn(`⚠️ High memory usage: ${currentMemory.toFixed(1)}MB`);
           }
         }
       }
@@ -223,7 +220,6 @@ class PerformanceManager {
     };
 
     if (__DEV__) {
-      console.error('💥 Crash detected:', crashReport);
     }
 
     // Log to crash reporting service in production
@@ -249,7 +245,6 @@ class PerformanceManager {
     };
 
     if (__DEV__) {
-      console.error('🚨 Unhandled promise rejection:', rejectionReport);
     }
 
     // Prevent default handling in production to avoid crashes
@@ -291,7 +286,6 @@ class PerformanceManager {
    */
   private attemptMemoryCleanup(): void {
     if (__DEV__) {
-      console.log('🧹 Attempting memory cleanup...');
     }
 
     // Force garbage collection if available
@@ -316,7 +310,6 @@ class PerformanceManager {
     // Clear temporary files
     
     if (__DEV__) {
-      console.log('🗑️ Cleared optional caches');
     }
   }
 
@@ -329,7 +322,6 @@ class PerformanceManager {
     // Remove unused images from memory
     
     if (__DEV__) {
-      console.log('🖼️ Optimized image cache');
     }
   }
 
@@ -342,7 +334,6 @@ class PerformanceManager {
     // Refresh critical app state
     
     if (__DEV__) {
-      console.log('🔄 Attempting graceful recovery...');
     }
   }
 
@@ -379,7 +370,6 @@ class PerformanceManager {
   private logPerformanceWarning(type: string, data: any): void {
     if (!__DEV__) {
       // Log to analytics service
-      console.warn(`Performance warning: ${type}`, data);
     }
   }
 
@@ -389,7 +379,6 @@ class PerformanceManager {
   private logCrashReport(crashReport: any): void {
     if (!__DEV__) {
       // Log to crash reporting service (Sentry, Crashlytics, etc.)
-      console.error('Crash report:', crashReport);
     }
   }
 
@@ -636,7 +625,6 @@ export const PerformanceUtils = {
   // Bundle size optimization checker
   analyzeBundleSize: () => {
     if (__DEV__) {
-      console.log('📦 Bundle analysis available in development mode');
       // In production, this would integrate with bundle analyzers
     }
   },
@@ -649,7 +637,6 @@ export const usePerformanceTracking = (componentName: string) => {
   React.useEffect(() => {
     const renderTime = Date.now() - startTime;
     if (renderTime > 100) { // Log slow renders
-      console.log(`⏱️ Slow render: ${componentName} took ${renderTime}ms`);
     }
   }, [componentName, startTime]);
 
@@ -658,7 +645,6 @@ export const usePerformanceTracking = (componentName: string) => {
     return () => {
       const interactionTime = Date.now() - interactionStart;
       if (interactionTime > 100) {
-        console.log(`🖱️ Slow interaction: ${componentName}.${action} took ${interactionTime}ms`);
       }
     };
   }, [componentName]);
@@ -713,10 +699,8 @@ export const NetworkOptimizer = {
 // Development performance helpers
 if (__DEV__) {
   // Add performance logging in development
-  console.log('🔧 Performance monitoring enabled in development mode');
   
   // Monitor bundle size in development
   setTimeout(() => {
-    console.log('📊 Performance report:', performanceManager.generatePerformanceReport());
   }, 5000);
 } 

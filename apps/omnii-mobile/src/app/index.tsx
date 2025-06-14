@@ -14,38 +14,24 @@ export default function LandingPage() {
   const { isInitialized, user, session } = useAuth();
   const [hasRouted, setHasRouted] = React.useState(false);
 
-  // Debug logging
-  React.useEffect(() => {
-    if (__DEV__ && user) {
-      console.log('🏠 Index Route Debug:', {
-        isInitialized,
-        userId: user?.id,
-        hasSession: !!session,
-        hasRouted,
-        isStaticExport: isStaticExport(),
-      });
-    }
-  }, [isInitialized, user?.id, session, hasRouted]);
+
 
   // Handle authenticated user routing (only for dynamic builds)
   React.useEffect(() => {
     // Skip auth routing in static export mode - always show landing page
     if (isStaticExport()) {
-      console.log('🔧 Static export mode: Showing landing page without auth routing');
       return;
     }
     
     if (hasRouted || !isInitialized || !user || !session) return;
 
-    // Authenticated users go directly to approvals (onboarding happens there)
-    console.log('✅ Redirecting authenticated user to approvals');
+    // Authenticated users go directly to tasks (onboarding happens there)
     setHasRouted(true);
-    router.replace('/(tabs)/approvals');
+    router.replace('/(tabs)/tasks');
   }, [isInitialized, user?.id, session, hasRouted, router]);
 
   // For static export, always show landing page
   if (isStaticExport()) {
-    console.log('🔧 Static export mode: Showing landing page');
     return (
       <>
         <AppHead

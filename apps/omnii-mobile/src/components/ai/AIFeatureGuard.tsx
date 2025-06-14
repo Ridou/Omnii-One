@@ -128,7 +128,6 @@ export const AIFeatureGuard: React.FC<AIFeatureGuardProps> = ({
       const needsGoogle = await needsGoogleIntegrationForAI();
       setNeedsIntegration(needsGoogle);
     } catch (error) {
-      console.error('Failed to check integration status:', error);
       // Assume no integration needed on error to avoid blocking users
       setNeedsIntegration(false);
     } finally {
@@ -162,7 +161,6 @@ export const AIFeatureGuard: React.FC<AIFeatureGuardProps> = ({
       );
       
     } catch (error) {
-      console.error('Failed to connect Google integration:', error);
       
       Alert.alert(
         '❌ Connection Failed',

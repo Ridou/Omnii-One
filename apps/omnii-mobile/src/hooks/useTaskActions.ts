@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 
-interface Approval {
+interface Task {
   id: string;
   title: string;
   description: string;
@@ -11,62 +11,60 @@ interface Approval {
   type: string;
 }
 
-interface UseApprovalActionsProps {
-  approvals: Approval[];
-  setApprovals: React.Dispatch<React.SetStateAction<Approval[]>>;
+interface UseTaskActionsProps {
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   onAchievement?: (achievementId: string) => void;
 }
 
-export function useApprovalActions({ 
-  approvals, 
-  setApprovals, 
+export function useTaskActions({ 
+  tasks, 
+  setTasks, 
   onAchievement 
-}: UseApprovalActionsProps) {
+}: UseTaskActionsProps) {
   const [undoStack, setUndoStack] = useState<{
     action: 'approve' | 'reject';
-    approval: Approval;
+    task: Task;
     timestamp: number;
   }[]>([]);
 
-  const removeApproval = useCallback((id: string) => {
-    setApprovals(approvals.filter(approval => approval.id !== id));
-  }, [approvals, setApprovals]);
+const removeTask = useCallback((id: string) => {
+  setTasks(prev => prev.filter(task => task.id !== id));
+}, [setTasks]);
 
-  const handleApprove = useCallback((approval: Approval) => {
+  const handleApprove = useCallback((task: Task) => {
     // Add to undo stack
     setUndoStack(prev => [...prev, {
       action: 'approve',
-      approval,
+      task,
       timestamp: Date.now(),
     }]);
 
     // Remove from current list
-    removeApproval(approval.id);
+    removeTask(task.id);
 
     // Track achievement progress
     onAchievement?.('swipe-approve');
 
     // In real app, would also make API call
-    console.log('Approved:', approval.title);
-  }, [removeApproval, onAchievement]);
+  }, [removeTask, onAchievement]);
 
-  const handleReject = useCallback((approval: Approval) => {
+  const handleReject = useCallback((task: Task) => {
     // Add to undo stack
     setUndoStack(prev => [...prev, {
       action: 'reject',
-      approval,
+      task,
       timestamp: Date.now(),
     }]);
 
     // Remove from current list
-    removeApproval(approval.id);
+    removeTask(task.id);
 
     // Track achievement progress
     onAchievement?.('swipe-reject');
 
     // In real app, would also make API call
-    console.log('Rejected:', approval.title);
-  }, [removeApproval, onAchievement]);
+  }, [removeTask, onAchievement]);
 
   const undoLastAction = useCallback(() => {
     const lastAction = undoStack[undoStack.length - 1];
@@ -78,14 +76,13 @@ export function useApprovalActions({
       return;
     }
 
-    // Restore the approval to the list
-    setApprovals(prev => [...prev, lastAction.approval]);
+    // Restore the task to the list
+    setTasks(prev => [...prev, lastAction.task]);
     
     // Remove from undo stack
     setUndoStack(prev => prev.slice(0, -1));
 
-    console.log('Undid:', lastAction.action, lastAction.approval.title);
-  }, [undoStack, setApprovals]);
+  }, [undoStack, setTasks]);
 
   return {
     handleApprove,

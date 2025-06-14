@@ -5,7 +5,8 @@ export default {
     name: 'OMNII',
     slug: 'omnii',
     owner: 'omnii',
-    version: '1.0.2',
+    version: '1.0.3',
+    runtimeVersion: '1.0.3',
     orientation: 'portrait',
     icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
     userInterfaceStyle: 'light',
@@ -54,7 +55,7 @@ export default {
     web: {
       bundler: 'metro',
       output: 'static',
-      favicon: './public/favicon.svg',
+      favicon: './public/favicon.ico',
       name: 'OMNII - AI Productivity Assistant',
       shortName: 'OMNII',
       darkMode: false,

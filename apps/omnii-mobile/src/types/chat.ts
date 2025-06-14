@@ -58,7 +58,7 @@ export interface ChatMessage {
 export interface Citation {
   id: string;
   name: string;
-  type: 'analytics' | 'profile' | 'approvals' | 'achievements';
+  type: 'analytics' | 'profile' | 'tasks' | 'achievements';
   url?: string;
   confidence: number;
 }

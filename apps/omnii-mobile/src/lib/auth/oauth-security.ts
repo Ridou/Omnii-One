@@ -7,7 +7,6 @@ let SecureStore: any = null;
 try {
   SecureStore = require('expo-secure-store');
 } catch (error) {
-  console.warn('⚠️ SecureStore not available in oauth-security:', error);
 }
 
 /**
@@ -71,7 +70,6 @@ class OAuthSecurityManager {
     }, 5 * 60 * 1000);
 
     if (__DEV__) {
-      console.log('🔐 OAuth Security Manager initialized');
     }
   }
 
@@ -235,7 +233,6 @@ class OAuthSecurityManager {
           requireAuthentication: !__DEV__,
         });
       } else {
-        console.warn('⚠️ SecureStore not available, storing in memory (development only)');
         // In development, we can store in memory as a fallback
         if (__DEV__) {
           (globalThis as any).__oauth_code_verifier = codeVerifier;
@@ -244,7 +241,6 @@ class OAuthSecurityManager {
         }
       }
     } catch (error) {
-      console.error('Failed to store code verifier securely:', error);
       throw new Error('OAuth security error: Failed to store code verifier');
     }
   }
@@ -264,7 +260,6 @@ class OAuthSecurityManager {
           await SecureStore.deleteItemAsync('oauth_code_verifier');
         }
       } else {
-        console.warn('⚠️ SecureStore not available, retrieving from memory (development only)');
         // In development, retrieve from memory fallback
         if (__DEV__) {
           codeVerifier = (globalThis as any).__oauth_code_verifier || null;
@@ -277,7 +272,6 @@ class OAuthSecurityManager {
       
       return codeVerifier;
     } catch (error) {
-      console.error('Failed to retrieve code verifier:', error);
       return null;
     }
   }
@@ -289,12 +283,10 @@ class OAuthSecurityManager {
     const stateData = this.activeStates.get(state);
     
     if (!stateData) {
-      console.warn('Invalid or unknown state parameter');
       return false;
     }
     
     if (Date.now() > stateData.expiresAt) {
-      console.warn('Expired state parameter');
       this.activeStates.delete(state);
       return false;
     }
@@ -311,12 +303,10 @@ class OAuthSecurityManager {
     const nonceData = this.activeNonces.get(nonce);
     
     if (!nonceData) {
-      console.warn('Invalid or unknown nonce parameter');
       return false;
     }
     
     if (Date.now() > nonceData.expiresAt) {
-      console.warn('Expired nonce parameter');
       this.activeNonces.delete(nonce);
       return false;
     }
@@ -372,7 +362,6 @@ class OAuthSecurityManager {
     }
     
     if (uri !== expectedUri) {
-      console.warn(`Invalid redirect URI: expected ${expectedUri}, got ${uri}`);
       return false;
     }
     
@@ -385,20 +374,17 @@ class OAuthSecurityManager {
   public async validateAuthorizationResponse(params: Record<string, string>): Promise<boolean> {
     // Check for error response
     if (params.error) {
-      console.error('OAuth authorization error:', params.error, params.error_description);
       return false;
     }
     
     // Validate required parameters
     if (!params.code) {
-      console.error('Missing authorization code in response');
       return false;
     }
     
     // Validate state parameter
     if (this.securityOptions.requireStateParameter) {
       if (!params.state || !this.validateState(params.state)) {
-        console.error('Invalid or missing state parameter');
         return false;
       }
     }
@@ -450,7 +436,6 @@ class OAuthSecurityManager {
       
       return tokens;
     } catch (error) {
-      console.error('Token exchange error:', error);
       throw new Error('OAuth security error: Token exchange failed');
     }
   }
@@ -476,7 +461,6 @@ class OAuthSecurityManager {
     }
     
     if (__DEV__) {
-      console.log(`🧹 Cleaned up expired OAuth tokens. Active states: ${this.activeStates.size}, Active nonces: ${this.activeNonces.size}`);
     }
   }
 
@@ -501,7 +485,6 @@ class OAuthSecurityManager {
     if (__DEV__) {
       this.securityOptions.enforceHTTPS = false;
       this.securityOptions.enableCertificatePinning = false;
-      console.log('🔧 OAuth development mode enabled');
     }
   }
 
@@ -513,7 +496,6 @@ class OAuthSecurityManager {
     this.securityOptions.enableCertificatePinning = true;
     this.securityOptions.requireStateParameter = true;
     this.securityOptions.requireNonce = true;
-    console.log('🔒 OAuth production security mode enabled');
   }
 }
 

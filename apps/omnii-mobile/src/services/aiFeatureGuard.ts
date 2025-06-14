@@ -7,12 +7,10 @@ export class AIFeatureGuard {
    */
   async ensureGoogleAccess(featureId: string): Promise<boolean> {
     try {
-      console.log(`🛡️ Checking Google access for feature: ${featureId}`);
       
       const status = await checkGoogleTokenStatus();
       
       if (!status.isValid && this.requiresGoogle(featureId)) {
-        console.log(`⚠️ Feature ${featureId} requires Google access but none found`);
         
         const shouldConnect = await this.showGooglePrompt(featureId);
         if (shouldConnect) {
@@ -22,27 +20,21 @@ export class AIFeatureGuard {
             const newStatus = await checkGoogleTokenStatus();
             
             if (newStatus.isValid) {
-              console.log(`✅ Google access granted for feature: ${featureId}`);
               return true;
             } else {
-              console.log(`❌ Google connection failed for feature: ${featureId}`);
               return false;
             }
           } catch (error) {
-            console.error(`💥 Google OAuth failed for feature ${featureId}:`, error);
             return false;
           }
         } else {
-          console.log(`🚫 User declined Google connection for feature: ${featureId}`);
           throw new Error(`Google Workspace access is required for ${this.getFeatureName(featureId)}`);
         }
       }
       
-      console.log(`✅ Google access verified for feature: ${featureId}`);
       return true;
       
     } catch (error) {
-      console.error(`💥 Failed to ensure Google access for feature ${featureId}:`, error);
       throw error;
     }
   }
@@ -147,7 +139,6 @@ export class AIFeatureGuard {
       const status = await checkGoogleTokenStatus();
       return status.isValid;
     } catch (error) {
-      console.error('Failed to check Google connection status:', error);
       return false;
     }
   }

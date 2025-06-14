@@ -69,26 +69,6 @@ export const getOmniiScopesString = (): string => {
 // 📊 Current scope information
 export const getCurrentScopeInfo = () => {
   const scopes = getOmniiScopes();
-  console.log('🔍 Current OAuth Scope Configuration:');
-  console.log(`📊 Total active scopes: ${scopes.length}`);
-  console.log('🔓 Mode: Core Productivity Scopes (Gmail + Calendar + Contacts + Tasks)');
-  console.log('✅ Services available:');
-  console.log('  - Gmail: Full access (read, compose, send, modify, labels)');
-  console.log('  - Calendar: Full access (read, create, edit events)');
-  console.log('  - Contacts: Full access via People API (read, modify contacts + Other contacts)');
-  console.log('  - Tasks: Full access (read, write tasks)');
-  console.log('🚫 Services disabled for faster approval:');
-  console.log('  - Drive: Commented out (enable after core approval)');
-  console.log('  - Sheets: Commented out (enable after core approval)');
-  console.log('');
-  console.log('⚠️ Note: Current scopes require Google OAuth verification');
-  console.log('📝 Status: Verification in progress (4-6 weeks)');
-  console.log('🧪 Workaround: Add Apple reviewers as test users in Google Cloud Console');
-  console.log('');
-  console.log('💡 To enable Drive & Sheets later:');
-  console.log('   1. Uncomment the /* DRIVE & SHEETS */ section in scopes/index.ts');
-  console.log('   2. Update Supabase OAuth scopes configuration');
-  console.log('   3. Request additional Google verification if needed');
   
   return {
     total: scopes.length,
@@ -100,10 +80,5 @@ export const getCurrentScopeInfo = () => {
 // Log the scope string for easy copy-paste to Supabase dashboard
 export const logSupabaseScopeString = (): void => {
   const scopeString = getOmniiScopesString();
-  console.log('📋 Supabase Google OAuth Scopes Configuration:');
-  console.log('Use this string in your signInWithOAuth providerScopes:');
-  console.log('');
-  console.log(`scopes: '${scopeString}'`);
-  console.log('');
   getCurrentScopeInfo();
 }; 
