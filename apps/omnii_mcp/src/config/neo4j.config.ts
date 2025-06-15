@@ -111,18 +111,18 @@ export class Neo4jService {
   private consolidationInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    try {
-      // Initialize with production Neo4j driver (already handled by singleton)
-      this.conversationManager = new BrainConversationManager();
-      
-      // Initialize Redis for caching (with error handling)
-      this.redis = new Redis(process.env.REDIS_URL!, {
-        maxRetriesPerRequest: 3,
-        lazyConnect: true,
-        connectTimeout: 60000,
-        commandTimeout: 5000
-      });
+    // Initialize with production Neo4j driver (always initialize these properties)
+    this.conversationManager = new BrainConversationManager();
+    
+    // Initialize Redis for caching (with error handling)
+    this.redis = new Redis(process.env.REDIS_URL!, {
+      maxRetriesPerRequest: 3,
+      lazyConnect: true,
+      connectTimeout: 60000,
+      commandTimeout: 5000
+    });
 
+    try {
       // Handle Redis connection errors gracefully
       this.redis.on('error', (err) => {
         console.warn('⚠️ Redis connection error:', err.message);
