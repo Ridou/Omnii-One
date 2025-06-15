@@ -1,11 +1,12 @@
-// ✅ UNIFIED APPROACH: Import from @omnii/validators (Single Source of Truth)
+// ✅ UNIFIED APPROACH: Import from validators source (Single Source of Truth)
 // 
-// This file now serves as a re-export of the unified brain memory schemas
-// instead of defining its own local schemas. This ensures consistency
-// across all services and eliminates schema conflicts.
+// This file imports runtime values from validators and re-exports types as inferred types
+// to avoid runtime import issues with TypeScript types.
 
+import { z } from 'zod/v4';
+
+// Import schemas and functions from validators source (runtime values only)
 export {
-  // Schemas
   EnhancedChatMessageSchema,
   EnhancedMemorySchema,
   EnhancedConceptSchema,
@@ -15,25 +16,34 @@ export {
   TimeWindowSchema,
   MemoryStrengthCalculationSchema,
   ComposioMemoryEnhancementSchema,
-  
-  // Constants
   BRAIN_MEMORY_CONSTANTS,
-  
-  // Validation functions
   isValidBrainMemoryContext,
   validateBrainMemoryContext,
   safeParseEnhancedChatMessage,
-    
-  // Types
-  type EnhancedChatMessage,
-  type EnhancedMemory,
-  type EnhancedConcept,
-  type EnhancedTag,
-  type BrainMemoryContext,
-  type EnhancedRelationship,
-  type TimeWindow,
-  type MemoryStrengthCalculation,
-  type ComposioMemoryEnhancement
 } from '@omnii/validators';
+
+// Import the schemas to infer types from them (avoiding runtime type imports)
+import {
+  EnhancedChatMessageSchema,
+  EnhancedMemorySchema,
+  EnhancedConceptSchema,
+  EnhancedTagSchema,
+  BrainMemoryContextSchema,
+  EnhancedRelationshipSchema,
+  TimeWindowSchema,
+  MemoryStrengthCalculationSchema,
+  ComposioMemoryEnhancementSchema,
+} from '@omnii/validators';
+
+// Define types locally by inferring from schemas (this avoids runtime import issues)
+export type EnhancedChatMessage = z.infer<typeof EnhancedChatMessageSchema>;
+export type EnhancedMemory = z.infer<typeof EnhancedMemorySchema>;
+export type EnhancedConcept = z.infer<typeof EnhancedConceptSchema>;
+export type EnhancedTag = z.infer<typeof EnhancedTagSchema>;
+export type BrainMemoryContext = z.infer<typeof BrainMemoryContextSchema>;
+export type EnhancedRelationship = z.infer<typeof EnhancedRelationshipSchema>;
+export type TimeWindow = z.infer<typeof TimeWindowSchema>;
+export type MemoryStrengthCalculation = z.infer<typeof MemoryStrengthCalculationSchema>;
+export type ComposioMemoryEnhancement = z.infer<typeof ComposioMemoryEnhancementSchema>;
 
 // ✅ Note: BrainMemoryContextSchema is already exported in the main export block above 
