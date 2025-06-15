@@ -39,7 +39,8 @@ export function RDFMemoryCard() {
       console.log('   Result:', data.data);
       setIsAnalyzing(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('❌ RDFMemoryCard: Message analysis failed:', error);
       setIsAnalyzing(false);
     },
   }));
