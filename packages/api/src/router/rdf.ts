@@ -34,8 +34,21 @@ const expandNameSchema = z.object({
   ])
 });
 
-// Use localhost for development
+// Get base URL for MCP service (same pattern as neo4j router)
 const getRDFBaseUrl = () => {
+  // Check environment variables first
+  if (process.env.MCP_SERVICE_URL) {
+    return process.env.MCP_SERVICE_URL;
+  }
+  
+  // Production detection
+  if (process.env.NODE_ENV === 'production' || 
+      process.env.RAILWAY_ENVIRONMENT || 
+      process.env.VERCEL_ENV) {
+    return 'https://omniimcp-production.up.railway.app';
+  }
+  
+  // Default to local MCP service (not Python directly)
   return 'http://localhost:8000';
 };
 

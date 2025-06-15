@@ -1,5 +1,21 @@
 {
-  "extends": "../../tooling/typescript/package-node-js.json",
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  "extends": "../../tooling/typescript/base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "module": "es2020",
+    "target": "es2020",
+    "lib": ["es2020"],
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "strictNullChecks": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
