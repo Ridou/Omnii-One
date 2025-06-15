@@ -421,21 +421,20 @@ export const emailRouter = {
     };
   }),
 
-  listEmails: publicProcedure
-    .input(ListEmailsInputSchema)
-    .query(async ({ ctx, input }): Promise<GmailResponse<EmailsListResponse>> => {
-      console.log(`[EmailRouter] 🚨 DEBUG: listEmails called with ctx:`, {
-        hasSession: !!ctx.session,
-        hasUser: !!ctx.session?.user,
-        userId: ctx.session?.user?.id,
-      });
-      
+  listEmails: protectedProcedure
+    .query(async ({ ctx }): Promise<GmailResponse<EmailsListResponse>> => {
       try {
-        // For now, use hardcoded user ID to test
-        const userId = ctx.session?.user?.id;
+        const userId = ctx.session.user.id;
         console.log(`[EmailRouter] Listing emails for user: ${userId}`);
 
-        const result = await emailService.listEmails(userId, input);
+        // Use default parameters like tasks does
+        const defaultParams = {
+          maxResults: 20,
+          query: "newer_than:7d",
+          includeSpamTrash: false,
+        };
+
+        const result = await emailService.listEmails(userId, defaultParams);
 
         return {
           success: true,

@@ -1,7 +1,7 @@
 import { trpc } from '~/utils/api';
 
 import type { CompleteTaskOverview, TaskData, TaskListWithTasks } from '@omnii/validators';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { debugAuthStatus } from '~/utils/auth';
 import { useEffect } from 'react';
 
@@ -19,7 +19,7 @@ export const useTasks = () => {
   }, []);
   
 
-  // ✅ FIXED: tRPC packages now installed - using proper tRPC hook
+  // ✅ Use the stable pattern that works in other mobile hooks
   const {
     data,
     isLoading,
@@ -28,11 +28,13 @@ export const useTasks = () => {
     isRefetching
   } = useQuery(trpc.tasks.getCompleteOverview.queryOptions());
 
-  // ✅ Handle the actual router return type (success/error wrapper)
-  const tasksOverview = data?.success ? data.data : null;
-  const hasError = !!error || (data && !data.success);
+  // ✅ Handle superjson-wrapped data structure  
+  const tasksOverview = data?.json?.success ? data.json.data : null;
+  const hasError = !!error || (data?.json && !data.json.success);
   const errorMessage = error?.message || 
-    (data && !data.success ? data.error : null);
+    (data?.json && !data.json.success ? data.json.error : null);
+    
+
 
   return {
     // Data - all properly typed by tRPC
@@ -102,53 +104,57 @@ export const useTaskMutations = () => {
   }));
 
   // ============================================================================
-  // TASK MUTATIONS - Using tRPC v11 useMutation pattern
+  // TASK MUTATIONS - Using stable pattern consistent with queries
   // ============================================================================
 
-  const createTaskMutation = useMutation(trpc.tasks.createTask.mutationOptions({
+  const createTaskMutation = useMutation({
+    mutationFn: (variables: any) => trpc.tasks.createTask.mutate(variables),
     onSuccess: (result, variables) => {
-      void queryClient.invalidateQueries({ queryKey: [['tasks', 'getCompleteOverview']] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'getCompleteOverview'] });
     },
     onError: (error) => {
       // Handle error silently
     }
-  }));
+  });
 
-  const updateTaskMutation = useMutation(trpc.tasks.updateTask.mutationOptions({
+  const updateTaskMutation = useMutation({
+    mutationFn: (variables: any) => trpc.tasks.updateTask.mutate(variables),
     onSuccess: (result, variables) => {
-      void queryClient.invalidateQueries({ queryKey: [['tasks', 'getCompleteOverview']] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'getCompleteOverview'] });
     },
     onError: (error) => {
       // Handle error silently
     }
-  }));
+  });
 
-  const deleteTaskMutation = useMutation(trpc.tasks.deleteTask.mutationOptions({
+  const deleteTaskMutation = useMutation({
+    mutationFn: (variables: any) => trpc.tasks.deleteTask.mutate(variables),
     onSuccess: (result, variables) => {
-      void queryClient.invalidateQueries({ queryKey: [['tasks', 'getCompleteOverview']] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'getCompleteOverview'] });
     },
     onError: (error) => {
       // Handle error silently
     }
-  }));
+  });
 
-  const createTaskListMutation = useMutation(trpc.tasks.createTaskList.mutationOptions({
+  const createTaskListMutation = useMutation({
+    mutationFn: (variables: any) => trpc.tasks.createTaskList.mutate(variables),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [['tasks', 'getCompleteOverview']] });
-      void queryClient.invalidateQueries({ queryKey: [['tasks', 'listTaskLists']] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'getCompleteOverview'] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'listTaskLists'] });
     },
     onError: (error) => {
       // Handle error silently
     }
-  }))
+  });
 
   // ============================================================================
   // CONVENIENCE METHODS WITH PROPER ERROR HANDLING
   // ============================================================================
 
   const createTaskInFirstList = async (title: string, notes?: string, due?: string) => {
-    // Extract the actual data from the tRPC response wrapper
-    const taskListsResponse = taskListsData?.success ? taskListsData.data : null;
+    // Extract the actual data from the superjson-wrapped tRPC response  
+    const taskListsResponse = taskListsData?.json?.success ? taskListsData.json.data : null;
     
     if (!taskListsResponse) {
       throw new Error('No task lists available. Please create a task list first.');
@@ -175,8 +181,8 @@ export const useTaskMutations = () => {
   };
 
   return {
-    // Task Lists Data - Properly typed
-    taskLists: taskListsData?.success ? taskListsData.data : null,
+    // Task Lists Data - Properly typed with superjson wrapper
+    taskLists: taskListsData?.json?.success ? taskListsData.json.data : null,
     taskListsLoading,
     taskListsError,
     

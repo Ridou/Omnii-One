@@ -9,16 +9,16 @@ const buildAnalyticsFromTRPCData = (
   emailsData?: any,
   calendarData?: any
 ): AnalyticsData => {
-  // Extract real metrics from tRPC responses
-  const totalTasks = tasksData?.success ? tasksData.data?.totalTasks ?? 0 : 0;
-  const completedTasks = tasksData?.success ? tasksData.data?.totalCompleted ?? 0 : 0;
-  const pendingTasks = tasksData?.success ? tasksData.data?.totalPending ?? 0 : 0;
+  // Extract real metrics from superjson-wrapped tRPC responses
+  const totalTasks = tasksData?.json?.data?.totalTasks ?? 0;
+  const completedTasks = tasksData?.json?.data?.totalCompleted ?? 0;
+  const pendingTasks = tasksData?.json?.data?.totalPending ?? 0;
   
-  const totalContacts = contactsData?.success ? contactsData.data?.totalCount ?? 0 : 0;
-  const totalEmails = emailsData?.success ? emailsData.data?.totalCount ?? 0 : 0;
-  const unreadEmails = emailsData?.success ? emailsData.data?.unreadCount ?? 0 : 0;
+  const totalContacts = contactsData?.json?.data?.totalCount ?? 0;
+  const totalEmails = emailsData?.json?.data?.totalCount ?? 0;
+  const unreadEmails = emailsData?.json?.data?.unreadCount ?? 0;
   
-  const totalEvents = calendarData?.success ? calendarData.data?.totalCount ?? 0 : 0;
+  const totalEvents = calendarData?.json?.data?.totalCount ?? 0;
 
   // Calculate focus hours based on completed tasks (rough estimate)
   const estimatedFocusHours = completedTasks * 0.5; // Assume 30min per completed task

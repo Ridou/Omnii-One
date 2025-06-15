@@ -29,11 +29,11 @@ export const useContacts = (pageSize: number = 1000) => {
   }));
 
 
-  // ✅ Handle the actual router return type (success/error wrapper)
-  const contactsData = data?.success ? data.data : null;
-  const hasError = !!error || (data && !data.success);
+  // ✅ Handle superjson-wrapped data structure
+  const contactsData = data?.json?.success ? data.json.data : null;
+  const hasError = !!error || (data?.json && !data.json.success);
   const errorMessage = error?.message || 
-    (data && !data.success ? data.error : null);
+    (data?.json && !data.json.success ? data.json.error : null);
 
   // Log parsed results
 
@@ -105,11 +105,11 @@ export const useContactsSearch = (query: string = "", pageSize: number = 10) => 
   );
 
 
-  // Handle the tRPC response wrapper
-  const searchResults = data?.success ? data.data : null;
-  const hasError = !!error || (data && !data.success);
+  // Handle superjson-wrapped tRPC response
+  const searchResults = data?.json?.success ? data.json.data : null;
+  const hasError = !!error || (data?.json && !data.json.success);
   const errorMessage = error?.message || 
-    (data && !data.success ? data.error : null);
+    (data?.json && !data.json.success ? data.json.error : null);
 
   return {
     // Search results

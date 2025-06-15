@@ -11,6 +11,7 @@ const API_NEO4J_URL = `${API_BASE_URL}/api/neo4j`;
 const getAuthHeaders = async () => {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
+    
     if (session && !error) {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -87,7 +88,9 @@ export const useNeo4jSimple = () => {
     setCurrentSearch(query);
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_NEO4J_URL}/concepts/search?user_id=${user.id}&q=${query}`, {
+      const url = `${API_NEO4J_URL}/concepts/search?user_id=${user.id}&q=${query}`;
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers,
       });
@@ -128,5 +131,80 @@ export const useNeo4jSimple = () => {
     // 🌐 API configuration info
     apiBaseUrl: API_BASE_URL,
     isUsingProduction: API_BASE_URL.includes('railway.app'),
+  };
+};
+
+/**
+ * Hook for concept-specific operations - MISSING EXPORT THAT MOBILE APP EXPECTS
+ */
+export const useConcepts = () => {
+  const { user } = useAuth();
+  const [concepts, setConcepts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const refetch = useCallback(async () => {
+    if (!user?.id) {
+      setConcepts([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_NEO4J_URL}/concepts?user_id=${user.id}&limit=1000`, {
+        method: 'GET',
+        headers,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setConcepts(data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch concepts:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch concepts'));
+      setConcepts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  return {
+    concepts,
+    loading,
+    error,
+    refetch,
+    
+    // Concept-specific helpers
+    totalConcepts: concepts?.length ?? 0,
+    
+    getConceptByName: (name: string) =>
+      concepts?.find(concept => 
+        concept.properties.name === name
+      ),
+    
+    searchConceptsByName: (searchTerm: string) =>
+      concepts?.filter(concept =>
+        concept.properties.name?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      ) ?? [],
+    
+    getRecentConcepts: (limit = 10) =>
+      concepts
+        ?.filter(concept => concept.properties.last_mentioned)
+        ?.sort((a, b) => {
+          const aDate = new Date(a.properties.last_mentioned as string);
+          const bDate = new Date(b.properties.last_mentioned as string);
+          return bDate.getTime() - aDate.getTime();
+        })
+        ?.slice(0, limit) ?? [],
+    
+    getActiveConcepts: (threshold = 0.5) =>
+      concepts?.filter(concept => 
+        (concept.properties.activation_strength as number || 0) >= threshold
+      ) ?? [],
   };
 };

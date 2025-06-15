@@ -226,40 +226,17 @@ class CalendarService {
 const calendarService = new CalendarService();
 
 export const calendarRouter = {
-  getEvents: publicProcedure
-    .input(
-      z.object({
-        timeMin: z.string().optional(),
-        timeMax: z.string().optional(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      console.log(`[CalendarRouter] 🚨 DEBUG: getEvents called with ctx:`, {
-        hasSession: !!ctx.session,
-        hasUser: !!ctx.session?.user,
-        userId: ctx.session?.user?.id,
-      });
-      
+  getEvents: protectedProcedure
+    .query(async ({ ctx }) => {
       try {
-        // Use hardcoded user ID for debugging or fallback to session
-        const userId = ctx.session?.user?.id;
-        
-        if (!userId) {
-          return {
-            success: false,
-            error: "User not authenticated",
-            message: "Authentication required",
-          };
-        }
+        const userId = ctx.session.user.id;
 
         console.log(
           `[CalendarRouter] Getting calendar events for user: ${userId}`,
         );
 
-        const events = await calendarService.fetchCalendarEvents(userId, {
-          timeMin: input.timeMin,
-          timeMax: input.timeMax,
-        });
+        // Use default time range like tasks does (no input params)
+        const events = await calendarService.fetchCalendarEvents(userId, {});
 
         return {
           success: true,

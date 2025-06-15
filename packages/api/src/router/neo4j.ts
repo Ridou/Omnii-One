@@ -1,7 +1,7 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
 
-import { protectedProcedure, publicProcedure } from "../trpc";
+import { protectedProcedure } from "../trpc";
 
 // ============================================================================
 // INPUT VALIDATION SCHEMAS
@@ -170,7 +170,7 @@ export const neo4jRouter = {
           throw new Error(`Neo4j service error: ${response.statusText}`);
         }
 
-        const data = await response.json() as any;
+        const data = await response.json();
         const nodes = data.data || [];
         
         return {
@@ -189,17 +189,10 @@ export const neo4jRouter = {
     }),
 
   // List nodes of a specific type
-  listNodes: publicProcedure
+  listNodes: protectedProcedure
     .input(ListNodesInputSchema)
     .query(async ({ ctx, input }): Promise<NodeListResponse> => {
-      console.log(`[Neo4jRouter] 🚨 DEBUG: listNodes called with ctx:`, {
-        hasSession: !!ctx.session,
-        hasUser: !!ctx.session?.user,
-        userId: ctx.session?.user?.id,
-      });
-      
-      // Use hardcoded user ID for debugging or fallback to session
-              const userId = ctx.session?.user?.id;
+      const userId = ctx.session.user.id;
       console.log(`[Neo4jRouter] Listing ${input.nodeType} nodes for user: ${userId}`);
       
       try {
@@ -233,7 +226,7 @@ export const neo4jRouter = {
           throw new Error(`Neo4j service error: ${response.statusText}`);
         }
 
-        const data = await response.json() as any;
+        const data = await response.json();
         const nodes = data.data || [];
         
         return {

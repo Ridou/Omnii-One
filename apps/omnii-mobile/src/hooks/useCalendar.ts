@@ -26,10 +26,10 @@ export const useCalendar = (params?: { timeMin?: string; timeMax?: string }) => 
   }));
 
 
-  const calendarData = data?.success ? data.data : null;
-  const hasError = !!error || (data && !data.success);
+  const calendarData = data?.json?.success ? data.json.data : null;
+  const hasError = !!error || (data?.json && !data.json.success);
   const errorMessage = error?.message || 
-    (data && !data.success ? data.error : null);
+    (data?.json && !data.json.success ? data.json.error : null);
 
 
   return {

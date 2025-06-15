@@ -14,7 +14,7 @@ import { AuthGuard } from '~/components/common/AuthGuard';
 // Hooks
 import { useTasks, useTaskMutations } from '~/hooks/useTasks';
 import { useCalendar } from '~/hooks/useCalendar';
-import { useConcepts } from '~/hooks/useNeo4j';
+import { useConcepts } from '~/hooks/useNeo4jSimple';
 import { useChatState } from '~/hooks/useChatState';
 import { useChatAnimations } from '~/hooks/useChatAnimations';
 import { useChatActions } from '~/hooks/useChatActions';
