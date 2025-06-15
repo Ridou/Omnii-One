@@ -82,6 +82,7 @@ export const rdfRouter = {
   analyzeMessage: protectedProcedure
     .input(analyzeMessageSchema)
     .mutation(async ({ ctx, input }) => {
+      console.log('[analyzeMessage] RDF analyze message to:', input);
       // EXACT COPY FROM test-local-rdf-flow.js
       const analyzeResponse = await fetch('http://localhost:8000/api/rdf/analyze', {
         method: 'POST',
@@ -95,6 +96,7 @@ export const rdfRouter = {
           extractors: input.extractors
         })
       });
+      console.log('RDF analyze message to:', analyzeResponse);
       
       const analyzeData = await analyzeResponse.json();
       

@@ -1,214 +1,221 @@
-import { trpc } from '~/utils/api';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback } from 'react';
+
+// EXACT constants - NO environment variables, just like useNeo4jSimple
+const API_BASE_URL = "http://localhost:8000";
+const API_RDF_URL = `${API_BASE_URL}/api/rdf`;
 
 /**
- * Hook for RDF semantic analysis and contact resolution using tRPC
- * Based on the working RDF Contact Analyzer from tests
+ * Simple RDF hook that directly calls the RDF endpoints
+ * Similar to useNeo4jSimple - no tRPC, just fetch
  */
 export const useRDF = () => {
-  // Default to extracting concepts from a sample text
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-    isRefetching
-  } = useQuery(trpc.rdf.extractConcepts.queryOptions({
-    text: "List my recent contacts and tasks"
-  }));
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [concepts, setConcepts] = useState<any>(null);
+  const [nameVariations, setNameVariations] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle the tRPC response wrapper
-  const conceptsData = data?.success ? data.data : null;
-  const hasError = !!error || (data && !data.success);
-  const errorMessage = error?.message || 
-    (data && !data.success ? data.message : null);
+  // Analyze message - matches test-local-rdf-flow.js exactly
+  const analyzeMessage = useCallback(async (text: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_RDF_URL}/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text,
+          domain: 'contact_communication',
+          task: 'message_analysis',
+          extractors: [
+            'contact_names',
+            'communication_intent',
+            'context_clues',
+            'formality_level',
+            'urgency_indicators'
+          ]
+        })
+      });
+      console.log('RDF analyze message to:', response);
+      const data = await response.json();
+      console.log('RDF analyze response data:', JSON.stringify(data, null, 2));
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'RDF analysis failed');
+      }
+      
+      // Store the entire response, not just data.analysis
+      setAnalysisResult(data);
+      return data;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to analyze message';
+      setError(errorMsg);
+      console.error('Failed to analyze message:', error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Extract concepts - matches test-local-rdf-flow.js exactly  
+  const extractConcepts = useCallback(async (text: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_RDF_URL}/extract-concepts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text })
+      });
+      
+      const data = await response.json();
+      console.log('RDF extract concepts response data:', JSON.stringify(data, null, 2));
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Concept extraction failed');
+      }
+      
+      // Store the entire response
+      setConcepts(data);
+      return data;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to extract concepts';
+      setError(errorMsg);
+      console.error('Failed to extract concepts:', error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Expand contact name - for name variations
+  const expandContactName = useCallback(async (name: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_RDF_URL}/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name,
+          domain: 'name_linguistics',
+          task: 'name_variation_generation',
+          variation_types: [
+            'phonetic_variations',
+            'nickname_derivations',
+            'cultural_variants',
+            'orthographic_variations',
+            'diminutive_forms',
+            'similar_sounding_names'
+          ]
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Name expansion failed');
+      }
+      
+      // Extract variations similar to RDF router
+      const variations = [name]; // Always include original
+      
+      if (data.phonetic_variations?.variations) {
+        variations.push(...data.phonetic_variations.variations);
+      }
+      if (data.nicknames?.variations) {
+        variations.push(...data.nicknames.variations);
+      }
+      if (data.cultural_variants?.variations) {
+        variations.push(...data.cultural_variants.variations);
+      }
+      
+      const uniqueVariations = [...new Set(variations)];
+      setNameVariations(uniqueVariations);
+      return uniqueVariations;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to expand name';
+      setError(errorMsg);
+      console.error('Failed to expand contact name:', error);
+      return [name]; // Return original name on error
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Health check
+  const checkHealth = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_RDF_URL}/health`);
+      const data = await response.json();
+      return { healthy: response.ok, ...data };
+    } catch (error) {
+      console.error('RDF health check failed:', error);
+      return { healthy: false };
+    }
+  }, []);
 
   return {
-    // Data - all properly typed by tRPC
-    concepts: conceptsData?.concepts || [],
-    sentiment: conceptsData?.sentiment,
-    intent: conceptsData?.intent,
-    isLoading,
-    isRefetching,
-    
-    // Error handling
-    hasError,
-    errorMessage,
+    // State
+    analysisResult,
+    concepts,
+    nameVariations,
+    loading,
+    error,
     
     // Actions
-    refetch,
-    
-    // Computed values
-    totalConcepts: conceptsData?.concepts?.length ?? 0,
-    
-    // Helper functions
-    getConceptByType: (type: string) => 
-      conceptsData?.concepts?.filter(concept => concept.type === type) ?? [],
-    
-    getPersonConcepts: () =>
-      conceptsData?.concepts?.filter(concept => concept.type === 'person') ?? [],
-    
-    getActionConcepts: () =>
-      conceptsData?.concepts?.filter(concept => concept.type === 'action') ?? [],
-    
-    // Access to full tRPC response for debugging
-    fullResponse: data,
-    rawError: error,
-  };
-};
-
-/**
- * Hook for RDF message analysis and contact resolution
- */
-export const useRDFAnalysis = () => {
-  const queryClient = useQueryClient();
-
-  // Analyze message for contact communication
-  const analyzeMessage = (text: string) => {
-    return trpc.rdf.analyzeMessage.useQuery({ 
-      text,
-      domain: 'contact_communication',
-      task: 'message_analysis',
-      extractors: [
-        'contact_names',
-        'communication_intent',
-        'context_clues',
-        'formality_level',
-        'urgency_indicators'
-      ]
-    });
-  };
-
-  // Extract concepts from text
-  const extractConcepts = (text: string) => {
-    return trpc.rdf.extractConcepts.useQuery({ text });
-  };
-
-  // Expand contact name with variations
-  const expandContactName = (name: string) => {
-    return trpc.rdf.expandContactName.useQuery({
-      name,
-      domain: 'name_linguistics',
-      task: 'name_variation_generation',
-      variation_types: [
-        'phonetic_variations',
-        'nickname_derivations',
-        'cultural_variants',
-        'orthographic_variations',
-        'diminutive_forms',
-        'similar_sounding_names'
-      ]
-    });
-  };
-
-  return {
     analyzeMessage,
     extractConcepts,
     expandContactName,
+    checkHealth,
     
-    // Invalidate queries helper
-    invalidateRDF: () => {
-      void queryClient.invalidateQueries({ 
-        queryKey: [['rdf', 'analyzeMessage']] 
-      });
-      void queryClient.invalidateQueries({ 
-        queryKey: [['rdf', 'extractConcepts']] 
-      });
-      void queryClient.invalidateQueries({ 
-        queryKey: [['rdf', 'expandContactName']] 
-      });
+    // Helpers from analysis result
+    // The response structure varies, so let's handle multiple formats
+    getPrimaryContact: () => {
+      if (!analysisResult) return null;
+      // Navigate through nested structure
+      const analysis = analysisResult?.analysis?.analysis || analysisResult?.analysis || analysisResult;
+      // Look for contact in multiple places
+      return analysis?.contact_extraction?.primary_contact || 
+             analysis?.brain_memory_analysis?.primary_contact ||
+             null;
     },
-  };
-};
-
-/**
- * Hook for contact resolution workflow
- * Combines message analysis, name expansion, and contact search
- */
-export const useContactResolution = (message: string | null) => {
-  const { analyzeMessage, expandContactName } = useRDFAnalysis();
-  
-  // Step 1: Analyze the message
-  const messageAnalysis = analyzeMessage(message || '');
-  
-  // Extract primary contact from analysis
-  const primaryContact = messageAnalysis.data?.data?.contact_extraction?.primary_contact;
-  
-  // Step 2: Expand contact name if we have one
-  const nameExpansion = expandContactName(primaryContact || '');
-  
-  // Get analysis results
-  const analysis = messageAnalysis.data?.success ? messageAnalysis.data.data : null;
-  const variations = nameExpansion.data?.success ? nameExpansion.data.data.variations : [];
-  
-  return {
-    // Message analysis
-    analysis,
-    isAnalyzing: messageAnalysis.isLoading,
-    analysisError: messageAnalysis.error,
+    getIntent: () => {
+      if (!analysisResult) return null;
+      const analysis = analysisResult?.analysis?.analysis || analysisResult?.analysis || analysisResult;
+      return analysis?.intent_analysis?.communication_action || 
+             analysis?.ai_insights?.intent ||
+             null;
+    },
+    getFormality: () => {
+      if (!analysisResult) return null;
+      const analysis = analysisResult?.analysis?.analysis || analysisResult?.analysis || analysisResult;
+      return analysis?.context_analysis?.formality_level || null;
+    },
+    getConfidence: () => {
+      if (!analysisResult) return 0;
+      const analysis = analysisResult?.analysis?.analysis || analysisResult?.analysis || analysisResult;
+      return analysis?.contact_extraction?.confidence || 
+             analysis?.confidence ||
+             analysisResult?.analysis?.confidence ||
+             analysis?.ai_insights?.confidence_metrics?.overall_confidence ||
+             0;
+    },
     
-    // Name variations
-    variations,
-    isExpandingName: nameExpansion.isLoading,
-    nameError: nameExpansion.error,
+    // Helpers from concepts
+    // The MCP service returns: { success: true, concepts: [...], sentiment: {...}, intent: "...", timestamp: "..." }
+    getConceptsArray: () => concepts?.concepts || [],
+    getSentiment: () => concepts?.sentiment,
+    getTextIntent: () => concepts?.intent,
     
-    // Combined loading state
-    isLoading: messageAnalysis.isLoading || nameExpansion.isLoading,
-    
-    // Extracted values
-    primaryContact,
-    intent: analysis?.intent_analysis?.communication_action,
-    formality: analysis?.context_analysis?.formality_level,
-    confidence: analysis?.contact_extraction?.confidence || 0,
-    
-    // Refetch functions
-    refetchAnalysis: messageAnalysis.refetch,
-    refetchVariations: nameExpansion.refetch,
-  };
-};
-
-/**
- * Hook for RDF service health and status
- */
-export const useRDFStatus = () => {
-  const {
-    data: healthData,
-    isLoading: healthLoading,
-    error: healthError,
-    refetch: refetchHealth
-  } = useQuery(trpc.rdf.health.queryOptions());
-
-  const {
-    data: statusData,
-    isLoading: statusLoading,
-    error: statusError,
-    refetch: refetchStatus
-  } = useQuery(trpc.rdf.status.queryOptions());
-
-  const health = healthData?.success ? healthData.data : null;
-  const status = statusData?.success ? statusData.data : null;
-
-  return {
-    // Health check
-    health,
-    isHealthy: health?.status === 'healthy',
-    healthLoading,
-    healthError,
-    refetchHealth,
-    
-    // Service status
-    status,
-    isAvailable: status?.status === 'available',
-    statusLoading,
-    statusError,
-    refetchStatus,
-    
-    // Combined states
-    isLoading: healthLoading || statusLoading,
-    hasError: !!healthError || !!statusError,
-    
-    // Service info
-    serviceVersion: status?.version,
-    integration: status?.integration,
+    // Debug helpers - get raw responses
+    getRawAnalysisResult: () => analysisResult,
+    getRawConcepts: () => concepts,
   };
 };
