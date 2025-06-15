@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { rdfServiceClient } from '../services/rdf-client';
+import { rdfServiceClient } from '../services/rdf/rdf-client';
 import { HumanInputSchema } from '../types/rdf-schemas';
 
 export default new Elysia({ prefix: '/rdf' })

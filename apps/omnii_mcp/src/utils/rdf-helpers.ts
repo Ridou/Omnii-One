@@ -129,7 +129,11 @@ export function extractTemporalPatterns(text: string): Array<{
   confidence: number;
   temporal_context: string;
 }> {
-  const patterns = [];
+  const patterns: Array<{
+    type: string;
+    confidence: number;
+    temporal_context: string;
+  }> = [];
   const lower = text.toLowerCase();
   
   // Time indicators

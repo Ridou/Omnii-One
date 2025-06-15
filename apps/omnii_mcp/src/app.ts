@@ -5,7 +5,7 @@ import { cors } from "@elysiajs/cors";
 import { helmet } from "elysia-helmet";
 import { swagger } from "@elysiajs/swagger";
 import routes from "./routes";
-import { WebSocketHandlerService } from "./services/websocket-handler.service";
+import { WebSocketHandlerService } from "./services/core/websocket-handler.service";
 import {
   WebSocketMessageType,
   WebSocketResponseStatus,

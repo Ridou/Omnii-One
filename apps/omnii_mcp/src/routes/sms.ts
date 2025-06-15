@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
-import twilioService from '../services/twilio-service';
-import { SimpleSMSAI } from '../services/sms-ai-simple';
+import twilioService from '../services/integrations/twilio-service';
+import { SimpleSMSAI } from '../services/core/sms-ai-simple';
 
 // Initialize simple AI service
 const simpleSMSAI = new SimpleSMSAI();

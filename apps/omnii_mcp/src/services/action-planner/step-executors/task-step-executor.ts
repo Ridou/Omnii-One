@@ -5,8 +5,9 @@ import {
   ExecutionContext,
   ExecutionContextType,
   TaskActionType,
+  ResponseCategory,
 } from "../../../types/action-planning.types";
-import unifiedGoogleManager from "../../unified-google-manager";
+import unifiedGoogleManager from "../../integrations/unified-google-manager";
 
 /**
  * Executor for task-related action steps
@@ -45,12 +46,12 @@ export class TaskStepExecutor extends BaseStepExecutor {
       return this.createStepResult(
         step,
         result.success,
-        result.rawData || result,
-        result.message,
-        result.error,
+        (result as any).rawData || result,
+        result.message || 'Task operation completed',
+        (result as any).error,
         undefined,
-        result.authRequired,
-        result.authUrl
+        (result as any).authRequired,
+        (result as any).authUrl
       );
     } catch (error) {
       console.error(`[TaskStepExecutor] Task step execution failed:`, error);

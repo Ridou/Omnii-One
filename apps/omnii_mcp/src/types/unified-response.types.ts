@@ -146,7 +146,7 @@ export class UnifiedResponseBuilder {
   }
 
   private getDefaultIcon(type: UnifiedToolResponse['type']): string {
-    const icons = {
+    const icons: Record<string, string> = {
       email: '📧',
       calendar: '📅',
       contact: '👤',

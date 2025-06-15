@@ -305,7 +305,7 @@ export class DependencyResolver {
    * Check if a step has any dependencies
    */
   hasDependencies(step: ActionStep): boolean {
-    return (
+    return Boolean(
       (step.requires && step.requires.length > 0) ||
       (step.dependsOn && step.dependsOn.length > 0)
     );

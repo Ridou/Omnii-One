@@ -134,7 +134,7 @@ class ContactsOAuthManager implements IOAuthTokenManager {
       throw new Error(`Token refresh failed: ${response.status} ${errorData}`);
     }
 
-    return response.json();
+    return response.json() as Promise<{ access_token: string; refresh_token?: string; expires_in: number; }>;
   }
 
   private async updateToken(userId: string, accessToken: string, refreshToken: string, expiresIn: number): Promise<void> {

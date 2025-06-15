@@ -7,7 +7,7 @@ import {
   CalendarActionType,
   ResponseCategory,
 } from "../../../types/action-planning.types";
-import unifiedGoogleManager from "../../unified-google-manager";
+import unifiedGoogleManager from "../../integrations/unified-google-manager";
 
 /**
  * Executor for calendar-related action steps

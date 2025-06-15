@@ -4,7 +4,7 @@ import {
   GoogleServicePlugin,
   GoogleServiceType,
   IOAuthTokenManager
-} from "../google-service-plugin";
+} from "../integrations/google-service-plugin";
 import { ExecutionContextType } from "../../types/action-planning.types";
 import { GoogleTasksAction } from "../../types/composio-enums";
 import {
@@ -244,7 +244,7 @@ For creating tasks, you'll need a tasklist parameter - use the default task list
             GoogleTasksAction.LIST_TASK_LISTS,
             GoogleTasksAction.LIST_TASKS,
             GoogleTasksAction.INSERT_TASK,
-            GoogleTasksAction.PATCH_TASK,
+            GoogleTasksAction.UPDATE_TASK,
           ],
         }),
         tool_choice: "auto",

@@ -1,8 +1,8 @@
 import neo4j, { Driver, Config, Session } from 'neo4j-driver';
 import type { Record as Neo4jRecord } from 'neo4j-driver';
-import { redisCache } from '../services/redis-cache';
+import { redisCache } from '../services/caching/redis-cache';
 import { Redis } from 'ioredis';
-import { BrainConversationManager } from '../services/brain-conversation-manager';
+import { BrainConversationManager } from '../services/core/brain-conversation-manager';
 import { config } from './env.validation';
 import { BrainMemoryContext } from '../types/brain-memory-schemas';
 
@@ -64,23 +64,27 @@ export const createNeo4jDriver = (): Driver => {
     config
   );
 
-  // Connection health check
+  // Connection health check (non-blocking)
   driver.verifyConnectivity()
     .then(() => {
+      neo4jConnected = true;
       console.log('✅ Neo4j AuraDB connection verified successfully');
       console.log(`🔗 Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
       console.log(`💾 Database: ${process.env.NEO4J_DATABASE}`);
     })
     .catch(err => {
+      neo4jConnected = false;
       console.error('❌ Neo4j AuraDB connection failed:', err);
-      throw new Error(`Neo4j connection failed: ${err.message}`);
+      console.warn('⚠️ Server will continue in degraded mode without AI memory');
+      // DO NOT THROW - Allow server to continue without Neo4j
     });
 
   return driver;
 };
 
-// Singleton driver instance
+// Singleton driver instance and connectivity status
 let driverInstance: Driver | null = null;
+let neo4jConnected: boolean = false;
 
 export const getNeo4jDriver = (): Driver => {
   if (!driverInstance) {
@@ -88,6 +92,8 @@ export const getNeo4jDriver = (): Driver => {
   }
   return driverInstance;
 };
+
+export const isNeo4jConnected = (): boolean => neo4jConnected;
 
 // Graceful shutdown
 export const closeNeo4jDriver = async (): Promise<void> => {
@@ -105,26 +111,39 @@ export class Neo4jService {
   private consolidationInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    // Initialize with production Neo4j driver (already handled by singleton)
-    this.conversationManager = new BrainConversationManager();
-    
-    // Initialize Redis for caching
-    this.redis = new Redis(process.env.REDIS_URL!, {
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-      connectTimeout: 60000,
-      commandTimeout: 5000
-    });
+    try {
+      // Initialize with production Neo4j driver (already handled by singleton)
+      this.conversationManager = new BrainConversationManager();
+      
+      // Initialize Redis for caching (with error handling)
+      this.redis = new Redis(process.env.REDIS_URL!, {
+        maxRetriesPerRequest: 3,
+        lazyConnect: true,
+        connectTimeout: 60000,
+        commandTimeout: 5000
+      });
 
-    // Start background consolidation if enabled
-    if (config.MEMORY_BRIDGE_ENABLED) {
-      this.startMemoryConsolidation();
+      // Handle Redis connection errors gracefully
+      this.redis.on('error', (err) => {
+        console.warn('⚠️ Redis connection error:', err.message);
+        console.warn('⚠️ Server will continue without Redis caching');
+      });
+
+      // Start background consolidation if enabled and Neo4j is connected
+      if (config.MEMORY_BRIDGE_ENABLED && isNeo4jConnected()) {
+        this.startMemoryConsolidation();
+      }
+
+      const neo4jStatus = isNeo4jConnected() ? 'CONNECTED' : 'DISCONNECTED (degraded mode)';
+      console.log(`🧠 Neo4jService initialized - Neo4j: ${neo4jStatus}`);
+      console.log(`🔄 Memory consolidation: ${config.MEMORY_BRIDGE_ENABLED && isNeo4jConnected() ? 'ENABLED' : 'DISABLED'}`);
+      console.log(`⏱️ Consolidation interval: ${config.MEMORY_CONSOLIDATION_INTERVAL}s`);
+      
+    } catch (error) {
+      console.error('❌ Neo4jService initialization error:', error);
+      console.warn('⚠️ Service will continue with minimal functionality');
+      // Don't throw - allow service to continue
     }
-
-    console.log('🧠 Neo4jService initialized with brain memory and Redis');
-    console.log(`🔄 Memory consolidation: ${config.MEMORY_BRIDGE_ENABLED ? 'ENABLED' : 'DISABLED'}`);
-    console.log(`⏱️ Consolidation interval: ${config.MEMORY_CONSOLIDATION_INTERVAL}s`);
   }
 
   // Expose conversationManager for direct access (brain memory functionality)
@@ -133,6 +152,9 @@ export class Neo4jService {
   }
 
   private getSession(): Session {
+    if (!isNeo4jConnected()) {
+      throw new Error('Neo4j is not connected - running in degraded mode');
+    }
     const driver = getNeo4jDriver();
     const database = process.env.NEO4J_DATABASE || 'neo4j';
     return driver.session({ database });
@@ -161,6 +183,12 @@ export class Neo4jService {
     const startTime = Date.now();
     
     try {
+      // Check Neo4j connectivity first
+      if (!isNeo4jConnected()) {
+        console.warn(`[Neo4jService] Neo4j not connected - using fallback memory`);
+        return await this.getFallbackMemoryContext(userId, channel, sourceIdentifier);
+      }
+
       // Production timeout wrapper
       const memoryPromise = this.conversationManager.getBrainMemoryContext(
         userId,
@@ -345,6 +373,9 @@ export class Neo4jService {
 
   private async testNeo4jConnection(): Promise<boolean> {
     try {
+      if (!isNeo4jConnected()) {
+        return false;
+      }
       const driver = getNeo4jDriver();
       await driver.verifyConnectivity();
       return true;
@@ -797,8 +828,22 @@ export class Neo4jService {
   }
 }
 
-// Export singleton instance
-export const neo4jService = new Neo4jService();
+// Lazy singleton pattern to prevent issues during module load
+let neo4jServiceInstance: Neo4jService | null = null;
+
+export const getNeo4jService = (): Neo4jService => {
+  if (!neo4jServiceInstance) {
+    neo4jServiceInstance = new Neo4jService();
+  }
+  return neo4jServiceInstance;
+};
+
+// Lazy getters to prevent service creation during module load
+export const neo4jService = new Proxy({} as Neo4jService, {
+  get(target, prop) {
+    return getNeo4jService()[prop as keyof Neo4jService];
+  }
+});
 
 // For backward compatibility with productionBrainService
 export const productionBrainService = neo4jService; 

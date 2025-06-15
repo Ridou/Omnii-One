@@ -12,6 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
+    "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
       "@omnii/api": ["../../packages/api/src"],

@@ -36,6 +36,4 @@ export {
   type ComposioMemoryEnhancement
 } from '@omnii/validators';
 
-// ✅ BACKWARD COMPATIBILITY: Re-export BrainMemoryContext as both type and schema
-// This maintains compatibility with existing omnii_mcp code that might import it differently
-export { BrainMemoryContextSchema as BrainMemoryContext } from '@omnii/validators'; 
+// ✅ Note: BrainMemoryContextSchema is already exported in the main export block above 

@@ -509,6 +509,7 @@ export class TimeMemoryHelpers {
       id: node.id,
       content: node.content,
       timestamp: node.timestamp,
+      user_id: node.user_id || node.userId || '',
       channel: node.channel,
       source_identifier: node.source_identifier,
       intent: node.intent,

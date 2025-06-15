@@ -4,7 +4,7 @@ import {
   GoogleServicePlugin,
   GoogleServiceType,
   IOAuthTokenManager
-} from "../google-service-plugin";
+} from "../integrations/google-service-plugin";
 import { ExecutionContextType } from "../../types/action-planning.types";
 import { GmailAction } from "../../types/composio-enums";
 import {
