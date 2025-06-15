@@ -110,7 +110,7 @@ export async function fetchGraphRelations(userId: string): Promise<any> {
     const result = await session.run(
       `
       MATCH (n)-[r]-(m)
-      WHERE n.userId = $userId OR m.userId = $userId
+      WHERE n.user_id = $userId OR m.user_id = $userId
       RETURN n, r, m
       LIMIT 50
       `,
