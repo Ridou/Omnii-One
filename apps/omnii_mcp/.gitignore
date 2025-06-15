@@ -49,4 +49,5 @@ coverage/
 .nyc_output/
 .env
 
-debug_logs/
+debug_logs/test-validators-comprehensive.ts
+.DS_Store
