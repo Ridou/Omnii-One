@@ -8,7 +8,7 @@ import {
   McpServer,
   ResourceTemplate,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { neo4jService } from "./neo4j-service";
+import { neo4jService } from "../config/neo4j.config";
 import * as dotenv from "dotenv";
 import type { Request, Response } from "express";
 import { z } from "zod/v4";

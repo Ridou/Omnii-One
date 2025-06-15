@@ -1,5 +1,7 @@
-import neo4j, { Driver, Session, Transaction } from 'neo4j-driver';
 import { v4 as uuidv4 } from 'uuid';
+import { OpenAI } from 'openai';
+import { Driver, Session, Transaction } from 'neo4j-driver';
+import { redisCache } from './redis-cache';
 import { 
   EnhancedChatMessage, 
   EnhancedChatMessageSchema,
@@ -16,9 +18,12 @@ import {
   BRAIN_MEMORY_CONSTANTS
 } from '../types/brain-memory-schemas';
 import { TimeMemoryHelpers } from '../utils/time-memory-helpers';
-import { redisCache } from './redis-cache';
-import { OpenAI } from 'openai';
+import { getNeo4jDriver } from '../config/neo4j.config';
 
+/**
+ * Enhanced BrainConversationManager that mimics human memory patterns
+ * Uses existing ChatMessage, Memory, Concept, and Tag schemas with brain-like enhancements
+ */
 export class BrainConversationManager {
   private driver: Driver;
   private openai: OpenAI;
@@ -34,24 +39,8 @@ export class BrainConversationManager {
   private readonly RECENT_MODIFICATION_HOURS = BRAIN_MEMORY_CONSTANTS.RECENT_MODIFICATION_HOURS;
 
   constructor(driver?: Driver, openai?: OpenAI, mockRedisCache?: any) {
-    // Production Neo4j connection or test driver
-    this.driver = driver || neo4j.driver(
-      process.env.NEO4J_URI!,
-      neo4j.auth.basic(
-        process.env.NEO4J_USER!,
-        process.env.NEO4J_PASSWORD!
-      ),
-      {
-        // Note: encryption/trust removed since it's specified in the URI (neo4j+s://)
-        maxConnectionLifetime: 30 * 60 * 1000, // 30 minutes
-        maxConnectionPoolSize: 50,
-        connectionAcquisitionTimeout: 60000, // 60 seconds
-        logging: {
-          level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
-          logger: (level: string, message: string) => console.log(`[Neo4j-${level.toUpperCase()}] ${message}`)
-        }
-      }
-    );
+    // 🔧 CONSOLIDATED: Use the shared production-ready driver from neo4j.config.ts
+    this.driver = driver || getNeo4jDriver();
 
     this.openai = openai || new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
@@ -59,7 +48,7 @@ export class BrainConversationManager {
 
     this.timeMemoryHelpers = new TimeMemoryHelpers(this.driver);
     
-    console.log('🧠 BrainConversationManager initialized with AuraDB connection');
+    console.log('🧠 BrainConversationManager initialized with consolidated Neo4j driver');
   }
 
   /**

@@ -10,7 +10,7 @@ import {
   ExecutionContextType,
 } from "../types/action-planning.types";
 import { InterventionManager } from "./intervention-manager";
-import { productionBrainService } from "./memory/production-brain-service";
+import { productionBrainService } from "../config/neo4j.config";
 import { BrainMemoryContext } from "../types/brain-memory-schemas";
 
 export class SimpleSMSAI {
