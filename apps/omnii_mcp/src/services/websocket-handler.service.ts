@@ -22,7 +22,7 @@ import { randomBytes } from "crypto";
 import responseManager from "./response-manager";
 import { getObjectStructure, logObjectStructure } from "../utils/object-structure";
 import { isValidUnifiedToolResponse } from "@omnii/validators";
-import { productionBrainService } from "./memory/production-brain-service";
+import { productionBrainService } from "../config/neo4j.config";
 
 // Use Elysia's WebSocket type
 interface ElysiaWebSocket {

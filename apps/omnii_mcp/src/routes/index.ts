@@ -3,6 +3,7 @@ import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import neo4jRoutes from './neo4j';
 import smsRoutes from './sms';
 import rdfRoutes from './rdf';
+import brainRoutes from './brain-monitoring.routes';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
 
@@ -63,6 +64,7 @@ export default (app: Elysia) => {
   api.use(neo4jRoutes);
   api.use(smsRoutes);
   api.use(rdfRoutes);
+  api.use(brainRoutes);
   
   // Mount the API routes under /api
   return app.use(api);
