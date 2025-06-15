@@ -1,5 +1,6 @@
+import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod/v4";
-import { protectedProcedure, createTRPCRouter } from "../trpc";
+import { protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 
 // Input schemas based on the RDF service endpoints
@@ -34,12 +35,9 @@ const expandNameSchema = z.object({
   ])
 });
 
-// Get base URL for MCP service (same pattern as neo4j router)
-const getRDFBaseUrl = () => {
-  // Check environment variables first
-  if (process.env.MCP_SERVICE_URL) {
-    return process.env.MCP_SERVICE_URL;
-  }
+// Environment-aware base URL resolution (same as neo4j router)
+const getRDFBaseUrl = (): string => {
+ 
   
   // Production detection
   if (process.env.NODE_ENV === 'production' || 
@@ -48,11 +46,11 @@ const getRDFBaseUrl = () => {
     return 'https://omniimcp-production.up.railway.app';
   }
   
-  // Default to local MCP service (not Python directly)
+  // Default to local development
   return 'http://localhost:8000';
 };
 
-export const rdfRouter = createTRPCRouter({
+export const rdfRouter = {
   /**
    * Get RDF service health status
    */
@@ -84,44 +82,30 @@ export const rdfRouter = createTRPCRouter({
   analyzeMessage: protectedProcedure
     .input(analyzeMessageSchema)
     .mutation(async ({ ctx, input }) => {
-      try {
-        const baseUrl = getRDFBaseUrl();
-        const fullUrl = `${baseUrl}/api/rdf/analyze`;
-        console.log('🔍 RDF analyze message called from tRPC');
-        console.log('   URL:', fullUrl);
-        console.log('   Input:', JSON.stringify(input, null, 2));
-        
-        const response = await fetch(fullUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(input)
-        });
-        
-        console.log('   Response status:', response.status);
-        const data = await response.json();
-        console.log('   Response data:', JSON.stringify(data, null, 2));
-        
-        if (!response.ok || !data.success) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: data.error || 'RDF analysis failed'
-          });
-        }
-        
-        return {
-          success: true,
-          data: data.analysis,
-          message: 'Message analyzed successfully'
-        };
-      } catch (error) {
-        console.error('RDF message analysis error:', error);
-        throw error instanceof TRPCError ? error : new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to analyze message'
+      // EXACT COPY FROM test-local-rdf-flow.js
+      const analyzeResponse = await fetch('http://localhost:8000/api/rdf/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text: input.text,
+          domain: input.domain,
+          task: input.task,
+          extractors: input.extractors
+        })
+      });
+      
+      const analyzeData = await analyzeResponse.json();
+      
+      if (!analyzeResponse.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: analyzeData.error || 'RDF analysis failed'
         });
       }
+      
+      return analyzeData;
     }),
 
   /**
@@ -130,46 +114,25 @@ export const rdfRouter = createTRPCRouter({
   extractConcepts: protectedProcedure
     .input(extractConceptsSchema)
     .mutation(async ({ ctx, input }) => {
-      try {
-        const baseUrl = getRDFBaseUrl();
-        const fullUrl = `${baseUrl}/api/rdf/extract-concepts`;
-        console.log('RDF extract concepts to:', fullUrl);
-        console.log('Request body:', JSON.stringify(input));
-        
-        const response = await fetch(fullUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(input)
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok || !data.success) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: data.error || 'Concept extraction failed'
-          });
-        }
-        
-        return {
-          success: true,
-          data: {
-            concepts: data.concepts || [],
-            sentiment: data.sentiment || { score: 0, polarity: 'neutral' },
-            intent: data.intent || 'unknown',
-            text_length: data.text_length
-          },
-          message: 'Concepts extracted successfully'
-        };
-      } catch (error) {
-        console.error('RDF concept extraction error:', error);
-        throw error instanceof TRPCError ? error : new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to extract concepts'
+      // EXACT COPY FROM test-local-rdf-flow.js
+      const extractResponse = await fetch('http://localhost:8000/api/rdf/extract-concepts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: input.text })
+      });
+      
+      const extractData = await extractResponse.json();
+      
+      if (!extractResponse.ok) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: extractData.error || 'Concept extraction failed'
         });
       }
+      
+      return extractData;
     }),
 
   /**
@@ -191,6 +154,8 @@ export const rdfRouter = createTRPCRouter({
         });
         
         const data = await response.json();
+
+      
         
         // Extract variations from the response
         const variations = [];
@@ -262,4 +227,4 @@ export const rdfRouter = createTRPCRouter({
       });
     }
   }),
-});
+} satisfies TRPCRouterRecord;

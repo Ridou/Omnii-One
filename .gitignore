@@ -197,3 +197,7 @@ supabase/.git/
 *.heap.prof
 *.heapsnapshot
 .vercel
+
+# Prevent accidental JS builds in TypeScript packages
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
