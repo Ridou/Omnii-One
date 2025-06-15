@@ -414,7 +414,7 @@ export const contactsRouter = {
       
       try {
         // For now, use hardcoded user ID to test
-        const userId = ctx.session?.user?.id || 'cd9bdc60-35af-4bb6-b87e-1932e96fb354';
+        const userId = ctx.session?.user?.id;
         console.log(`[ContactsRouter] Listing all contacts for user: ${userId}`);
 
         const result = await contactsService.listContacts(userId, input.pageSize);

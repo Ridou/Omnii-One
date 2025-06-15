@@ -432,7 +432,7 @@ export const emailRouter = {
       
       try {
         // For now, use hardcoded user ID to test
-        const userId = ctx.session?.user?.id || 'cd9bdc60-35af-4bb6-b87e-1932e96fb354';
+        const userId = ctx.session?.user?.id;
         console.log(`[EmailRouter] Listing emails for user: ${userId}`);
 
         const result = await emailService.listEmails(userId, input);
