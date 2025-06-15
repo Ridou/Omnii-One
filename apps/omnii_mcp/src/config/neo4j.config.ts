@@ -4,7 +4,7 @@ import { redisCache } from '../services/caching/redis-cache';
 import { Redis } from 'ioredis';
 import { BrainConversationManager } from '../services/core/brain-conversation-manager';
 import { config } from './env.validation';
-import { BrainMemoryContext } from '../types/brain-memory-schemas';
+import type { BrainMemoryContext } from '../types/brain-memory-schemas';
 
 // Define supported node types
 type NodeType = 'Concept' | 'Email' | 'Event' | string;

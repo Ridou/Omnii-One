@@ -11,7 +11,7 @@ import {
 } from "../../types/action-planning.types";
 import { InterventionManager } from "../workflows/intervention-manager";
 import { productionBrainService } from "../../config/neo4j.config";
-import { BrainMemoryContext } from "../../types/brain-memory-schemas";
+import type { BrainMemoryContext } from "../../types/brain-memory-schemas";
 
 export class SimpleSMSAI {
   private openai: OpenAI;
