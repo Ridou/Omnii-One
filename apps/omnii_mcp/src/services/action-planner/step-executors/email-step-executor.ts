@@ -6,7 +6,7 @@ import {
   ExecutionContextType,
   ResponseCategory,
 } from "../../../types/action-planning.types";
-import unifiedGoogleManager from "../../unified-google-manager";
+import unifiedGoogleManager from "../../integrations/unified-google-manager";
 import { ENTITY_PLACEHOLDER, slugify } from "../action-planner-utils";
 import { EntityPlaceholder } from "../../plugins/email-plugin";
 

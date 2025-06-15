@@ -5,7 +5,7 @@ import {
   ExecutionContext,
   AnalysisActionType,
 } from "../../../types/action-planning.types";
-import { CalendarTemporalManager } from "../../calendar-temporal-manager";
+import { CalendarTemporalManager } from "../../integrations/calendar-temporal-manager";
 
 /**
  * Executor for analysis-related action steps (free time finding, etc.)

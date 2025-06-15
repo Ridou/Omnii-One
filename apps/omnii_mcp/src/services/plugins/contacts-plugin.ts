@@ -4,7 +4,7 @@ import {
   GoogleServicePlugin,
   GoogleServiceType,
   IOAuthTokenManager
-} from "../google-service-plugin";
+} from "../integrations/google-service-plugin";
 import { z } from "zod/v4";
 import { google } from "googleapis";
 import { ComposioApp, GoogleContactsAction } from "../../types/composio-enums";

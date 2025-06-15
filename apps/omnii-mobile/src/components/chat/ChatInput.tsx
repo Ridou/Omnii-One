@@ -49,7 +49,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         return;
       } else {
         // Enter: Send message (allow multiple requests)
-        nativeEvent.preventDefault();
         if (messageInput.trim()) { // Allow sending even when AI is processing
           setIsFocused(false); // Hide helpers after sending
           inputRef.current?.blur(); // Remove focus from input

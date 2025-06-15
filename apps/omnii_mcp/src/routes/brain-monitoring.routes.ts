@@ -110,7 +110,7 @@ export default (app: Elysia) =>
       // Memory context test endpoint (for development)
       .post(
         '/test-memory',
-        async ({ body }) => {
+        async ({ body, error }) => {
           try {
             const { userId, message, channel, sourceIdentifier } = body;
 
@@ -121,19 +121,26 @@ export default (app: Elysia) =>
               sourceIdentifier
             );
 
+            const timeWindowStats = memoryContext.working_memory.time_window_stats || {
+              previous_week_count: 0,
+              current_week_count: 0,
+              next_week_count: 0,
+              recently_modified_count: 0
+            };
+
             return {
               success: true,
               memory_strength: memoryContext.consolidation_metadata.memory_strength,
               working_memory_count: memoryContext.working_memory.recent_messages.length,
               episodic_memory_count: memoryContext.episodic_memory.conversation_threads.length,
               semantic_concepts_count: memoryContext.semantic_memory.activated_concepts.length,
-              time_window_stats: memoryContext.working_memory.time_window_stats
+              time_window_stats: timeWindowStats
             };
-          } catch (error) {
-            return { 
+          } catch (err) {
+            return error(500, { 
               error: 'Memory test failed',
-              message: error instanceof Error ? error.message : 'Unknown error'
-            };
+              message: err instanceof Error ? err.message : 'Unknown error'
+            });
           }
         },
         {

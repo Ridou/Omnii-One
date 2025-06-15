@@ -10,11 +10,11 @@ import {
   ExecutionContextType,
 } from "../../../types/action-planning.types";
 import { CachedEntity, EntityType } from "../../../types/entity.types";
-import { redisCache } from "../../redis-cache";
+import { redisCache } from "../../caching/redis-cache";
 import {
   InterventionManager,
   InterventionRequest,
-} from "../../intervention-manager";
+} from "../../workflows/intervention-manager";
 
 /**
  * Executor for system-related action steps (interventions, etc.)

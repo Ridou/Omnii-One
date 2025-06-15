@@ -5,8 +5,9 @@ import {
   ExecutionContext,
   ExecutionContextType,
   ContactActionType,
+  ResponseCategory,
 } from "../../../types/action-planning.types";
-import unifiedGoogleManager from "../../unified-google-manager";
+import unifiedGoogleManager from "../../integrations/unified-google-manager";
 
 /**
  * Executor for contact-related action steps
@@ -45,9 +46,9 @@ export class ContactStepExecutor extends BaseStepExecutor {
       return this.createStepResult(
         step,
         result.success,
-        result.rawData || result,
-        result.message,
-        result.error
+        (result as any).rawData || result,
+        result.message || 'Contact operation completed',
+        (result as any).error
       );
     } catch (error) {
       console.error(

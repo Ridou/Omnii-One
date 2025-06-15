@@ -228,8 +228,17 @@ export const getWebSocketUrl = () => {
   
   // For web development, also check if we need to replace localhost
   if (baseUrl.includes('localhost')) {
-    // Use the same IP that the server is running on
-    const localIP = '10.201.235.37'; // From your server logs
+    // Try to get the host IP from Metro bundler or use localhost
+    const hostUri = Constants.expoConfig?.hostUri;
+    let localIP = '127.0.0.1'; // Fallback to localhost
+    
+    if (hostUri) {
+      const ipMatch = hostUri.match(/([^:]+)/);
+      if (ipMatch) {
+        localIP = ipMatch[1];
+      }
+    }
+    
     const portMatch = baseUrl.match(/:(\d+)/);
     const port = portMatch ? portMatch[1] : '8000';
     const wsUrl = `ws://${localIP}:${port}/ws`;

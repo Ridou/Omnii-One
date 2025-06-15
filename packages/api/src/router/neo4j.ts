@@ -170,7 +170,7 @@ export const neo4jRouter = {
           throw new Error(`Neo4j service error: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as any;
         const nodes = data.data || [];
         
         return {
@@ -226,7 +226,7 @@ export const neo4jRouter = {
           throw new Error(`Neo4j service error: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as any;
         const nodes = data.data || [];
         
         return {

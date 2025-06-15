@@ -52,7 +52,7 @@ try {
       callback?: (res: any) => void
     ): ClientRequest {
       options.headers = options.headers || {};
-      options.headers['Accept-Encoding'] = 'gzip, deflate';
+      (options.headers as any)['Accept-Encoding'] = 'gzip, deflate';
       return originalHttpRequest.call(this, options, callback);
     };
 
@@ -61,7 +61,7 @@ try {
       callback?: (res: any) => void
     ): ClientRequest {
       options.headers = options.headers || {};
-      options.headers['Accept-Encoding'] = 'gzip, deflate';
+      (options.headers as any)['Accept-Encoding'] = 'gzip, deflate';
       return originalHttpsRequest.call(this, options, callback);
     };
 

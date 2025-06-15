@@ -13,7 +13,7 @@ import {
   ActionType,
   StepState,
 } from "../../../types/action-planning.types";
-import { InterventionManager } from "../../intervention-manager";
+import { InterventionManager } from "../../workflows/intervention-manager";
 
 /**
  * Factory for creating and managing step executors with dependency resolution

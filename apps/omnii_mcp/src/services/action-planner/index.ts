@@ -1,5 +1,5 @@
 // Main ActionPlanner class
-export { ActionPlanner } from "../action-planner";
+export { ActionPlanner } from "../core/action-planner";
 
 // Step Executors
 export { BaseStepExecutor } from "./step-executors/base-step-executor";
