@@ -19,6 +19,12 @@ import {
   validateBrainMemoryContext,
   safeParseEnhancedChatMessage,
   
+  // 🛡️ New Privacy Validation Functions
+  validateChatMessageWithUserId,
+  validateMemoryWithUserId,
+  validateConceptWithUserId,
+  validateTagWithUserId,
+  
   // Types
   type EnhancedChatMessage,
   type EnhancedMemory,
@@ -67,6 +73,7 @@ describe('Unified Brain Memory Schema Validation', () => {
       id: '550e8400-e29b-41d4-a716-446655440000',
       content: 'Schedule a meeting with John tomorrow at 2pm',
       timestamp: new Date().toISOString(),
+      user_id: 'test-user-123', // 🛡️ Required for privacy protection
       channel: 'sms',
       source_identifier: '+18582260766',
       intent: 'request',
@@ -108,6 +115,7 @@ describe('Unified Brain Memory Schema Validation', () => {
             id: '550e8400-e29b-41d4-a716-446655440000',
             content: 'Test message',
             timestamp: new Date().toISOString(),
+            user_id: 'test-user-123', // 🛡️ Required for privacy protection
             channel: 'chat',
             source_identifier: 'websocket-123'
           }
@@ -244,6 +252,291 @@ describe('Unified Brain Memory Schema Validation', () => {
     
     console.log('✅ Error handling working correctly');
   });
+
+  // 🛡️ NEW PRIVACY VALIDATION TESTS
+  test('should enforce user_id privacy protection in ChatMessage', () => {
+    console.log('🛡️ Testing ChatMessage privacy enforcement...');
+    
+    // Test 1: Valid message with user_id should pass
+    const validMessage = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      content: 'Valid message with user ID',
+      timestamp: new Date().toISOString(),
+      user_id: 'test-user-123', // ✅ Required
+      channel: 'sms' as const,
+      source_identifier: '+1234567890'
+    };
+    
+    expect(() => validateChatMessageWithUserId(validMessage)).not.toThrow();
+    const result = safeParseEnhancedChatMessage(validMessage);
+    expect(result.success).toBe(true);
+    
+    // Test 2: Message without user_id should fail
+    const messageWithoutUserId = {
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      content: 'Message without user ID',
+      timestamp: new Date().toISOString(),
+      // ❌ Missing user_id
+      channel: 'sms' as const,
+      source_identifier: '+1234567890'
+    };
+    
+    expect(() => validateChatMessageWithUserId(messageWithoutUserId)).toThrow('PRIVACY VIOLATION');
+    const badResult = safeParseEnhancedChatMessage(messageWithoutUserId);
+    expect(badResult.success).toBe(false);
+    if (!badResult.success) {
+      expect(badResult.error).toContain('user_id');
+    }
+    
+    console.log('✅ ChatMessage privacy enforcement working correctly');
+  });
+
+  test('should enforce user_id privacy protection in Memory', () => {
+    console.log('🛡️ Testing Memory privacy enforcement...');
+    
+    // Test 1: Valid memory with user_id should pass
+    const validMemory = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      timestamp: new Date().toISOString(),
+      user_id: 'test-user-123', // ✅ Required
+      memory_type: 'episodic' as const,
+      consolidation_status: 'fresh' as const
+    };
+    
+    expect(() => validateMemoryWithUserId(validMemory)).not.toThrow();
+    
+    // Test 2: Memory without user_id should fail
+    const memoryWithoutUserId = {
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      timestamp: new Date().toISOString(),
+      // ❌ Missing user_id
+      memory_type: 'episodic' as const,
+      consolidation_status: 'fresh' as const
+    };
+    
+    expect(() => validateMemoryWithUserId(memoryWithoutUserId)).toThrow('PRIVACY VIOLATION');
+    
+    console.log('✅ Memory privacy enforcement working correctly');
+  });
+
+  test('should enforce user_id privacy protection in Concept', () => {
+    console.log('🛡️ Testing Concept privacy enforcement...');
+    
+    // Test 1: Valid concept with user_id should pass
+    const validConcept = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: 'meeting',
+      user_id: 'test-user-123', // ✅ Required
+      activation_strength: 0.8,
+      mention_count: 5,
+      semantic_weight: 0.7
+    };
+    
+    expect(() => validateConceptWithUserId(validConcept)).not.toThrow();
+    
+    // Test 2: Concept without user_id should fail
+    const conceptWithoutUserId = {
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      name: 'project',
+      // ❌ Missing user_id
+      activation_strength: 0.6,
+      mention_count: 3,
+      semantic_weight: 0.5
+    };
+    
+    expect(() => validateConceptWithUserId(conceptWithoutUserId)).toThrow('PRIVACY VIOLATION');
+    
+    console.log('✅ Concept privacy enforcement working correctly');
+  });
+
+  test('should enforce user_id privacy protection in Tag', () => {
+    console.log('🛡️ Testing Tag privacy enforcement...');
+    
+    // Test 1: Valid tag with user_id should pass
+    const validTag = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      name: 'work',
+      user_id: 'test-user-123', // ✅ Required
+      usage_count: 10,
+      category: 'topic' as const
+    };
+    
+    expect(() => validateTagWithUserId(validTag)).not.toThrow();
+    
+    // Test 2: Tag without user_id should fail
+    const tagWithoutUserId = {
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      name: 'personal',
+      // ❌ Missing user_id
+      usage_count: 5,
+      category: 'topic' as const
+    };
+    
+    expect(() => validateTagWithUserId(tagWithoutUserId)).toThrow('PRIVACY VIOLATION');
+    
+    console.log('✅ Tag privacy enforcement working correctly');
+  });
+
+  test('should enforce user_id privacy in BrainMemoryContext', () => {
+    console.log('🛡️ Testing BrainMemoryContext privacy enforcement...');
+    
+    // Test 1: Valid context with user_id in all messages should pass
+    const validContextWithUserId = {
+      working_memory: {
+        recent_messages: [
+          {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            content: 'Message with user ID',
+            timestamp: new Date().toISOString(),
+            user_id: 'test-user-123', // ✅ Required
+            channel: 'sms' as const,
+            source_identifier: '+1234567890'
+          }
+        ],
+        active_concepts: ['concept1'],
+        current_intent: 'test'
+      },
+      episodic_memory: {
+        conversation_threads: [],
+        related_episodes: []
+      },
+      semantic_memory: {
+        activated_concepts: [],
+        concept_associations: []
+      },
+      consolidation_metadata: {
+        retrieval_timestamp: new Date().toISOString(),
+        memory_strength: 0.8,
+        context_channels: ['sms' as const],
+        consolidation_score: 0.7
+      }
+    };
+    
+    expect(() => validateBrainMemoryContext(validContextWithUserId)).not.toThrow();
+    
+    // Test 2: Context with message missing user_id should fail
+    const contextWithMissingUserId = {
+      working_memory: {
+        recent_messages: [
+          {
+            id: '550e8400-e29b-41d4-a716-446655440001',
+            content: 'Message without user ID',
+            timestamp: new Date().toISOString(),
+            // ❌ Missing user_id
+            channel: 'sms' as const,
+            source_identifier: '+1234567890'
+          }
+        ],
+        active_concepts: ['concept1'],
+        current_intent: 'test'
+      },
+      episodic_memory: {
+        conversation_threads: [],
+        related_episodes: []
+      },
+      semantic_memory: {
+        activated_concepts: [],
+        concept_associations: []
+      },
+      consolidation_metadata: {
+        retrieval_timestamp: new Date().toISOString(),
+        memory_strength: 0.8,
+        context_channels: ['sms' as const],
+        consolidation_score: 0.7
+      }
+    };
+    
+    expect(() => validateBrainMemoryContext(contextWithMissingUserId)).toThrow();
+    
+    console.log('✅ BrainMemoryContext privacy enforcement working correctly');
+  });
+
+  test('should demonstrate complete privacy protection flow', () => {
+    console.log('🛡️ Testing complete privacy protection flow...');
+    
+    // Simulate a real-world scenario where all nodes must have user_id
+    const userId = 'production-user-456';
+    
+    // 1. Create a message
+    const secureMessage = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      content: 'Schedule a secure meeting',
+      timestamp: new Date().toISOString(),
+      user_id: userId, // 🔒 Privacy protected
+      channel: 'chat' as const,
+      source_identifier: 'secure-chat-123'
+    };
+    
+    // 2. Create related memory
+    const secureMemory = {
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      timestamp: new Date().toISOString(),
+      user_id: userId, // 🔒 Privacy protected
+      memory_type: 'episodic' as const,
+      consolidation_status: 'fresh' as const
+    };
+    
+    // 3. Create related concept
+    const secureConcept = {
+      id: '550e8400-e29b-41d4-a716-446655440002',
+      name: 'secure-meeting',
+      user_id: userId, // 🔒 Privacy protected
+      activation_strength: 0.9,
+      mention_count: 1,
+      semantic_weight: 0.8
+    };
+    
+    // 4. Create related tag
+    const secureTag = {
+      id: '550e8400-e29b-41d4-a716-446655440003',
+      name: 'security',
+      user_id: userId, // 🔒 Privacy protected
+      usage_count: 1,
+      category: 'topic' as const
+    };
+    
+    // All validations should pass
+    expect(() => validateChatMessageWithUserId(secureMessage)).not.toThrow();
+    expect(() => validateMemoryWithUserId(secureMemory)).not.toThrow();
+    expect(() => validateConceptWithUserId(secureConcept)).not.toThrow();
+    expect(() => validateTagWithUserId(secureTag)).not.toThrow();
+    
+    // Create a complete brain context
+    const secureBrainContext = {
+      working_memory: {
+        recent_messages: [secureMessage],
+        active_concepts: [secureConcept.id],
+        current_intent: 'secure_scheduling'
+      },
+      episodic_memory: {
+        conversation_threads: [{
+          thread_id: 'secure-thread-1',
+          semantic_weight: 0.9,
+          memory_node_id: secureMemory.id
+        }],
+        related_episodes: []
+      },
+      semantic_memory: {
+        activated_concepts: [{
+          concept: secureConcept,
+          activation_strength: 0.9,
+          related_concepts: ['meeting', 'privacy']
+        }],
+        concept_associations: []
+      },
+      consolidation_metadata: {
+        retrieval_timestamp: new Date().toISOString(),
+        memory_strength: 0.95,
+        context_channels: ['chat' as const],
+        consolidation_score: 0.9
+      }
+    };
+    
+    expect(() => validateBrainMemoryContext(secureBrainContext)).not.toThrow();
+    
+    console.log('✅ Complete privacy protection flow validated');
+    console.log(`🔒 All nodes properly secured for user: ${userId}`);
+  });
   
   test('should validate brain memory constants correctly', () => {
     console.log('📊 Testing brain memory constants...');
@@ -273,6 +566,7 @@ describe('Unified Brain Memory Schema Validation', () => {
       id: '550e8400-e29b-41d4-a716-446655440000',
       content: 'Book a flight to Italy next month for my vacation',
       timestamp: new Date().toISOString(),
+      user_id: 'test-user-123', // 🛡️ Required for privacy protection
       channel: 'sms',
       source_identifier: '+18582260766',
       intent: 'request',

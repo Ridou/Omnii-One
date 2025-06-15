@@ -10,6 +10,7 @@ export const EnhancedChatMessageSchema = z.object({
   id: z.string().uuid("ChatMessage ID must be valid UUID"),
   content: z.string().min(1).max(50000, "Content too long"),
   timestamp: z.string().datetime("Invalid timestamp format"),
+  user_id: z.string().min(1, "User ID required for privacy protection"),
   
   // Brain-like properties
   channel: z.enum(['sms', 'chat', 'websocket']),
@@ -48,6 +49,7 @@ export const EnhancedChatMessageSchema = z.object({
 export const EnhancedMemorySchema = z.object({
   id: z.string().uuid("Memory ID must be valid UUID"),
   timestamp: z.string().datetime(),
+  user_id: z.string().min(1, "User ID required for privacy protection"),
   memory_type: z.enum(['episodic', 'semantic', 'procedural', 'working']).default('episodic'),
   consolidation_status: z.enum(['fresh', 'consolidating', 'consolidated', 'archived']).default('fresh'),
   consolidation_date: z.string().datetime().optional(),
@@ -66,7 +68,7 @@ export const EnhancedConceptSchema = z.object({
   mention_count: z.number().int().min(0).default(0),
   last_mentioned: z.string().datetime().optional(),
   semantic_weight: z.number().min(0).max(1).default(0.5),
-  user_id: z.string().min(1, "User ID required")
+  user_id: z.string().min(1, "User ID required for privacy protection")
 });
 
 // Enhanced Tag node properties
@@ -77,7 +79,7 @@ export const EnhancedTagSchema = z.object({
   last_used: z.string().datetime().optional(),
   channel_origin: z.enum(['sms', 'chat', 'websocket']).optional(),
   category: z.enum(['entity', 'topic', 'action', 'emotion', 'temporal', 'location', 'google_service']).optional(),
-  user_id: z.string().min(1, "User ID required")
+  user_id: z.string().min(1, "User ID required for privacy protection")
 });
 
 // Brain-like memory context schema (unified structure)
@@ -216,7 +218,95 @@ export const BRAIN_MEMORY_CONSTANTS = {
 } as const;
 
 // ============================================================================
-// VALIDATION FUNCTIONS (Following unified pattern)
+// PRIVACY VALIDATION HELPERS (New)
+// ============================================================================
+
+/**
+ * Validates that a ChatMessage object includes required user_id
+ * This will FAIL if user_id is missing, enforcing privacy protection
+ */
+export function validateChatMessageWithUserId(data: any): z.infer<typeof EnhancedChatMessageSchema> {
+  console.log('[PrivacyValidation] 🛡️ Validating ChatMessage with required user_id...');
+  
+  if (!data.user_id) {
+    throw new Error('PRIVACY VIOLATION: user_id is required for all ChatMessage nodes');
+  }
+  
+  try {
+    const validated = EnhancedChatMessageSchema.parse(data);
+    console.log(`[PrivacyValidation] ✅ ChatMessage validated with user_id: ${validated.user_id}`);
+    return validated;
+  } catch (error) {
+    console.error('[PrivacyValidation] ❌ ChatMessage validation failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Validates that a Memory object includes required user_id
+ * This will FAIL if user_id is missing, enforcing privacy protection
+ */
+export function validateMemoryWithUserId(data: any): z.infer<typeof EnhancedMemorySchema> {
+  console.log('[PrivacyValidation] 🛡️ Validating Memory with required user_id...');
+  
+  if (!data.user_id) {
+    throw new Error('PRIVACY VIOLATION: user_id is required for all Memory nodes');
+  }
+  
+  try {
+    const validated = EnhancedMemorySchema.parse(data);
+    console.log(`[PrivacyValidation] ✅ Memory validated with user_id: ${validated.user_id}`);
+    return validated;
+  } catch (error) {
+    console.error('[PrivacyValidation] ❌ Memory validation failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Validates that a Concept object includes required user_id
+ * This will FAIL if user_id is missing, enforcing privacy protection
+ */
+export function validateConceptWithUserId(data: any): z.infer<typeof EnhancedConceptSchema> {
+  console.log('[PrivacyValidation] 🛡️ Validating Concept with required user_id...');
+  
+  if (!data.user_id) {
+    throw new Error('PRIVACY VIOLATION: user_id is required for all Concept nodes');
+  }
+  
+  try {
+    const validated = EnhancedConceptSchema.parse(data);
+    console.log(`[PrivacyValidation] ✅ Concept validated with user_id: ${validated.user_id}`);
+    return validated;
+  } catch (error) {
+    console.error('[PrivacyValidation] ❌ Concept validation failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Validates that a Tag object includes required user_id
+ * This will FAIL if user_id is missing, enforcing privacy protection
+ */
+export function validateTagWithUserId(data: any): z.infer<typeof EnhancedTagSchema> {
+  console.log('[PrivacyValidation] 🛡️ Validating Tag with required user_id...');
+  
+  if (!data.user_id) {
+    throw new Error('PRIVACY VIOLATION: user_id is required for all Tag nodes');
+  }
+  
+  try {
+    const validated = EnhancedTagSchema.parse(data);
+    console.log(`[PrivacyValidation] ✅ Tag validated with user_id: ${validated.user_id}`);
+    return validated;
+  } catch (error) {
+    console.error('[PrivacyValidation] ❌ Tag validation failed:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// EXISTING VALIDATION FUNCTIONS (Updated)
 // ============================================================================
 
 export function isValidBrainMemoryContext(data: any): data is z.infer<typeof BrainMemoryContextSchema> {
@@ -245,6 +335,14 @@ export function validateBrainMemoryContext(data: any): z.infer<typeof BrainMemor
     console.log(`[BrainMemoryValidation] 🧠 Episodic Memory: ${episodicThreadsCount} threads`);
     console.log(`[BrainMemoryValidation] 🧠 Semantic Memory: ${activatedConceptsCount} concepts`);
     
+    // 🛡️ PRIVACY CHECK: Validate all messages have user_id
+    validated.working_memory.recent_messages.forEach((msg, index) => {
+      if (!msg.user_id) {
+        throw new Error(`PRIVACY VIOLATION: Message ${index} in working memory missing user_id`);
+      }
+    });
+    
+    console.log('[BrainMemoryValidation] 🛡️ Privacy validation passed - all messages have user_id');
     return validated;
   } catch (error) {
     console.error('[BrainMemoryValidation] ❌ Validation failed:', error);
@@ -261,6 +359,13 @@ export function safeParseEnhancedChatMessage(data: any): {
 } {
   const result = EnhancedChatMessageSchema.safeParse(data);
   if (result.success) {
+    // 🛡️ Double-check privacy requirement
+    if (!result.data.user_id) {
+      return { 
+        success: false, 
+        error: 'PRIVACY VIOLATION: user_id is required for all ChatMessage nodes' 
+      };
+    }
     return { success: true, data: result.data };
   } else {
     return { 
