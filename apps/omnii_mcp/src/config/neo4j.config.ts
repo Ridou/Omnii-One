@@ -1,10 +1,5 @@
 import neo4j, { Driver, Config, Session } from 'neo4j-driver';
 import type { Record as Neo4jRecord } from 'neo4j-driver';
-import { redisCache } from '../services/caching/redis-cache';
-import { Redis } from 'ioredis';
-import { BrainConversationManager } from '../services/core/brain-conversation-manager';
-import { config } from './env.validation';
-import type { BrainMemoryContext } from '../types/brain-memory-schemas';
 
 // Define supported node types
 type NodeType = 'Concept' | 'Email' | 'Event' | string;
@@ -75,7 +70,7 @@ export const createNeo4jDriver = (): Driver => {
     config
   );
 
-  // Verify connection immediately and throw if it fails
+  // Connection health check - don't throw on failure
   driver.verifyConnectivity()
     .then(() => {
       neo4jConnected = true;
@@ -84,8 +79,9 @@ export const createNeo4jDriver = (): Driver => {
       console.log(`💾 Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
     })
     .catch(err => {
+      neo4jConnected = false;
       console.error('❌ Neo4j AuraDB connection failed:', err);
-      throw new Error(`Failed to connect to Neo4j: ${err.message}`);
+      // Don't throw - let the service handle it gracefully
     });
 
   return driver;
@@ -109,56 +105,13 @@ export const closeNeo4jDriver = async (): Promise<void> => {
   if (driverInstance) {
     await driverInstance.close();
     driverInstance = null;
+    neo4jConnected = false;
     console.log('🔌 Neo4j driver closed gracefully');
   }
 };
 
-// Production-ready Neo4j Service with brain memory, Redis, and health monitoring
-export class Neo4jService {
-  private conversationManager: BrainConversationManager;
-  private redis: Redis;
-  private consolidationInterval: NodeJS.Timeout | null = null;
-
-  constructor() {
-    // Initialize with production Neo4j driver (always initialize these properties)
-    this.conversationManager = new BrainConversationManager();
-    
-    // Initialize Redis for caching (with error handling)
-    this.redis = new Redis(process.env.REDIS_URL!, {
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-      connectTimeout: 60000,
-      commandTimeout: 5000
-    });
-
-    try {
-      // Handle Redis connection errors gracefully
-      this.redis.on('error', (err) => {
-        console.warn('⚠️ Redis connection error:', err.message);
-        console.warn('⚠️ Server will continue without Redis caching');
-      });
-
-      // Start background consolidation if enabled
-      if (config.MEMORY_BRIDGE_ENABLED) {
-        this.startMemoryConsolidation();
-      }
-
-      console.log(`🧠 Neo4jService initialized - Neo4j: CONNECTED`);
-      console.log(`🔄 Memory consolidation: ${config.MEMORY_BRIDGE_ENABLED ? 'ENABLED' : 'DISABLED'}`);
-      console.log(`⏱️ Consolidation interval: ${config.MEMORY_CONSOLIDATION_INTERVAL}s`);
-      
-    } catch (error) {
-      console.error('❌ Neo4jService initialization error:', error);
-      console.warn('⚠️ Service will continue with minimal functionality');
-      // Don't throw - allow service to continue
-    }
-  }
-
-  // Expose conversationManager for direct access (brain memory functionality)
-  get manager(): BrainConversationManager {
-    return this.conversationManager;
-  }
-
+// Simple Neo4j Service class (replacing the complex one)
+class SimpleNeo4jService {
   private getSession(): Session {
     const driver = getNeo4jDriver();
     const database = process.env.NEO4J_DATABASE || 'neo4j';
@@ -166,201 +119,9 @@ export class Neo4jService {
   }
 
   /**
-   * Production-ready memory retrieval with timeout and fallback
-   */
-  async getBrainMemoryContext(
-    userId: string,
-    currentMessage: string,
-    channel: 'sms' | 'chat',
-    sourceIdentifier: string,
-    options: {
-      timeoutMs?: number;
-      fallbackToCache?: boolean;
-      prioritizeRecent?: boolean;
-    } = {}
-  ): Promise<BrainMemoryContext> {
-    const { 
-      timeoutMs = config.CONTEXT_RETRIEVAL_TIMEOUT,
-      fallbackToCache = true,
-      prioritizeRecent = channel === 'chat'
-    } = options;
-
-    const startTime = Date.now();
-    
-    try {
-      // Production timeout wrapper
-      const memoryPromise = this.conversationManager.getBrainMemoryContext(
-        userId,
-        currentMessage,
-        channel,
-        sourceIdentifier,
-        {
-          workingMemorySize: prioritizeRecent ? 10 : 7,
-          includeGoogleServices: true
-        }
-      );
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Memory retrieval timeout')), timeoutMs);
-      });
-
-      const memoryContext = await Promise.race([memoryPromise, timeoutPromise]);
-      
-      const retrievalTime = Date.now() - startTime;
-      console.log(`[Neo4jService] ⚡ Memory retrieved in ${retrievalTime}ms`);
-      
-      // Performance monitoring
-      if (retrievalTime > timeoutMs * 0.8) {
-        console.warn(`[Neo4jService] ⚠️ Slow memory retrieval: ${retrievalTime}ms (threshold: ${timeoutMs}ms)`);
-      }
-
-      return memoryContext;
-
-    } catch (error) {
-      const retrievalTime = Date.now() - startTime;
-      console.error(`[Neo4jService] ❌ Memory retrieval failed after ${retrievalTime}ms:`, error);
-      throw error;
-    }
-  }
-
-
-
-  /**
-   * Background memory consolidation process
-   */
-  private startMemoryConsolidation(): void {
-    console.log(`[Neo4jService] 🔄 Starting memory consolidation (interval: ${config.MEMORY_CONSOLIDATION_INTERVAL}s)`);
-    
-    this.consolidationInterval = setInterval(async () => {
-      try {
-        console.log(`[Neo4jService] 🧠 Running memory consolidation cycle`);
-        
-        // Consolidate memories older than 24 hours
-        await this.conversationManager.consolidateMemories({
-          olderThanHours: 24,
-          batchSize: config.PATTERN_ANALYSIS_BATCH_SIZE,
-          maxProcessingTime: 300000 // 5 minutes max
-        });
-        
-        // Update concept activation strengths
-        await this.conversationManager.updateSemanticActivation({
-          threshold: config.CONCEPT_DISCOVERY_THRESHOLD,
-          batchSize: config.PATTERN_ANALYSIS_BATCH_SIZE
-        });
-
-        console.log(`[Neo4jService] ✅ Memory consolidation cycle completed`);
-        
-      } catch (error) {
-        console.error(`[Neo4jService] ❌ Memory consolidation failed:`, error);
-      }
-    }, config.MEMORY_CONSOLIDATION_INTERVAL * 1000);
-  }
-
-  /**
-   * Health check for monitoring
-   */
-  async healthCheck(): Promise<{
-    status: 'healthy' | 'unhealthy';
-    neo4j: boolean;
-    redis: boolean;
-    memory_bridge: boolean;
-    metrics: {
-      total_conversations: number;
-      active_concepts: number;
-      memory_strength_avg: number;
-    };
-  }> {
-    try {
-      // Test Neo4j connection
-      const neo4jHealthy = await this.testNeo4jConnection();
-      
-      // Test Redis connection  
-      const redisHealthy = await this.testRedisConnection();
-      
-      // Get brain metrics
-      const metrics = await this.getBrainMetrics();
-      
-      const status = neo4jHealthy && redisHealthy ? 'healthy' : 'unhealthy';
-
-      return {
-        status,
-        neo4j: neo4jHealthy,
-        redis: redisHealthy,
-        memory_bridge: config.MEMORY_BRIDGE_ENABLED,
-        metrics
-      };
-      
-    } catch (error) {
-      console.error(`[Neo4jService] ❌ Health check failed:`, error);
-      throw error;
-    }
-  }
-
-  private async testNeo4jConnection(): Promise<boolean> {
-    try {
-      const driver = getNeo4jDriver();
-      await driver.verifyConnectivity();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async testRedisConnection(): Promise<boolean> {  
-    try {
-      await this.redis.ping();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async getBrainMetrics(): Promise<{
-    total_conversations: number;
-    active_concepts: number;
-    memory_strength_avg: number;
-  }> {
-    // Basic metrics - can be enhanced later
-    return {
-      total_conversations: 0,
-      active_concepts: 0,
-      memory_strength_avg: 0
-    };
-  }
-
-  /**
-   * Graceful shutdown
-   */
-  async shutdown(): Promise<void> {
-    console.log(`[Neo4jService] 🔌 Shutting down service...`);
-    
-    // Stop consolidation
-    if (this.consolidationInterval) {
-      clearInterval(this.consolidationInterval);
-      this.consolidationInterval = null;
-    }
-
-    // Close connections
-    await this.redis.quit();
-    await closeNeo4jDriver();
-    
-    console.log(`[Neo4jService] ✅ Service shutdown complete`);
-  }
-
-  // === Original Neo4j service methods ===
-
-  /**
    * List all nodes of a specific type for a user
    */
   async listNodes(userId: string, nodeType: NodeType = 'Concept', limit = 100, filter?: string): Promise<NodeData[]> {
-    const cacheKey = redisCache.getCacheKey(userId, `list${nodeType}s`, `${limit}-${filter || ''}`);
-    const cachedData = await redisCache.get(cacheKey);
-    
-    if (cachedData) {
-      console.log(`Cache hit for list${nodeType}s`);
-      return cachedData;
-    }
-
     const session = this.getSession();
     try {
       let filterQuery = '';
@@ -405,7 +166,6 @@ export class Neo4jService {
         };
       });
       
-      await redisCache.set(cacheKey, nodes);
       return nodes;
     } catch (error) {
       console.error(`Error in listNodes(${nodeType}):`, error);
@@ -416,198 +176,15 @@ export class Neo4jService {
   }
 
   /**
-   * Get context for a specific node, including related nodes of any type
-   */
-  async getContextForNode(userId: string, nodeId: string): Promise<ContextData> {
-    const cacheKey = redisCache.getCacheKey(userId, 'getContextForNode', nodeId);
-    const cachedData = await redisCache.get(cacheKey);
-    
-    if (cachedData) {
-      console.log('Cache hit for getContextForNode');
-      return cachedData;
-    }
-
-    const session = this.getSession();
-    try {
-      const result = await session.run(
-        `
-        MATCH (n)
-        WHERE id(n) = $nodeId AND n.user_id = $userId
-        WITH n, labels(n) as sourceLabels
-        MATCH (n)-[r]-(m)
-        WHERE m.user_id = $userId
-        RETURN n, r, m, sourceLabels, labels(m) as targetLabels
-        `,
-        { 
-          nodeId: Number.parseInt(nodeId), 
-          userId 
-        }
-      );
-      
-      if (result.records.length === 0) {
-        throw new Error(`Node with ID ${nodeId} not found or access denied`);
-      }
-      
-      const nodes: Map<string, NodeData> = new Map();
-      const relationships: RelationshipData[] = [];
-      
-      // First extract the source node (n)
-      const firstRecord = result.records[0];
-      const sourceNode = firstRecord.get('n');
-      const sourceLabels = firstRecord.get('sourceLabels');
-      
-      // Add source node to nodes map
-      nodes.set(sourceNode.identity.toString(), {
-        id: sourceNode.identity.toString(),
-        labels: sourceLabels,
-        properties: sourceNode.properties
-      });
-      
-      // Process all records for relationships and target nodes
-      for (const record of result.records) {
-        const r = record.get('r');
-        const targetNode = record.get('m');
-        const targetLabels = record.get('targetLabels');
-        const targetId = targetNode.identity.toString();
-        
-        // Add target node if not already in map
-        if (!nodes.has(targetId)) {
-          nodes.set(targetId, {
-            id: targetId,
-            labels: targetLabels,
-            properties: targetNode.properties
-          });
-        }
-        
-        // Add relationship
-        relationships.push({
-          type: r.type,
-          properties: r.properties,
-          source: sourceNode.identity.toString(),
-          target: targetId
-        });
-      }
-      
-      const contextData: ContextData = { 
-        nodes: Array.from(nodes.values()),
-        relationships 
-      };
-      
-      await redisCache.set(cacheKey, contextData);
-      return contextData;
-    } catch (error) {
-      console.error('Error in getContextForNode:', error);
-      return { nodes: [], relationships: [] };
-    } finally {
-      await session.close();
-    }
-  }
-
-  /**
-   * Search for similar nodes across all available node types
-   */
-  async searchAllNodeTypes(userId: string, text: string, limit = 5): Promise<NodeData[]> {
-    const cacheKey = redisCache.getCacheKey(userId, 'searchAllNodeTypes', `${text}-${limit}`);
-    const cachedData = await redisCache.get(cacheKey);
-    
-    if (cachedData) {
-      console.log('Cache hit for searchAllNodeTypes');
-      return cachedData;
-    }
-
-    const session = this.getSession();
-    try {
-      // Sanitize limit parameter
-      const sanitizedLimit = neo4j.int(Number.parseInt(String(limit), 10));
-      
-      const result = await session.run(
-        `
-        // Match all nodes that belong to this user
-        MATCH (n)
-        WHERE n.user_id = $userId
-        
-        // Calculate relevance score based on node type and properties
-        WITH n, labels(n) as nodeLabels,
-          CASE
-            WHEN 'Concept' IN labels(n) THEN
-              CASE
-                WHEN n.name CONTAINS $text THEN 5
-                WHEN n.content CONTAINS $text THEN 3
-                WHEN n.description CONTAINS $text THEN 2
-                ELSE 0
-              END
-            WHEN 'Email' IN labels(n) THEN
-              CASE
-                WHEN n.subject CONTAINS $text THEN 5
-                WHEN n.snippet CONTAINS $text THEN 3
-                WHEN n.from CONTAINS $text THEN 2
-                ELSE 0
-              END
-            WHEN 'Event' IN labels(n) THEN
-              CASE
-                WHEN n.title CONTAINS $text THEN 5
-                WHEN n.description CONTAINS $text THEN 3
-                WHEN n.location CONTAINS $text THEN 2
-                ELSE 0
-              END
-            ELSE 0
-          END AS relevance
-        
-        // Filter out irrelevant nodes
-        WHERE relevance > 0
-        
-        // Return results sorted by relevance
-        RETURN n, nodeLabels, relevance
-        ORDER BY relevance DESC
-        LIMIT $limit
-        `,
-        { 
-          userId, 
-          text, 
-          limit: sanitizedLimit
-        }
-      );
-      
-      const nodes = result.records.map((record: Neo4jRecord) => {
-        const node = record.get('n');
-        const labels = record.get('nodeLabels');
-        const relevance = record.get('relevance');
-        
-        return {
-          id: node.identity.toString(),
-          labels: labels,
-          properties: { ...node.properties, relevance } // Include relevance score in properties
-        };
-      });
-      
-      await redisCache.set(cacheKey, nodes);
-      return nodes;
-    } catch (error) {
-      console.error('Error in searchAllNodeTypes:', error);
-      return [];
-    } finally {
-      await session.close();
-    }
-  }
-
-  /**
-   * Search specifically for concepts - retaining the original function for compatibility
+   * Search specifically for concepts
    */
   async searchSimilarConcepts(userId: string, text: string, limit = 5): Promise<NodeData[]> {
-    const cacheKey = redisCache.getCacheKey(userId, 'searchSimilarConcepts', `${text}-${limit}`);
-    const cachedData = await redisCache.get(cacheKey);
-    
-    if (cachedData) {
-      console.log('Cache hit for searchSimilarConcepts');
-      return cachedData;
-    }
-
     const session = this.getSession();
     try {
       // Sanitize limit parameter
       const sanitizedLimit = neo4j.int(Number.parseInt(String(limit), 10));
       
-      // Simple text search without APOC (which may not be available)
+      // Simple text search
       const result = await session.run(
         `
         MATCH (c:Concept)
@@ -644,7 +221,6 @@ export class Neo4jService {
         };
       });
       
-      await redisCache.set(cacheKey, concepts);
       return concepts;
     } catch (error) {
       console.error('Error in searchSimilarConcepts:', error);
@@ -656,84 +232,23 @@ export class Neo4jService {
 
   /**
    * Get comprehensive context for AI based on a query
-   * This will search across multiple node types and build a relevant context graph
    */
   async getContextForQuery(userId: string, query: string, limit = 5): Promise<ContextData> {
-    const cacheKey = redisCache.getCacheKey(userId, 'getContextForQuery', `${query}-${limit}`);
-    const cachedData = await redisCache.get(cacheKey);
-    
-    if (cachedData) {
-      console.log('Cache hit for getContextForQuery');
-      return cachedData;
-    }
-
-    // Sanitize limit parameter for Neo4j query
-    const sanitizedNumber = Number.parseInt(String(limit), 10);
-
-    // First find relevant nodes across all types
-    const relevantNodes = await this.searchAllNodeTypes(userId, query, sanitizedNumber);
-    
-    // No nodes found
-    if (relevantNodes.length === 0) {
-      return { nodes: [], relationships: [] };
-    }
-    
-    const nodeIds = relevantNodes.map(n => n.id);
-    
-    const session = this.getSession();
-    try {
-      // Get relationships between the found nodes
-      const result = await session.run(
-        `
-        MATCH (n1)-[r]-(n2)
-        WHERE id(n1) IN $nodeIds AND id(n2) IN $nodeIds
-        AND n1.user_id = $userId AND n2.user_id = $userId
-        RETURN r, id(n1) as source, id(n2) as target
-        `,
-        { 
-          nodeIds: nodeIds.map(id => neo4j.int(Number.parseInt(id, 10))), 
-          userId 
-        }
-      );
-      
-      const relationships = result.records.map(record => {
-        const r = record.get('r');
-        const source = record.get('source').toString();
-        const target = record.get('target').toString();
-        
-        return {
-          type: r.type,
-          properties: r.properties,
-          source,
-          target
-        };
-      });
-      
-      const contextData: ContextData = { 
-        nodes: relevantNodes,
-        relationships
-      };
-      
-      await redisCache.set(cacheKey, contextData);
-      return contextData;
-    } catch (error) {
-      console.error('Error in getContextForQuery:', error);
-      return { nodes: relevantNodes, relationships: [] };
-    } finally {
-      await session.close();
-    }
+    // For now, just search concepts and return without relationships
+    const concepts = await this.searchSimilarConcepts(userId, query, limit);
+    return {
+      nodes: concepts,
+      relationships: []
+    };
   }
 
   /**
    * Backward compatibility method for getConceptsForContext
    */
   async getConceptsForContext(userId: string, query: string, limit = 3): Promise<{concepts: NodeData[], relationships: RelationshipData[]}> {
-    // Sanitize limit parameter
-    const sanitizedNumber = Number.parseInt(String(limit), 10);
+    const contextData = await this.getContextForQuery(userId, query, limit);
     
-    const contextData = await this.getContextForQuery(userId, query, sanitizedNumber);
-    
-    // For backward compatibility, filter to only include Concept nodes
+    // Filter to only include Concept nodes
     const concepts = contextData.nodes.filter(node => 
       node.labels.includes('Concept')
     );
@@ -746,26 +261,13 @@ export class Neo4jService {
 
   // Close the driver when the application shuts down
   async close(): Promise<void> {
-    await this.shutdown();
+    await closeNeo4jDriver();
   }
 }
 
-// Lazy singleton pattern to prevent issues during module load
-let neo4jServiceInstance: Neo4jService | null = null;
+// Export simple service instance
+export const neo4jService = new SimpleNeo4jService();
 
-export const getNeo4jService = (): Neo4jService => {
-  if (!neo4jServiceInstance) {
-    neo4jServiceInstance = new Neo4jService();
-  }
-  return neo4jServiceInstance;
-};
-
-// Lazy getters to prevent service creation during module load
-export const neo4jService = new Proxy({} as Neo4jService, {
-  get(target, prop) {
-    return getNeo4jService()[prop as keyof Neo4jService];
-  }
-});
-
-// For backward compatibility with productionBrainService
-export const productionBrainService = neo4jService; 
+// For backward compatibility
+export const productionBrainService = neo4jService;
+export const getNeo4jService = () => neo4jService; 
