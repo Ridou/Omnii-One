@@ -28,19 +28,10 @@ import { useXPSystem } from '~/hooks/useXPSystem';
 import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { DesktopTasksContent, TabletTasksContent } from '~/components/common/DesktopTasksComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
-
+import { useTasks } from '~/hooks/useTasks';
+import type { TaskData } from '@omnii/validators';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
-  created_at: string;
-  requested_by: string;
-  type: string;
-}
 
 // Tab configuration with AI-focused productivity patterns (Shape of AI inspired)
 const taskTabs = [
@@ -74,37 +65,6 @@ const taskTabs = [
   }
 ];
 
-// Mock data for testing - Adding back for stable state
-const mockTasks: Task[] = [
-  {
-    id: '1',
-    title: 'Production Database Access Request',
-    description: 'Request to grant read-only access to production database for troubleshooting issues.',
-    priority: 'high',
-    created_at: '2025-03-15T10:30:00Z',
-    requested_by: 'Sarah Johnson',
-    type: 'Access Request',
-  },
-  {
-    id: '2',
-    title: 'Marketing Campaign Budget Increase',
-    description: 'Request to increase Q2 marketing campaign budget by 15% to expand reach.',
-    priority: 'medium',
-    created_at: '2025-03-14T14:45:00Z',
-    requested_by: 'Michael Rodriguez',
-    type: 'Budget Request',
-  },
-  {
-    id: '3',
-    title: 'New Hire Equipment Procurement',
-    description: 'Request to approve equipment purchase for new software developer joining next month.',
-    priority: 'low',
-    created_at: '2025-03-13T09:15:00Z',
-    requested_by: 'Emma Chen',
-    type: 'Procurement',
-  },
-];
-
 export default function TasksScreen() {
   const { user } = useAuth();
   const { isDark } = useTheme();
@@ -112,11 +72,24 @@ export default function TasksScreen() {
   const { xpProgress, currentLevel, currentXP, awardXP } = useXPSystem();
   const { getNextCelebration, showCelebration } = useXPContext();
   
+  // Use real tRPC data instead of mock data
+  const { 
+    tasksOverview, 
+    isLoading, 
+    hasError, 
+    errorMessage, 
+    refetch,
+    getAllTasks,
+    getPendingTasks,
+    totalTasks,
+    totalCompleted,
+    totalPending 
+  } = useTasks();
+  
   // Mascot state management
   const { cheeringState, triggerCheering } = useMascotCheering();
   const mascotStage = getMascotStageByLevel(currentLevel);
   
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [selectedFilter, setSelectedFilter] = useState('auto');
   const [refreshing, setRefreshing] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
@@ -130,8 +103,11 @@ export default function TasksScreen() {
     }, {} as Record<string, Animated.Value>)
   ).current;
 
-  const handleTaskApprove = useCallback(async (task: Task) => {
-    // Handle regular task approval - award XP for engagement
+  // Get real tasks from tRPC
+  const allTasks = getAllTasks();
+
+  const handleTaskApprove = useCallback(async (task: TaskData) => {
+    // Handle real task approval - award XP for engagement
     const taskXP = 15; // Standard task XP
     
     try {
@@ -139,15 +115,18 @@ export default function TasksScreen() {
     } catch (error) {
     }
     
-    // Remove from list immediately
-    setTasks(prev => prev.filter(t => t.id !== task.id));
+    // TODO: Implement actual task completion via tRPC
+    console.log('[TasksScreen] Task approved:', task.id);
     
     // Trigger mascot cheering for task completion
     triggerCheering(CheeringTrigger.TASK_COMPLETE);
-  }, [awardXP, triggerCheering]);
+    
+    // Refresh tasks to get updated data
+    refetch();
+  }, [awardXP, triggerCheering, refetch]);
 
-  const handleTaskReject = useCallback(async (task: Task) => {
-    // Handle regular task rejection - still award some XP for engagement
+  const handleTaskReject = useCallback(async (task: TaskData) => {
+    // Handle task rejection - still award some XP for engagement
     const engagementXP = 5; // Small XP for engagement even when declining
     
     try {
@@ -155,19 +134,21 @@ export default function TasksScreen() {
     } catch (error) {
     }
     
-    // Remove from list immediately
-    setTasks(prev => prev.filter(t => t.id !== task.id));
+    // TODO: Implement actual task deletion via tRPC  
+    console.log('[TasksScreen] Task rejected:', task.id);
     
     // Trigger mascot cheering for engagement
     triggerCheering(CheeringTrigger.TASK_COMPLETE);
-  }, [awardXP, triggerCheering]);
+    
+    // Refresh tasks to get updated data
+    refetch();
+  }, [awardXP, triggerCheering, refetch]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await refetch();
     setRefreshing(false);
-  }, []);
+  }, [refetch]);
 
   const handleTabPress = (tabKey: string) => {
     // Scale animation on press
@@ -191,20 +172,24 @@ export default function TasksScreen() {
     setSelectedFilter(tabKey);
   };
 
-  // AI-powered filtering logic
-  const getAIFilteredTasks = (tasks: Task[], filter: string): Task[] => {
+  // AI-powered filtering logic for real tasks
+  const getAIFilteredTasks = (tasks: TaskData[], filter: string): TaskData[] => {
+    if (!tasks || tasks.length === 0) return [];
+    
     switch (filter) {
       case 'auto':
         // AI-automated recommendations - smart task suggestions
         return tasks
+          .filter(task => task.status === 'needsAction') // Only pending tasks
           .sort((a, b) => {
-            const getAutoScore = (task: Task): number => {
+            const getAutoScore = (task: TaskData): number => {
               let score = 0;
-              if (task.priority === 'medium') score += 5; // Balanced difficulty
-              if (task.priority === 'high') score += 3; // Important items
-              if (task.priority === 'low') score += 2; // Quick wins
-              // Favor recent tasks for automation
-              const daysDiff = Math.floor((Date.now() - new Date(task.created_at).getTime()) / (1000 * 60 * 60 * 24));
+              // Prioritize tasks with due dates
+              if (task.due) score += 5;
+              // Favor tasks with notes/details
+              if (task.notes && task.notes.length > 0) score += 3;
+              // Recent tasks get priority
+              const daysDiff = Math.floor((Date.now() - new Date(task.updated || task.created || '').getTime()) / (1000 * 60 * 60 * 24));
               if (daysDiff <= 1) score += 2;
               return score;
             };
@@ -212,49 +197,68 @@ export default function TasksScreen() {
           });
           
       case 'collab':
-        // Collaborative tasks - items that require team input or approval
+        // Collaborative tasks - items that might need coordination
         return tasks
           .filter(task => 
-            task.type.toLowerCase().includes('request') || 
-            task.description.toLowerCase().includes('approval') ||
-            task.description.toLowerCase().includes('team') ||
-            task.description.toLowerCase().includes('collaborative')
+            task.status === 'needsAction' &&
+            (task.title.toLowerCase().includes('meet') || 
+             task.title.toLowerCase().includes('call') ||
+             task.title.toLowerCase().includes('review') ||
+             task.notes?.toLowerCase().includes('team') ||
+             task.notes?.toLowerCase().includes('collaborate'))
           )
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          .sort((a, b) => new Date(b.updated || b.created || '').getTime() - new Date(a.updated || a.created || '').getTime());
           
       case 'daily':
-        // Daily tasks - routine items and recent submissions
+        // Daily tasks - tasks due today or overdue
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // End of today
+        
         return tasks
           .filter(task => {
-            const daysDiff = Math.floor((Date.now() - new Date(task.created_at).getTime()) / (1000 * 60 * 60 * 24));
-            return daysDiff <= 1; // Tasks from today/yesterday
+            if (task.status !== 'needsAction') return false;
+            if (!task.due) return false;
+            const dueDate = new Date(task.due);
+            return dueDate <= today; // Due today or overdue
           })
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          .sort((a, b) => {
+            const aDate = new Date(a.due || '');
+            const bDate = new Date(b.due || '');
+            return aDate.getTime() - bDate.getTime(); // Earliest due first
+          });
           
       case 'goal':
-        // Goal-oriented tasks - high-impact and strategic items
+        // Goal-oriented tasks - important tasks with clear outcomes
         return tasks
-          .filter(task => task.priority === 'high')
+          .filter(task => 
+            task.status === 'needsAction' &&
+            (task.title.length > 20 || // Detailed titles suggest important tasks
+             task.notes && task.notes.length > 50 || // Detailed notes
+             task.due) // Tasks with deadlines are usually important
+          )
           .sort((a, b) => {
-            const priorityOrder = { high: 0, medium: 1, low: 2 };
-            const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-            if (priorityDiff !== 0) return priorityDiff;
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            // Prioritize tasks with due dates, then by update time
+            if (a.due && !b.due) return -1;
+            if (!a.due && b.due) return 1;
+            if (a.due && b.due) {
+              return new Date(a.due).getTime() - new Date(b.due).getTime();
+            }
+            return new Date(b.updated || b.created || '').getTime() - new Date(a.updated || a.created || '').getTime();
           });
           
       default:
-        return tasks;
+        return tasks.filter(task => task.status === 'needsAction');
     }
   };
 
-  const filteredTasks = getAIFilteredTasks(tasks, selectedFilter);
+  const filteredTasks = getAIFilteredTasks(allTasks, selectedFilter);
 
-  // Updated stats for AI-focused tabs
+  // Updated stats for AI-focused tabs using real data
   const stats = {
-    auto: getAIFilteredTasks(tasks, 'auto').length,
-    collab: getAIFilteredTasks(tasks, 'collab').length,
-    daily: getAIFilteredTasks(tasks, 'daily').length,
-    goal: getAIFilteredTasks(tasks, 'goal').length,
+    auto: getAIFilteredTasks(allTasks, 'auto').length,
+    collab: getAIFilteredTasks(allTasks, 'collab').length,
+    daily: getAIFilteredTasks(allTasks, 'daily').length,
+    goal: getAIFilteredTasks(allTasks, 'goal').length,
   };
 
   // Enhanced Filter Tabs component with AI descriptions
@@ -411,7 +415,7 @@ export default function TasksScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: Task }) => (
+  const renderItem = ({ item }: { item: TaskData }) => (
     <View className="mb-2">
       <SimpleSwipeCard
         onSwipeLeft={() => handleTaskReject(item)}
