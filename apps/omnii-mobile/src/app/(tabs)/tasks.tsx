@@ -116,7 +116,6 @@ export default function TasksScreen() {
     }
     
     // TODO: Implement actual task completion via tRPC
-    console.log('[TasksScreen] Task approved:', task.id);
     
     // Trigger mascot cheering for task completion
     triggerCheering(CheeringTrigger.TASK_COMPLETE);
@@ -134,8 +133,7 @@ export default function TasksScreen() {
     } catch (error) {
     }
     
-    // TODO: Implement actual task deletion via tRPC  
-    console.log('[TasksScreen] Task rejected:', task.id);
+    // TODO: Implement actual task deletion via tRPC
     
     // Trigger mascot cheering for engagement
     triggerCheering(CheeringTrigger.TASK_COMPLETE);
@@ -172,93 +170,78 @@ export default function TasksScreen() {
     setSelectedFilter(tabKey);
   };
 
-  // AI-powered filtering logic for real tasks
-  const getAIFilteredTasks = (tasks: TaskData[], filter: string): TaskData[] => {
-    if (!tasks || tasks.length === 0) return [];
+  // Task list mapping - maps your Google Task lists to categories
+  const getTaskListMapping = () => {
+    if (!tasksOverview?.taskLists) return {};
     
-    switch (filter) {
-      case 'auto':
-        // AI-automated recommendations - smart task suggestions
-        return tasks
-          .filter(task => task.status === 'needsAction') // Only pending tasks
-          .sort((a, b) => {
-            const getAutoScore = (task: TaskData): number => {
-              let score = 0;
-              // Prioritize tasks with due dates
-              if (task.due) score += 5;
-              // Favor tasks with notes/details
-              if (task.notes && task.notes.length > 0) score += 3;
-              // Recent tasks get priority
-              const daysDiff = Math.floor((Date.now() - new Date(task.updated || task.created || '').getTime()) / (1000 * 60 * 60 * 24));
-              if (daysDiff <= 1) score += 2;
-              return score;
-            };
-            return getAutoScore(b) - getAutoScore(a);
-          });
-          
-      case 'collab':
-        // Collaborative tasks - items that might need coordination
-        return tasks
-          .filter(task => 
-            task.status === 'needsAction' &&
-            (task.title.toLowerCase().includes('meet') || 
-             task.title.toLowerCase().includes('call') ||
-             task.title.toLowerCase().includes('review') ||
-             task.notes?.toLowerCase().includes('team') ||
-             task.notes?.toLowerCase().includes('collaborate'))
-          )
-          .sort((a, b) => new Date(b.updated || b.created || '').getTime() - new Date(a.updated || a.created || '').getTime());
-          
-      case 'daily':
-        // Daily tasks - tasks due today or overdue
-        const today = new Date();
-        today.setHours(23, 59, 59, 999); // End of today
-        
-        return tasks
-          .filter(task => {
-            if (task.status !== 'needsAction') return false;
-            if (!task.due) return false;
-            const dueDate = new Date(task.due);
-            return dueDate <= today; // Due today or overdue
-          })
-          .sort((a, b) => {
-            const aDate = new Date(a.due || '');
-            const bDate = new Date(b.due || '');
-            return aDate.getTime() - bDate.getTime(); // Earliest due first
-          });
-          
-      case 'goal':
-        // Goal-oriented tasks - important tasks with clear outcomes
-        return tasks
-          .filter(task => 
-            task.status === 'needsAction' &&
-            (task.title.length > 20 || // Detailed titles suggest important tasks
-             task.notes && task.notes.length > 50 || // Detailed notes
-             task.due) // Tasks with deadlines are usually important
-          )
-          .sort((a, b) => {
-            // Prioritize tasks with due dates, then by update time
-            if (a.due && !b.due) return -1;
-            if (!a.due && b.due) return 1;
-            if (a.due && b.due) {
-              return new Date(a.due).getTime() - new Date(b.due).getTime();
-            }
-            return new Date(b.updated || b.created || '').getTime() - new Date(a.updated || a.created || '').getTime();
-          });
-          
-      default:
-        return tasks.filter(task => task.status === 'needsAction');
-    }
+    const mapping: Record<string, string[]> = {
+      auto: [],
+      collab: [],
+      daily: [],
+      goal: []
+    };
+    
+    // Map your actual Google Task lists to categories
+    tasksOverview.taskLists.forEach(list => {
+      const listTitle = list.title.toLowerCase();
+      const listId = list.id;
+      
+      // Map based on list names (adjust these to match your actual list names)
+      if (listTitle.includes('auto') || listTitle.includes('automation')) {
+        mapping.auto.push(listId);
+      } else if (listTitle.includes('collab') || listTitle.includes('collaboration') || listTitle.includes('team')) {
+        mapping.collab.push(listId);
+      } else if (listTitle.includes('daily') || listTitle.includes('routine') || listTitle.includes('habit')) {
+        mapping.daily.push(listId);
+      } else if (listTitle.includes('goal') || listTitle.includes('project') || listTitle.includes('learn')) {
+        mapping.goal.push(listId);
+      } else {
+        // For now, distribute tasks evenly across categories for demo
+        // You can create specific lists later
+        const listIndex = tasksOverview.taskLists.indexOf(list);
+        const categories = ['auto', 'collab', 'daily', 'goal'];
+        const categoryKey = categories[listIndex % categories.length] as keyof typeof mapping;
+        mapping[categoryKey].push(listId);
+      }
+    });
+    
+    return mapping;
   };
 
-  const filteredTasks = getAIFilteredTasks(allTasks, selectedFilter);
+  // Filter tasks by their actual Google Task list
+  const getTasksByList = (filter: string): TaskData[] => {
+    if (!tasksOverview?.taskLists) return [];
+    
+    const listMapping = getTaskListMapping();
+    const targetListIds = listMapping[filter as keyof typeof listMapping] || [];
+    
+    // Get all tasks from the target lists
+    const tasks: TaskData[] = [];
+    
+    tasksOverview.taskLists.forEach(list => {
+      if (targetListIds.includes(list.id)) {
+        // Only include pending tasks
+        const pendingTasks = list.tasks.filter(task => task.status === 'needsAction');
+        tasks.push(...pendingTasks);
+      }
+    });
+    
+    // Sort by update time (most recent first)
+    return tasks.sort((a, b) => {
+      return new Date(b.updated || '').getTime() - new Date(a.updated || '').getTime();
+    });
+  };
 
-  // Updated stats for AI-focused tabs using real data
+  const filteredTasks = getTasksByList(selectedFilter);
+
+
+
+  // Updated stats for list-based filtering using real Google Task lists
   const stats = {
-    auto: getAIFilteredTasks(allTasks, 'auto').length,
-    collab: getAIFilteredTasks(allTasks, 'collab').length,
-    daily: getAIFilteredTasks(allTasks, 'daily').length,
-    goal: getAIFilteredTasks(allTasks, 'goal').length,
+    auto: getTasksByList('auto').length,
+    collab: getTasksByList('collab').length,
+    daily: getTasksByList('daily').length,
+    goal: getTasksByList('goal').length,
   };
 
   // Enhanced Filter Tabs component with AI descriptions

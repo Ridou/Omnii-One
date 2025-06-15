@@ -242,7 +242,7 @@ export const calendarRouter = {
       
       try {
         // Use hardcoded user ID for debugging or fallback to session
-        const userId = ctx.session?.user?.id || 'cd9bdc60-35af-4bb6-b87e-1932e96fb354';
+        const userId = ctx.session?.user?.id;
         
         if (!userId) {
           return {
