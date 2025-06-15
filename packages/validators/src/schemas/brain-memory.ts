@@ -373,4 +373,6 @@ export function safeParseEnhancedChatMessage(data: any): {
       error: result.error.message 
     };
   }
-} 
+}
+
+// Types are exported from types.ts to avoid conflicts 
