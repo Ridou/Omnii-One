@@ -246,10 +246,10 @@ export interface EnhancedWorkflowDraft extends WorkflowDraft {
 }
 
 import { CachedEntity } from "./entity.types";
-import { BrainMemoryContext } from "./brain-memory-schemas";
+import type { BrainMemoryContext } from "./brain-memory-schemas";
 
 // Re-export for consistency across the application
-export { BrainMemoryContext } from "./brain-memory-schemas";
+export type { BrainMemoryContext } from "./brain-memory-schemas";
 
 /**
  * Execution context (enhanced with brain memory support and RDF insights)
