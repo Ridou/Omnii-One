@@ -14,6 +14,9 @@ import { useContacts, useContactStats } from '~/hooks/useContacts';
 import { useEmail } from '~/hooks/useEmail';
 import { useNeo4jSimple } from '~/hooks/useNeo4jSimple';
 
+// Import RDF Memory Card component
+import { RDFMemoryCard } from './RDFMemoryCard';
+
 interface MemoryContentProps {
   tasksOverview: any;
   calendarData: any;
@@ -194,6 +197,9 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
             }
           />
         </View>
+
+        {/* RDF Semantic Analysis Card */}
+        <RDFMemoryCard />
 
         {/* Shape of AI - Trust Indicators: Memory Controls */}
         <MemoryControlsSection />

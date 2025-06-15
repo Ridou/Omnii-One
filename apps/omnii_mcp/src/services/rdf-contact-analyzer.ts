@@ -123,8 +123,15 @@ export class RDFContactAnalyzer {
     // Lazy import to avoid initialization issues during testing
     let unifiedGoogleManager;
     try {
-      const imported = await import('./unified-google-manager');
-      unifiedGoogleManager = imported.default;
+      // Use dynamic import with a slight delay to ensure module is fully loaded
+      const module = await import('./unified-google-manager');
+      // Access default export safely
+      unifiedGoogleManager = module.default || module;
+      
+      if (!unifiedGoogleManager) {
+        console.error(`[RDFContactAnalyzer] Failed to get unified-google-manager instance`);
+        return [];
+      }
     } catch (importError) {
       console.error(`[RDFContactAnalyzer] Failed to import unified-google-manager:`, importError);
       return [];

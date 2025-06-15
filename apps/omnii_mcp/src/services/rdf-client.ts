@@ -6,10 +6,19 @@
 import { rdfCache } from './rdf-cache';
 
 export class RDFServiceClient {
-  private pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_URL || "http://omnii-rdf-python-production.railway.internal:8000";
+  private pythonServiceUrl: string;
 
   constructor() {
-    console.log(`[RDFServiceClient] 🔗 Connecting to Python RDF service (INTERNAL RAILWAY URL):`);
+    // Use different URLs for local vs production
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT === 'production';
+    
+    this.pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_URL || 
+      (isProduction 
+        ? "http://omnii-rdf-python-production.railway.internal:8000"
+        : "http://localhost:8001"); // Local Python runs on 8001 since MCP is on 8000
+    
+    console.log(`[RDFServiceClient] 🔗 Connecting to Python RDF service:`);
+    console.log(`[RDFServiceClient] - Environment: ${isProduction ? 'production' : 'local'}`);
     console.log(`[RDFServiceClient] - Python service: ${this.pythonServiceUrl}`);
     
     if (!this.pythonServiceUrl) {
