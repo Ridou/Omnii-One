@@ -16,6 +16,7 @@ import { useEmail } from '~/hooks/useEmail';
 interface MemoryContentProps {
   tasksOverview: any;
   calendarData: any;
+  conceptsData?: any;
   onTaskAction: (action: string, data?: any) => void;
   onCalendarAction: (action: string, data?: any) => void;
   onContactAction?: (action: string, data?: any) => void;
@@ -25,6 +26,7 @@ interface MemoryContentProps {
 export const MemoryContent: React.FC<MemoryContentProps> = ({
   tasksOverview,
   calendarData,
+  conceptsData,
   onTaskAction,
   onCalendarAction,
   onContactAction,
@@ -133,6 +135,22 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
             data={{ emails, totalEmails, unreadCount }}
             onExpand={() => onEmailAction?.('view_patterns')}
             expandedContent={<EmailMemoryDetails data={{ emails, totalEmails, unreadCount }} />}
+          />
+
+          {/* Neo4j Knowledge Graph */}
+          <MemorySummaryCard
+            icon="🧠"
+            title="Brain Memory"
+            items={[
+              `${conceptsData?.totalConcepts || 0} concepts stored`,
+              `${conceptsData?.getActiveConcepts().length || 0} active concepts`,
+              `${conceptsData?.getRecentConcepts(5).length || 0} recent mentions`,
+              `${Math.round((conceptsData?.getActiveConcepts().length / Math.max(conceptsData?.totalConcepts, 1)) * 100) || 0}% activation rate`
+            ]}
+            color="blue"
+            data={conceptsData}
+            onExpand={() => console.log('View brain memory')}
+            expandedContent={<BrainMemoryDetails data={conceptsData} />}
           />
         </View>
 
@@ -1063,6 +1081,134 @@ const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
           ))}
         </View>
       </ScrollView>
+    </View>
+  );
+};
+// Neo4j Memory Details Component
+const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
+  const { isDark } = useTheme();
+  
+  if (!data?.concepts) {
+    return (
+      <View className={cn(
+        "rounded-xl p-4 border",
+        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+      )}>
+        <Text className={cn(
+          "text-sm",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>
+          No Neo4j concepts loaded
+        </Text>
+      </View>
+    );
+  }
+  
+  const concepts = data.concepts.slice(0, 5); // Show first 5 concepts
+  
+  return (
+    <View className={cn(
+      "rounded-xl p-4 border",
+      isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+    )}>
+      <View className="flex-row items-center mb-3">
+        <Text className="text-xl mr-2">🧠</Text>
+        <Text className={cn(
+          "text-lg font-semibold",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
+          Knowledge Graph ({data.totalConcepts} concepts)
+        </Text>
+      </View>
+  
+      {data.isLoading && (
+        <Text className={cn(
+          "text-sm mb-2",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>
+          Loading concepts...
+        </Text>
+      )}
+  
+      {data.error && (
+        <Text className={cn(
+          "text-sm mb-2 text-red-500"
+        )}>
+          Error: {data.error?.message || 'Failed to load concepts'}
+        </Text>
+      )}
+  
+      <ScrollView style={{ maxHeight: 300 }}>
+        {concepts.map((concept: any, index: number) => (
+          <View key={concept.id || index} className={cn(
+            "p-3 rounded-lg mb-2 border",
+            isDark ? "bg-slate-900 border-slate-600" : "bg-gray-50 border-gray-200"
+          )}>
+            <Text className={cn(
+              "text-sm font-medium mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>
+              {concept.properties?.name || `Concept ${concept.id}`}
+            </Text>
+            <Text className={cn(
+              "text-xs",
+              isDark ? "text-slate-400" : "text-gray-600"
+            )}>
+              Labels: {concept.labels?.join(', ') || 'Unknown'}
+            </Text>
+            {concept.properties?.description && (
+              <Text className={cn(
+                "text-xs mt-1",
+                isDark ? "text-slate-300" : "text-gray-700"
+              )} numberOfLines={2}>
+                {concept.properties.description}
+              </Text>
+            )}
+            {concept.properties?.activation_strength !== undefined && (
+              <View className="flex-row items-center mt-2">
+                <Text className={cn(
+                  "text-xs",
+                  isDark ? "text-slate-500" : "text-gray-500"
+                )}>
+                  Activation: {Math.round(concept.properties.activation_strength * 100)}%
+                </Text>
+                {concept.properties?.mention_count !== undefined && (
+                  <Text className={cn(
+                    "text-xs ml-3",
+                    isDark ? "text-slate-500" : "text-gray-500"
+                  )}>
+                    Mentions: {concept.properties.mention_count}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        ))}
+        
+        {data.totalConcepts > 5 && (
+          <Text className={cn(
+            "text-xs text-center mt-2",
+            isDark ? "text-slate-500" : "text-gray-500"
+          )}>
+            Showing 5 of {data.totalConcepts} concepts
+          </Text>
+        )}
+      </ScrollView>
+      
+      <TouchableOpacity 
+        className={cn(
+          "p-2 rounded-md items-center mt-3",
+          isDark ? "bg-slate-900" : "bg-gray-50"
+        )}
+        onPress={data.refetch}
+      >
+        <Text className={cn(
+          "text-xs font-medium",
+          isDark ? "text-blue-400" : "text-blue-600"
+        )}>
+          Refresh Neo4j Data
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };

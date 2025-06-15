@@ -14,6 +14,7 @@ import { AuthGuard } from '~/components/common/AuthGuard';
 // Hooks
 import { useTasks, useTaskMutations } from '~/hooks/useTasks';
 import { useCalendar } from '~/hooks/useCalendar';
+import { useConcepts } from '~/hooks/useNeo4j';
 import { useChatState } from '~/hooks/useChatState';
 import { useChatAnimations } from '~/hooks/useChatAnimations';
 import { useChatActions } from '~/hooks/useChatActions';
@@ -50,6 +51,7 @@ export default function ChatScreen() {
     // Data hooks
     const tasksData = useTasks();
     const calendarData = useCalendar();
+    const conceptsData = useConcepts();
     const taskMutations = useTaskMutations();
 
     // Chat state and handlers
@@ -98,6 +100,7 @@ export default function ChatScreen() {
                     <MemoryContent
                         tasksOverview={tasksData.tasksOverview}
                         calendarData={calendarData.calendarData}
+                        conceptsData={conceptsData}
                         onTaskAction={handleTaskAction}
                         onCalendarAction={handleCalendarAction}
                         onContactAction={handleContactAction}
