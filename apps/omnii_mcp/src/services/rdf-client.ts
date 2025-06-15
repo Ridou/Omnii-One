@@ -12,10 +12,16 @@ export class RDFServiceClient {
     // Use different URLs for local vs production
     const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT === 'production';
     
-    this.pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_URL || 
-      (isProduction 
-        ? "http://omnii-rdf-python-production.railway.internal:8000"
-        : "http://localhost:8001"); // Local Python runs on 8001 since MCP is on 8000
+    // First check for override URL (useful for testing with ngrok)
+    if (process.env.RDF_PYTHON_SERVICE_OVERRIDE_URL) {
+      this.pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_OVERRIDE_URL;
+      console.log(`[RDFServiceClient] 🔗 Using override URL: ${this.pythonServiceUrl}`);
+    } else {
+      this.pythonServiceUrl = process.env.RDF_PYTHON_SERVICE_URL || 
+        (isProduction 
+          ? "http://omnii-rdf-python-production.railway.internal:8000"
+          : "http://localhost:8001"); // Local Python runs on 8001 since MCP is on 8000
+    }
     
     console.log(`[RDFServiceClient] 🔗 Connecting to Python RDF service:`);
     console.log(`[RDFServiceClient] - Environment: ${isProduction ? 'production' : 'local'}`);

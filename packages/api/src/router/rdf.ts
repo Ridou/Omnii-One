@@ -34,11 +34,9 @@ const expandNameSchema = z.object({
   ])
 });
 
-// Since the tRPC API is deployed, it needs to call the production MCP service
+// Use localhost for development
 const getRDFBaseUrl = () => {
-  // Always use the production MCP service for now
-  // In the future, you can add environment-based logic here
-  return 'https://omniimcp-production.up.railway.app';
+  return 'http://localhost:8000';
 };
 
 export const rdfRouter = createTRPCRouter({
@@ -47,8 +45,8 @@ export const rdfRouter = createTRPCRouter({
    */
   health: protectedProcedure.query(async ({ ctx }) => {
     try {
-      // Use localhost for development
-      const baseUrl = 'http://localhost:8000';
+      const baseUrl = getRDFBaseUrl();
+      console.log('RDF health check to:', baseUrl);
       
       const response = await fetch(`${baseUrl}/api/rdf/health`);
       const data = await response.json();
@@ -74,9 +72,13 @@ export const rdfRouter = createTRPCRouter({
     .input(analyzeMessageSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const baseUrl = 'http://localhost:8000';
+        const baseUrl = getRDFBaseUrl();
+        const fullUrl = `${baseUrl}/api/rdf/analyze`;
+        console.log('🔍 RDF analyze message called from tRPC');
+        console.log('   URL:', fullUrl);
+        console.log('   Input:', JSON.stringify(input, null, 2));
         
-        const response = await fetch(`${baseUrl}/api/rdf/analyze`, {
+        const response = await fetch(fullUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -84,7 +86,9 @@ export const rdfRouter = createTRPCRouter({
           body: JSON.stringify(input)
         });
         
+        console.log('   Response status:', response.status);
         const data = await response.json();
+        console.log('   Response data:', JSON.stringify(data, null, 2));
         
         if (!response.ok || !data.success) {
           throw new TRPCError({
@@ -114,9 +118,12 @@ export const rdfRouter = createTRPCRouter({
     .input(extractConceptsSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const baseUrl = 'http://localhost:8000';
+        const baseUrl = getRDFBaseUrl();
+        const fullUrl = `${baseUrl}/api/rdf/extract-concepts`;
+        console.log('RDF extract concepts to:', fullUrl);
+        console.log('Request body:', JSON.stringify(input));
         
-        const response = await fetch(`${baseUrl}/api/rdf/extract-concepts`, {
+        const response = await fetch(fullUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -159,7 +166,8 @@ export const rdfRouter = createTRPCRouter({
     .input(expandNameSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        const baseUrl = 'http://localhost:8000';
+        const baseUrl = getRDFBaseUrl();
+        console.log('RDF expand contact name to:', baseUrl);
         
         const response = await fetch(`${baseUrl}/api/rdf/process`, {
           method: 'POST',
@@ -222,7 +230,8 @@ export const rdfRouter = createTRPCRouter({
    */
   status: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const baseUrl = 'https://omniimcp-production.up.railway.app';
+      const baseUrl = getRDFBaseUrl();
+      console.log('RDF status check to:', baseUrl);
       
       const response = await fetch(`${baseUrl}/api/rdf/status`);
       const data = await response.json();

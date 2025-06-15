@@ -43,11 +43,13 @@ export default new Elysia({ prefix: '/rdf' })
   })
 
   .post('/analyze', async ({ body, set }) => {
-    console.log('🔍 RDF Analysis request received');
+    console.log('🔍 RDF Analysis request received at MCP');
+    console.log('   Request body:', JSON.stringify(body, null, 2));
     
     try {
       // For analysis, we process the input through the Python RDF service
       const result = await rdfServiceClient.processRDFRequest(body);
+      console.log('   Python service responded:', result ? 'success' : 'failed');
       
       if (!result.success) {
         set.status = 400;
