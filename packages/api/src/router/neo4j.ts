@@ -72,6 +72,11 @@ const getBaseUrl = (): string => {
     return process.env.MCP_SERVICE_URL;
   }
   
+  // Check OMNII_TEST_ENV for explicit environment setting
+  if (process.env.OMNII_TEST_ENV === 'PROD') {
+    return 'https://omniimcp-production.up.railway.app';
+  }
+  
   // Production detection
   if (process.env.NODE_ENV === 'production' || 
       process.env.RAILWAY_ENVIRONMENT || 
@@ -79,8 +84,49 @@ const getBaseUrl = (): string => {
     return 'https://omniimcp-production.up.railway.app';
   }
   
-  // Default to local development
-  return 'http://localhost:9090';
+  // Default to local development (port 8000 to match your test config)
+  return 'http://localhost:8000';
+};
+
+// Cache Neo4j availability status
+let neo4jAvailabilityCache: { available: boolean; checkedAt: number } | null = null;
+const NEO4J_AVAILABILITY_CACHE_TTL = 60000; // 1 minute
+
+// Check if Neo4j is available by checking if MCP service is reachable
+const isNeo4jAvailable = async (): Promise<boolean> => {
+  // Return cached result if still valid
+  if (neo4jAvailabilityCache && 
+      Date.now() - neo4jAvailabilityCache.checkedAt < NEO4J_AVAILABILITY_CACHE_TTL) {
+    return neo4jAvailabilityCache.available;
+  }
+
+  try {
+    const baseUrl = getBaseUrl();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    const response = await fetch(`${baseUrl}/health`, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    const available = response.ok;
+    
+    // Cache the result
+    neo4jAvailabilityCache = { available, checkedAt: Date.now() };
+    
+    if (!available) {
+      console.warn('[Neo4jRouter] MCP service returned non-OK status');
+    }
+    
+    return available;
+  } catch (error) {
+    // Cache the negative result
+    neo4jAvailabilityCache = { available: false, checkedAt: Date.now() };
+    console.warn('[Neo4jRouter] MCP service not reachable, Neo4j features will be disabled');
+    return false;
+  }
 };
 
 // ============================================================================
@@ -96,6 +142,17 @@ export const neo4jRouter = {
       console.log(`[Neo4jRouter] Searching nodes for user: ${userId}, query: ${input.query}`);
       
       try {
+        // Check if Neo4j is available first
+        const available = await isNeo4jAvailable();
+        if (!available) {
+          return {
+            success: true,
+            data: [],
+            totalCount: 0,
+            message: 'Neo4j service is not available',
+          };
+        }
+
         const baseUrl = getBaseUrl();
         const url = new URL(`${baseUrl}/api/neo4j/concepts/search`);
         url.searchParams.set('user_id', userId);
@@ -139,6 +196,17 @@ export const neo4jRouter = {
       console.log(`[Neo4jRouter] Listing ${input.nodeType} nodes for user: ${userId}`);
       
       try {
+        // Check if Neo4j is available first
+        const available = await isNeo4jAvailable();
+        if (!available) {
+          return {
+            success: true,
+            data: [],
+            totalCount: 0,
+            message: 'Neo4j service is not available',
+          };
+        }
+
         const baseUrl = getBaseUrl();
         const url = new URL(`${baseUrl}/api/neo4j/concepts`);
         url.searchParams.set('user_id', userId);
@@ -184,6 +252,19 @@ export const neo4jRouter = {
       console.log(`[Neo4jRouter] Getting context for node: ${input.nodeId}`);
       
       try {
+        // Check if Neo4j is available first
+        const available = await isNeo4jAvailable();
+        if (!available) {
+          return {
+            success: true,
+            data: {
+              nodes: [],
+              relationships: []
+            },
+            message: 'Neo4j service is not available',
+          };
+        }
+
         const baseUrl = getBaseUrl();
         // Note: This endpoint may need to be implemented in the MCP service
         // For now, returning a mock response

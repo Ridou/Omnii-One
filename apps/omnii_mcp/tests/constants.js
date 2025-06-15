@@ -57,7 +57,7 @@ export const N8N_TEST_SCENARIOS = {
       'How do I cancel my subscription?',
       'Can you help me upgrade my plan?'
     ],
-    expected_concepts: ['billing', 'authentication', 'subscription', 'upgrade'],
+    expected_concepts: ['billin g', 'authentication', 'subscription', 'upgrade'],
     min_satisfaction: 8.0
   },
   TECHNICAL_ISSUES: {

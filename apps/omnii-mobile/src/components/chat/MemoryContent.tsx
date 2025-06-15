@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Pressable, TextInput } from 'react-native';
 import { useTheme } from '~/context/ThemeContext';
 import { cn } from '~/utils/cn';
 import Animated, { 
@@ -12,6 +12,7 @@ import Animated, {
 // ✅ Import real data hooks
 import { useContacts, useContactStats } from '~/hooks/useContacts';
 import { useEmail } from '~/hooks/useEmail';
+import { useNeo4jSimple } from '~/hooks/useNeo4jSimple';
 
 interface MemoryContentProps {
   tasksOverview: any;
@@ -44,6 +45,23 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
     getUnreadEmails,
     getEmailsWithAttachments 
   } = useEmail(50, "newer_than:30d"); // Get emails from last 30 days
+  
+  // ✅ Get Neo4j data using simple hook with hardcoded localhost
+  const { 
+    concepts, 
+    searchResults, 
+    loading: neo4jLoading, 
+    searchLoading,
+    currentSearch,
+    listConcepts, 
+    searchConcepts 
+  } = useNeo4jSimple();
+  
+  // Fetch concepts when component mounts
+  useEffect(() => {
+    listConcepts();
+    searchConcepts('test'); // Also search for 'test' by default
+  }, []);
 
   return (
     <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
@@ -142,15 +160,38 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
             icon="🧠"
             title="Brain Memory"
             items={[
-              `${conceptsData?.totalConcepts || 0} concepts stored`,
-              `${conceptsData?.getActiveConcepts().length || 0} active concepts`,
-              `${conceptsData?.getRecentConcepts(5).length || 0} recent mentions`,
-              `${Math.round((conceptsData?.getActiveConcepts().length / Math.max(conceptsData?.totalConcepts, 1)) * 100) || 0}% activation rate`
+              `${concepts.length} concepts listed`,
+              `${searchResults.length} results for "${currentSearch}"`,
+              `${concepts.filter(c => c.labels?.includes('Note')).length + searchResults.filter(c => c.labels?.includes('Note')).length} total notes`,
+              neo4jLoading || searchLoading ? 'Loading...' : 'Connected to localhost:8000'
             ]}
             color="blue"
-            data={conceptsData}
-            onExpand={() => console.log('View brain memory')}
-            expandedContent={<BrainMemoryDetails data={conceptsData} />}
+            data={{ 
+              concepts, 
+              searchResults, 
+              loading: neo4jLoading, 
+              searchLoading,
+              currentSearch,
+              refetch: listConcepts,
+              searchConcepts 
+            }}
+            onExpand={() => {
+              listConcepts();
+              searchConcepts('test');
+            }}
+            expandedContent={
+              <BrainMemoryDetails 
+                data={{ 
+                  concepts, 
+                  searchResults, 
+                  loading: neo4jLoading, 
+                  searchLoading,
+                  currentSearch,
+                  refetch: listConcepts,
+                  searchConcepts 
+                }} 
+              />
+            }
           />
         </View>
 
@@ -1087,8 +1128,9 @@ const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
 // Neo4j Memory Details Component
 const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   const { isDark } = useTheme();
+  const [searchInput, setSearchInput] = useState('test');
   
-  if (!data?.concepts) {
+  if (!data?.concepts && !data?.searchResults) {
     return (
       <View className={cn(
         "rounded-xl p-4 border",
@@ -1104,7 +1146,14 @@ const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
     );
   }
   
-  const concepts = data.concepts.slice(0, 5); // Show first 5 concepts
+  const handleSearch = () => {
+    if (data.searchConcepts) {
+      data.searchConcepts(searchInput);
+    }
+  };
+  
+  const concepts = data.concepts?.slice(0, 5) || []; // Show first 5 concepts
+  const searchResults = data.searchResults || [];
   
   return (
     <View className={cn(
@@ -1137,8 +1186,75 @@ const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
           Error: {data.error?.message || 'Failed to load concepts'}
         </Text>
       )}
+      
+      {/* Search Input */}
+      <View className="flex-row items-center mb-3 gap-2">
+        <View className={cn(
+          "flex-1 px-3 py-2 rounded-lg border",
+          isDark ? "bg-slate-900 border-slate-600" : "bg-gray-100 border-gray-300"
+        )}>
+          <TextInput
+            value={searchInput}
+            onChangeText={setSearchInput}
+            placeholder="Search concepts..."
+            placeholderTextColor={isDark ? "#64748b" : "#9ca3af"}
+            className={cn(
+              "text-sm",
+              isDark ? "text-white" : "text-gray-900"
+            )}
+            onSubmitEditing={handleSearch}
+          />
+        </View>
+        <TouchableOpacity 
+          onPress={handleSearch}
+          className={cn(
+            "px-4 py-2 rounded-lg",
+            isDark ? "bg-blue-600" : "bg-blue-500"
+          )}
+        >
+          <Text className="text-white text-sm font-medium">Search</Text>
+        </TouchableOpacity>
+      </View>
   
-      <ScrollView style={{ maxHeight: 300 }}>
+      <ScrollView style={{ maxHeight: 400 }}>
+        {/* Search Results Section */}
+        {searchResults.length > 0 && (
+          <View className="mb-4">
+            <Text className={cn(
+              "text-sm font-medium mb-2",
+              isDark ? "text-blue-400" : "text-blue-600"
+            )}>
+              Search Results for "{data.currentSearch}" ({searchResults.length}):
+            </Text>
+            {searchResults.map((concept: any, index: number) => (
+              <View key={`search-${concept.id || index}`} className={cn(
+                "p-3 rounded-lg mb-2 border",
+                isDark ? "bg-blue-900/20 border-blue-600/30" : "bg-blue-50 border-blue-200"
+              )}>
+                <Text className={cn(
+                  "text-sm font-medium mb-1",
+                  isDark ? "text-white" : "text-gray-900"
+                )}>
+                  {concept.properties?.name || `Concept ${concept.id}`}
+                </Text>
+                <Text className={cn(
+                  "text-xs",
+                  isDark ? "text-slate-400" : "text-gray-600"
+                )}>
+                  ID: {concept.id} | Labels: {concept.labels?.join(', ') || 'Unknown'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+        
+        {/* Listed Concepts Section */}
+        <Text className={cn(
+          "text-sm font-medium mb-2",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
+          Listed Concepts ({concepts.length}):
+        </Text>
         {concepts.map((concept: any, index: number) => (
           <View key={concept.id || index} className={cn(
             "p-3 rounded-lg mb-2 border",
