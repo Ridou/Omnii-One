@@ -35,6 +35,8 @@ export function RDFMemoryCard() {
       if (data.success && data.data) {
         setAnalysisResult(data.data);
       }
+      console.log('🔍 RDFMemoryCard: Message analysis complete');
+      console.log('   Result:', data.data);
       setIsAnalyzing(false);
     },
     onError: () => {
@@ -52,6 +54,8 @@ export function RDFMemoryCard() {
   // Handle message analysis
   const handleAnalyze = () => {
     if (testMessage.trim()) {
+      console.log('🔍 RDFMemoryCard: Starting message analysis...');
+      console.log('   Message:', testMessage);
       setIsAnalyzing(true);
       analyzeMessageQuery.mutate({
         text: testMessage,
@@ -87,7 +91,7 @@ export function RDFMemoryCard() {
           <ActivityIndicator size="small" color="#9333EA" />
         )}
       </View>
-        
+
       {/* Contact Resolution Test */}
       <View className="mb-4">
         <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
