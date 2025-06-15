@@ -40,14 +40,14 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local development
-# .env.local
-# .env.development.local
-# .env.test.local
-# .env.production.local
-# test-results/
-# coverage/
-# .nyc_output/
-# .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+test-results/
+coverage/
+.nyc_output/
+.env
 
 debug_logs/test-validators-comprehensive.ts
 .DS_Store

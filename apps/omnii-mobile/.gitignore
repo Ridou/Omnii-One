@@ -28,11 +28,11 @@ yarn-error.*
 *.pem
 
 # # environment variables
-# .env
-# .env.local
-# .env.development
-# .env.production
-# .env.staging
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
 
 # typescript
 *.tsbuildinfo

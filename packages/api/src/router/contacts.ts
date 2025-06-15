@@ -401,23 +401,14 @@ export const contactsRouter = {
     }),
 
   // Endpoint for listing all contacts using connections API
-  listContacts: publicProcedure // 🚨 TEMPORARY: Changed from protectedProcedure for debugging
-    .input(z.object({
-      pageSize: z.number().int().min(1).max(1000).optional().default(20),
-    }))
-    .query(async ({ ctx, input }): Promise<GoogleContactsResponse<ContactsListResponse>> => {
-      console.log(`[ContactsRouter] 🚨 DEBUG: listContacts called with ctx:`, {
-        hasSession: !!ctx.session,
-        hasUser: !!ctx.session?.user,
-        userId: ctx.session?.user?.id,
-      });
-      
+  listContacts: protectedProcedure
+    .query(async ({ ctx }): Promise<GoogleContactsResponse<ContactsListResponse>> => {
       try {
-        // For now, use hardcoded user ID to test
-        const userId = ctx.session?.user?.id;
+        const userId = ctx.session.user.id;
         console.log(`[ContactsRouter] Listing all contacts for user: ${userId}`);
 
-        const result = await contactsService.listContacts(userId, input.pageSize);
+        // Use default pageSize like tasks does
+        const result = await contactsService.listContacts(userId, 50);
 
         return {
           success: true,

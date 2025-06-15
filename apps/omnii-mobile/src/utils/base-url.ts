@@ -6,14 +6,12 @@ import { Platform } from "react-native";
  * setting the baseUrl to your production API URL.
  */
 export const getBaseUrl = () => {
-  /**
-   * Gets the IP address of your host-machine. If it cannot automatically find it,
-   * you'll have to manually set it. NOTE: Port 3000 should work for most but confirm
-   * you don't have anything else running on it, or you'd have to change it.
-   *
-   * **NOTE**: This is only for development. In production, you'll want to set the
-   * baseUrl to your production API URL.
-   */
+  // First try to get from expo config extra
   const backendApiUrl = Constants.expoConfig?.extra?.backendApiUrl;
-  return backendApiUrl;  
+  
+  // If that fails, try the environment variable directly  
+  const envUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+  
+  // Return the first available URL or default to production
+  return backendApiUrl || envUrl || "https://omniimcp-production.up.railway.app";
 };

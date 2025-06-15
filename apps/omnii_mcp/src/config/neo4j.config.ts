@@ -31,6 +31,17 @@ interface ContextData {
 }
 
 export const createNeo4jDriver = (): Driver => {
+  // Check required environment variables first
+  if (!process.env.NEO4J_URI) {
+    throw new Error('NEO4J_URI environment variable is required');
+  }
+  if (!process.env.NEO4J_USER) {
+    throw new Error('NEO4J_USER environment variable is required');
+  }
+  if (!process.env.NEO4J_PASSWORD) {
+    throw new Error('NEO4J_PASSWORD environment variable is required');
+  }
+
   const config: Config = {
     // Production Connection Pool Settings
     maxConnectionLifetime: 30 * 60 * 1000, // 30 minutes
@@ -55,28 +66,26 @@ export const createNeo4jDriver = (): Driver => {
     resolver: (address: string) => Promise.resolve([address]),
   };
 
-    const driver = neo4j.driver(
-    process.env.NEO4J_URI!,
+  const driver = neo4j.driver(
+    process.env.NEO4J_URI,
     neo4j.auth.basic(
-      process.env.NEO4J_USER!,
-      process.env.NEO4J_PASSWORD!
+      process.env.NEO4J_USER,
+      process.env.NEO4J_PASSWORD
     ),
     config
   );
 
-  // Connection health check (non-blocking)
+  // Verify connection immediately and throw if it fails
   driver.verifyConnectivity()
     .then(() => {
       neo4jConnected = true;
       console.log('✅ Neo4j AuraDB connection verified successfully');
       console.log(`🔗 Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
-      console.log(`💾 Database: ${process.env.NEO4J_DATABASE}`);
+      console.log(`💾 Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
     })
     .catch(err => {
-      neo4jConnected = false;
       console.error('❌ Neo4j AuraDB connection failed:', err);
-      console.warn('⚠️ Server will continue in degraded mode without AI memory');
-      // DO NOT THROW - Allow server to continue without Neo4j
+      throw new Error(`Failed to connect to Neo4j: ${err.message}`);
     });
 
   return driver;
@@ -129,14 +138,13 @@ export class Neo4jService {
         console.warn('⚠️ Server will continue without Redis caching');
       });
 
-      // Start background consolidation if enabled and Neo4j is connected
-      if (config.MEMORY_BRIDGE_ENABLED && isNeo4jConnected()) {
+      // Start background consolidation if enabled
+      if (config.MEMORY_BRIDGE_ENABLED) {
         this.startMemoryConsolidation();
       }
 
-      const neo4jStatus = isNeo4jConnected() ? 'CONNECTED' : 'DISCONNECTED (degraded mode)';
-      console.log(`🧠 Neo4jService initialized - Neo4j: ${neo4jStatus}`);
-      console.log(`🔄 Memory consolidation: ${config.MEMORY_BRIDGE_ENABLED && isNeo4jConnected() ? 'ENABLED' : 'DISABLED'}`);
+      console.log(`🧠 Neo4jService initialized - Neo4j: CONNECTED`);
+      console.log(`🔄 Memory consolidation: ${config.MEMORY_BRIDGE_ENABLED ? 'ENABLED' : 'DISABLED'}`);
       console.log(`⏱️ Consolidation interval: ${config.MEMORY_CONSOLIDATION_INTERVAL}s`);
       
     } catch (error) {
@@ -152,9 +160,6 @@ export class Neo4jService {
   }
 
   private getSession(): Session {
-    if (!isNeo4jConnected()) {
-      throw new Error('Neo4j is not connected - running in degraded mode');
-    }
     const driver = getNeo4jDriver();
     const database = process.env.NEO4J_DATABASE || 'neo4j';
     return driver.session({ database });
@@ -183,12 +188,6 @@ export class Neo4jService {
     const startTime = Date.now();
     
     try {
-      // Check Neo4j connectivity first
-      if (!isNeo4jConnected()) {
-        console.warn(`[Neo4jService] Neo4j not connected - using fallback memory`);
-        return await this.getFallbackMemoryContext(userId, channel, sourceIdentifier);
-      }
-
       // Production timeout wrapper
       const memoryPromise = this.conversationManager.getBrainMemoryContext(
         userId,
@@ -220,74 +219,11 @@ export class Neo4jService {
     } catch (error) {
       const retrievalTime = Date.now() - startTime;
       console.error(`[Neo4jService] ❌ Memory retrieval failed after ${retrievalTime}ms:`, error);
-
-      if (fallbackToCache) {
-        return await this.getFallbackMemoryContext(userId, channel, sourceIdentifier);
-      }
-
       throw error;
     }
   }
 
-  /**
-   * Fallback to cached or minimal memory context
-   */
-  private async getFallbackMemoryContext(
-    userId: string,
-    channel: 'sms' | 'chat',
-    sourceIdentifier: string
-  ): Promise<BrainMemoryContext> {
-    console.log(`[Neo4jService] 🔄 Using fallback memory context`);
-    
-    // Try Redis cache first
-    const cacheKey = `fallback_memory:${userId}:${channel}:${sourceIdentifier}`;
-    const cached = await this.redis.get(cacheKey);
-    
-    if (cached) {
-      console.log(`[Neo4jService] 📦 Using cached fallback memory`);
-      return JSON.parse(cached);
-    }
 
-    // Minimal memory context
-    const minimal: BrainMemoryContext = {
-      working_memory: {
-        recent_messages: [],
-        time_window_messages: [],
-        recently_modified_messages: [],
-        active_concepts: [],
-        current_intent: undefined,
-        time_window_stats: {
-          previous_week_count: 0,
-          current_week_count: 0,
-          next_week_count: 0,
-          recently_modified_count: 0
-        }
-      },
-      episodic_memory: {
-        conversation_threads: [],
-        related_episodes: []
-      },
-      semantic_memory: {
-        activated_concepts: [],
-        concept_associations: []
-      },
-      consolidation_metadata: {
-        retrieval_timestamp: new Date().toISOString(),
-        memory_strength: 0.1,
-        context_channels: [channel],
-        memory_age_hours: 0,
-        consolidation_score: 0.0,
-        working_memory_limit: 7,
-        episodic_window_hours: 168,
-        semantic_activation_threshold: 0.3
-      }
-    };
-
-    // Cache the minimal context
-    await this.redis.setex(cacheKey, 300, JSON.stringify(minimal)); // 5 minutes cache
-    
-    return minimal;
-  }
 
   /**
    * Background memory consolidation process
@@ -324,7 +260,7 @@ export class Neo4jService {
    * Health check for monitoring
    */
   async healthCheck(): Promise<{
-    status: 'healthy' | 'degraded' | 'unhealthy';
+    status: 'healthy' | 'unhealthy';
     neo4j: boolean;
     redis: boolean;
     memory_bridge: boolean;
@@ -344,8 +280,7 @@ export class Neo4jService {
       // Get brain metrics
       const metrics = await this.getBrainMetrics();
       
-      const status = neo4jHealthy && redisHealthy ? 'healthy' : 
-                    (neo4jHealthy || redisHealthy) ? 'degraded' : 'unhealthy';
+      const status = neo4jHealthy && redisHealthy ? 'healthy' : 'unhealthy';
 
       return {
         status,
@@ -357,25 +292,12 @@ export class Neo4jService {
       
     } catch (error) {
       console.error(`[Neo4jService] ❌ Health check failed:`, error);
-      return {
-        status: 'unhealthy',
-        neo4j: false,
-        redis: false,
-        memory_bridge: false,
-        metrics: {
-          total_conversations: 0,
-          active_concepts: 0,
-          memory_strength_avg: 0
-        }
-      };
+      throw error;
     }
   }
 
   private async testNeo4jConnection(): Promise<boolean> {
     try {
-      if (!isNeo4jConnected()) {
-        return false;
-      }
       const driver = getNeo4jDriver();
       await driver.verifyConnectivity();
       return true;

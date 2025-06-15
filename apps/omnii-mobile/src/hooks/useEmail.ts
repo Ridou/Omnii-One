@@ -38,14 +38,14 @@ export const useEmail = (maxResults: number = 20, query: string = "newer_than:7d
     }
   ));
 
-  // ✅ Extract data with proper error handling
-  const emails: EmailData[] = data?.success ? data.data?.emails ?? [] : [];
-  const totalEmails = data?.success ? data.data?.totalCount ?? 0 : 0;
-  const unreadCount = data?.success ? data.data?.unreadCount ?? 0 : 0;
-  const nextPageToken = data?.success ? data.data?.nextPageToken : undefined;
+  // ✅ Extract data with superjson wrapper handling
+  const emails: EmailData[] = data?.json?.success ? data.json.data?.emails ?? [] : [];
+  const totalEmails = data?.json?.success ? data.json.data?.totalCount ?? 0 : 0;
+  const unreadCount = data?.json?.success ? data.json.data?.unreadCount ?? 0 : 0;
+  const nextPageToken = data?.json?.success ? data.json.data?.nextPageToken : undefined;
   
-  const hasError = !data?.success || !!error;
-  const errorMessage = !data?.success ? data?.error : error?.message;
+  const hasError = !data?.json?.success || !!error;
+  const errorMessage = !data?.json?.success ? data?.json?.error : error?.message;
   const hasEmails = emails.length > 0;
 
   // ✅ Helper functions
@@ -122,9 +122,9 @@ export const useEmailSearch = (searchQuery: string, maxResults: number = 10) => 
     }
   );
 
-  const emails: EmailData[] = data?.success ? data.data?.emails ?? [] : [];
+  const emails: EmailData[] = data?.json?.success ? data.json.data?.emails ?? [] : [];
   const hasResults = emails.length > 0;
-  const hasError = !data?.success || !!error;
+  const hasError = !data?.json?.success || !!error;
 
   return {
     emails,
@@ -156,16 +156,16 @@ export const useEmailStats = () => {
     }
   ));
 
-  const stats = data?.success ? {
-    total_emails: data.data?.totalCount ?? 0,
-    unread_emails: data.data?.unreadCount ?? 0,
-    read_emails: (data.data?.totalCount ?? 0) - (data.data?.unreadCount ?? 0),
+  const stats = data?.json?.success ? {
+    total_emails: data.json.data?.totalCount ?? 0,
+    unread_emails: data.json.data?.unreadCount ?? 0,
+    read_emails: (data.json.data?.totalCount ?? 0) - (data.json.data?.unreadCount ?? 0),
   } : null;
 
   return {
     stats,
     isLoading,
-    hasError: !data?.success || !!error,
+    hasError: !data?.json?.success || !!error,
   };
 };
 
@@ -191,9 +191,9 @@ export const useEmailDetail = (messageId: string, format: "minimal" | "metadata"
     }
   ));
 
-  const email: EmailData | null = data?.success ? data.data ?? null : null;
-  const hasError = !data?.success || !!error;
-  const errorMessage = !data?.success ? data?.error : error?.message;
+  const email: EmailData | null = data?.json?.success ? data.json.data ?? null : null;
+  const hasError = !data?.json?.success || !!error;
+  const errorMessage = !data?.json?.success ? data?.json?.error : error?.message;
 
   return {
     email,
