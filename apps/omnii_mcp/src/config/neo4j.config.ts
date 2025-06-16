@@ -26,11 +26,16 @@ interface ContextData {
 }
 
 export const createNeo4jDriver = (): Driver => {
-  // Debug environment variables
+  // Enhanced environment debugging
   console.log('🔍 === NEO4J ENVIRONMENT DEBUG ===');
-  console.log('NEO4J_URI:', process.env.NEO4J_URI ? 'SET' : 'NOT SET');
-  console.log('NEO4J_USER:', process.env.NEO4J_USER ? 'SET' : 'NOT SET');
-  console.log('NEO4J_PASSWORD:', process.env.NEO4J_PASSWORD ? 'SET' : 'NOT SET');
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Railway Environment:', process.env.RAILWAY_ENVIRONMENT || 'not set');
+  console.log('Working Directory:', process.cwd());
+  console.log('Total env vars available:', Object.keys(process.env).length);
+  console.log('Neo4j related env vars:', Object.keys(process.env).filter(key => key.includes('NEO4J')));
+  console.log('NEO4J_URI:', process.env.NEO4J_URI ? `SET (${process.env.NEO4J_URI.substring(0, 25)}...)` : 'NOT SET');
+  console.log('NEO4J_USER:', process.env.NEO4J_USER ? `SET (${process.env.NEO4J_USER})` : 'NOT SET');
+  console.log('NEO4J_PASSWORD:', process.env.NEO4J_PASSWORD ? `SET (${process.env.NEO4J_PASSWORD.substring(0, 8)}...)` : 'NOT SET');
   console.log('NEO4J_DATABASE:', process.env.NEO4J_DATABASE || 'neo4j (default)');
   console.log('==================================');
 

@@ -1,6 +1,14 @@
-// Load environment variables first before any other imports
-import { config } from 'dotenv';
-config();
+// Load environment variables first before any other imports (development only)
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    require('dotenv').config();
+    console.log('🔧 Loaded .env file for development');
+  } catch (error) {
+    console.log('⚠️ No .env file found (this is normal for production)');
+  }
+} else {
+  console.log('🚀 Production mode: Using Railway environment variables');
+}
 
 import './config/axios.config';
 
