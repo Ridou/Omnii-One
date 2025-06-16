@@ -1,3 +1,7 @@
+// Load environment variables first before any other imports
+import { config } from 'dotenv';
+config();
+
 import './config/axios.config';
 
 import { Elysia } from "elysia";
