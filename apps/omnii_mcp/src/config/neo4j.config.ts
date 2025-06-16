@@ -26,14 +26,26 @@ interface ContextData {
 }
 
 export const createNeo4jDriver = (): Driver => {
-  // Check required environment variables first
+  // Debug environment variables
+  console.log('🔍 === NEO4J ENVIRONMENT DEBUG ===');
+  console.log('NEO4J_URI:', process.env.NEO4J_URI ? 'SET' : 'NOT SET');
+  console.log('NEO4J_USER:', process.env.NEO4J_USER ? 'SET' : 'NOT SET');
+  console.log('NEO4J_PASSWORD:', process.env.NEO4J_PASSWORD ? 'SET' : 'NOT SET');
+  console.log('NEO4J_DATABASE:', process.env.NEO4J_DATABASE || 'neo4j (default)');
+  console.log('==================================');
+
+  // Check required environment variables
   if (!process.env.NEO4J_URI) {
+    console.error('❌ NEO4J_URI environment variable is required');
+    console.error('🔧 Please set: NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io');
     throw new Error('NEO4J_URI environment variable is required');
   }
   if (!process.env.NEO4J_USER) {
+    console.error('❌ NEO4J_USER environment variable is required');
     throw new Error('NEO4J_USER environment variable is required');
   }
   if (!process.env.NEO4J_PASSWORD) {
+    console.error('❌ NEO4J_PASSWORD environment variable is required');
     throw new Error('NEO4J_PASSWORD environment variable is required');
   }
 
@@ -70,7 +82,7 @@ export const createNeo4jDriver = (): Driver => {
     config
   );
 
-  // Connection health check - don't throw on failure
+  // Connection health check - don't throw on failure to allow server to start
   driver.verifyConnectivity()
     .then(() => {
       neo4jConnected = true;
@@ -80,8 +92,9 @@ export const createNeo4jDriver = (): Driver => {
     })
     .catch(err => {
       neo4jConnected = false;
-      console.error('❌ Neo4j AuraDB connection failed:', err);
-      // Don't throw - let the service handle it gracefully
+      console.error('❌ Neo4j AuraDB connection failed during startup:', err.message);
+      console.warn('⚠️ Server will continue but Neo4j operations will fail');
+      // Don't throw - let the service handle it gracefully in individual operations
     });
 
   return driver;
