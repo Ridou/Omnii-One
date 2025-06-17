@@ -5,6 +5,7 @@ import { emailRouter } from "./router/email";
 import { helloRouter } from "./router/hello";
 import { neo4jRouter } from "./router/neo4j";
 import { postRouter } from "./router/post";
+import { rdfRouter } from "./router/rdf";
 import { tasksRouter } from "./router/tasks";
 import { createTRPCRouter } from "./trpc";
 
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   contacts: contactsRouter,
   email: emailRouter,
   neo4j: neo4jRouter,
+  rdf: rdfRouter,
 });
 
 // export type definition of API

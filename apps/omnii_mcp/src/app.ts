@@ -38,6 +38,8 @@ console.log("🚀 Working directory:", process.cwd());
 console.log("🚀 Command line args:", process.argv);
 console.log("🚀 Process PID:", process.pid);
 console.log("🚀 Available memory:", process.memoryUsage());
+console.log("🚀 RDF_PYTHON_SERVICE_URL:", process.env.RDF_PYTHON_SERVICE_URL || "not set (will use defaults)");
+console.log("🚀 RAILWAY_ENVIRONMENT:", process.env.RAILWAY_ENVIRONMENT || "not set");
 console.log("🚀 ===============================");
 
 // ✅ CRITICAL: Initialize Neo4j driver early in startup
