@@ -8,67 +8,83 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { trpc } from '~/utils/api';
 import { cn } from '~/utils/cn';
 import { useTheme } from '~/context/ThemeContext';
-import { useMutation } from '@tanstack/react-query';
 
 export function RDFMemoryCard() {
   const { isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [testMessage, setTestMessage] = useState('Send Eden an email about weekend plans');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [concepts, setConcepts] = useState<any[]>([]);
+  const [extractResult, setExtractResult] = useState<any>(null);
+  const [jsonDisplay, setJsonDisplay] = useState<string>('');
   
-  // Use tRPC queries directly with error handling
-  const extractConceptsQuery =useMutation(trpc.rdf.extractConcepts.mutationOptions({
-    onSuccess: (data) => {
-      if (data.success && data.data) {
-        setConcepts(data.data.concepts || []);
-      }
-    },
-}));
-  
-  const analyzeMessageQuery = useMutation(trpc.rdf.analyzeMessage.mutationOptions({
-    onSuccess: (data) => {
-      if (data.success && data.data) {
-        setAnalysisResult(data.data);
-      }
-      console.log('🔍 RDFMemoryCard: Message analysis complete');
-      console.log('   Result:', data.data);
-      setIsAnalyzing(false);
-    },
-    onError: () => {
-      setIsAnalyzing(false);
-    },
-  }));
-  
-  // Handle search
-  const handleSearch = () => {
+  // EXACT COPY FROM test-local-rdf-flow.js - Handle search/extract concepts
+  const handleSearch = async () => {
     if (searchQuery.trim()) {
-      extractConceptsQuery.mutate({ text: searchQuery });
+      console.log('\n4️⃣ Testing concept extraction through MCP...');
+      setIsExtracting(true);
+      setJsonDisplay('');
+      try {
+        const extractResponse = await fetch('http://localhost:8000/api/rdf/extract-concepts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text: searchQuery })
+        });
+        console.log(`   Status: ${extractResponse.status}`);
+        const extractData = await extractResponse.json();
+        console.log(`   Response:`, JSON.stringify(extractData, null, 2));
+        setExtractResult(extractData);
+        setJsonDisplay(JSON.stringify(extractData, null, 2));
+      } catch (error) {
+        console.log(`   ❌ Failed to extract concepts: ${error.message}`);
+        setJsonDisplay(`Error: ${error.message}`);
+      } finally {
+        setIsExtracting(false);
+      }
     }
   };
   
-  // Handle message analysis
-  const handleAnalyze = () => {
+  // EXACT COPY FROM test-local-rdf-flow.js - Handle message analysis
+  const handleAnalyze = async () => {
     if (testMessage.trim()) {
-      console.log('🔍 RDFMemoryCard: Starting message analysis...');
-      console.log('   Message:', testMessage);
+      console.log('\n3️⃣ Testing message analysis through MCP...');
       setIsAnalyzing(true);
-      analyzeMessageQuery.mutate({
-        text: testMessage,
-        domain: 'contact_communication',
-        task: 'message_analysis',
-        extractors: [
-          'contact_names',
-          'communication_intent',
-          'context_clues',
-          'formality_level',
-          'urgency_indicators'
-        ]
-      });
+      setJsonDisplay('');
+      try {
+        const analyzeResponse = await fetch('http://localhost:8000/api/rdf/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            text: testMessage,
+            domain: 'contact_communication',
+            task: 'message_analysis',
+            extractors: [
+              'contact_names',
+              'communication_intent',
+              'context_clues',
+              'formality_level',
+              'urgency_indicators'
+            ]
+          })
+        });
+        console.log(`   Status: ${analyzeResponse.status}`);
+        const analyzeData = await analyzeResponse.json();
+        console.log(`   Response:`, JSON.stringify(analyzeData, null, 2));
+        setAnalysisResult(analyzeData);
+        setJsonDisplay(JSON.stringify(analyzeData, null, 2));
+      } catch (error) {
+        console.log(`   ❌ Failed to analyze message: ${error.message}`);
+        setJsonDisplay(`Error: ${error.message}`);
+      } finally {
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -84,10 +100,10 @@ export function RDFMemoryCard() {
             style={{ marginRight: 8 }}
           />
           <Text className="text-lg font-semibold text-gray-900 dark:text-white">
-            RDF Semantic Analysis
+            RDF Direct HTTP Test (No tRPC)
           </Text>
         </View>
-        {(extractConceptsQuery.isPending || analyzeMessageQuery.isPending) && (
+        {(isAnalyzing || isExtracting) && (
           <ActivityIndicator size="small" color="#9333EA" />
         )}
       </View>
@@ -116,37 +132,6 @@ export function RDFMemoryCard() {
           <Text className="text-center text-white font-medium">Analyze Message</Text>
         </TouchableOpacity>
         
-        {analysisResult && (
-          <View className={cn(
-            "mt-2 rounded-lg p-3",
-            isDark ? "bg-purple-900/20" : "bg-purple-50"
-          )}>
-            <Text className={cn(
-              "text-sm font-medium",
-              isDark ? "text-purple-200" : "text-purple-900"
-            )}>
-              Analysis Results:
-            </Text>
-            <Text className={cn(
-              "text-xs mt-1",
-              isDark ? "text-purple-300" : "text-purple-700"
-            )}>
-              • Contact: {analysisResult.contact_extraction?.primary_contact || 'Not found'}
-            </Text>
-            <Text className={cn(
-              "text-xs",
-              isDark ? "text-purple-300" : "text-purple-700"
-            )}>
-              • Intent: {analysisResult.intent_analysis?.communication_action || 'Unknown'}
-            </Text>
-            <Text className={cn(
-              "text-xs",
-              isDark ? "text-purple-300" : "text-purple-700"
-            )}>
-              • Confidence: {Math.round((analysisResult.contact_extraction?.confidence || 0) * 100)}%
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Concept Search */}
@@ -172,43 +157,19 @@ export function RDFMemoryCard() {
         </View>
       </View>
 
-      {/* Current Concepts */}
-      <View>
-        <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-          Extracted Concepts ({concepts.length}):
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="flex-row"
-        >
-          {concepts.length > 0 ? (
-            concepts.map((concept, index) => (
-              <View
-                key={index}
-                className={cn(
-                  "mr-2 rounded-full px-3 py-1",
-                  isDark ? "bg-purple-900/30" : "bg-purple-100"
-                )}
-              >
-                <Text className={cn(
-                  "text-xs",
-                  isDark ? "text-purple-200" : "text-purple-800"
-                )}>
-                  {concept.name} ({concept.type})
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text className={cn(
-              "text-sm",
-              isDark ? "text-gray-400" : "text-gray-500"
-            )}>
-              No concepts extracted yet
+      {/* Raw JSON Response Display */}
+      {jsonDisplay && (
+        <View className="mt-4">
+          <Text className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Raw HTTP Response:
+          </Text>
+          <ScrollView className="max-h-96 rounded-lg bg-gray-100 p-3 dark:bg-gray-700">
+            <Text className="text-xs font-mono text-gray-800 dark:text-gray-200">
+              {jsonDisplay}
             </Text>
-          )}
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
