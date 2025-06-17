@@ -123,7 +123,7 @@ export class RDFContactAnalyzer {
     // Lazy import to avoid initialization issues during testing
     let unifiedGoogleManager;
     try {
-      const imported = await import('./unified-google-manager');
+      const imported = await import('../integrations/unified-google-manager');
       unifiedGoogleManager = imported.default;
     } catch (importError) {
       console.error(`[RDFContactAnalyzer] Failed to import unified-google-manager:`, importError);
@@ -210,21 +210,22 @@ export class RDFContactAnalyzer {
         if (result.data?.contacts && Array.isArray(result.data.contacts)) {
           console.log(`[RDFContactAnalyzer] ✅ Found ${result.data.contacts.length} contacts in search result.data.contacts`);
           // Google People API returns person.emailAddresses[].value format, use transformApiContactToContact
-          extractedContacts = result.data.contacts.map(c => this.transformApiContactToContact(c, primaryName)).filter(Boolean) as Contact[];
+          extractedContacts = result.data.contacts.map((c: any) => this.transformApiContactToContact(c, primaryName)).filter(Boolean) as Contact[];
         }
         
         else if (result.data?.structured?.contacts && Array.isArray(result.data.structured.contacts)) {
           console.log(`[RDFContactAnalyzer] ✅ Found ${result.data.structured.contacts.length} contacts in result.data.structured.contacts`);
-          extractedContacts = result.data.structured.contacts.map(c => this.transformApiContactToContact(c, primaryName)).filter(Boolean) as Contact[];
+          extractedContacts = result.data.structured.contacts.map((c: any) => this.transformApiContactToContact(c, primaryName)).filter(Boolean) as Contact[];
         }
         
         else if (result.structured?.contacts && Array.isArray(result.structured.contacts)) {
           console.log(`[RDFContactAnalyzer] ✅ Found ${result.structured.contacts.length} contacts in result.structured.contacts`);
-          extractedContacts = result.structured.contacts.map(c => this.transformApiContactToContact(c, primaryName)).filter(Boolean) as Contact[];
+          extractedContacts = result.structured.contacts.map((c: any) => this.transformApiContactToContact(c, primaryName)).filter(Boolean) as Contact[];
         }
         
         else if (result.rawData) {
-          extractedContacts = this.extractContactsFromApiResponse(result.rawData, primaryName);
+          const rawContacts = this.extractAllContactsFromResponse(result.rawData);
+          extractedContacts = this.extractContactsFromStructuredResponse({contacts: rawContacts}, primaryName);
         }
         
         else if (result.structured) {
@@ -278,22 +279,22 @@ export class RDFContactAnalyzer {
         if (result.data?.contacts && Array.isArray(result.data.contacts)) {
           console.log(`[RDFContactAnalyzer] ✅ Found ${result.data.contacts.length} contacts in result.data.contacts`);
           // ✅ CRITICAL FIX: Use correct transformation method for Google People API format
-          contacts = result.data.contacts.slice(0, 10).map(c => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
+          contacts = result.data.contacts.slice(0, 10).map((c: any) => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
         }
         
         else if (result.data?.structured?.contacts && Array.isArray(result.data.structured.contacts)) {
           console.log(`[RDFContactAnalyzer] ✅ Found ${result.data.structured.contacts.length} contacts in result.data.structured.contacts`);
-          contacts = result.data.structured.contacts.slice(0, 10).map(c => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
+          contacts = result.data.structured.contacts.slice(0, 10).map((c: any) => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
         }
         
         else if (result.structured?.contacts && Array.isArray(result.structured.contacts)) {
           console.log(`[RDFContactAnalyzer] ✅ Found ${result.structured.contacts.length} contacts in result.structured.contacts`);
-          contacts = result.structured.contacts.slice(0, 10).map(c => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
+          contacts = result.structured.contacts.slice(0, 10).map((c: any) => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
         }
         
         else if (result.rawData) {
           const rawContacts = this.extractAllContactsFromResponse(result.rawData);
-          contacts = rawContacts.slice(0, 10).map(c => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
+          contacts = rawContacts.slice(0, 10).map((c: any) => this.transformApiContactToContact(c, 'sample')).filter(Boolean) as Contact[];
         }
         
         else if (result.structured) {
@@ -980,5 +981,75 @@ export class RDFContactAnalyzer {
     
     console.log(`[RDFContactAnalyzer] Extracted ${contacts.length} contacts from structured response`);
     return contacts;
+  }
+
+  /**
+   * Deduplicate contacts by email and name
+   */
+  private deduplicateContacts(contacts: Contact[]): Contact[] {
+    const seen = new Set<string>();
+    const unique: Contact[] = [];
+    
+    for (const contact of contacts) {
+      const key = `${contact.email || 'no-email'}_${contact.name.toLowerCase()}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(contact);
+      }
+    }
+    
+    console.log(`[RDFContactAnalyzer] Deduplicated ${contacts.length} → ${unique.length} contacts`);
+    return unique;
+  }
+
+  /**
+   * Transform API contact response to Contact interface
+   */
+  private transformApiContactToContact(apiContact: any, searchTerm: string): Contact | null {
+    try {
+      if (!apiContact) return null;
+      
+      // Handle Google People API format
+      const names = apiContact.names || [];
+      const emails = apiContact.emailAddresses || [];
+      const phones = apiContact.phoneNumbers || [];
+      
+      // Extract name
+      let name = '';
+      if (names.length > 0 && names[0].displayName) {
+        name = names[0].displayName;
+      } else if (apiContact.name) {
+        name = apiContact.name;
+      } else if (apiContact.displayName) {
+        name = apiContact.displayName;
+      } else {
+        name = searchTerm;
+      }
+      
+      // Extract email
+      let email = '';
+      if (emails.length > 0 && emails[0].value) {
+        email = emails[0].value;
+      } else if (apiContact.email) {
+        email = apiContact.email;
+      }
+      
+      // Extract phone
+      let phone = '';
+      if (phones.length > 0 && phones[0].value) {
+        phone = phones[0].value;
+      } else if (apiContact.phone || apiContact.phoneNumber) {
+        phone = apiContact.phone || apiContact.phoneNumber;
+      }
+      
+      return {
+        name,
+        email: email || undefined,
+        phone: phone || undefined,
+      };
+    } catch (error) {
+      console.error(`[RDFContactAnalyzer] Error transforming contact:`, error);
+      return null;
+    }
   }
 }

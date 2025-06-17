@@ -41,28 +41,32 @@ export const createNeo4jDriver = (): Driver => {
     throw new Error('NEO4J_PASSWORD environment variable is required');
   }
 
+  // 🚄 Railway environment detection
+  const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
+  
   const config: Config = {
-    // Production Connection Pool Settings
-    maxConnectionLifetime: 30 * 60 * 1000, // 30 minutes
-    maxConnectionPoolSize: 50, // Handle high concurrency
-    connectionAcquisitionTimeout: 60000, // 60 seconds
-    maxTransactionRetryTime: 30000, // 30 seconds for retries
+    // ✅ Railway-optimized Connection Pool Settings
+    maxConnectionLifetime: isRailway ? 10 * 60 * 1000 : 30 * 60 * 1000, // 10 min for Railway, 30 min local
+    maxConnectionPoolSize: isRailway ? 5 : 20, // ✅ 5 for Railway (was 50!), 20 for local
+    connectionAcquisitionTimeout: isRailway ? 10000 : 30000, // ✅ 10s for Railway (was 60s!), 30s local  
+    maxTransactionRetryTime: 15000, // 15 seconds for retries
     
-    // Performance Optimizations
-    fetchSize: 1000, // Fetch more records per round trip
-    disableLosslessIntegers: true, // Use JavaScript numbers for integers
+    // ✅ Railway-optimized Performance
+    fetchSize: isRailway ? 100 : 1000, // Smaller fetch size for Railway
+    disableLosslessIntegers: true,
     
-    // Logging Configuration
+    // ✅ Enhanced Logging for Railway debugging
     logging: {
-      level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
+      level: 'debug', // Always debug to see connection issues
       logger: (level: string, message: string) => {
         const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] [Neo4j-${level.toUpperCase()}] ${message}`);
+        const env = isRailway ? '[RAILWAY]' : '[LOCAL]';
+        console.log(`[${timestamp}] ${env} [Neo4j-${level.toUpperCase()}] ${message}`);
       }
     },
     
-    // Resolver for DNS resolution
-    resolver: (address: string) => Promise.resolve([address]),
+    // ✅ Remove custom resolver for Railway - let it use default DNS
+    // resolver: (address: string) => Promise.resolve([address]), // REMOVED FOR RAILWAY
   };
 
   const driver = neo4j.driver(
@@ -74,20 +78,49 @@ export const createNeo4jDriver = (): Driver => {
     config
   );
 
-  // Connection health check - don't throw on failure to allow server to start
-  driver.verifyConnectivity()
-    .then(() => {
-      neo4jConnected = true;
-      console.log('✅ Neo4j AuraDB connection verified successfully');
-      console.log(`🔗 Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
-      console.log(`💾 Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
-    })
-    .catch(err => {
-      neo4jConnected = false;
-      console.error('❌ Neo4j AuraDB connection failed during startup:', err.message);
-      console.warn('⚠️ Server will continue but Neo4j operations will fail');
-      // Don't throw - let the service handle it gracefully in individual operations
-    });
+  // ✅ Railway-aware connection verification
+  if (isRailway) {
+    // 🚄 RAILWAY: Block startup until Neo4j is connected (fail fast)
+    console.log('🚄 Railway detected - performing blocking Neo4j connection verification...');
+    try {
+      // This will block and throw if connection fails
+      // We'll handle this synchronously in Railway to fail fast
+      driver.verifyConnectivity()
+        .then(() => {
+          neo4jConnected = true;
+          console.log('✅ [RAILWAY] Neo4j AuraDB connection verified successfully');
+          console.log(`🔗 [RAILWAY] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
+          console.log(`💾 [RAILWAY] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
+          console.log(`🔧 [RAILWAY] Pool config: max=${config.maxConnectionPoolSize}, timeout=${config.connectionAcquisitionTimeout}ms`);
+        })
+        .catch(err => {
+          neo4jConnected = false;
+          console.error('❌ [RAILWAY] Neo4j AuraDB connection failed during startup:', err.message);
+          console.error('❌ [RAILWAY] This is a critical failure in production');
+          // In Railway, we want to fail fast rather than start with broken Neo4j
+          throw new Error(`Railway Neo4j connection failed: ${err.message}`);
+        });
+    } catch (error) {
+      console.error('❌ [RAILWAY] Neo4j driver creation failed:', error);
+      throw error;
+    }
+  } else {
+    // 🏠 LOCAL: Graceful degradation (original behavior)
+    console.log('🏠 Local development - performing non-blocking Neo4j connection verification...');
+    driver.verifyConnectivity()
+      .then(() => {
+        neo4jConnected = true;
+        console.log('✅ [LOCAL] Neo4j AuraDB connection verified successfully');
+        console.log(`🔗 [LOCAL] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
+        console.log(`💾 [LOCAL] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
+      })
+      .catch(err => {
+        neo4jConnected = false;
+        console.error('❌ [LOCAL] Neo4j AuraDB connection failed during startup:', err.message);
+        console.warn('⚠️ [LOCAL] Server will continue but Neo4j operations will fail');
+        // Don't throw - let the service handle it gracefully in individual operations
+      });
+  }
 
   return driver;
 };

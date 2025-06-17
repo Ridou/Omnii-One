@@ -14,7 +14,7 @@ const requiredVars = [
   'SUPABASE_URL', 
   'SUPABASE_ANON_KEY',
   'NEO4J_URI',
-  'NEO4J_USERNAME', 
+  'NEO4J_USER', 
   'NEO4J_PASSWORD',
   'PORT',
   'NODE_ENV'
