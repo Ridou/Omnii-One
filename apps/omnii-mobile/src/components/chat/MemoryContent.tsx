@@ -16,6 +16,8 @@ import { useNeo4jSimple } from '~/hooks/useNeo4jSimple';
 
 // Import RDF Memory Card component
 import { RDFMemoryCard } from './RDFMemoryCard';
+import { api } from '../../utils/api';
+import { getBaseUrl } from '../../utils/base-url';
 
 interface MemoryContentProps {
   tasksOverview: any;
@@ -166,7 +168,7 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
               `${concepts.length} concepts listed`,
               `${searchResults.length} results for "${currentSearch}"`,
               `${concepts.filter(c => c.labels?.includes('Note')).length + searchResults.filter(c => c.labels?.includes('Note')).length} total notes`,
-              neo4jLoading || searchLoading ? 'Loading...' : 'Connected to localhost:8000'
+              neo4jLoading || searchLoading ? 'Loading...' : `Connected to ${getBaseUrl()}`
             ]}
             color="blue"
             data={{ 

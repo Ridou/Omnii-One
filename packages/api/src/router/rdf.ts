@@ -83,8 +83,8 @@ export const rdfRouter = {
     .input(analyzeMessageSchema)
     .mutation(async ({ ctx, input }) => {
       console.log('[analyzeMessage] RDF analyze message to:', input);
-      // EXACT COPY FROM test-local-rdf-flow.js
-      const analyzeResponse = await fetch('http://localhost:8000/api/rdf/analyze', {
+      const baseUrl = getRDFBaseUrl();
+      const analyzeResponse = await fetch(`${baseUrl}/api/rdf/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -116,8 +116,8 @@ export const rdfRouter = {
   extractConcepts: protectedProcedure
     .input(extractConceptsSchema)
     .mutation(async ({ ctx, input }) => {
-      // EXACT COPY FROM test-local-rdf-flow.js
-      const extractResponse = await fetch('http://localhost:8000/api/rdf/extract-concepts', {
+      const baseUrl = getRDFBaseUrl();
+      const extractResponse = await fetch(`${baseUrl}/api/rdf/extract-concepts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

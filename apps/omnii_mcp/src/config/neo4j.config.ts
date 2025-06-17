@@ -80,30 +80,25 @@ export const createNeo4jDriver = (): Driver => {
 
   // ✅ Railway-aware connection verification
   if (isRailway) {
-    // 🚄 RAILWAY: Block startup until Neo4j is connected (fail fast)
-    console.log('🚄 Railway detected - performing blocking Neo4j connection verification...');
-    try {
-      // This will block and throw if connection fails
-      // We'll handle this synchronously in Railway to fail fast
-      driver.verifyConnectivity()
-        .then(() => {
-          neo4jConnected = true;
-          console.log('✅ [RAILWAY] Neo4j AuraDB connection verified successfully');
-          console.log(`🔗 [RAILWAY] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
-          console.log(`💾 [RAILWAY] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
-          console.log(`🔧 [RAILWAY] Pool config: max=${config.maxConnectionPoolSize}, timeout=${config.connectionAcquisitionTimeout}ms`);
-        })
-        .catch(err => {
-          neo4jConnected = false;
-          console.error('❌ [RAILWAY] Neo4j AuraDB connection failed during startup:', err.message);
-          console.error('❌ [RAILWAY] This is a critical failure in production');
-          // In Railway, we want to fail fast rather than start with broken Neo4j
-          throw new Error(`Railway Neo4j connection failed: ${err.message}`);
-        });
-    } catch (error) {
-      console.error('❌ [RAILWAY] Neo4j driver creation failed:', error);
-      throw error;
-    }
+    // 🚄 RAILWAY: Non-blocking verification with proper error handling
+    console.log('🚄 Railway detected - performing async Neo4j connection verification...');
+    
+    // Don't block startup - verify connection asynchronously
+    driver.verifyConnectivity()
+      .then(() => {
+        neo4jConnected = true;
+        console.log('✅ [RAILWAY] Neo4j AuraDB connection verified successfully');
+        console.log(`🔗 [RAILWAY] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
+        console.log(`💾 [RAILWAY] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
+        console.log(`🔧 [RAILWAY] Pool config: max=${config.maxConnectionPoolSize}, timeout=${config.connectionAcquisitionTimeout}ms`);
+      })
+      .catch(err => {
+        neo4jConnected = false;
+        console.error('❌ [RAILWAY] Neo4j AuraDB connection failed during startup:', err.message);
+        console.error('❌ [RAILWAY] Server will continue but Neo4j operations will be degraded');
+        console.error('🔧 [RAILWAY] Check environment variables: NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD');
+        // DON'T THROW - Let server continue with degraded Neo4j functionality
+      });
   } else {
     // 🏠 LOCAL: Graceful degradation (original behavior)
     console.log('🏠 Local development - performing non-blocking Neo4j connection verification...');

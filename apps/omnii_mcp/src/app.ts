@@ -530,17 +530,7 @@ try {
   console.log(`   - PORT: ${process.env.PORT}`);
   console.log(`   - Railway health path: /health`);
   
-  // Test health endpoint internally after a short delay
-  setTimeout(() => {
-    console.log("🧪 Testing health endpoint internally...");
-    fetch(`http://localhost:${port}/health`)
-      .then(res => {
-        console.log(`✅ Internal health check status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => console.log("✅ Internal health check passed:", data))
-      .catch(err => console.error("❌ Internal health check failed:", err));
-  }, 2000);
+  // Internal health check removed - no need to self-test in production
   
   // Log ready state for Railway
   setTimeout(() => {
