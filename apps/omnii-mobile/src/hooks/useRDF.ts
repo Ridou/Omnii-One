@@ -1,32 +1,45 @@
 import { useState, useCallback } from 'react';
-
-// EXACT constants - NO environment variables, just like useNeo4jSimple
-const API_BASE_URL = "http://localhost:8000";
-const API_RDF_URL = `${API_BASE_URL}/api/rdf`;
+import { Platform } from 'react-native';
 
 /**
- * Simple RDF hook that directly calls the RDF endpoints
- * Similar to useNeo4jSimple - no tRPC, just fetch
+ * Direct HTTP RDF hook - EXACT COPY of test-local-rdf-flow.js logic
+ * No tRPC, no complexity, just raw fetch calls
  */
 export const useRDF = () => {
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [concepts, setConcepts] = useState<any>(null);
-  const [nameVariations, setNameVariations] = useState<string[]>([]);
+  // Handle platform-specific localhost
+  const getBaseUrl = () => {
+    // For physical devices, replace with your computer's IP
+    // Example: return 'http://192.168.1.100:8000';
+    
+    if (Platform.OS === 'ios') {
+      // iOS simulator
+      return 'http://localhost:8000';
+    } else if (Platform.OS === 'android') {
+      // Android emulator
+      return 'http://10.0.2.2:8000';
+    } else {
+      // Web or other
+      return 'http://localhost:8000';
+    }
+  };
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [lastResponse, setLastResponse] = useState<any>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
 
-  // Analyze message - matches test-local-rdf-flow.js exactly
-  const analyzeMessage = useCallback(async (text: string) => {
+  // Test message analysis - EXACT COPY FROM test-local-rdf-flow.js
+  const testAnalyzeMessage = useCallback(async (text: string) => {
+    console.log('\n3️⃣ Testing message analysis through MCP...');
     setLoading(true);
-    setError(null);
+    setLastError(null);
+    
     try {
-      const response = await fetch(`${API_RDF_URL}/analyze`, {
+      const analyzeResponse = await fetch(`${getBaseUrl()}/api/rdf/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          text,
+          text: text,
           domain: 'contact_communication',
           task: 'message_analysis',
           extractors: [
@@ -38,184 +51,128 @@ export const useRDF = () => {
           ]
         })
       });
-      console.log('RDF analyze message to:', response);
-      const data = await response.json();
-      console.log('RDF analyze response data:', JSON.stringify(data, null, 2));
+      console.log(`   Status: ${analyzeResponse.status}`);
+      const analyzeData = await analyzeResponse.json();
+      console.log(`   Response:`, JSON.stringify(analyzeData, null, 2));
       
-      if (!response.ok) {
-        throw new Error(data.error || 'RDF analysis failed');
+      setLastResponse(analyzeData);
+      return analyzeData;
+    } catch (error: any) {
+      console.log(`   ❌ Failed to analyze message: ${error.message}`);
+      console.log(`   💡 Platform: ${Platform.OS}`);
+      console.log(`   💡 URL used: ${getBaseUrl()}/api/rdf/analyze`);
+      if (error.message === 'Network request failed') {
+        console.log('   💡 Tips:');
+        console.log('      - For physical device: Use your computer\'s IP instead of localhost');
+        console.log('      - Make sure MCP service is running: cd apps/omnii_mcp && bun dev');
+        console.log('      - Check if port 8000 is accessible from your device');
       }
-      
-      // Store the entire response, not just data.analysis
-      setAnalysisResult(data);
-      return data;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to analyze message';
-      setError(errorMsg);
-      console.error('Failed to analyze message:', error);
+      setLastError(error.message);
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Extract concepts - matches test-local-rdf-flow.js exactly  
-  const extractConcepts = useCallback(async (text: string) => {
+  // Test concept extraction - EXACT COPY FROM test-local-rdf-flow.js
+  const testExtractConcepts = useCallback(async (text: string) => {
+    console.log('\n4️⃣ Testing concept extraction through MCP...');
     setLoading(true);
-    setError(null);
+    setLastError(null);
+    
     try {
-      const response = await fetch(`${API_RDF_URL}/extract-concepts`, {
+      const extractResponse = await fetch(`${getBaseUrl()}/api/rdf/extract-concepts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text: text })
       });
+      console.log(`   Status: ${extractResponse.status}`);
+      const extractData = await extractResponse.json();
+      console.log(`   Response:`, JSON.stringify(extractData, null, 2));
       
-      const data = await response.json();
-      console.log('RDF extract concepts response data:', JSON.stringify(data, null, 2));
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Concept extraction failed');
-      }
-      
-      // Store the entire response
-      setConcepts(data);
-      return data;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to extract concepts';
-      setError(errorMsg);
-      console.error('Failed to extract concepts:', error);
+      setLastResponse(extractData);
+      return extractData;
+    } catch (error: any) {
+      console.log(`   ❌ Failed to extract concepts: ${error.message}`);
+      setLastError(error.message);
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Expand contact name - for name variations
-  const expandContactName = useCallback(async (name: string) => {
-    setLoading(true);
-    setError(null);
+  // Test health check - EXACT COPY FROM test-local-rdf-flow.js
+  const testHealthCheck = useCallback(async () => {
+    console.log('1️⃣ Testing MCP service at localhost:8000...');
     try {
-      const response = await fetch(`${API_RDF_URL}/process`, {
-        method: 'POST',
+      const mcpResponse = await fetch(`${getBaseUrl()}/api/rdf/health`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name,
-          domain: 'name_linguistics',
-          task: 'name_variation_generation',
-          variation_types: [
-            'phonetic_variations',
-            'nickname_derivations',
-            'cultural_variants',
-            'orthographic_variations',
-            'diminutive_forms',
-            'similar_sounding_names'
-          ]
-        })
+        }
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Name expansion failed');
-      }
-      
-      // Extract variations similar to RDF router
-      const variations = [name]; // Always include original
-      
-      if (data.phonetic_variations?.variations) {
-        variations.push(...data.phonetic_variations.variations);
-      }
-      if (data.nicknames?.variations) {
-        variations.push(...data.nicknames.variations);
-      }
-      if (data.cultural_variants?.variations) {
-        variations.push(...data.cultural_variants.variations);
-      }
-      
-      const uniqueVariations = [...new Set(variations)];
-      setNameVariations(uniqueVariations);
-      return uniqueVariations;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to expand name';
-      setError(errorMsg);
-      console.error('Failed to expand contact name:', error);
-      return [name]; // Return original name on error
-    } finally {
-      setLoading(false);
+      console.log(`   Status: ${mcpResponse.status}`);
+      const mcpData = await mcpResponse.json();
+      console.log(`   Response:`, JSON.stringify(mcpData, null, 2));
+      return mcpData;
+    } catch (error: any) {
+      console.log(`   ❌ Failed to reach MCP service: ${error.message}`);
+      console.log(`   💡 Make sure to run: cd apps/omnii_mcp && bun dev`);
+      return null;
     }
   }, []);
 
-  // Health check
-  const checkHealth = useCallback(async () => {
+  // Test Python service - EXACT COPY FROM test-local-rdf-flow.js
+  const testPythonHealth = useCallback(async () => {
+    console.log('\n2️⃣ Testing Python RDF service at localhost:8001...');
     try {
-      const response = await fetch(`${API_RDF_URL}/health`);
-      const data = await response.json();
-      return { healthy: response.ok, ...data };
-    } catch (error) {
-      console.error('RDF health check failed:', error);
-      return { healthy: false };
+      // Python service port mapping
+      const pythonUrl = Platform.OS === 'android' ? 'http://10.0.2.2:8001/health' : 'http://localhost:8001/health';
+      const pythonResponse = await fetch(pythonUrl, {
+        method: 'GET'
+      });
+      console.log(`   Status: ${pythonResponse.status}`);
+      console.log(`   ✅ Python RDF service is running!`);
+      return true;
+    } catch (error: any) {
+      console.log(`   ❌ Python RDF service not accessible: ${error.message}`);
+      console.log(`   💡 Make sure to run: cd apps/omnii-rdf && ./start-local.sh`);
+      return false;
     }
   }, []);
+
+  // Run full test flow - EXACT COPY FROM test-local-rdf-flow.js
+  const runFullTestFlow = useCallback(async () => {
+    console.log('🧪 Testing Local RDF Flow\n');
+    
+    await testHealthCheck();
+    await testPythonHealth();
+    await testAnalyzeMessage('Send Eden an email about weekend plans');
+    await testExtractConcepts('Send Eden an email about weekend plans');
+    
+    console.log('\n📝 Summary of local setup:');
+    console.log('- React Native app should have EXPO_PUBLIC_BACKEND_BASE_URL=http://localhost:8000');
+    console.log('- MCP service should be running on port 8000');
+    console.log('- Python RDF service should be running on port 8001');
+    console.log('- Flow: React Native → localhost:8000 (MCP) → localhost:8001 (Python)');
+  }, [testHealthCheck, testPythonHealth, testAnalyzeMessage, testExtractConcepts]);
 
   return {
     // State
-    analysisResult,
-    concepts,
-    nameVariations,
     loading,
-    error,
+    lastResponse,
+    lastError,
     
-    // Actions
-    analyzeMessage,
-    extractConcepts,
-    expandContactName,
-    checkHealth,
+    // Test functions - matching test script exactly
+    testAnalyzeMessage,
+    testExtractConcepts,
+    testHealthCheck,
+    testPythonHealth,
+    runFullTestFlow,
     
-    // Helpers from analysis result
-    // The response structure varies, so let's handle multiple formats
-    getPrimaryContact: () => {
-      if (!analysisResult) return null;
-      // Navigate through nested structure
-      const analysis = analysisResult?.analysis?.analysis || analysisResult?.analysis || analysisResult;
-      // Look for contact in multiple places
-      return analysis?.contact_extraction?.primary_contact || 
-             analysis?.brain_memory_analysis?.primary_contact ||
-             null;
-    },
-    getIntent: () => {
-      if (!analysisResult) return null;
-      const analysis = analysisResult?.analysis?.analysis || analysisResult?.analysis || analysisResult;
-      return analysis?.intent_analysis?.communication_action || 
-             analysis?.ai_insights?.intent ||
-             null;
-    },
-    getFormality: () => {
-      if (!analysisResult) return null;
-      const analysis = analysisResult?.analysis?.analysis || analysisResult?.analysis || analysisResult;
-      return analysis?.context_analysis?.formality_level || null;
-    },
-    getConfidence: () => {
-      if (!analysisResult) return 0;
-      const analysis = analysisResult?.analysis?.analysis || analysisResult?.analysis || analysisResult;
-      return analysis?.contact_extraction?.confidence || 
-             analysis?.confidence ||
-             analysisResult?.analysis?.confidence ||
-             analysis?.ai_insights?.confidence_metrics?.overall_confidence ||
-             0;
-    },
-    
-    // Helpers from concepts
-    // The MCP service returns: { success: true, concepts: [...], sentiment: {...}, intent: "...", timestamp: "..." }
-    getConceptsArray: () => concepts?.concepts || [],
-    getSentiment: () => concepts?.sentiment,
-    getTextIntent: () => concepts?.intent,
-    
-    // Debug helpers - get raw responses
-    getRawAnalysisResult: () => analysisResult,
-    getRawConcepts: () => concepts,
+    // Simple helper to get JSON display
+    getJsonDisplay: () => lastResponse ? JSON.stringify(lastResponse, null, 2) : '',
   };
 };
