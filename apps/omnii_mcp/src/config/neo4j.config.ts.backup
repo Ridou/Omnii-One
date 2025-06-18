@@ -45,18 +45,19 @@ export const createNeo4jDriver = (): Driver => {
   const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
   
   const config: Config = {
-    // ✅ IDENTICAL CONFIG for both local and Railway (no conflicts)
-    maxConnectionLifetime: 30 * 60 * 1000, // 30 minutes
-    maxConnectionPoolSize: 20, // Same for both environments
-    connectionAcquisitionTimeout: 30000, // 30 seconds for both
-    maxTransactionRetryTime: 15000, // 15 seconds
+    // ✅ ULTRA-PERMISSIVE Railway settings - maximum compatibility
+    maxConnectionLifetime: isRailway ? 30 * 60 * 1000 : 30 * 60 * 1000, // 30 min for both (very generous)
+    maxConnectionPoolSize: isRailway ? 10 : 20, // ✅ LARGE: 10 for Railway (was 3), 20 for local
+    connectionAcquisitionTimeout: isRailway ? 60000 : 30000, // ✅ VERY LONG: 60s for Railway (was 15s), 30s local  
+    maxTransactionRetryTime: isRailway ? 30000 : 15000, // 30 seconds for Railway (very generous), 15 for local
     
-    fetchSize: 1000, // Same for both
+    // ✅ Railway-permissive Performance
+    fetchSize: isRailway ? 1000 : 1000, // Same as local (no restrictions)
     disableLosslessIntegers: true,
     
-    // ✅ Enhanced Logging for debugging
+    // ✅ Enhanced Logging for Railway debugging
     logging: {
-      level: 'debug',
+      level: 'debug', // Always debug to see connection issues
       logger: (level: string, message: string) => {
         const timestamp = new Date().toISOString();
         const env = isRailway ? '[RAILWAY]' : '[LOCAL]';
@@ -64,22 +65,20 @@ export const createNeo4jDriver = (): Driver => {
       }
     },
     
-    // ✅ NO Railway-specific config - let neo4j+s:// handle everything
+    // ✅ Railway-permissive optimizations (ULTRA LOOSE)
+    ...(isRailway && {
+      // Very generous timeouts
+      connectionTimeout: 30000, // 30 second connection timeout (was 10s)
+      socketTimeout: 60000,     // 60 second socket timeout (was 15s)
+      socketKeepAlive: true,    // Keep connections alive
+      // Remove conflicting SSL options (neo4j+s:// already specifies SSL)
+    }),
+    
+    // ✅ Use default DNS resolution
   };
 
-  console.log(`🔧 Neo4j Config: IDENTICAL for all environments - no conflicts`);
-  console.log(`🔧 Environment: ${isRailway ? 'Railway' : 'Local'}`);
-  console.log(`🔧 Pool: ${config.maxConnectionPoolSize}, Timeout: ${config.connectionAcquisitionTimeout}ms`);
-  
-  // 🔍 Environment variables verification for debugging
-  console.log(`🔍 Neo4j Environment Variables:`);
-  console.log(`   NEO4J_URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'} ${process.env.NEO4J_URI ? `(${process.env.NEO4J_URI.substring(0, 20)}...)` : ''}`);
-  console.log(`   NEO4J_USER: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'} ${process.env.NEO4J_USER ? `(${process.env.NEO4J_USER})` : ''}`);
-  console.log(`   NEO4J_PASSWORD: ${process.env.NEO4J_PASSWORD ? 'SET' : 'MISSING'} ${process.env.NEO4J_PASSWORD ? `(length: ${process.env.NEO4J_PASSWORD.length})` : ''}`);
-  console.log(`   NEO4J_DATABASE: ${process.env.NEO4J_DATABASE ? 'SET' : 'MISSING'} ${process.env.NEO4J_DATABASE ? `(${process.env.NEO4J_DATABASE})` : '(default: neo4j)'}`);
-  console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
-  console.log(`   RAILWAY_ENVIRONMENT: ${process.env.RAILWAY_ENVIRONMENT || 'undefined'}`);
-  console.log(`   RAILWAY_PROJECT_ID: ${process.env.RAILWAY_PROJECT_ID || 'undefined'}`);
+  console.log(`🚄 Railway Neo4j Config: Ultra-permissive settings for maximum compatibility`);
+  console.log(`🚄 Pool: ${config.maxConnectionPoolSize}, Timeout: ${config.connectionAcquisitionTimeout}ms, Connection: ${isRailway ? config.connectionTimeout : 'default'}ms`);
 
   const driver = neo4j.driver(
     process.env.NEO4J_URI, // Back to original URI
@@ -90,36 +89,51 @@ export const createNeo4jDriver = (): Driver => {
     config
   );
 
-  // ✅ Unified connection verification for all environments
-  const envLabel = isRailway ? 'RAILWAY' : 'LOCAL';
-  console.log(`🔗 ${envLabel}: Starting Neo4j connection verification...`);
-  
-  // Don't block startup - verify connection asynchronously (modern approach)
-  (async () => {
-    try {
-      const session = driver.session({ database: process.env.NEO4J_DATABASE || 'neo4j' });
-      await session.run('RETURN 1 as test');
-      await session.close();
-      
-      neo4jConnected = true;
-      console.log(`✅ [${envLabel}] Neo4j AuraDB connection verified successfully!`);
-      console.log(`🔗 [${envLabel}] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
-      console.log(`💾 [${envLabel}] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
-      console.log(`🔧 [${envLabel}] Using IDENTICAL config as local (no conflicts)`);
-    } catch (err) {
-      neo4jConnected = false;
-      console.error(`❌ [${envLabel}] Neo4j AuraDB connection failed:`, (err as Error).message);
-      if (isRailway) {
-        console.error('❌ [RAILWAY] Using IDENTICAL config as local - if this fails, Railway networking issue');
-      }
-      console.error(`🔧 [${envLabel}] Environment variables:`);
-      console.error(`🔧   NEO4J_URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'}`);
-      console.error(`🔧   NEO4J_USER: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'}`);
-      console.error(`🔧   NEO4J_PASSWORD: ${process.env.NEO4J_PASSWORD ? 'SET (length=' + process.env.NEO4J_PASSWORD.length + ')' : 'MISSING'}`);
-      console.error(`🔧   NEO4J_DATABASE: ${process.env.NEO4J_DATABASE || 'neo4j (default)'}`);
-      // DON'T THROW - Let server continue with degraded Neo4j functionality
-    }
-  })();
+  // ✅ Railway-aware connection verification
+  if (isRailway) {
+    // 🚄 RAILWAY: Ultra-permissive connection attempt
+    console.log('🚄 Railway detected - attempting ultra-permissive Neo4j connection...');
+    console.log(`🚄 NEO4J_URI: ${process.env.NEO4J_URI}`);
+    console.log(`🚄 NEO4J_USER: ${process.env.NEO4J_USER}`);
+    console.log(`🚄 NEO4J_DATABASE: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
+    
+    // Don't block startup - verify connection asynchronously
+    driver.verifyConnectivity()
+      .then(() => {
+        neo4jConnected = true;
+        console.log('✅ [RAILWAY] Neo4j AuraDB connection verified with ultra-permissive settings!');
+        console.log(`🔗 [RAILWAY] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
+        console.log(`💾 [RAILWAY] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
+        console.log(`🔧 [RAILWAY] Pool config: max=${config.maxConnectionPoolSize}, timeout=${config.connectionAcquisitionTimeout}ms`);
+      })
+      .catch(err => {
+        neo4jConnected = false;
+        console.error('❌ [RAILWAY] Neo4j AuraDB connection STILL FAILED with ultra-permissive settings:', err.message);
+        console.error('❌ [RAILWAY] This suggests a fundamental Railway networking limitation with Neo4j AuraDB');
+        console.error('🔧 [RAILWAY] Environment variables:');
+        console.error(`🔧   NEO4J_URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'}`);
+        console.error(`🔧   NEO4J_USER: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'}`);
+        console.error(`🔧   NEO4J_PASSWORD: ${process.env.NEO4J_PASSWORD ? 'SET (length=' + process.env.NEO4J_PASSWORD.length + ')' : 'MISSING'}`);
+        console.error(`🔧   NEO4J_DATABASE: ${process.env.NEO4J_DATABASE || 'neo4j (default)'}`);
+        // DON'T THROW - Let server continue with degraded Neo4j functionality
+      });
+  } else {
+    // 🏠 LOCAL: Standard behavior
+    console.log('🏠 Local development - performing standard Neo4j connection...');
+    driver.verifyConnectivity()
+      .then(() => {
+        neo4jConnected = true;
+        console.log('✅ [LOCAL] Neo4j AuraDB connection verified successfully');
+        console.log(`🔗 [LOCAL] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
+        console.log(`💾 [LOCAL] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
+      })
+      .catch(err => {
+        neo4jConnected = false;
+        console.error('❌ [LOCAL] Neo4j AuraDB connection failed during startup:', err.message);
+        console.warn('⚠️ [LOCAL] Server will continue but Neo4j operations will fail');
+        // Don't throw - let the service handle it gracefully in individual operations
+      });
+  }
 
   return driver;
 };
