@@ -44,20 +44,15 @@ export const createNeo4jDriver = (): Driver => {
   // 🚄 Railway environment detection
   const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
   
-  // 🚄 RAILWAY WORKAROUND: Use direct bolt connection to bypass routing discovery
-  const neo4jUri = isRailway 
-    ? process.env.NEO4J_URI.replace('neo4j+s://', 'bolt+s://') // Force direct bolt connection
-    : process.env.NEO4J_URI; // Keep original neo4j+s:// for local (routing works)
-
   const config: Config = {
-    // ✅ RAILWAY-COMPATIBLE Connection Pool Settings 
-    maxConnectionLifetime: isRailway ? 10 * 60 * 1000 : 30 * 60 * 1000, // 10 min for Railway, 30 min local
-    maxConnectionPoolSize: isRailway ? 3 : 20, // ✅ 3 for Railway, 20 for local
-    connectionAcquisitionTimeout: isRailway ? 15000 : 30000, // ✅ 15s for Railway, 30s local  
-    maxTransactionRetryTime: isRailway ? 10000 : 15000, // 10 seconds for Railway, 15 for local
+    // ✅ ULTRA-PERMISSIVE Railway settings - maximum compatibility
+    maxConnectionLifetime: isRailway ? 30 * 60 * 1000 : 30 * 60 * 1000, // 30 min for both (very generous)
+    maxConnectionPoolSize: isRailway ? 10 : 20, // ✅ LARGE: 10 for Railway (was 3), 20 for local
+    connectionAcquisitionTimeout: isRailway ? 60000 : 30000, // ✅ VERY LONG: 60s for Railway (was 15s), 30s local  
+    maxTransactionRetryTime: isRailway ? 30000 : 15000, // 30 seconds for Railway (very generous), 15 for local
     
-    // ✅ Railway-optimized Performance
-    fetchSize: isRailway ? 100 : 1000, // Moderate fetch size for Railway
+    // ✅ Railway-permissive Performance
+    fetchSize: isRailway ? 1000 : 1000, // Same as local (no restrictions)
     disableLosslessIntegers: true,
     
     // ✅ Enhanced Logging for Railway debugging
@@ -70,22 +65,25 @@ export const createNeo4jDriver = (): Driver => {
       }
     },
     
-    // ✅ Railway-specific optimizations (BYPASS ROUTING)
+    // ✅ Railway-permissive optimizations (ULTRA LOOSE)
     ...(isRailway && {
-      // Direct connection timeouts
-      connectionTimeout: 10000, // 10 second connection timeout
-      socketTimeout: 15000,     // 15 second socket timeout 
+      // Very generous timeouts
+      connectionTimeout: 30000, // 30 second connection timeout (was 10s)
+      socketTimeout: 60000,     // 60 second socket timeout (was 15s)
       socketKeepAlive: true,    // Keep connections alive
+      // Remove any restrictions
+      trustStore: undefined,    // Don't restrict certificates
+      encrypted: undefined,     // Let Neo4j decide encryption
     }),
     
-    // ✅ Remove custom resolver for Railway - let it use default DNS
-    // resolver: (address: string) => Promise.resolve([address]), // REMOVED FOR RAILWAY
+    // ✅ Use default DNS resolution
   };
 
-  console.log(`🚄 Railway Neo4j Config: URI=${neo4jUri}, Routing=${isRailway ? 'DISABLED' : 'ENABLED'}`);
+  console.log(`🚄 Railway Neo4j Config: Ultra-permissive settings for maximum compatibility`);
+  console.log(`🚄 Pool: ${config.maxConnectionPoolSize}, Timeout: ${config.connectionAcquisitionTimeout}ms, Connection: ${isRailway ? config.connectionTimeout : 'default'}ms`);
 
   const driver = neo4j.driver(
-    neo4jUri, // Use modified URI for Railway
+    process.env.NEO4J_URI, // Back to original URI
     neo4j.auth.basic(
       process.env.NEO4J_USER,
       process.env.NEO4J_PASSWORD
@@ -95,28 +93,35 @@ export const createNeo4jDriver = (): Driver => {
 
   // ✅ Railway-aware connection verification
   if (isRailway) {
-    // 🚄 RAILWAY: Non-blocking verification with direct connection
-    console.log('🚄 Railway detected - performing direct Neo4j connection (routing disabled)...');
+    // 🚄 RAILWAY: Ultra-permissive connection attempt
+    console.log('🚄 Railway detected - attempting ultra-permissive Neo4j connection...');
+    console.log(`🚄 NEO4J_URI: ${process.env.NEO4J_URI}`);
+    console.log(`🚄 NEO4J_USER: ${process.env.NEO4J_USER}`);
+    console.log(`🚄 NEO4J_DATABASE: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
     
     // Don't block startup - verify connection asynchronously
     driver.verifyConnectivity()
       .then(() => {
         neo4jConnected = true;
-        console.log('✅ [RAILWAY] Neo4j AuraDB DIRECT connection verified successfully');
-        console.log(`🔗 [RAILWAY] Connected to: ${neo4jUri}`);
+        console.log('✅ [RAILWAY] Neo4j AuraDB connection verified with ultra-permissive settings!');
+        console.log(`🔗 [RAILWAY] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
         console.log(`💾 [RAILWAY] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
-        console.log(`🔧 [RAILWAY] Pool config: max=${config.maxConnectionPoolSize}, timeout=${config.connectionAcquisitionTimeout}ms, routing=DISABLED`);
+        console.log(`🔧 [RAILWAY] Pool config: max=${config.maxConnectionPoolSize}, timeout=${config.connectionAcquisitionTimeout}ms`);
       })
       .catch(err => {
         neo4jConnected = false;
-        console.error('❌ [RAILWAY] Neo4j AuraDB DIRECT connection failed during startup:', err.message);
-        console.error('❌ [RAILWAY] Server will continue but Neo4j operations will be degraded');
-        console.error('🔧 [RAILWAY] Check environment variables: NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD');
+        console.error('❌ [RAILWAY] Neo4j AuraDB connection STILL FAILED with ultra-permissive settings:', err.message);
+        console.error('❌ [RAILWAY] This suggests a fundamental Railway networking limitation with Neo4j AuraDB');
+        console.error('🔧 [RAILWAY] Environment variables:');
+        console.error(`🔧   NEO4J_URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'}`);
+        console.error(`🔧   NEO4J_USER: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'}`);
+        console.error(`🔧   NEO4J_PASSWORD: ${process.env.NEO4J_PASSWORD ? 'SET (length=' + process.env.NEO4J_PASSWORD.length + ')' : 'MISSING'}`);
+        console.error(`🔧   NEO4J_DATABASE: ${process.env.NEO4J_DATABASE || 'neo4j (default)'}`);
         // DON'T THROW - Let server continue with degraded Neo4j functionality
       });
   } else {
-    // 🏠 LOCAL: Graceful degradation (original behavior with routing)
-    console.log('🏠 Local development - performing Neo4j connection with routing enabled...');
+    // 🏠 LOCAL: Standard behavior
+    console.log('🏠 Local development - performing standard Neo4j connection...');
     driver.verifyConnectivity()
       .then(() => {
         neo4jConnected = true;
