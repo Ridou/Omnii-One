@@ -71,9 +71,7 @@ export const createNeo4jDriver = (): Driver => {
       connectionTimeout: 30000, // 30 second connection timeout (was 10s)
       socketTimeout: 60000,     // 60 second socket timeout (was 15s)
       socketKeepAlive: true,    // Keep connections alive
-      // Remove any restrictions
-      trustStore: undefined,    // Don't restrict certificates
-      encrypted: undefined,     // Let Neo4j decide encryption
+      // Remove conflicting SSL options (neo4j+s:// already specifies SSL)
     }),
     
     // ✅ Use default DNS resolution
