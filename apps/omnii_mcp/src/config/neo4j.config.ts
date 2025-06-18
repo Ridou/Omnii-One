@@ -45,14 +45,14 @@ export const createNeo4jDriver = (): Driver => {
   const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
   
   const config: Config = {
-    // ✅ Railway-optimized Connection Pool Settings
-    maxConnectionLifetime: isRailway ? 10 * 60 * 1000 : 30 * 60 * 1000, // 10 min for Railway, 30 min local
-    maxConnectionPoolSize: isRailway ? 5 : 20, // ✅ 5 for Railway (was 50!), 20 for local
-    connectionAcquisitionTimeout: isRailway ? 10000 : 30000, // ✅ 10s for Railway (was 60s!), 30s local  
-    maxTransactionRetryTime: 15000, // 15 seconds for retries
+    // ✅ ULTRA-AGGRESSIVE Railway-optimized Connection Pool Settings
+    maxConnectionLifetime: isRailway ? 5 * 60 * 1000 : 30 * 60 * 1000, // 5 min for Railway (was 10), 30 min local
+    maxConnectionPoolSize: isRailway ? 2 : 20, // ✅ ULTRA-LOW: 2 for Railway (was 5!), 20 for local
+    connectionAcquisitionTimeout: isRailway ? 5000 : 30000, // ✅ ULTRA-FAST: 5s for Railway (was 10s!), 30s local  
+    maxTransactionRetryTime: isRailway ? 5000 : 15000, // 5 seconds for Railway, 15 for local
     
-    // ✅ Railway-optimized Performance
-    fetchSize: isRailway ? 100 : 1000, // Smaller fetch size for Railway
+    // ✅ Railway-optimized Performance - Even more aggressive
+    fetchSize: isRailway ? 50 : 1000, // Ultra-small fetch size for Railway (was 100)
     disableLosslessIntegers: true,
     
     // ✅ Enhanced Logging for Railway debugging
@@ -64,6 +64,15 @@ export const createNeo4jDriver = (): Driver => {
         console.log(`[${timestamp}] ${env} [Neo4j-${level.toUpperCase()}] ${message}`);
       }
     },
+    
+    // ✅ Railway-specific optimizations
+    ...(isRailway && {
+      // Add explicit Railway timeouts
+      connectionTimeout: 3000, // 3 second connection timeout
+      socketTimeout: 5000,     // 5 second socket timeout
+      // Disable keep-alive for Railway
+      socketKeepAlive: false,
+    }),
     
     // ✅ Remove custom resolver for Railway - let it use default DNS
     // resolver: (address: string) => Promise.resolve([address]), // REMOVED FOR RAILWAY
