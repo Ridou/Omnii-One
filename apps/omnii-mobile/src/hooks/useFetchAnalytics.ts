@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { AnalyticsData } from '~/types/analytics';
 import { trpc } from '~/utils/api';
 
@@ -123,7 +124,7 @@ const buildAnalyticsFromTRPCData = (
       {
         id: 'p1',
         type: 'productivity',
-        timeframe: 'today',
+        timeframe: 'tomorrow',
         prediction: `Based on ${completedTasks} completed tasks, efficiency is at ${efficiencyScore}%`,
         confidence: 92,
         preparationSuggestions: [
@@ -158,30 +159,30 @@ export function useFetchAnalytics() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch real data from tRPC
+  // ✅ Updated to use tRPC v11 syntax with useQuery + queryOptions
   const { 
     data: tasksData, 
     isLoading: tasksLoading,
     error: tasksError 
-  } = trpc.tasks.getCompleteOverview.useQuery();
+  } = useQuery(trpc.tasks.getCompleteOverview.queryOptions());
 
   const { 
     data: contactsData, 
     isLoading: contactsLoading,
     error: contactsError 
-  } = trpc.contacts.listContacts.useQuery({ pageSize: 50 });
+  } = useQuery(trpc.contacts.listContacts.queryOptions());
 
   const { 
     data: emailsData, 
     isLoading: emailsLoading,
     error: emailsError 
-  } = trpc.email.listEmails.useQuery({ maxResults: 20 });
+  } = useQuery(trpc.email.listEmails.queryOptions());
 
   const { 
     data: calendarData, 
     isLoading: calendarLoading,
     error: calendarError 
-  } = trpc.calendar.getEvents.useQuery({});
+  } = useQuery(trpc.calendar.getEvents.queryOptions());
 
   const fetchAnalytics = useCallback(() => {
     const anyLoading = tasksLoading || contactsLoading || emailsLoading || calendarLoading;

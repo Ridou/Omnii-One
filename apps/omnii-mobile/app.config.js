@@ -20,6 +20,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.omnii.mobile',
+      buildNumber: '2',
       googleServicesFile: './GoogleService-Info.plist',
       icon: './assets/images/icons/ios/app-icons/AppIcon-1024x1024@1x.png',
       usesAppleSignIn: true,
