@@ -45,14 +45,14 @@ export const createNeo4jDriver = (): Driver => {
   const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
   
   const config: Config = {
-    // ✅ ULTRA-AGGRESSIVE Railway-optimized Connection Pool Settings
-    maxConnectionLifetime: isRailway ? 5 * 60 * 1000 : 30 * 60 * 1000, // 5 min for Railway (was 10), 30 min local
-    maxConnectionPoolSize: isRailway ? 2 : 20, // ✅ ULTRA-LOW: 2 for Railway (was 5!), 20 for local
-    connectionAcquisitionTimeout: isRailway ? 5000 : 30000, // ✅ ULTRA-FAST: 5s for Railway (was 10s!), 30s local  
-    maxTransactionRetryTime: isRailway ? 5000 : 15000, // 5 seconds for Railway, 15 for local
+    // ✅ RAILWAY-COMPATIBLE Connection Pool Settings (Fixed topology discovery)
+    maxConnectionLifetime: isRailway ? 10 * 60 * 1000 : 30 * 60 * 1000, // 10 min for Railway (restored), 30 min local
+    maxConnectionPoolSize: isRailway ? 3 : 20, // ✅ CONSERVATIVE: 3 for Railway (was 2), 20 for local
+    connectionAcquisitionTimeout: isRailway ? 15000 : 30000, // ✅ RELAXED: 15s for Railway (was 5s!), 30s local  
+    maxTransactionRetryTime: isRailway ? 10000 : 15000, // 10 seconds for Railway, 15 for local
     
-    // ✅ Railway-optimized Performance - Even more aggressive
-    fetchSize: isRailway ? 50 : 1000, // Ultra-small fetch size for Railway (was 100)
+    // ✅ Railway-optimized Performance - Less aggressive
+    fetchSize: isRailway ? 100 : 1000, // Moderate fetch size for Railway (was 50)
     disableLosslessIntegers: true,
     
     // ✅ Enhanced Logging for Railway debugging
@@ -65,13 +65,13 @@ export const createNeo4jDriver = (): Driver => {
       }
     },
     
-    // ✅ Railway-specific optimizations
+    // ✅ Railway-compatible optimizations (FIXED for topology discovery)
     ...(isRailway && {
-      // Add explicit Railway timeouts
-      connectionTimeout: 3000, // 3 second connection timeout
-      socketTimeout: 5000,     // 5 second socket timeout
-      // Disable keep-alive for Railway
-      socketKeepAlive: false,
+      // More generous timeouts for cluster discovery
+      connectionTimeout: 10000, // 10 second connection timeout (was 3s)
+      socketTimeout: 15000,     // 15 second socket timeout (was 5s) 
+      // Re-enable keep-alive for cluster stability
+      socketKeepAlive: true,    // FIXED: was false, breaking topology
     }),
     
     // ✅ Remove custom resolver for Railway - let it use default DNS
