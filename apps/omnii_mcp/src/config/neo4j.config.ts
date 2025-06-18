@@ -44,15 +44,20 @@ export const createNeo4jDriver = (): Driver => {
   // 🚄 Railway environment detection
   const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
   
+  // 🚄 RAILWAY WORKAROUND: Use direct bolt connection to bypass routing discovery
+  const neo4jUri = isRailway 
+    ? process.env.NEO4J_URI.replace('neo4j+s://', 'bolt+s://') // Force direct bolt connection
+    : process.env.NEO4J_URI; // Keep original neo4j+s:// for local (routing works)
+
   const config: Config = {
-    // ✅ RAILWAY-COMPATIBLE Connection Pool Settings (Fixed topology discovery)
-    maxConnectionLifetime: isRailway ? 10 * 60 * 1000 : 30 * 60 * 1000, // 10 min for Railway (restored), 30 min local
-    maxConnectionPoolSize: isRailway ? 3 : 20, // ✅ CONSERVATIVE: 3 for Railway (was 2), 20 for local
-    connectionAcquisitionTimeout: isRailway ? 15000 : 30000, // ✅ RELAXED: 15s for Railway (was 5s!), 30s local  
+    // ✅ RAILWAY-COMPATIBLE Connection Pool Settings 
+    maxConnectionLifetime: isRailway ? 10 * 60 * 1000 : 30 * 60 * 1000, // 10 min for Railway, 30 min local
+    maxConnectionPoolSize: isRailway ? 3 : 20, // ✅ 3 for Railway, 20 for local
+    connectionAcquisitionTimeout: isRailway ? 15000 : 30000, // ✅ 15s for Railway, 30s local  
     maxTransactionRetryTime: isRailway ? 10000 : 15000, // 10 seconds for Railway, 15 for local
     
-    // ✅ Railway-optimized Performance - Less aggressive
-    fetchSize: isRailway ? 100 : 1000, // Moderate fetch size for Railway (was 50)
+    // ✅ Railway-optimized Performance
+    fetchSize: isRailway ? 100 : 1000, // Moderate fetch size for Railway
     disableLosslessIntegers: true,
     
     // ✅ Enhanced Logging for Railway debugging
@@ -65,21 +70,22 @@ export const createNeo4jDriver = (): Driver => {
       }
     },
     
-    // ✅ Railway-compatible optimizations (FIXED for topology discovery)
+    // ✅ Railway-specific optimizations (BYPASS ROUTING)
     ...(isRailway && {
-      // More generous timeouts for cluster discovery
-      connectionTimeout: 10000, // 10 second connection timeout (was 3s)
-      socketTimeout: 15000,     // 15 second socket timeout (was 5s) 
-      // Re-enable keep-alive for cluster stability
-      socketKeepAlive: true,    // FIXED: was false, breaking topology
+      // Direct connection timeouts
+      connectionTimeout: 10000, // 10 second connection timeout
+      socketTimeout: 15000,     // 15 second socket timeout 
+      socketKeepAlive: true,    // Keep connections alive
     }),
     
     // ✅ Remove custom resolver for Railway - let it use default DNS
     // resolver: (address: string) => Promise.resolve([address]), // REMOVED FOR RAILWAY
   };
 
+  console.log(`🚄 Railway Neo4j Config: URI=${neo4jUri}, Routing=${isRailway ? 'DISABLED' : 'ENABLED'}`);
+
   const driver = neo4j.driver(
-    process.env.NEO4J_URI,
+    neo4jUri, // Use modified URI for Railway
     neo4j.auth.basic(
       process.env.NEO4J_USER,
       process.env.NEO4J_PASSWORD
@@ -89,28 +95,28 @@ export const createNeo4jDriver = (): Driver => {
 
   // ✅ Railway-aware connection verification
   if (isRailway) {
-    // 🚄 RAILWAY: Non-blocking verification with proper error handling
-    console.log('🚄 Railway detected - performing async Neo4j connection verification...');
+    // 🚄 RAILWAY: Non-blocking verification with direct connection
+    console.log('🚄 Railway detected - performing direct Neo4j connection (routing disabled)...');
     
     // Don't block startup - verify connection asynchronously
     driver.verifyConnectivity()
       .then(() => {
         neo4jConnected = true;
-        console.log('✅ [RAILWAY] Neo4j AuraDB connection verified successfully');
-        console.log(`🔗 [RAILWAY] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
+        console.log('✅ [RAILWAY] Neo4j AuraDB DIRECT connection verified successfully');
+        console.log(`🔗 [RAILWAY] Connected to: ${neo4jUri}`);
         console.log(`💾 [RAILWAY] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
-        console.log(`🔧 [RAILWAY] Pool config: max=${config.maxConnectionPoolSize}, timeout=${config.connectionAcquisitionTimeout}ms`);
+        console.log(`🔧 [RAILWAY] Pool config: max=${config.maxConnectionPoolSize}, timeout=${config.connectionAcquisitionTimeout}ms, routing=DISABLED`);
       })
       .catch(err => {
         neo4jConnected = false;
-        console.error('❌ [RAILWAY] Neo4j AuraDB connection failed during startup:', err.message);
+        console.error('❌ [RAILWAY] Neo4j AuraDB DIRECT connection failed during startup:', err.message);
         console.error('❌ [RAILWAY] Server will continue but Neo4j operations will be degraded');
         console.error('🔧 [RAILWAY] Check environment variables: NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD');
         // DON'T THROW - Let server continue with degraded Neo4j functionality
       });
   } else {
-    // 🏠 LOCAL: Graceful degradation (original behavior)
-    console.log('🏠 Local development - performing non-blocking Neo4j connection verification...');
+    // 🏠 LOCAL: Graceful degradation (original behavior with routing)
+    console.log('🏠 Local development - performing Neo4j connection with routing enabled...');
     driver.verifyConnectivity()
       .then(() => {
         neo4jConnected = true;
