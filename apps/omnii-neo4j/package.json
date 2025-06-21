@@ -1,0 +1,31 @@
+{
+  "name": "@omnii/neo4j-service",
+  "version": "1.0.0",
+  "description": "Dedicated Neo4j Service using Railway Template",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "bun build src/app.ts --outdir ./dist --target node",
+    "build:prod": "bun build src/app.ts --outdir ./dist --target node --minify",
+    "start": "bun run dist/app.js",
+    "start:prod": "NODE_ENV=production bun run dist/app.js",
+    "dev": "bun run --watch src/app.ts",
+    "test": "bun test",
+    "test:integration": "bun test tests/integration/",
+    "health": "curl http://localhost:8002/api/health"
+  },
+  "dependencies": {
+    "elysia": "latest",
+    "@elysiajs/cors": "latest",
+    "@elysiajs/swagger": "latest",
+    "neo4j-driver": "^5.15.0",
+    "zod": "^3.22.4",
+    "uuid": "^9.0.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.7",
+    "bun-types": "latest",
+    "typescript": "^5.3.0"
+  },
+  "type": "module"
+} 
