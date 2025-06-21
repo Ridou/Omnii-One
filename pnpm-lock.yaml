@@ -272,23 +272,60 @@ importers:
         specifier: 'catalog:'
         version: 5.8.3
 
+  apps/omnii-neo4j:
+    dependencies:
+      '@elysiajs/cors':
+        specifier: latest
+        version: 1.3.3(elysia@1.3.5(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))
+      '@elysiajs/swagger':
+        specifier: latest
+        version: 1.3.0(elysia@1.3.5(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))
+      dotenv:
+        specifier: ^16.5.0
+        version: 16.5.0
+      elysia:
+        specifier: latest
+        version: 1.3.5(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
+      file-type:
+        specifier: ^20.0.0
+        version: 20.5.0
+      neo4j-driver:
+        specifier: ^5.9.0
+        version: 5.28.1
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
+      zod:
+        specifier: ^3.25.43
+        version: 3.25.57
+    devDependencies:
+      '@types/uuid':
+        specifier: ^10.0.0
+        version: 10.0.0
+      bun-types:
+        specifier: latest
+        version: 1.2.17
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
+
   apps/omnii_mcp:
     dependencies:
       '@elysiajs/bearer':
         specifier: ^1.3.0
-        version: 1.3.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))
+        version: 1.3.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))
       '@elysiajs/cors':
         specifier: ^1.3.3
-        version: 1.3.3(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))
+        version: 1.3.3(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))
       '@elysiajs/swagger':
         specifier: ^1.3.0
-        version: 1.3.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))
+        version: 1.3.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))
       '@elysiajs/trpc':
         specifier: ^1.1.0
-        version: 1.1.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))
+        version: 1.1.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))
       '@elysiajs/websocket':
         specifier: ^0.2.8
-        version: 0.2.8(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))
+        version: 0.2.8(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))
       '@google-cloud/local-auth':
         specifier: 2.1.0
         version: 2.1.0
@@ -321,10 +358,10 @@ importers:
         version: 16.5.0
       elysia:
         specifier: ^1.3.4
-        version: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3)
+        version: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
       elysia-helmet:
         specifier: ^3.0.0
-        version: 3.0.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))
+        version: 3.0.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))
       express:
         specifier: ^4.18.2
         version: 4.21.2
@@ -388,7 +425,7 @@ importers:
         version: 4.0.11
       bun-types:
         specifier: latest
-        version: 1.2.15
+        version: 1.2.17
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@22.15.30)(ts-node@10.9.2(@types/node@22.15.30)(typescript@5.8.3))
@@ -498,10 +535,10 @@ importers:
         version: 0.10.0
       drizzle-orm:
         specifier: ^0.44.1
-        version: 0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.15)(kysely@0.28.2)
+        version: 0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.17)(kysely@0.28.2)
       drizzle-zod:
         specifier: ^0.8.2
-        version: 0.8.2(drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.15)(kysely@0.28.2))(zod@3.25.51)
+        version: 0.8.2(drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.17)(kysely@0.28.2))(zod@3.25.51)
       zod:
         specifier: 'catalog:'
         version: 3.25.51
@@ -3343,6 +3380,10 @@ packages:
       jest:
         optional: true
 
+  '@tokenizer/inflate@0.2.7':
+    resolution: {integrity: sha512-MADQgmZT1eKjp06jpI2yozxaU9uVs4GzzgSL+uEq7bVcJ9V1ZXQkeGNql1fsSI0gMy1vhvNTNbUqrx+pZfJVmg==}
+    engines: {node: '>=18'}
+
   '@tokenizer/token@0.3.0':
     resolution: {integrity: sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A==}
 
@@ -4217,6 +4258,9 @@ packages:
   bun-types@1.2.15:
     resolution: {integrity: sha512-NarRIaS+iOaQU1JPfyKhZm4AsUOrwUOqRNHY0XxI8GI8jYxiLXLcdjYMG9UKS+fwWasc1uw1htV9AX24dD+p4w==}
 
+  bun-types@1.2.17:
+    resolution: {integrity: sha512-ElC7ItwT3SCQwYZDYoAH+q6KT4Fxjl8DtZ6qDulUFBmXA8YB4xo+l54J9ZJN+k2pphfn9vk7kfubeSd5QfTVJQ==}
+
   busboy@1.6.0:
     resolution: {integrity: sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==}
     engines: {node: '>=10.16.0'}
@@ -4946,6 +4990,13 @@ packages:
       file-type: '>= 20.0.0'
       typescript: '>= 5.0.0'
 
+  elysia@1.3.5:
+    resolution: {integrity: sha512-XVIKXlKFwUT7Sta8GY+wO5reD9I0rqAEtaz1Z71UgJb61csYt8Q3W9al8rtL5RgumuRR8e3DNdzlUN9GkC4KDw==}
+    peerDependencies:
+      exact-mirror: '>= 0.0.9'
+      file-type: '>= 20.0.0'
+      typescript: '>= 5.0.0'
+
   emittery@0.13.1:
     resolution: {integrity: sha512-DeWwawk6r5yR9jFgnDKYt4sLS0LmHJJi3ZOnb5/JdbYwj3nW+FxQnHIjhBKz8YLC7oRNPVM9NQ47I3CVx34eqQ==}
     engines: {node: '>=12'}
@@ -5508,6 +5559,9 @@ packages:
       picomatch:
         optional: true
 
+  fflate@0.8.2:
+    resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
+
   figures@3.2.0:
     resolution: {integrity: sha512-yaduQFRKLXYOGgEn6AZau90j3ggSOyiqXU0F9JZfeXYhNa+Jk4X+s45A2zg5jns87GAFa34BBm2kXw4XpNcbdg==}
     engines: {node: '>=8'}
@@ -5519,6 +5573,10 @@ packages:
   file-type@16.5.4:
     resolution: {integrity: sha512-/yFHK0aGjFEgDJjEKP0pWCplsPFPhwyfwevf/pVxiN0tmE4L9LmwWxWukdJSHdoCli4VgQLehjJtwQBnqmsKcw==}
     engines: {node: '>=10'}
+
+  file-type@20.5.0:
+    resolution: {integrity: sha512-BfHZtG/l9iMm4Ecianu7P8HRD2tBHLtjXinm4X62XBOYzi7CYA7jyqfJzOvXHqzVrVPYqBo2/GvbARMaaJkKVg==}
+    engines: {node: '>=18'}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -8569,6 +8627,10 @@ packages:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
 
+  strtok3@10.3.1:
+    resolution: {integrity: sha512-3JWEZM6mfix/GCJBBUrkA8p2Id2pBkyTkVCJKto55w080QBKZ+8R171fGrbiSp+yMO/u6F8/yUh7K4V9K+YCnw==}
+    engines: {node: '>=18'}
+
   strtok3@6.3.0:
     resolution: {integrity: sha512-fZtbhtvI9I48xDSywd/somNqgUHl2L2cstmXCCif0itOf96jeW18MBSyrLuNicYQVkvpOxkZtkzujiTJ9LW5Jw==}
     engines: {node: '>=10'}
@@ -8743,6 +8805,10 @@ packages:
     resolution: {integrity: sha512-6udB24Q737UD/SDsKAHI9FCRP7Bqc9D/MQUV02ORQg5iskjtLJlZJNdN4kKtcdtwCeWIwIHDGaUsTsCCAa8sFQ==}
     engines: {node: '>=10'}
 
+  token-types@6.0.0:
+    resolution: {integrity: sha512-lbDrTLVsHhOMljPscd0yitpozq7Ga2M5Cvez5AjGg8GASBjtt6iERCAJ93yommPmz62fb45oFIXHEZ3u9bfJEA==}
+    engines: {node: '>=14.16'}
+
   tough-cookie@4.1.4:
     resolution: {integrity: sha512-Loo5UUvLD9ScZ6jh8beX1T6sO1w2/MpCRpEP7V280GKMVUQ0Jzar2U3UJPsrdbziLEMMhu3Ujnq//rhiFuIeag==}
     engines: {node: '>=6'}
@@ -8909,6 +8975,10 @@ packages:
     resolution: {integrity: sha512-v3Xu+yuwBXisp6QYTcH4UbH+xYJXqnq2m/LtQVWKWzYc1iehYnLixoQDN9FH6/j9/oybfd6W9Ghwkl8+UMKTKQ==}
     engines: {node: '>=0.8.0'}
     hasBin: true
+
+  uint8array-extras@1.4.0:
+    resolution: {integrity: sha512-ZPtzy0hu4cZjv3z5NW9gfKnNLjoz4y6uv4HlelAjDK7sY/xOkKZv9xK/WQpcsBB3jEybChz9DPC2U/+cusjJVQ==}
+    engines: {node: '>=18'}
 
   unbox-primitive@1.1.0:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
@@ -9967,7 +10037,7 @@ snapshots:
       '@better-fetch/fetch': 1.1.18
       better-auth: 1.2.8
       better-call: 1.0.9
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@better-auth/utils@0.2.5':
     dependencies:
@@ -9992,29 +10062,41 @@ snapshots:
     dependencies:
       '@types/hammerjs': 2.0.46
 
-  '@elysiajs/bearer@1.3.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))':
+  '@elysiajs/bearer@1.3.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))':
     dependencies:
-      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3)
+      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
 
-  '@elysiajs/cors@1.3.3(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))':
+  '@elysiajs/cors@1.3.3(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))':
     dependencies:
-      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3)
+      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
 
-  '@elysiajs/swagger@1.3.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))':
+  '@elysiajs/cors@1.3.3(elysia@1.3.5(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))':
+    dependencies:
+      elysia: 1.3.5(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
+
+  '@elysiajs/swagger@1.3.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))':
     dependencies:
       '@scalar/themes': 0.9.86
       '@scalar/types': 0.0.12
-      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3)
+      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
       openapi-types: 12.1.3
       pathe: 1.1.2
 
-  '@elysiajs/trpc@1.1.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))':
+  '@elysiajs/swagger@1.3.0(elysia@1.3.5(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))':
     dependencies:
-      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3)
+      '@scalar/themes': 0.9.86
+      '@scalar/types': 0.0.12
+      elysia: 1.3.5(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
+      openapi-types: 12.1.3
+      pathe: 1.1.2
 
-  '@elysiajs/websocket@0.2.8(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3))':
+  '@elysiajs/trpc@1.1.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))':
     dependencies:
-      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3)
+      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
+
+  '@elysiajs/websocket@0.2.8(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3))':
+    dependencies:
+      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
       nanoid: 4.0.2
       raikiri: 0.0.0-beta.8
 
@@ -10982,7 +11064,7 @@ snapshots:
     dependencies:
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-blur@1.6.0':
     dependencies:
@@ -10992,7 +11074,7 @@ snapshots:
   '@jimp/plugin-circle@1.6.0':
     dependencies:
       '@jimp/types': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-color@1.6.0':
     dependencies:
@@ -11000,7 +11082,7 @@ snapshots:
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
       tinycolor2: 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-contain@1.6.0':
     dependencies:
@@ -11009,7 +11091,7 @@ snapshots:
       '@jimp/plugin-resize': 1.6.0
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-cover@1.6.0':
     dependencies:
@@ -11017,20 +11099,20 @@ snapshots:
       '@jimp/plugin-crop': 1.6.0
       '@jimp/plugin-resize': 1.6.0
       '@jimp/types': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-crop@1.6.0':
     dependencies:
       '@jimp/core': 1.6.0
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-displace@1.6.0':
     dependencies:
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-dither@1.6.0':
     dependencies:
@@ -11040,12 +11122,12 @@ snapshots:
     dependencies:
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-flip@1.6.0':
     dependencies:
       '@jimp/types': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-hash@1.6.0':
     dependencies:
@@ -11063,7 +11145,7 @@ snapshots:
   '@jimp/plugin-mask@1.6.0':
     dependencies:
       '@jimp/types': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-print@1.6.0':
     dependencies:
@@ -11076,18 +11158,18 @@ snapshots:
       parse-bmfont-binary: 1.0.6
       parse-bmfont-xml: 1.1.6
       simple-xml-to-json: 1.2.3
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-quantize@1.6.0':
     dependencies:
       image-q: 4.0.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-resize@1.6.0':
     dependencies:
       '@jimp/core': 1.6.0
       '@jimp/types': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-rotate@1.6.0':
     dependencies:
@@ -11096,7 +11178,7 @@ snapshots:
       '@jimp/plugin-resize': 1.6.0
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/plugin-threshold@1.6.0':
     dependencies:
@@ -11105,11 +11187,11 @@ snapshots:
       '@jimp/plugin-hash': 1.6.0
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/types@1.6.0':
     dependencies:
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@jimp/utils@1.6.0':
     dependencies:
@@ -11189,8 +11271,8 @@ snapshots:
       express-rate-limit: 7.5.0(express@5.1.0)
       pkce-challenge: 5.0.0
       raw-body: 3.0.0
-      zod: 3.25.51
-      zod-to-json-schema: 3.24.5(zod@3.25.51)
+      zod: 3.25.57
+      zod-to-json-schema: 3.24.5(zod@3.25.57)
     transitivePeerDependencies:
       - supports-color
 
@@ -12279,7 +12361,7 @@ snapshots:
 
   '@scalar/openapi-types@0.2.0':
     dependencies:
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@scalar/themes@0.9.86':
     dependencies:
@@ -12296,7 +12378,7 @@ snapshots:
       '@unhead/schema': 1.11.20
       nanoid: 5.1.5
       type-fest: 4.41.0
-      zod: 3.25.51
+      zod: 3.25.57
 
   '@simplewebauthn/browser@13.1.0': {}
 
@@ -12430,6 +12512,14 @@ snapshots:
       redent: 3.0.0
     optionalDependencies:
       jest: 29.7.0(@types/node@22.15.30)(ts-node@10.9.2(@types/node@22.15.30)(typescript@5.8.3))
+
+  '@tokenizer/inflate@0.2.7':
+    dependencies:
+      debug: 4.4.1
+      fflate: 0.8.2
+      token-types: 6.0.0
+    transitivePeerDependencies:
+      - supports-color
 
   '@tokenizer/token@0.3.0': {}
 
@@ -13368,7 +13458,7 @@ snapshots:
       jose: 5.10.0
       kysely: 0.28.2
       nanostores: 0.11.4
-      zod: 3.25.51
+      zod: 3.25.57
 
   better-call@1.0.9:
     dependencies:
@@ -13538,6 +13628,10 @@ snapshots:
       node-gyp-build: 4.8.4
 
   bun-types@1.2.15:
+    dependencies:
+      '@types/node': 22.15.30
+
+  bun-types@1.2.17:
     dependencies:
       '@types/node': 22.15.30
 
@@ -13789,8 +13883,8 @@ snapshots:
       pusher-js: 8.4.0-rc2
       resolve-package-path: 4.0.3
       uuid: 10.0.0
-      zod: 3.25.51
-      zod-to-json-schema: 3.24.5(zod@3.25.51)
+      zod: 3.25.57
+      zod-to-json-schema: 3.24.5(zod@3.25.57)
     transitivePeerDependencies:
       - debug
 
@@ -14154,18 +14248,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.15)(kysely@0.28.2):
+  drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.17)(kysely@0.28.2):
     optionalDependencies:
       '@cloudflare/workers-types': 4.20250605.0
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.11.6
       '@vercel/postgres': 0.10.0
-      bun-types: 1.2.15
+      bun-types: 1.2.17
       kysely: 0.28.2
 
-  drizzle-zod@0.8.2(drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.15)(kysely@0.28.2))(zod@3.25.51):
+  drizzle-zod@0.8.2(drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.17)(kysely@0.28.2))(zod@3.25.51):
     dependencies:
-      drizzle-orm: 0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.15)(kysely@0.28.2)
+      drizzle-orm: 0.44.2(@cloudflare/workers-types@4.20250605.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.2.17)(kysely@0.28.2)
       zod: 3.25.51
 
   dunder-proto@1.0.1:
@@ -14198,16 +14292,27 @@ snapshots:
       minimalistic-assert: 1.0.1
       minimalistic-crypto-utils: 1.0.1
 
-  elysia-helmet@3.0.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3)):
+  elysia-helmet@3.0.0(elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)):
     dependencies:
-      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3)
+      elysia: 1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3)
 
-  elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@16.5.4)(typescript@5.8.3):
+  elysia@1.3.4(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3):
     dependencies:
       cookie: 1.0.2
       exact-mirror: 0.1.2(@sinclair/typebox@0.34.33)
       fast-decode-uri-component: 1.0.1
-      file-type: 16.5.4
+      file-type: 20.5.0
+      typescript: 5.8.3
+    optionalDependencies:
+      '@sinclair/typebox': 0.34.33
+      openapi-types: 12.1.3
+
+  elysia@1.3.5(exact-mirror@0.1.2(@sinclair/typebox@0.34.33))(file-type@20.5.0)(typescript@5.8.3):
+    dependencies:
+      cookie: 1.0.2
+      exact-mirror: 0.1.2(@sinclair/typebox@0.34.33)
+      fast-decode-uri-component: 1.0.1
+      file-type: 20.5.0
       typescript: 5.8.3
     optionalDependencies:
       '@sinclair/typebox': 0.34.33
@@ -14542,8 +14647,8 @@ snapshots:
       '@babel/plugin-transform-private-methods': 7.27.1(@babel/core@7.27.4)
       eslint: 9.28.0(jiti@1.21.7)
       hermes-parser: 0.25.1
-      zod: 3.25.51
-      zod-validation-error: 3.4.1(zod@3.25.51)
+      zod: 3.25.57
+      zod-validation-error: 3.4.1(zod@3.25.57)
     transitivePeerDependencies:
       - supports-color
 
@@ -15081,6 +15186,8 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.2
 
+  fflate@0.8.2: {}
+
   figures@3.2.0:
     dependencies:
       escape-string-regexp: 1.0.5
@@ -15094,6 +15201,15 @@ snapshots:
       readable-web-to-node-stream: 3.0.4
       strtok3: 6.3.0
       token-types: 4.2.1
+
+  file-type@20.5.0:
+    dependencies:
+      '@tokenizer/inflate': 0.2.7
+      strtok3: 10.3.1
+      token-types: 6.0.0
+      uint8array-extras: 1.4.0
+    transitivePeerDependencies:
+      - supports-color
 
   fill-range@7.1.1:
     dependencies:
@@ -18759,6 +18875,10 @@ snapshots:
 
   strip-json-comments@3.1.1: {}
 
+  strtok3@10.3.1:
+    dependencies:
+      '@tokenizer/token': 0.3.0
+
   strtok3@6.3.0:
     dependencies:
       '@tokenizer/token': 0.3.0
@@ -18970,6 +19090,11 @@ snapshots:
       '@tokenizer/token': 0.3.0
       ieee754: 1.2.1
 
+  token-types@6.0.0:
+    dependencies:
+      '@tokenizer/token': 0.3.0
+      ieee754: 1.2.1
+
   tough-cookie@4.1.4:
     dependencies:
       psl: 1.15.0
@@ -19159,6 +19284,8 @@ snapshots:
 
   uglify-js@3.19.3:
     optional: true
+
+  uint8array-extras@1.4.0: {}
 
   unbox-primitive@1.1.0:
     dependencies:
@@ -19550,9 +19677,9 @@ snapshots:
     dependencies:
       zod: 3.25.57
 
-  zod-validation-error@3.4.1(zod@3.25.51):
+  zod-validation-error@3.4.1(zod@3.25.57):
     dependencies:
-      zod: 3.25.51
+      zod: 3.25.57
 
   zod@3.25.51: {}
 

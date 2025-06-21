@@ -1,5 +1,6 @@
 import neo4j, { Driver, Config, Session } from 'neo4j-driver';
 import type { Record as Neo4jRecord } from 'neo4j-driver';
+import { v4 as uuidv4 } from 'uuid';
 
 // Define supported node types
 type NodeType = 'Concept' | 'Email' | 'Event' | string;
@@ -23,6 +24,176 @@ interface RelationshipData {
 interface ContextData {
   nodes: NodeData[];
   relationships: RelationshipData[];
+}
+
+// Simple brain manager interface for chat storage
+class SimpleBrainManager {
+  private driver: Driver;
+
+  constructor(driver: Driver) {
+    this.driver = driver;
+  }
+
+  async storeChatConversation(data: {
+    user_id: string;
+    content: string;
+    chat_id: string;
+    is_incoming: boolean;
+    websocket_session_id?: string;
+    thread_id?: string;
+    is_group_chat?: boolean;
+    participants?: string[];
+    reply_to_message_id?: string;
+    message_sequence?: number;
+    google_service_context?: {
+      service_type?: 'calendar' | 'tasks' | 'contacts' | 'email';
+      operation?: string;
+      entity_ids?: string[];
+    };
+  }): Promise<any> {
+    console.log(`[BrainMemory] 💬 Storing chat conversation for user: ${data.user_id}`);
+    
+    const session = this.driver.session();
+    
+    try {
+      const messageId = uuidv4();
+      
+      // Simple storage without complex analysis
+      await session.run(`
+        CREATE (msg:ChatMessage {
+          id: $id,
+          content: $content,
+          timestamp: datetime($timestamp),
+          user_id: $user_id,
+          channel: 'chat',
+          source_identifier: $chat_id,
+          chat_metadata: $chat_metadata
+        })
+        
+        WITH msg
+        MATCH (user:User {id: $user_id})
+        MERGE (user)-[:OWNS]->(msg)
+        
+        CREATE (memory:Memory {
+          id: $memory_id,
+          timestamp: datetime($timestamp),
+          user_id: $user_id,
+          memory_type: 'episodic',
+          consolidation_status: 'fresh',
+          episode_type: 'conversation',
+          channel: 'chat',
+          original_message_id: $id
+        })
+        
+        CREATE (msg)-[:HAS_MEMORY]->(memory)
+        
+        RETURN msg, memory
+      `, {
+        id: messageId,
+        content: data.content,
+        timestamp: new Date().toISOString(),
+        user_id: data.user_id,
+        chat_id: data.chat_id,
+        chat_metadata: JSON.stringify({
+          chat_id: data.chat_id,
+          websocket_session_id: data.websocket_session_id,
+          is_group_chat: data.is_group_chat || false,
+          participants: data.participants || []
+        }),
+        memory_id: uuidv4()
+      });
+
+      console.log(`[BrainMemory] ✅ Stored chat conversation: ${messageId}`);
+      
+      return {
+        id: messageId,
+        user_id: data.user_id,
+        content: data.content,
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      console.error(`[BrainMemory] ❌ Failed to store chat conversation:`, error);
+      throw error;
+    } finally {
+      await session.close();
+    }
+  }
+
+  async storeSMSConversation(data: {
+    user_id: string;
+    content: string;
+    phone_number: string;
+    is_incoming: boolean;
+    local_datetime?: string;
+    google_service_context?: any;
+  }): Promise<any> {
+    console.log(`[BrainMemory] 💾 Storing SMS conversation for user: ${data.user_id}`);
+    
+    const session = this.driver.session();
+    
+    try {
+      const messageId = uuidv4();
+      
+      await session.run(`
+        CREATE (msg:ChatMessage {
+          id: $id,
+          content: $content,
+          timestamp: datetime($timestamp),
+          user_id: $user_id,
+          channel: 'sms',
+          source_identifier: $phone_number,
+          sms_metadata: $sms_metadata
+        })
+        
+        WITH msg
+        MATCH (user:User {id: $user_id})
+        MERGE (user)-[:OWNS]->(msg)
+        
+        CREATE (memory:Memory {
+          id: $memory_id,
+          timestamp: datetime($timestamp),
+          user_id: $user_id,
+          memory_type: 'episodic',
+          consolidation_status: 'fresh',
+          episode_type: 'conversation',
+          channel: 'sms',
+          original_message_id: $id
+        })
+        
+        CREATE (msg)-[:HAS_MEMORY]->(memory)
+        
+        RETURN msg, memory
+      `, {
+        id: messageId,
+        content: data.content,
+        timestamp: new Date().toISOString(),
+        user_id: data.user_id,
+        phone_number: data.phone_number,
+        sms_metadata: JSON.stringify({
+          phone_number: data.phone_number,
+          is_incoming: data.is_incoming,
+          local_datetime: data.local_datetime
+        }),
+        memory_id: uuidv4()
+      });
+
+      console.log(`[BrainMemory] ✅ Stored SMS conversation: ${messageId}`);
+      
+      return {
+        id: messageId,
+        user_id: data.user_id,
+        content: data.content,
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      console.error(`[BrainMemory] ❌ Failed to store SMS conversation:`, error);
+      throw error;
+    } finally {
+      await session.close();
+    }
+  }
 }
 
 export const createNeo4jDriver = (): Driver => {
@@ -418,6 +589,14 @@ class SimpleNeo4jService {
 // Export simple service instance
 export const neo4jService = new SimpleNeo4jService();
 
+// Create BrainConversationManager instance
+const brainConversationManager = new SimpleBrainManager(getNeo4jDriver());
+
+// Enhanced production brain service with manager
+export const productionBrainService = {
+  ...neo4jService,
+  manager: brainConversationManager
+};
+
 // For backward compatibility
-export const productionBrainService = neo4jService;
 export const getNeo4jService = () => neo4jService; 
