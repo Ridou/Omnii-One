@@ -10,6 +10,15 @@ healthcheckTimeout = 60
 # Auto-generated password for Neo4j (Railway will generate this)
 DB_PASSWORD = { generate = true }
 
+# Neo4j Memory Configuration (Railway container limits)
+NEO4J_server_memory_heap_initial_size = "256M"
+NEO4J_server_memory_heap_max_size = "512M"
+NEO4J_server_memory_pagecache_size = "128M"
+
+# Additional Neo4j performance settings for containers
+NEO4J_server_memory_off_heap_max_size = "512M"
+NEO4J_server_jvm_additional = "-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:+UseStringDeduplication"
+
 # Optional CSV import URLs for bulk data loading
 NODE_CSV_URLS = ""
 RELATION_CSV_URLS = "" 
