@@ -21,7 +21,7 @@
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "lint:ws": "npx sherif@latest",
-    "postinstall": "npm run lint:ws && cd apps/omnii-neo4j && bun install",
+    "postinstall": "npm run lint:ws",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",
     "android": "expo run:android",
