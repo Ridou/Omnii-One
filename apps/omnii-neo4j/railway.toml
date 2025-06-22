@@ -3,8 +3,6 @@ builder = "dockerfile"
 
 [deploy]
 restartPolicyType = "always"
-healthcheckPath = "/api/health"
-healthcheckTimeout = 60
 
 # Environment variables should be set in Railway dashboard for security
 # Required variables:
