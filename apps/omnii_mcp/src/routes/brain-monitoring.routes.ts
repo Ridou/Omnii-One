@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { neo4jServiceClient } from '../services/neo4j-client';
+import { productionBrainService } from '../config/neo4j.config';
 
 // Define schemas
 const TestMemoryBody = t.Object({
@@ -23,31 +23,12 @@ export default (app: Elysia) =>
         '/health',
         async () => {
           try {
-            const health = await neo4jServiceClient.healthCheck();
-            
-            // Transform microservice health check to expected brain monitoring format
-            return {
-              status: health.status,
-              neo4j: health.neo4j,
-              redis: false, // Redis is not used in microservice
-              memory_bridge: health.neo4j, // Use Neo4j status as memory bridge status
-              metrics: {
-                total_conversations: 0, // Not tracked in microservice
-                active_concepts: health.metrics?.total_concepts || 0,
-                memory_strength_avg: 0.8 // Default value
-              }
-            };
+            const health = await productionBrainService.healthCheck();
+            return health;
           } catch (error) {
             return { 
-              status: 'unhealthy' as const,
-              neo4j: false,
-              redis: false,
-              memory_bridge: false,
-              metrics: {
-                total_conversations: 0,
-                active_concepts: 0,
-                memory_strength_avg: 0
-              }
+              status: 'unhealthy', 
+              error: error instanceof Error ? error.message : 'Unknown error'
             };
           }
         },
@@ -133,7 +114,7 @@ export default (app: Elysia) =>
           try {
             const { userId, message, channel, sourceIdentifier } = body;
 
-            const memoryContext = await neo4jServiceClient.getBrainMemoryContext(
+            const memoryContext = await productionBrainService.getBrainMemoryContext(
               userId,
               message,
               channel as 'sms' | 'chat',

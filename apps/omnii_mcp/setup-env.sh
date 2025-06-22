@@ -24,10 +24,10 @@ SUPABASE_URL=https://auth.omnii.net
 SUPABASE_ANON_KEY=your_supabase_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
-# Neo4j Database Configuration (CRITICAL)
-NEO4J_URI=bolt://localhost:7687
+# Neo4j AuraDB Configuration (CRITICAL - DIRECT CONNECTION TO YOUR PAID INSTANCE)
+NEO4J_URI=neo4j+s://your-instance-id.databases.neo4j.io
 NEO4J_USER=neo4j  
-NEO4J_PASSWORD=your_neo4j_password_here
+NEO4J_PASSWORD=your_auradb_password_here
 NEO4J_DATABASE=neo4j
 
 # OpenAI Integration (CRITICAL)
@@ -92,11 +92,12 @@ echo ""
 echo "2. 🤖 OPENAI_API_KEY:"
 echo "   → Get from: https://platform.openai.com/api-keys"
 echo ""
-echo "3. 📊 NEO4J CONFIGURATION:"
-echo "   NEO4J_URI - Your Neo4j connection string"
-echo "   NEO4J_PASSWORD - Your Neo4j password"
-echo "   → Local: bolt://localhost:7687"
-echo "   → Aura: bolt+s://your-instance.databases.neo4j.io"
+echo "3. 📊 NEO4J AURADB CONFIGURATION (DIRECT CONNECTION):"
+echo "   NEO4J_URI - Your AuraDB connection string"
+echo "   NEO4J_PASSWORD - Your AuraDB password"
+echo "   → Get from: https://console.neo4j.io/"
+echo "   → Format: neo4j+s://your-instance-id.databases.neo4j.io"
+echo "   → Use DIRECT connection - no intermediary services needed!"
 echo ""
 echo "4. 🔒 SECURITY KEYS (Generate secure random strings):"
 echo "   JWT_SECRET - Run: openssl rand -hex 32"

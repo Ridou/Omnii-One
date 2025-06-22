@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import neo4jRoutes from './neo4j';
+import neo4jDirectRoutes from './neo4j-direct';
 import smsRoutes from './sms';
 import rdfRoutes from './rdf';
 import brainRoutes from './brain-monitoring.routes';
@@ -62,6 +63,7 @@ export default (app: Elysia) => {
   
   // Register other routes
   api.use(neo4jRoutes);
+  api.use(neo4jDirectRoutes);
   api.use(smsRoutes);
   api.use(rdfRoutes);
   api.use(brainRoutes);

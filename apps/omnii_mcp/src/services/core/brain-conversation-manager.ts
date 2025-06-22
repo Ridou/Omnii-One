@@ -344,14 +344,7 @@ export class BrainConversationManager {
     const cached = await redisCache.get(cacheKey);
     if (cached) {
       console.log(`[BrainMemory] 🧠 Cache hit for ${channel}:${sourceIdentifier}`);
-      try {
-        // Parse JSON string from Redis cache before validating
-        const cachedData = typeof cached === 'string' ? JSON.parse(cached) : cached;
-        return BrainMemoryContextSchema.parse(cachedData);
-      } catch (parseError) {
-        console.warn(`[BrainMemory] ⚠️ Cache parse error, rebuilding context:`, parseError);
-        // Continue to rebuild context if cache is corrupted
-      }
+      return BrainMemoryContextSchema.parse(cached);
     }
 
     console.log(`[BrainMemory] 🧠 Building brain-like memory context for ${channel}:${sourceIdentifier}`);

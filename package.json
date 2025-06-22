@@ -8,7 +8,7 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "build": "turbo run build",
-    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'bun.lock' -type f -delete && rm -f pnpm-lock.yaml && git clean -xdf -e .env -e '*.env' -e '.env.*'",
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && git clean -xdf -e .env -e '*.env' -e '.env.*'",
     "clean:workspaces": "turbo run clean",
     "auth:generate": "npm run --workspace=@omnii/auth generate",
     "db:push": "turbo -F @omnii/db push",

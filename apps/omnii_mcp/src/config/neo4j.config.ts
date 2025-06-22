@@ -1,6 +1,5 @@
 import neo4j, { Driver, Config, Session } from 'neo4j-driver';
 import type { Record as Neo4jRecord } from 'neo4j-driver';
-import { v4 as uuidv4 } from 'uuid';
 
 // Define supported node types
 type NodeType = 'Concept' | 'Email' | 'Event' | string;
@@ -26,176 +25,6 @@ interface ContextData {
   relationships: RelationshipData[];
 }
 
-// Simple brain manager interface for chat storage
-class SimpleBrainManager {
-  private driver: Driver;
-
-  constructor(driver: Driver) {
-    this.driver = driver;
-  }
-
-  async storeChatConversation(data: {
-    user_id: string;
-    content: string;
-    chat_id: string;
-    is_incoming: boolean;
-    websocket_session_id?: string;
-    thread_id?: string;
-    is_group_chat?: boolean;
-    participants?: string[];
-    reply_to_message_id?: string;
-    message_sequence?: number;
-    google_service_context?: {
-      service_type?: 'calendar' | 'tasks' | 'contacts' | 'email';
-      operation?: string;
-      entity_ids?: string[];
-    };
-  }): Promise<any> {
-    console.log(`[BrainMemory] 💬 Storing chat conversation for user: ${data.user_id}`);
-    
-    const session = this.driver.session();
-    
-    try {
-      const messageId = uuidv4();
-      
-      // Simple storage without complex analysis
-      await session.run(`
-        CREATE (msg:ChatMessage {
-          id: $id,
-          content: $content,
-          timestamp: datetime($timestamp),
-          user_id: $user_id,
-          channel: 'chat',
-          source_identifier: $chat_id,
-          chat_metadata: $chat_metadata
-        })
-        
-        WITH msg
-        MATCH (user:User {id: $user_id})
-        MERGE (user)-[:OWNS]->(msg)
-        
-        CREATE (memory:Memory {
-          id: $memory_id,
-          timestamp: datetime($timestamp),
-          user_id: $user_id,
-          memory_type: 'episodic',
-          consolidation_status: 'fresh',
-          episode_type: 'conversation',
-          channel: 'chat',
-          original_message_id: $id
-        })
-        
-        CREATE (msg)-[:HAS_MEMORY]->(memory)
-        
-        RETURN msg, memory
-      `, {
-        id: messageId,
-        content: data.content,
-        timestamp: new Date().toISOString(),
-        user_id: data.user_id,
-        chat_id: data.chat_id,
-        chat_metadata: JSON.stringify({
-          chat_id: data.chat_id,
-          websocket_session_id: data.websocket_session_id,
-          is_group_chat: data.is_group_chat || false,
-          participants: data.participants || []
-        }),
-        memory_id: uuidv4()
-      });
-
-      console.log(`[BrainMemory] ✅ Stored chat conversation: ${messageId}`);
-      
-      return {
-        id: messageId,
-        user_id: data.user_id,
-        content: data.content,
-        timestamp: new Date().toISOString()
-      };
-      
-    } catch (error) {
-      console.error(`[BrainMemory] ❌ Failed to store chat conversation:`, error);
-      throw error;
-    } finally {
-      await session.close();
-    }
-  }
-
-  async storeSMSConversation(data: {
-    user_id: string;
-    content: string;
-    phone_number: string;
-    is_incoming: boolean;
-    local_datetime?: string;
-    google_service_context?: any;
-  }): Promise<any> {
-    console.log(`[BrainMemory] 💾 Storing SMS conversation for user: ${data.user_id}`);
-    
-    const session = this.driver.session();
-    
-    try {
-      const messageId = uuidv4();
-      
-      await session.run(`
-        CREATE (msg:ChatMessage {
-          id: $id,
-          content: $content,
-          timestamp: datetime($timestamp),
-          user_id: $user_id,
-          channel: 'sms',
-          source_identifier: $phone_number,
-          sms_metadata: $sms_metadata
-        })
-        
-        WITH msg
-        MATCH (user:User {id: $user_id})
-        MERGE (user)-[:OWNS]->(msg)
-        
-        CREATE (memory:Memory {
-          id: $memory_id,
-          timestamp: datetime($timestamp),
-          user_id: $user_id,
-          memory_type: 'episodic',
-          consolidation_status: 'fresh',
-          episode_type: 'conversation',
-          channel: 'sms',
-          original_message_id: $id
-        })
-        
-        CREATE (msg)-[:HAS_MEMORY]->(memory)
-        
-        RETURN msg, memory
-      `, {
-        id: messageId,
-        content: data.content,
-        timestamp: new Date().toISOString(),
-        user_id: data.user_id,
-        phone_number: data.phone_number,
-        sms_metadata: JSON.stringify({
-          phone_number: data.phone_number,
-          is_incoming: data.is_incoming,
-          local_datetime: data.local_datetime
-        }),
-        memory_id: uuidv4()
-      });
-
-      console.log(`[BrainMemory] ✅ Stored SMS conversation: ${messageId}`);
-      
-      return {
-        id: messageId,
-        user_id: data.user_id,
-        content: data.content,
-        timestamp: new Date().toISOString()
-      };
-      
-    } catch (error) {
-      console.error(`[BrainMemory] ❌ Failed to store SMS conversation:`, error);
-      throw error;
-    } finally {
-      await session.close();
-    }
-  }
-}
-
 export const createNeo4jDriver = (): Driver => {
   // Check required environment variables
   if (!process.env.NEO4J_URI) {
@@ -212,48 +41,45 @@ export const createNeo4jDriver = (): Driver => {
     throw new Error('NEO4J_PASSWORD environment variable is required');
   }
 
-  // 🚄 Railway environment detection
-  const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
-  
+  // ✅ Optimized configuration for direct Neo4j AuraDB connection
   const config: Config = {
-    // ✅ IDENTICAL CONFIG for both local and Railway (no conflicts)
+    // Connection pool settings optimized for production
     maxConnectionLifetime: 30 * 60 * 1000, // 30 minutes
-    maxConnectionPoolSize: 20, // Same for both environments
-    connectionAcquisitionTimeout: 30000, // 30 seconds for both
+    maxConnectionPoolSize: 15, // Increased for better performance
+    connectionAcquisitionTimeout: 15000, // 15 seconds
+    connectionTimeout: 10000, // 10 seconds (must be <= connectionAcquisitionTimeout)
     maxTransactionRetryTime: 15000, // 15 seconds
     
-    fetchSize: 1000, // Same for both
+    // Performance settings
+    fetchSize: 1000,
     disableLosslessIntegers: true,
     
-    // ✅ Enhanced Logging for debugging
+    // Let neo4j+s:// URL handle encryption/trust automatically
+    // No need to specify encryption or trust settings
+    
+    // Enhanced logging for debugging
     logging: {
-      level: 'debug',
+      level: 'info',
       logger: (level: string, message: string) => {
         const timestamp = new Date().toISOString();
-        const env = isRailway ? '[RAILWAY]' : '[LOCAL]';
-        console.log(`[${timestamp}] ${env} [Neo4j-${level.toUpperCase()}] ${message}`);
+        console.log(`[${timestamp}] [Neo4j-${level.toUpperCase()}] ${message}`);
       }
-    },
-    
-    // ✅ NO Railway-specific config - let neo4j+s:// handle everything
+    }
   };
 
-  console.log(`🔧 Neo4j Config: IDENTICAL for all environments - no conflicts`);
-  console.log(`🔧 Environment: ${isRailway ? 'Railway' : 'Local'}`);
-  console.log(`🔧 Pool: ${config.maxConnectionPoolSize}, Timeout: ${config.connectionAcquisitionTimeout}ms`);
+  console.log(`🚀 Connecting directly to Neo4j AuraDB...`);
+  console.log(`🔧 Pool Size: ${config.maxConnectionPoolSize}, Timeout: ${config.connectionAcquisitionTimeout}ms`);
   
-  // 🔍 Environment variables verification for debugging
-  console.log(`🔍 Neo4j Environment Variables:`);
-  console.log(`   NEO4J_URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'} ${process.env.NEO4J_URI ? `(${process.env.NEO4J_URI.substring(0, 20)}...)` : ''}`);
-  console.log(`   NEO4J_USER: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'} ${process.env.NEO4J_USER ? `(${process.env.NEO4J_USER})` : ''}`);
-  console.log(`   NEO4J_PASSWORD: ${process.env.NEO4J_PASSWORD ? 'SET' : 'MISSING'} ${process.env.NEO4J_PASSWORD ? `(length: ${process.env.NEO4J_PASSWORD.length})` : ''}`);
-  console.log(`   NEO4J_DATABASE: ${process.env.NEO4J_DATABASE ? 'SET' : 'MISSING'} ${process.env.NEO4J_DATABASE ? `(${process.env.NEO4J_DATABASE})` : '(default: neo4j)'}`);
-  console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
-  console.log(`   RAILWAY_ENVIRONMENT: ${process.env.RAILWAY_ENVIRONMENT || 'undefined'}`);
-  console.log(`   RAILWAY_PROJECT_ID: ${process.env.RAILWAY_PROJECT_ID || 'undefined'}`);
+  // Environment variables verification
+  console.log(`🔍 Neo4j Configuration:`);
+  console.log(`   URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'} ${process.env.NEO4J_URI ? `(${process.env.NEO4J_URI.substring(0, 30)}...)` : ''}`);
+  console.log(`   User: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'} ${process.env.NEO4J_USER ? `(${process.env.NEO4J_USER})` : ''}`);
+  console.log(`   Password: ${process.env.NEO4J_PASSWORD ? 'SET' : 'MISSING'} ${process.env.NEO4J_PASSWORD ? `(length: ${process.env.NEO4J_PASSWORD.length})` : ''}`);
+  console.log(`   Database: ${process.env.NEO4J_DATABASE || 'neo4j (default)'}`);
 
+  // Create driver with direct connection
   const driver = neo4j.driver(
-    process.env.NEO4J_URI, // Back to original URI
+    process.env.NEO4J_URI,
     neo4j.auth.basic(
       process.env.NEO4J_USER,
       process.env.NEO4J_PASSWORD
@@ -261,11 +87,9 @@ export const createNeo4jDriver = (): Driver => {
     config
   );
 
-  // ✅ Unified connection verification for all environments
-  const envLabel = isRailway ? 'RAILWAY' : 'LOCAL';
-  console.log(`🔗 ${envLabel}: Starting Neo4j connection verification...`);
+  // ✅ Async connection verification (non-blocking)
+  console.log(`🔗 Verifying direct Neo4j connection...`);
   
-  // Don't block startup - verify connection asynchronously (modern approach)
   (async () => {
     try {
       const session = driver.session({ database: process.env.NEO4J_DATABASE || 'neo4j' });
@@ -273,22 +97,19 @@ export const createNeo4jDriver = (): Driver => {
       await session.close();
       
       neo4jConnected = true;
-      console.log(`✅ [${envLabel}] Neo4j AuraDB connection verified successfully!`);
-      console.log(`🔗 [${envLabel}] Connected to: ${process.env.NEO4J_URI?.split('@')[1]}`);
-      console.log(`💾 [${envLabel}] Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
-      console.log(`🔧 [${envLabel}] Using IDENTICAL config as local (no conflicts)`);
+      console.log(`✅ Direct Neo4j AuraDB connection verified successfully!`);
+      console.log(`🔗 Connected to: ${process.env.NEO4J_URI?.split('@')[1] || 'AuraDB Instance'}`);
+      console.log(`💾 Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
+      console.log(`🎯 Using DIRECT connection - no intermediary services`);
     } catch (err) {
       neo4jConnected = false;
-      console.error(`❌ [${envLabel}] Neo4j AuraDB connection failed:`, (err as Error).message);
-      if (isRailway) {
-        console.error('❌ [RAILWAY] Using IDENTICAL config as local - if this fails, Railway networking issue');
-      }
-      console.error(`🔧 [${envLabel}] Environment variables:`);
+      console.error(`❌ Direct Neo4j AuraDB connection failed:`, (err as Error).message);
+      console.error(`🔧 Connection details:`);
       console.error(`🔧   NEO4J_URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'}`);
       console.error(`🔧   NEO4J_USER: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'}`);
       console.error(`🔧   NEO4J_PASSWORD: ${process.env.NEO4J_PASSWORD ? 'SET (length=' + process.env.NEO4J_PASSWORD.length + ')' : 'MISSING'}`);
       console.error(`🔧   NEO4J_DATABASE: ${process.env.NEO4J_DATABASE || 'neo4j (default)'}`);
-      // DON'T THROW - Let server continue with degraded Neo4j functionality
+      console.error(`💡 Tip: Ensure your Neo4j AuraDB instance is running and accessible`);
     }
   })();
 
@@ -589,14 +410,6 @@ class SimpleNeo4jService {
 // Export simple service instance
 export const neo4jService = new SimpleNeo4jService();
 
-// Create BrainConversationManager instance
-const brainConversationManager = new SimpleBrainManager(getNeo4jDriver());
-
-// Enhanced production brain service with manager
-export const productionBrainService = {
-  ...neo4jService,
-  manager: brainConversationManager
-};
-
 // For backward compatibility
+export const productionBrainService = neo4jService;
 export const getNeo4jService = () => neo4jService; 

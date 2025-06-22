@@ -443,7 +443,7 @@ curl "https://omniimcp-production.up.railway.app/api/neo4j/health"
 curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts?user_id=your-user-id&limit=10"
 
 # Search concepts
-curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts/search?user_id=your-user-id&q=test&limit=5"
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts/search?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&q=test&limit=5"
 ```
 
 ### **Method 3: Run Brain Integration Test**
@@ -493,3 +493,5 @@ bun test tests/neo4j/brain-integration.test.ts
 
 **Last Updated**: January 2025
 **Compatible with**: Neo4j AuraDB, Brain Memory System v1.0
+
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts/search?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&q=test&limit=5"

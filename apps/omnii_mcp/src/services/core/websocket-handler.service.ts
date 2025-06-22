@@ -22,7 +22,7 @@ import { randomBytes } from "crypto";
 import responseManager from "../workflows/response-manager";
 import { getObjectStructure, logObjectStructure } from "../../utils/object-structure";
 import { isValidUnifiedToolResponse } from "@omnii/validators";
-import { neo4jServiceClient } from "../neo4j-client";
+import { productionBrainService } from "../../config/neo4j.config";
 
 // Use Elysia's WebSocket type
 interface ElysiaWebSocket {
@@ -712,7 +712,7 @@ export class WebSocketHandlerService {
     success?: boolean
   ): Promise<void> {
     try {
-      await neo4jServiceClient.storeChatConversation({
+      await productionBrainService.manager.storeChatConversation({
         user_id: userId,
         content: content,
         chat_id: chatId,

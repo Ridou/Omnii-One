@@ -5,17 +5,18 @@
     "outDir": "./dist",
     "declaration": true,
     "declarationMap": true,
-    "module": "esnext",
-    "target": "es2020",
-    "lib": ["es2020"],
+    "module": "ESNext",
+    "target": "ES2022",
+    "lib": ["ES2022"],
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "strictNullChecks": true,
-    "noEmit": false
+    "noEmit": false,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.js"]

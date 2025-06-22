@@ -19,8 +19,8 @@ export class NgrokConfigManager {
 
   constructor() {
     const publicUrl =
-      process.env.PUBLIC_URL || process.env.BASE_URL || "http://localhost:8081";
-    const localPort = parseInt(process.env.PORT || "8081");
+      process.env.PUBLIC_URL || process.env.BASE_URL || "http://localhost:8000";
+    const localPort = parseInt(process.env.PORT || "8000");
 
     this.config = {
       publicUrl: publicUrl.replace(/\/$/, ""), // Remove trailing slash

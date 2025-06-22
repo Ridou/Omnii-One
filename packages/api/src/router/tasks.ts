@@ -729,26 +729,26 @@ class TasksService {
 
       // Aggregate statistics and build complete overview
       const totalTasks = taskListsWithTasks.reduce(
-        (sum, list) => sum + list.taskCount,
+        (sum: number, list: any) => sum + list.taskCount,
         0,
       );
       const totalCompleted = taskListsWithTasks.reduce(
-        (sum, list) => sum + list.completedCount,
+        (sum: number, list: any) => sum + list.completedCount,
         0,
       );
       const totalPending = taskListsWithTasks.reduce(
-        (sum, list) => sum + list.pendingCount,
+        (sum: number, list: any) => sum + list.pendingCount,
         0,
       );
       const totalOverdue = taskListsWithTasks.reduce(
-        (sum, list) => sum + list.overdueCount,
+        (sum: number, list: any) => sum + list.overdueCount,
         0,
       );
 
       // Collect partial failures
       const partialFailures = taskListsWithTasks
-        .filter((list) => !list.fetchSuccess)
-        .map((list) => ({
+        .filter((list: any) => !list.fetchSuccess)
+        .map((list: any) => ({
           listId: list.id,
           listTitle: list.title,
           error: list.fetchError || "Unknown error",

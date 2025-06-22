@@ -12,7 +12,7 @@ import Animated, {
 // ✅ Import real data hooks
 import { useContacts, useContactStats } from '~/hooks/useContacts';
 import { useEmail } from '~/hooks/useEmail';
-import { useNeo4jSimple } from '~/hooks/useNeo4jSimple';
+import { useNeo4jDirect } from '~/hooks/useNeo4jDirect';
 
 // Import RDF Memory Card component
 import { RDFMemoryCard } from './RDFMemoryCard';
@@ -51,22 +51,25 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
     getEmailsWithAttachments 
   } = useEmail(50, "newer_than:30d"); // Get emails from last 30 days
   
-  // ✅ Get Neo4j data using simple hook with hardcoded localhost
+  // ✅ Get Neo4j data using direct hook - bypasses API routes
   const { 
     concepts, 
     searchResults, 
     loading: neo4jLoading, 
     searchLoading,
     currentSearch,
+    totalConcepts,
+    connectionStatus,
     listConcepts, 
-    searchConcepts 
-  } = useNeo4jSimple();
+    searchConcepts,
+    refreshAll
+  } = useNeo4jDirect();
   
   // Fetch concepts when component mounts
   useEffect(() => {
-    listConcepts();
-    searchConcepts('test'); // Also search for 'test' by default
-  }, []);
+    listConcepts(10); // Get first 10 concepts
+    searchConcepts('test', 10); // Also search for 'test' by default
+  }, [listConcepts, searchConcepts]);
 
   return (
     <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
@@ -167,8 +170,8 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
             items={[
               `${concepts.length} concepts listed`,
               `${searchResults.length} results for "${currentSearch}"`,
-              `${concepts.filter(c => c.labels?.includes('Note')).length + searchResults.filter(c => c.labels?.includes('Note')).length} total notes`,
-              neo4jLoading || searchLoading ? 'Loading...' : `Connected to ${getBaseUrl()}`
+              `${totalConcepts} total concepts in database`,
+              connectionStatus.connected ? `✅ Direct Neo4j (${connectionStatus.responseTime}ms)` : '❌ Disconnected'
             ]}
             color="blue"
             data={{ 
@@ -177,12 +180,13 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
               loading: neo4jLoading, 
               searchLoading,
               currentSearch,
-              refetch: listConcepts,
+              totalConcepts,
+              connectionStatus,
+              refetch: refreshAll,
               searchConcepts 
             }}
             onExpand={() => {
-              listConcepts();
-              searchConcepts('test');
+              refreshAll();
             }}
             expandedContent={
               <BrainMemoryDetails 
