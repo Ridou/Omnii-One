@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const Neo4jEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
-  PORT: z.string().default('8002'),
+  PORT: z.string().default('8001'),
   
   // Neo4j connection (supports both Railway template and external AuraDB)
   NEO4J_URI: z.string().min(1, 'Neo4j URI required (neo4j:// or neo4j+s://)'),
@@ -67,7 +67,7 @@ export const validateEnvironment = (): Neo4jEnv => {
     console.error('\n🔧 Required Neo4j environment variables:');
     console.error('   NEO4J_URI (connection string)');
     console.error('   NEO4J_PASSWORD (or DB_PASSWORD for Railway template)');
-    console.error('   PORT (default: 8002)');
+    console.error('   PORT (default: 8001)');
     throw new Error('Invalid Neo4j environment configuration');
   }
 }; 

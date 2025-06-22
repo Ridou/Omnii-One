@@ -35,6 +35,33 @@ const BrainMemoryQuery = t.Object({
   source_identifier: t.String()
 });
 
+const ChatConversationBody = t.Object({
+  user_id: t.String(),
+  content: t.String(),
+  chat_id: t.String(),
+  is_incoming: t.Boolean(),
+  websocket_session_id: t.Optional(t.String()),
+  thread_id: t.Optional(t.String()),
+  is_group_chat: t.Optional(t.Boolean()),
+  participants: t.Optional(t.Array(t.String())),
+  reply_to_message_id: t.Optional(t.String()),
+  message_sequence: t.Optional(t.Number()),
+  google_service_context: t.Optional(t.Object({
+    service_type: t.Optional(t.Union([t.Literal('calendar'), t.Literal('tasks'), t.Literal('contacts'), t.Literal('email')])),
+    operation: t.Optional(t.String()),
+    entity_ids: t.Optional(t.Array(t.String()))
+  }))
+});
+
+const SMSConversationBody = t.Object({
+  user_id: t.String(),
+  content: t.String(),
+  phone_number: t.String(),
+  is_incoming: t.Boolean(),
+  local_datetime: t.Optional(t.String()),
+  google_service_context: t.Optional(t.Any())
+});
+
 const BulkImportBody = t.Object({
   node_urls: t.Optional(t.Array(t.String())),
   relation_urls: t.Optional(t.Array(t.String()))
@@ -373,6 +400,70 @@ export const neo4jRoutes = (app: Elysia) =>
             summary: 'List nodes',
             description: 'List nodes of any type with optional filtering',
             tags: ['Nodes']
+          }
+        }
+      )
+
+      // ✅ CRITICAL: Store chat conversation (enables chat->Neo4j pipeline)
+      .post(
+        '/brain/store-chat',
+        async ({ body, set }) => {
+          try {
+            const result = await neo4jService.storeChatConversation(body);
+            return { data: result };
+          } catch (error) {
+            console.error('[Neo4j] Error storing chat conversation:', error);
+            set.status = 500;
+            return { 
+              error: 'Internal server error',
+              details: error instanceof Error ? error.message : 'Unknown error'
+            };
+          }
+        },
+        {
+          body: ChatConversationBody,
+          response: {
+            200: t.Object({
+              data: t.Any()
+            }),
+            500: ErrorResponse
+          },
+          detail: {
+            summary: 'Store chat conversation',
+            description: 'Store chat conversation as ChatMessage and Memory nodes (enables chat->Neo4j pipeline)',
+            tags: ['Brain Memory', 'Chat']
+          }
+        }
+      )
+
+      // ✅ CRITICAL: Store SMS conversation (enables SMS->Neo4j pipeline)
+      .post(
+        '/brain/store-sms',
+        async ({ body, set }) => {
+          try {
+            const result = await neo4jService.storeSMSConversation(body);
+            return { data: result };
+          } catch (error) {
+            console.error('[Neo4j] Error storing SMS conversation:', error);
+            set.status = 500;
+            return { 
+              error: 'Internal server error',
+              details: error instanceof Error ? error.message : 'Unknown error'
+            };
+          }
+        },
+        {
+          body: SMSConversationBody,
+          response: {
+            200: t.Object({
+              data: t.Any()
+            }),
+            500: ErrorResponse
+          },
+          detail: {
+            summary: 'Store SMS conversation',
+            description: 'Store SMS conversation as ChatMessage and Memory nodes (enables SMS->Neo4j pipeline)',
+            tags: ['Brain Memory', 'SMS']
           }
         }
       )

@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { neo4jService } from '../config/neo4j.config';
+import { neo4jServiceClient } from '../services/neo4j-client';
 
 // Define schemas (simple, no authentication)
 const SearchQuery = t.Object({
@@ -28,7 +28,7 @@ export default (app: Elysia) =>
         '/concepts/search',
         async ({ query, set }) => {
           try {
-            const results = await neo4jService.searchSimilarConcepts(
+            const results = await neo4jServiceClient.searchSimilarConcepts(
               query.user_id,
               query.q,
               query.limit ? Number(query.limit) : 5
@@ -64,7 +64,7 @@ export default (app: Elysia) =>
         '/concepts',
         async ({ query, set }) => {
           try {
-            const concepts = await neo4jService.listNodes(
+            const concepts = await neo4jServiceClient.listNodes(
               query.user_id,
               'Concept',
               query.limit ? Number(query.limit) : 100,

@@ -9,9 +9,6 @@ if (process.env.NODE_ENV !== 'production') {
 
 import './config/axios.config';
 
-// ✅ CRITICAL: Initialize Neo4j driver at startup
-import { getNeo4jDriver } from './config/neo4j.config';
-
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { helmet } from "elysia-helmet";
@@ -41,15 +38,6 @@ console.log("🚀 Available memory:", process.memoryUsage());
 console.log("🚀 RDF_PYTHON_SERVICE_URL:", process.env.RDF_PYTHON_SERVICE_URL || "not set (will use defaults)");
 console.log("🚀 RAILWAY_ENVIRONMENT:", process.env.RAILWAY_ENVIRONMENT || "not set");
 console.log("🚀 ===============================");
-
-// ✅ CRITICAL: Initialize Neo4j driver early in startup
-console.log("🚀 Initializing Neo4j driver...");
-try {
-  getNeo4jDriver();
-  console.log("✅ Neo4j driver initialization triggered");
-} catch (error) {
-  console.error("❌ Neo4j driver initialization failed:", error);
-}
 
 const DEFAULT_PORT = 8000;
 

@@ -43,7 +43,7 @@ async function startServer() {
             { name: 'Railway', description: 'Railway template features' },
           ],
           servers: [
-            { url: 'http://localhost:8002', description: 'Local development' },
+            { url: 'http://localhost:8001', description: 'Local development' },
             { url: 'https://neo4j-service-production.railway.app', description: 'Production (Railway)' },
           ],
         },

@@ -10,7 +10,7 @@ import {
   ExecutionContextType,
 } from "../../types/action-planning.types";
 import { InterventionManager } from "../workflows/intervention-manager";
-import { productionBrainService } from "../../config/neo4j.config";
+import { neo4jServiceClient } from "../neo4j-client";
 import type { BrainMemoryContext } from "../../types/brain-memory-schemas";
 
 export class SimpleSMSAI {
@@ -180,7 +180,7 @@ export class SimpleSMSAI {
     success?: boolean
   ): Promise<void> {
     try {
-      await productionBrainService.manager.storeSMSConversation({
+      await neo4jServiceClient.storeSMSConversation({
         user_id: userId,
         content: content,
         phone_number: phoneNumber,

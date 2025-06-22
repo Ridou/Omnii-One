@@ -3,10 +3,11 @@
  * Communicates with the dedicated Neo4j service
  */
 
-interface Neo4jClientConfig {
-  baseUrl: string;
+import axios, { AxiosInstance } from 'axios';
+
+interface Neo4jServiceConfig {
+  baseURL: string;
   timeout: number;
-  retries: number;
 }
 
 interface NodeData {
@@ -15,10 +16,7 @@ interface NodeData {
   properties: { [key: string]: unknown };
 }
 
-interface SearchResult {
-  id: string;
-  labels: string[];
-  properties: { [key: string]: unknown };
+interface SearchResult extends NodeData {
   score?: number;
 }
 
@@ -70,80 +68,75 @@ interface BrainMemoryContext {
   };
 }
 
-export class Neo4jClient {
-  private config: Neo4jClientConfig;
+export class Neo4jServiceClient {
+  private client: AxiosInstance;
+  private config: Neo4jServiceConfig;
 
   constructor() {
+    // Railway internal networking - services can communicate via service names
+    const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID;
+    
     this.config = {
-      baseUrl: this.getServiceUrl(),
-      timeout: 5000, // 5 seconds
-      retries: 3
+      // Use Railway internal service name when in Railway, localhost for local dev
+      baseURL: isRailway 
+        ? 'http://omnii-neo4j.railway.internal:8001/api'  // Railway internal networking
+        : 'http://localhost:8001/api',                    // Local development
+      timeout: 10000 // 10 second timeout for internal calls
     };
-  }
 
-  private getServiceUrl(): string {
-    // Check if we're in Railway environment
-    if (process.env.RAILWAY_ENVIRONMENT) {
-      // Railway internal service URL (will be set when deployed)
-      return process.env.NEO4J_SERVICE_URL || 'http://neo4j-service:8002';
-    }
-    
-    // Local development
-    return process.env.NEO4J_SERVICE_URL || 'http://localhost:8002';
-  }
-
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.config.baseUrl}${endpoint}`;
-    
-    let lastError: Error | null = null;
-    
-    for (let i = 0; i < this.config.retries; i++) {
-      try {
-        const response = await fetch(url, {
-          ...options,
-          headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-          },
-          signal: AbortSignal.timeout(this.config.timeout),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json() as T;
-        return data;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Unknown error');
-        console.warn(`[Neo4jClient] Attempt ${i + 1} failed:`, lastError.message);
-        
-        if (i < this.config.retries - 1) {
-          // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
-        }
+    this.client = axios.create({
+      baseURL: this.config.baseURL,
+      timeout: this.config.timeout,
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'omnii-mcp/1.0'
       }
-    }
+    });
 
-    console.error(`[Neo4jClient] All ${this.config.retries} attempts failed for ${endpoint}:`, lastError?.message);
-    throw lastError || new Error('Neo4j service unavailable');
+    // Request/Response interceptors for debugging
+    this.client.interceptors.request.use(
+      (config) => {
+        const env = isRailway ? '[RAILWAY-INTERNAL]' : '[LOCAL]';
+        console.log(`${env} [Neo4j-Client] → ${config.method?.toUpperCase()} ${config.url}`);
+        return config;
+      },
+      (error) => {
+        console.error('[Neo4j-Client] Request error:', error);
+        return Promise.reject(error);
+      }
+    );
+
+    this.client.interceptors.response.use(
+      (response) => {
+        const env = isRailway ? '[RAILWAY-INTERNAL]' : '[LOCAL]';
+        console.log(`${env} [Neo4j-Client] ← ${response.status} ${response.config.url} (${response.data?.data?.length || 0} items)`);
+        return response;
+      },
+      (error) => {
+        const env = isRailway ? '[RAILWAY-INTERNAL]' : '[LOCAL]';
+        console.error(`${env} [Neo4j-Client] ← ERROR ${error.response?.status || 'NO_RESPONSE'} ${error.config?.url}:`, error.response?.data || error.message);
+        return Promise.reject(error);
+      }
+    );
+
+    console.log(`🔗 [Neo4j-Client] Initialized with baseURL: ${this.config.baseURL}`);
   }
 
   /**
-   * Health check for the Neo4j service
+   * Health check for the Neo4j microservice
    */
   async healthCheck(): Promise<HealthCheck> {
     try {
-      const response = await this.request<HealthCheck>('/api/health');
-      return response;
+      const response = await this.client.get('/health');
+      return response.data;
     } catch (error) {
-      console.error('[Neo4jClient] Health check failed:', error);
+      console.error('[Neo4j-Client] Health check failed:', error);
       return {
         status: 'unhealthy',
         neo4j: false,
-        connection_type: 'unavailable',
+        connection_type: 'microservice-unreachable',
         metrics: {
-          error: error instanceof Error ? error.message : 'Service unavailable',
+          error: error instanceof Error ? error.message : 'Unknown error',
           timestamp: new Date().toISOString()
         }
       };
@@ -151,200 +144,155 @@ export class Neo4jClient {
   }
 
   /**
+   * List nodes of a specific type
+   */
+  async listNodes(userId: string, nodeType: string = 'Concept', limit: number = 100, filter?: string): Promise<NodeData[]> {
+    try {
+      const params: any = { user_id: userId, limit };
+      if (filter) params.filter = filter;
+      if (nodeType !== 'Concept') params.type = nodeType;
+
+      const response = await this.client.get('/concepts', { params });
+      return response.data.data || [];
+    } catch (error) {
+      console.error('[Neo4j-Client] listNodes failed:', error);
+      return [];
+    }
+  }
+
+  /**
    * Search for similar concepts
    */
-  async searchSimilarConcepts(userId: string, text: string, limit = 5): Promise<SearchResult[]> {
+  async searchSimilarConcepts(userId: string, text: string, limit: number = 5): Promise<SearchResult[]> {
     try {
-      const params = new URLSearchParams({
-        user_id: userId,
-        q: text,
-        limit: limit.toString()
+      const response = await this.client.get('/concepts/search', {
+        params: { user_id: userId, q: text, limit }
       });
-
-      const response = await this.request<{ data: SearchResult[] }>(`/api/concepts/search?${params}`);
-      return response.data || [];
+      return response.data.data || [];
     } catch (error) {
-      console.error('[Neo4jClient] Search concepts failed:', error);
+      console.error('[Neo4j-Client] searchSimilarConcepts failed:', error);
       return [];
     }
   }
 
   /**
-   * List concepts for a user
+   * Get context for AI queries
    */
-  async listNodes(userId: string, nodeType = 'Concept', limit = 100, filter?: string): Promise<NodeData[]> {
+  async getContextForQuery(userId: string, query: string, limit: number = 5): Promise<ContextData> {
     try {
-      const params = new URLSearchParams({
-        user_id: userId,
-        type: nodeType,
-        limit: limit.toString(),
-        ...(filter && { filter })
+      const response = await this.client.get('/context', {
+        params: { user_id: userId, query, limit }
       });
-
-      const response = await this.request<{ data: NodeData[] }>(`/api/nodes?${params}`);
-      return response.data || [];
+      return response.data.data || { nodes: [], relationships: [] };
     } catch (error) {
-      console.error('[Neo4jClient] List nodes failed:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get AI context for a query
-   */
-  async getContextForQuery(userId: string, query: string, limit = 5): Promise<ContextData> {
-    try {
-      const params = new URLSearchParams({
-        user_id: userId,
-        query: query,
-        limit: limit.toString()
-      });
-
-      const response = await this.request<{ data: ContextData }>(`/api/context?${params}`);
-      return response.data || { nodes: [], relationships: [] };
-    } catch (error) {
-      console.error('[Neo4jClient] Get context failed:', error);
+      console.error('[Neo4j-Client] getContextForQuery failed:', error);
       return { nodes: [], relationships: [] };
-    }
-  }
-
-  /**
-   * Get context for a specific node
-   */
-  async getNodeContext(nodeId: string, userId: string): Promise<ContextData> {
-    try {
-      const params = new URLSearchParams({
-        user_id: userId
-      });
-
-      const response = await this.request<{ data: ContextData }>(`/api/nodes/${nodeId}/context?${params}`);
-      return response.data || { nodes: [], relationships: [] };
-    } catch (error) {
-      console.error('[Neo4jClient] Get node context failed:', error);
-      return { nodes: [], relationships: [] };
-    }
-  }
-
-  /**
-   * Get brain memory context
-   */
-  async getBrainMemoryContext(
-    userId: string, 
-    message: string, 
-    channel: 'sms' | 'chat', 
-    sourceIdentifier: string
-  ): Promise<BrainMemoryContext> {
-    try {
-      const params = new URLSearchParams({
-        user_id: userId,
-        message: message,
-        channel: channel,
-        source_identifier: sourceIdentifier
-      });
-
-      const response = await this.request<{ data: BrainMemoryContext }>(`/api/brain/memory-context?${params}`);
-      return response.data || this.getEmptyBrainContext();
-    } catch (error) {
-      console.error('[Neo4jClient] Get brain memory context failed:', error);
-      return this.getEmptyBrainContext();
     }
   }
 
   /**
    * Get concepts for context (backward compatibility)
    */
-  async getConceptsForContext(userId: string, query: string, limit = 3): Promise<{concepts: NodeData[], relationships: any[]}> {
+  async getConceptsForContext(userId: string, query: string, limit: number = 3): Promise<{concepts: NodeData[], relationships: any[]}> {
     try {
-      const params = new URLSearchParams({
-        user_id: userId,
-        query: query,
-        limit: limit.toString()
+      const response = await this.client.get('/concepts/context', {
+        params: { user_id: userId, query, limit }
       });
-
-      const response = await this.request<{ data: {concepts: NodeData[], relationships: any[]} }>(`/api/concepts/context?${params}`);
-      return response.data || { concepts: [], relationships: [] };
+      return response.data.data || { concepts: [], relationships: [] };
     } catch (error) {
-      console.error('[Neo4jClient] Get concepts for context failed:', error);
+      console.error('[Neo4j-Client] getConceptsForContext failed:', error);
       return { concepts: [], relationships: [] };
     }
   }
 
   /**
-   * Bulk import from CSV (Railway template feature)
+   * Get brain memory context
    */
-  async bulkImportFromCSV(nodeUrls?: string[], relationUrls?: string[]): Promise<{imported: number, errors: string[]}> {
+  async getBrainMemoryContext(userId: string, message: string, channel: 'sms' | 'chat', sourceIdentifier: string): Promise<BrainMemoryContext> {
     try {
-      const response = await this.request<{ data: {imported: number, errors: string[]} }>('/api/bulk-import', {
-        method: 'POST',
-        body: JSON.stringify({
-          node_urls: nodeUrls,
-          relation_urls: relationUrls
-        })
+      const response = await this.client.get('/brain/memory-context', {
+        params: { user_id: userId, message, channel, source_identifier: sourceIdentifier }
       });
-
-      return response.data || { imported: 0, errors: ['No response data'] };
+      return response.data.data;
     } catch (error) {
-      console.error('[Neo4jClient] Bulk import failed:', error);
-      return { 
-        imported: 0, 
-        errors: [error instanceof Error ? error.message : 'Import failed'] 
+      console.error('[Neo4j-Client] getBrainMemoryContext failed:', error);
+      // Return empty context structure on failure
+      return {
+        consolidation_metadata: {
+          memory_strength: 0,
+          consolidation_score: 0,
+          last_consolidation: new Date().toISOString()
+        },
+        working_memory: {
+          recent_messages: [],
+          time_window_stats: {
+            previous_week_count: 0,
+            current_week_count: 0,
+            next_week_count: 0,
+            recently_modified_count: 0
+          }
+        },
+        episodic_memory: {
+          conversation_threads: [],
+          recent_interactions: []
+        },
+        semantic_memory: {
+          activated_concepts: [],
+          concept_relationships: []
+        }
       };
     }
   }
 
   /**
-   * Check if the Neo4j service is available
+   * Store chat conversation (CRITICAL: enables chat->Neo4j pipeline)
    */
-  async isAvailable(): Promise<boolean> {
+  async storeChatConversation(data: {
+    user_id: string;
+    content: string;
+    chat_id: string;
+    is_incoming: boolean;
+    websocket_session_id?: string;
+    thread_id?: string;
+    is_group_chat?: boolean;
+    participants?: string[];
+    reply_to_message_id?: string;
+    message_sequence?: number;
+    google_service_context?: {
+      service_type?: 'calendar' | 'tasks' | 'contacts' | 'email';
+      operation?: string;
+      entity_ids?: string[];
+    };
+  }): Promise<any> {
     try {
-      const health = await this.healthCheck();
-      return health.status === 'healthy' && health.neo4j;
+      const response = await this.client.post('/brain/store-chat', data);
+      return response.data.data;
     } catch (error) {
-      return false;
+      console.error('[Neo4j-Client] storeChatConversation failed:', error);
+      throw error;
     }
   }
 
   /**
-   * Get service configuration info
+   * Store SMS conversation (CRITICAL: enables SMS->Neo4j pipeline)
    */
-  getConfig(): Neo4jClientConfig {
-    return { ...this.config };
-  }
-
-  /**
-   * Update service URL (useful for testing)
-   */
-  setServiceUrl(url: string): void {
-    this.config.baseUrl = url;
-  }
-
-  private getEmptyBrainContext(): BrainMemoryContext {
-    return {
-      consolidation_metadata: {
-        memory_strength: 0,
-        consolidation_score: 0,
-        last_consolidation: new Date().toISOString()
-      },
-      working_memory: {
-        recent_messages: [],
-        time_window_stats: {
-          previous_week_count: 0,
-          current_week_count: 0,
-          next_week_count: 0,
-          recently_modified_count: 0
-        }
-      },
-      episodic_memory: {
-        conversation_threads: [],
-        recent_interactions: []
-      },
-      semantic_memory: {
-        activated_concepts: [],
-        concept_relationships: []
-      }
-    };
+  async storeSMSConversation(data: {
+    user_id: string;
+    content: string;
+    phone_number: string;
+    is_incoming: boolean;
+    local_datetime?: string;
+    google_service_context?: any;
+  }): Promise<any> {
+    try {
+      const response = await this.client.post('/brain/store-sms', data);
+      return response.data.data;
+    } catch (error) {
+      console.error('[Neo4j-Client] storeSMSConversation failed:', error);
+      throw error;
+    }
   }
 }
 
 // Export singleton instance
-export const neo4jClient = new Neo4jClient(); 
+export const neo4jServiceClient = new Neo4jServiceClient(); 

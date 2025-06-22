@@ -2,6 +2,7 @@ import { createSession } from '../config/neo4j.config';
 import type { NodeData, NodeType, ContextData, SearchResult, HealthCheck, BrainMemoryContext, BulkImportResult } from '../types/neo4j.types';
 import type { Record as Neo4jRecord } from 'neo4j-driver';
 import neo4j from 'neo4j-driver';
+import { v4 as uuidv4 } from 'uuid';
 
 export class Neo4jService {
   private getSession() {
@@ -389,6 +390,182 @@ export class Neo4jService {
       }
 
       return { imported, errors };
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Store chat conversation - creates ChatMessage and Memory nodes
+   * This is the critical method that enables chat->Neo4j pipeline
+   */
+  async storeChatConversation(data: {
+    user_id: string;
+    content: string;
+    chat_id: string;
+    is_incoming: boolean;
+    websocket_session_id?: string;
+    thread_id?: string;
+    is_group_chat?: boolean;
+    participants?: string[];
+    reply_to_message_id?: string;
+    message_sequence?: number;
+    google_service_context?: {
+      service_type?: 'calendar' | 'tasks' | 'contacts' | 'email';
+      operation?: string;
+      entity_ids?: string[];
+    };
+  }): Promise<any> {
+    console.log(`[Neo4j-BrainMemory] 💬 Storing chat conversation for user: ${data.user_id}`);
+    
+    const session = this.getSession();
+    
+    try {
+      const messageId = uuidv4();
+      
+      // Store ChatMessage and Memory nodes following Neo4j best practices
+      const result = await session.run(`
+        // Create ChatMessage node
+        CREATE (msg:ChatMessage {
+          id: $id,
+          content: $content,
+          timestamp: datetime($timestamp),
+          user_id: $user_id,
+          channel: 'chat',
+          source_identifier: $chat_id,
+          chat_metadata: $chat_metadata
+        })
+        
+        // Link to User (ensure User exists)
+        WITH msg
+        MERGE (user:User {id: $user_id})
+        MERGE (user)-[:OWNS]->(msg)
+        
+        // Create Memory node for episodic memory
+        CREATE (memory:Memory {
+          id: $memory_id,
+          timestamp: datetime($timestamp),
+          user_id: $user_id,
+          memory_type: 'episodic',
+          consolidation_status: 'fresh',
+          episode_type: 'conversation',
+          channel: 'chat',
+          original_message_id: $id
+        })
+        
+        // Create relationship
+        CREATE (msg)-[:HAS_MEMORY]->(memory)
+        
+        RETURN msg, memory
+      `, {
+        id: messageId,
+        content: data.content,
+        timestamp: new Date().toISOString(),
+        user_id: data.user_id,
+        chat_id: data.chat_id,
+        chat_metadata: JSON.stringify({
+          chat_id: data.chat_id,
+          websocket_session_id: data.websocket_session_id,
+          is_group_chat: data.is_group_chat || false,
+          participants: data.participants || []
+        }),
+        memory_id: uuidv4()
+      });
+
+      console.log(`[Neo4j-BrainMemory] ✅ Stored chat conversation: ${messageId}`);
+      
+      return {
+        id: messageId,
+        user_id: data.user_id,
+        content: data.content,
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      console.error(`[Neo4j-BrainMemory] ❌ Failed to store chat conversation:`, error);
+      throw error;
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Store SMS conversation - creates ChatMessage and Memory nodes
+   */
+  async storeSMSConversation(data: {
+    user_id: string;
+    content: string;
+    phone_number: string;
+    is_incoming: boolean;
+    local_datetime?: string;
+    google_service_context?: any;
+  }): Promise<any> {
+    console.log(`[Neo4j-BrainMemory] 💾 Storing SMS conversation for user: ${data.user_id}`);
+    
+    const session = this.getSession();
+    
+    try {
+      const messageId = uuidv4();
+      
+      const result = await session.run(`
+        // Create ChatMessage node for SMS
+        CREATE (msg:ChatMessage {
+          id: $id,
+          content: $content,
+          timestamp: datetime($timestamp),
+          user_id: $user_id,
+          channel: 'sms',
+          source_identifier: $phone_number,
+          sms_metadata: $sms_metadata
+        })
+        
+        // Link to User (ensure User exists)
+        WITH msg
+        MERGE (user:User {id: $user_id})
+        MERGE (user)-[:OWNS]->(msg)
+        
+        // Create Memory node
+        CREATE (memory:Memory {
+          id: $memory_id,
+          timestamp: datetime($timestamp),
+          user_id: $user_id,
+          memory_type: 'episodic',
+          consolidation_status: 'fresh',
+          episode_type: 'conversation',
+          channel: 'sms',
+          original_message_id: $id
+        })
+        
+        // Create relationship
+        CREATE (msg)-[:HAS_MEMORY]->(memory)
+        
+        RETURN msg, memory
+      `, {
+        id: messageId,
+        content: data.content,
+        timestamp: new Date().toISOString(),
+        user_id: data.user_id,
+        phone_number: data.phone_number,
+        sms_metadata: JSON.stringify({
+          phone_number: data.phone_number,
+          is_incoming: data.is_incoming,
+          local_datetime: data.local_datetime
+        }),
+        memory_id: uuidv4()
+      });
+
+      console.log(`[Neo4j-BrainMemory] ✅ Stored SMS conversation: ${messageId}`);
+      
+      return {
+        id: messageId,
+        user_id: data.user_id,
+        content: data.content,
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      console.error(`[Neo4j-BrainMemory] ❌ Failed to store SMS conversation:`, error);
+      throw error;
     } finally {
       await session.close();
     }
