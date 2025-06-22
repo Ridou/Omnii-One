@@ -103,7 +103,11 @@ export const initializeNeo4j = async (): Promise<void> => {
     console.log('✅ Neo4j driver initialized successfully!');
   } catch (error) {
     console.error('❌ Neo4j driver initialization failed:', error);
-    throw error;
+    console.warn('⚠️  Service will continue in degraded mode (no Neo4j functionality)');
+    // DON'T THROW - Let the service start without Neo4j
+    // This prevents 502 errors when Neo4j is unreachable
+    driverInstance = null;
+    isConnected = false;
   }
 };
 
