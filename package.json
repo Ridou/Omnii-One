@@ -8,7 +8,7 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "build": "turbo run build",
-    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && git clean -xdf -e .env -e '*.env' -e '.env.*'",
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'bun.lock' -type f -delete && rm -f pnpm-lock.yaml && git clean -xdf -e .env -e '*.env' -e '.env.*'",
     "clean:workspaces": "turbo run clean",
     "auth:generate": "npm run --workspace=@omnii/auth generate",
     "db:push": "turbo -F @omnii/db push",
@@ -21,7 +21,7 @@
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "lint:ws": "npx sherif@latest",
-    "postinstall": "npm run lint:ws",
+    "postinstall": "npm run lint:ws && cd apps/omnii-neo4j && bun install",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",
     "android": "expo run:android",
