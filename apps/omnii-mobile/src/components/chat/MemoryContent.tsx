@@ -12,7 +12,7 @@ import Animated, {
 // ✅ Import real data hooks
 import { useContacts, useContactStats } from '~/hooks/useContacts';
 import { useEmail } from '~/hooks/useEmail';
-import { useNeo4jDirectClient } from '~/hooks/useNeo4jDirectClient';
+import { useNeo4jCachedClient } from '~/hooks/useNeo4jCachedClient';
 
 // Import RDF Memory Card component
 import { RDFMemoryCard } from './RDFMemoryCard';
@@ -49,35 +49,38 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
     getEmailsWithAttachments 
   } = useEmail(50, "newer_than:30d"); // Get emails from last 30 days
   
-  // ✅ Get Neo4j data using direct client - bypasses server completely
+  // ✅ Get Neo4j data using brain memory cache - optimized with Supabase caching
   const { 
     concepts, 
     searchResults, 
     loading: neo4jLoading, 
     searchLoading,
     totalConcepts,
-    connectionStatus,
+    isConnected,
+    memorySystemStatus,
     listConcepts, 
     searchConcepts,
-    refreshAll
-  } = useNeo4jDirectClient();
+    forceRefresh,
+    cache,
+    directNeo4j
+  } = useNeo4jCachedClient('current_week');
   
   // Local state for current search
   const [currentSearch, setCurrentSearch] = useState('test');
   
   // Fetch concepts when component mounts (only once when connected)
   useEffect(() => {
-    if (connectionStatus.connected && concepts.length === 0) {
+    if (isConnected && concepts.length === 0) {
       listConcepts(10); // Get first 10 concepts
     }
-  }, [connectionStatus.connected]); // Only when connection status changes
+  }, [isConnected]); // Only when connection status changes
   
   // Search when search term changes (only once when connected)
   useEffect(() => {
-    if (connectionStatus.connected && currentSearch && searchResults.length === 0) {
+    if (isConnected && currentSearch && searchResults.length === 0) {
       searchConcepts(currentSearch, 10);
     }
-  }, [connectionStatus.connected, currentSearch]); // Only when connection or search term changes
+  }, [isConnected, currentSearch]); // Only when connection or search term changes
 
   return (
     <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
@@ -126,7 +129,7 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
                     }, {} as Record<string, number>);
                     const entries = Object.entries(counts);
                     const peakDay = entries.length > 0 
-                      ? entries.sort(([,a], [,b]) => b - a)[0]?.[0] || 'Monday'
+                      ? entries.sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0] || 'Monday'
                       : 'Monday';
                     return `Peak day: ${peakDay}`;
                   })()
@@ -179,7 +182,7 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
               `${concepts.length} concepts listed`,
               `${searchResults.length} results for "${currentSearch}"`,
               `${totalConcepts} total concepts in database`,
-              connectionStatus.connected ? `✅ Direct Neo4j (${connectionStatus.responseTime}ms)` : '❌ Disconnected'
+              isConnected ? `✅ Brain Memory (${memorySystemStatus.neo4j.responseTime}ms)` : '❌ Disconnected'
             ]}
             color="blue"
             data={{ 
@@ -189,12 +192,13 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
               searchLoading,
               currentSearch,
               totalConcepts,
-              connectionStatus,
-              refetch: refreshAll,
+              memorySystemStatus,
+              cache,
+              refetch: forceRefresh,
               searchConcepts 
             }}
             onExpand={() => {
-              refreshAll();
+              forceRefresh();
             }}
             expandedContent={
               <BrainMemoryDetails 
