@@ -1,11 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '~/context/AuthContext';
-import { env } from '~/lib/env';
+import { getBaseUrl } from '~/utils/base-url';
 import { supabase } from '~/lib/supabase';
 
 // Direct Neo4j API constants - bypasses existing routes
-// TEMPORARY: Use localhost for testing direct Neo4j connection
-const API_BASE_URL = 'http://localhost:8000'; // env.app.backendBaseUrl;
+const API_BASE_URL = getBaseUrl(); // Use proper base URL logic for production/local
 const NEO4J_DIRECT_URL = `${API_BASE_URL}/api/neo4j-direct`;
 
 // Enhanced interface for direct Neo4j concepts

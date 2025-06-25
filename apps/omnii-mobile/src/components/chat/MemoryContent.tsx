@@ -12,12 +12,10 @@ import Animated, {
 // ✅ Import real data hooks
 import { useContacts, useContactStats } from '~/hooks/useContacts';
 import { useEmail } from '~/hooks/useEmail';
-import { useNeo4jDirect } from '~/hooks/useNeo4jDirect';
+import { useNeo4jDirectClient } from '~/hooks/useNeo4jDirectClient';
 
 // Import RDF Memory Card component
 import { RDFMemoryCard } from './RDFMemoryCard';
-import { api } from '../../utils/api';
-import { getBaseUrl } from '../../utils/base-url';
 
 interface MemoryContentProps {
   tasksOverview: any;
@@ -51,25 +49,35 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
     getEmailsWithAttachments 
   } = useEmail(50, "newer_than:30d"); // Get emails from last 30 days
   
-  // ✅ Get Neo4j data using direct hook - bypasses API routes
+  // ✅ Get Neo4j data using direct client - bypasses server completely
   const { 
     concepts, 
     searchResults, 
     loading: neo4jLoading, 
     searchLoading,
-    currentSearch,
     totalConcepts,
     connectionStatus,
     listConcepts, 
     searchConcepts,
     refreshAll
-  } = useNeo4jDirect();
+  } = useNeo4jDirectClient();
   
-  // Fetch concepts when component mounts
+  // Local state for current search
+  const [currentSearch, setCurrentSearch] = useState('test');
+  
+  // Fetch concepts when component mounts (only once when connected)
   useEffect(() => {
-    listConcepts(10); // Get first 10 concepts
-    searchConcepts('test', 10); // Also search for 'test' by default
-  }, [listConcepts, searchConcepts]);
+    if (connectionStatus.connected && concepts.length === 0) {
+      listConcepts(10); // Get first 10 concepts
+    }
+  }, [connectionStatus.connected]); // Only when connection status changes
+  
+  // Search when search term changes (only once when connected)
+  useEffect(() => {
+    if (connectionStatus.connected && currentSearch && searchResults.length === 0) {
+      searchConcepts(currentSearch, 10);
+    }
+  }, [connectionStatus.connected, currentSearch]); // Only when connection or search term changes
 
   return (
     <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
