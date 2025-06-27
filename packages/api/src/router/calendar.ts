@@ -227,17 +227,17 @@ const calendarService = new CalendarService();
 
 export const calendarRouter = {
   getEvents: publicProcedure
-    .query(async ({ ctx }): Promise<CalendarResponse<EventsListResponse>> => {
+    .query(async ({ ctx }) => {
       try {
         // Get user ID from headers (mobile app compatibility)
-        const authHeader = ctx.authApi?.headers?.get?.('authorization') || '';
-        const userIdHeader = ctx.authApi?.headers?.get?.('x-user-id') || '';
+        const authHeader = ctx.headers?.get?.('authorization') || '';
+        const userIdHeader = ctx.headers?.get?.('x-user-id') || '';
         
         // Try session first, fallback to headers, then test user
         const userId = ctx.session?.user?.id || 
                       userIdHeader || 
                       'cd9bdc60-35af-4bb6-b87e-1932e96fb354'; // Test user fallback
-        
+
         console.log(`[CalendarRouter] Getting events for user: ${userId} (source: ${
           ctx.session?.user?.id ? 'session' : userIdHeader ? 'header' : 'fallback'
         })`);

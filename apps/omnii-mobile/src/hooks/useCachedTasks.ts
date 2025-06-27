@@ -95,55 +95,116 @@ export const useCachedTasks = () => {
         }
       }
 
-      // Step 2: Cache miss - fetch from tRPC/Google Tasks API
-      console.log('[CachedTasks] 📭 Cache miss - fetching from Google Tasks API...');
-      const tRPCResult = await tRPCRefetch();
+      // Step 2: Cache miss - try to fetch from Google Tasks API (graceful failure)
+      console.log('[CachedTasks] 📭 Cache miss - attempting to fetch from Google Tasks API...');
       
-      if (tRPCResult.error) {
-        console.error('[CachedTasks] ❌ tRPC Error:', tRPCResult.error);
-        throw new Error(`Google Tasks API Authentication Error: ${tRPCResult.error.message}`);
+      try {
+        const tRPCResult = await tRPCRefetch();
+        
+        if (tRPCResult.error) {
+          console.log('[CachedTasks] ⚠️ Google Tasks API not available - returning empty data');
+          // Return empty data structure instead of throwing error
+          const emptyData: CompleteTaskOverview = {
+            taskLists: [],
+            totalLists: 0,
+            totalTasks: 0,
+            totalCompleted: 0,
+            totalPending: 0,
+            totalOverdue: 0,
+            lastSyncTime: new Date().toISOString(),
+            syncSuccess: false,
+          };
+          
+          setTasksOverview(emptyData);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          return emptyData;
+        }
+
+        let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
+        
+        if (!freshData) {
+          console.log('[CachedTasks] ⚠️ No Google Tasks data available - returning empty data');
+          // Return empty data structure instead of throwing error
+          const emptyData: CompleteTaskOverview = {
+            taskLists: [],
+            totalLists: 0,
+            totalTasks: 0,
+            totalCompleted: 0,
+            totalPending: 0,
+            totalOverdue: 0,
+            lastSyncTime: new Date().toISOString(),
+            syncSuccess: false,
+          };
+          
+          setTasksOverview(emptyData);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          return emptyData;
+        }
+
+        // Step 3: Store in brain memory cache for future requests
+        const cacheData = {
+          taskLists: freshData.taskLists || [],
+          totalLists: freshData.totalLists || 0,
+          totalTasks: freshData.totalTasks || 0,
+          totalCompleted: freshData.totalCompleted || 0,
+          totalPending: freshData.totalPending || 0,
+          totalOverdue: freshData.totalOverdue || 0,
+          lastSyncTime: freshData.lastSyncTime || new Date().toISOString(),
+          syncSuccess: freshData.syncSuccess || true,
+          lastSynced: new Date().toISOString(),
+          cacheVersion: 1,
+          dataType: 'google_tasks' as const,
+        };
+
+        await setCachedData(cacheData);
+
+        setTasksOverview(freshData as CompleteTaskOverview);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
+        
+        console.log(`[CachedTasks] ✅ Fresh data cached: ${freshData.totalTasks} tasks in ${Date.now() - startTime}ms`);
+        return freshData;
+
+      } catch (authError) {
+        console.log('[CachedTasks] ⚠️ Authentication required for Google Tasks - returning empty data');
+        // Return empty data structure when authentication fails
+        const emptyData: CompleteTaskOverview = {
+          taskLists: [],
+          totalLists: 0,
+          totalTasks: 0,
+          totalCompleted: 0,
+          totalPending: 0,
+          totalOverdue: 0,
+          lastSyncTime: new Date().toISOString(),
+          syncSuccess: false,
+        };
+        
+        setTasksOverview(emptyData);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
+        return emptyData;
       }
-
-      let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
-      
-      if (!freshData) {
-        console.error('[CachedTasks] ❌ Google Tasks API Authentication Failed');
-        console.error('  - Check Google OAuth configuration'); 
-        console.error('  - Verify Tasks API scopes are enabled');
-        console.error('  - Ensure user is properly authenticated');
-        throw new Error('Google Tasks API Authentication Failed - user must re-authenticate with Google');
-      }
-
-      // Step 3: Store in brain memory cache for future requests
-      const cacheData = {
-        taskLists: freshData.taskLists || [],
-        totalLists: freshData.totalLists || 0,
-        totalTasks: freshData.totalTasks || 0,
-        totalCompleted: freshData.totalCompleted || 0,
-        totalPending: freshData.totalPending || 0,
-        totalOverdue: freshData.totalOverdue || 0,
-        lastSyncTime: freshData.lastSyncTime || new Date().toISOString(),
-        syncSuccess: freshData.syncSuccess || true,
-        lastSynced: new Date().toISOString(),
-        cacheVersion: 1,
-        dataType: 'google_tasks' as const,
-      };
-
-      await setCachedData(cacheData);
-
-      setTasksOverview(freshData as CompleteTaskOverview);
-      setLastFetchTime(Date.now());
-      setIsLoading(false);
-      
-      console.log(`[CachedTasks] ✅ Fresh data cached: ${freshData.totalTasks} tasks in ${Date.now() - startTime}ms`);
-      return freshData;
 
     } catch (error) {
-      console.error('[CachedTasks] ❌ Error fetching tasks:', error);
+      console.log('[CachedTasks] ⚠️ Unexpected error - returning empty data');
+      const emptyData: CompleteTaskOverview = {
+        taskLists: [],
+        totalLists: 0,
+        totalTasks: 0,
+        totalCompleted: 0,
+        totalPending: 0,
+        totalOverdue: 0,
+        lastSyncTime: new Date().toISOString(),
+        syncSuccess: false,
+      };
+      
+      setTasksOverview(emptyData);
       setHasError(true);
       setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
       setIsLoading(false);
-      return null;
+      return emptyData;
     } finally {
       initializingRef.current = false;
     }

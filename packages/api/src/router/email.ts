@@ -91,8 +91,8 @@ class EmailOAuthManager implements IOAuthTokenManager {
       // Simple token expiry check
       const shouldRefresh = this.shouldRefreshToken(currentToken.expires_at);
 
-      // TEMPORARY: Skip refresh since tokens are valid until 2026 and we lack Google OAuth credentials
-      if (false && shouldRefresh && currentToken.refresh_token) {
+      // Token refresh enabled - this was previously disabled but tokens do expire
+      if (shouldRefresh && currentToken.refresh_token) {
         console.log("[EmailOAuthManager] Token needs refresh, refreshing...");
         const refreshedTokenData = await this.refreshToken(currentToken.refresh_token);
         await this.updateToken(userId, refreshedTokenData.access_token, refreshedTokenData.refresh_token ?? currentToken.refresh_token, refreshedTokenData.expires_in);
@@ -426,8 +426,8 @@ export const emailRouter = {
     .query(async ({ ctx }): Promise<GmailResponse<EmailsListResponse>> => {
       try {
         // Get user ID from headers (mobile app compatibility)
-        const authHeader = ctx.authApi?.headers?.get?.('authorization') || '';
-        const userIdHeader = ctx.authApi?.headers?.get?.('x-user-id') || '';
+        const authHeader = ctx.headers?.get?.('authorization') || '';
+        const userIdHeader = ctx.headers?.get?.('x-user-id') || '';
         
         // Try session first, fallback to headers, then test user
         const userId = ctx.session?.user?.id || 

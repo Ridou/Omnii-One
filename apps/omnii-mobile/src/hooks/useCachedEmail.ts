@@ -97,59 +97,100 @@ export const useCachedEmail = (maxResults: number = 20, query: string = "newer_t
         }
       }
 
-      // Step 2: Cache miss - fetch from tRPC/Gmail API
-      console.log('[CachedEmail] 📭 Cache miss - fetching from Gmail API...');
-      const tRPCResult = await tRPCRefetch();
+      // Step 2: Cache miss - try to fetch from Gmail API (graceful failure)
+      console.log('[CachedEmail] 📭 Cache miss - attempting to fetch from Gmail API...');
       
-      console.log('[CachedEmail] 🔍 tRPC Response Debug:', {
-        hasError: !!tRPCResult.error,
-        errorMessage: tRPCResult.error?.message,
-        hasData: !!tRPCResult.data,
-        dataStructure: tRPCResult.data ? Object.keys(tRPCResult.data) : null,
-        success: tRPCResult.data?.success,
-        actualData: tRPCResult.data?.data ? 'present' : 'missing'
-      });
-      
-      if (tRPCResult.error) {
-        console.error('[CachedEmail] ❌ tRPC Error:', tRPCResult.error);
-        throw new Error(`Gmail API Authentication Error: ${tRPCResult.error.message}`);
+      try {
+        const tRPCResult = await tRPCRefetch();
+        
+        console.log('[CachedEmail] 🔍 tRPC Response Debug:', {
+          hasError: !!tRPCResult.error,
+          errorMessage: tRPCResult.error?.message,
+          hasData: !!tRPCResult.data,
+          dataStructure: tRPCResult.data ? Object.keys(tRPCResult.data) : null,
+          success: tRPCResult.data?.success,
+          actualData: tRPCResult.data?.data ? 'present' : 'missing'
+        });
+        
+        if (tRPCResult.error) {
+          console.log('[CachedEmail] ⚠️ Gmail API not available - returning empty data');
+          // Return empty data structure instead of throwing error
+          const emptyData: EmailsListResponse = {
+            emails: [],
+            totalCount: 0,
+            unreadCount: 0,
+          };
+          
+          setEmailsData(emptyData);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          return emptyData;
+        }
+
+        let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
+        
+        if (!freshData) {
+          console.log('[CachedEmail] ⚠️ No Gmail data available - returning empty data');
+          // Return empty data structure instead of throwing error
+          const emptyData: EmailsListResponse = {
+            emails: [],
+            totalCount: 0,
+            unreadCount: 0,
+          };
+          
+          setEmailsData(emptyData);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          return emptyData;
+        }
+
+        // Step 3: Store in brain memory cache for future requests
+        const cacheData = {
+          emails: freshData.emails || [],
+          totalEmails: freshData.totalCount || 0,
+          unreadCount: freshData.unreadCount || 0,
+          lastSynced: new Date().toISOString(),
+          cacheVersion: 1,
+          dataType: 'google_emails' as const,
+        };
+
+        await setCachedData(cacheData);
+
+        setEmailsData(freshData);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
+        
+        console.log(`[CachedEmail] ✅ Fresh data cached: ${freshData.totalCount} emails in ${Date.now() - startTime}ms`);
+        return freshData;
+
+      } catch (authError) {
+        console.log('[CachedEmail] ⚠️ Authentication required for Gmail - returning empty data');
+        // Return empty data structure when authentication fails
+        const emptyData: EmailsListResponse = {
+          emails: [],
+          totalCount: 0,
+          unreadCount: 0,
+        };
+        
+        setEmailsData(emptyData);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
+        return emptyData;
       }
-
-      let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
-      
-      if (!freshData) {
-        console.error('[CachedEmail] ❌ Gmail API Authentication Failed');
-        console.error('  - Check Google OAuth configuration');
-        console.error('  - Verify Gmail API scopes are enabled');
-        console.error('  - Ensure user is properly authenticated');
-        throw new Error('Gmail API Authentication Failed - user must re-authenticate with Google');
-      }
-
-      // Step 3: Store in brain memory cache for future requests
-      const cacheData = {
-        emails: freshData.emails || [],
-        totalEmails: freshData.totalCount || 0,
-        unreadCount: freshData.unreadCount || 0,
-        lastSynced: new Date().toISOString(),
-        cacheVersion: 1,
-        dataType: 'google_emails' as const,
-      };
-
-      await setCachedData(cacheData);
-
-      setEmailsData(freshData);
-      setLastFetchTime(Date.now());
-      setIsLoading(false);
-      
-      console.log(`[CachedEmail] ✅ Fresh data cached: ${freshData.totalCount} emails in ${Date.now() - startTime}ms`);
-      return freshData;
 
     } catch (error) {
-      console.error('[CachedEmail] ❌ Error fetching emails:', error);
+      console.log('[CachedEmail] ⚠️ Unexpected error - returning empty data');
+      const emptyData: EmailsListResponse = {
+        emails: [],
+        totalCount: 0,
+        unreadCount: 0,
+      };
+      
+      setEmailsData(emptyData);
       setHasError(true);
       setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
       setIsLoading(false);
-      return null;
+      return emptyData;
     } finally {
       initializingRef.current = false;
     }

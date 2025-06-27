@@ -123,7 +123,18 @@ export const useCachedCalendar = (params?: { timeMin?: string; timeMax?: string 
       const freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
       
       if (!freshData) {
-        throw new Error('No data received from Google Calendar API');
+        console.log('[CachedCalendar] ⚠️ No Google Calendar data available - returning empty data');
+        // Return empty data structure instead of throwing error
+        const emptyData: CalendarEventsResponse = {
+          events: [],
+          nextPageToken: null,
+          message: 'No authentication - empty data returned',
+        };
+        
+        setCalendarData(emptyData);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
+        return emptyData;
       }
 
       // Step 3: Store in brain memory cache for future requests

@@ -182,14 +182,85 @@ export class TasksOAuthManager implements IOAuthTokenManager {
         throw new Error(`No OAuth token found for user ${userId}: ${error?.message ?? 'Token not found'}`);
       }
 
-      return {
+      const currentToken = {
         access_token: tokenData.access_token as string,
         refresh_token: tokenData.refresh_token as string,
         expires_at: tokenData.expires_at as string,
       };
+
+      // Check if token needs refresh (same logic as contacts)
+      const shouldRefresh = this.shouldRefreshToken(currentToken.expires_at);
+
+      if (shouldRefresh && currentToken.refresh_token) {
+        console.log("[TasksOAuthManager] Token needs refresh, refreshing...");
+        const refreshedTokenData = await this.refreshToken(currentToken.refresh_token);
+        await this.updateToken(userId, refreshedTokenData.access_token, refreshedTokenData.refresh_token || currentToken.refresh_token, refreshedTokenData.expires_in);
+        
+        // Get updated token
+        const { data: updatedData } = await this.supabase
+          .from("oauth_tokens")
+          .select("access_token, refresh_token, expires_at")
+          .eq("user_id", userId)
+          .eq("provider", "google")
+          .single();
+
+        return {
+          access_token: updatedData.access_token as string,
+          refresh_token: updatedData.refresh_token as string,
+          expires_at: updatedData.expires_at as string,
+        };
+      }
+
+      return currentToken;
     } catch (error) {
       console.error(`[TasksOAuthManager] OAuth token retrieval failed:`, error);
       throw error;
+    }
+  }
+
+  private shouldRefreshToken(expiresAt: string): boolean {
+    const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+    const expiryTime = new Date(expiresAt).getTime();
+    const currentTime = Date.now();
+    return expiryTime - currentTime <= REFRESH_THRESHOLD_MS;
+  }
+
+  private async refreshToken(refreshToken: string): Promise<{ access_token: string; refresh_token?: string; expires_in: number; }> {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Token refresh failed: ${response.status} ${errorData}`);
+    }
+
+    return response.json() as Promise<{ access_token: string; refresh_token?: string; expires_in: number; }>;
+  }
+
+  private async updateToken(userId: string, accessToken: string, refreshToken: string, expiresIn: number): Promise<void> {
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+
+    const { error } = await this.supabase
+      .from("oauth_tokens")
+      .update({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_at: expiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("provider", "google");
+
+    if (error) {
+      throw new Error(`Failed to update token: ${error.message}`);
     }
   }
 }
@@ -731,7 +802,7 @@ export const tasksRouter = {
     .query(async ({ ctx }): Promise<TasksResponse<CompleteTaskOverview>> => {
       try {
         // Get user ID from headers (mobile app compatibility) - same pattern as email router
-        const userIdHeader = ctx.authApi?.headers?.get?.('x-user-id') || '';
+        const userIdHeader = ctx.headers?.get?.('x-user-id') || '';
         
         // Try session first, fallback to headers, then test user
         const userId = ctx.session?.user?.id || 

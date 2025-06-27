@@ -151,7 +151,7 @@ export default function TabLayout() {
                 justifyContent: 'center',
                 transform: [{ scale: focused ? 1.1 : 1.0 }]
               }}>
-                <HeaderLogo />
+              <HeaderLogo />
               </View>
             ),
           }}

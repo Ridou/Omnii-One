@@ -33,6 +33,7 @@ import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { DesktopAnalyticsContent, TabletAnalyticsContent } from '~/components/common/DesktopAnalyticsComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
 import { AuthGuard } from '~/components/common/AuthGuard';
+import { GoogleServicesStatus } from '~/components/common/GoogleServicesStatus';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -796,6 +797,19 @@ export default function AnalyticsScreen() {
               onTap={() => triggerCheering(CheeringTrigger.TAP_INTERACTION)}
             />
           </MascotContainer>
+        </View>
+        
+        {/* Google Services Status */}
+        <View className="mt-3">
+          <GoogleServicesStatus 
+            showCompactView={true}
+            onStatusChange={(connected) => {
+              if (connected) {
+                // Refetch analytics when user connects Google services
+                refetch();
+              }
+            }}
+          />
         </View>
       </View>
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable } from 'react-native';
 import { useTheme } from '~/context/ThemeContext';
+import { useAuth } from '~/context/AuthContext';
 import { cn } from '~/utils/cn';
 import Animated, { 
   useAnimatedStyle, 
@@ -11,6 +12,10 @@ import Animated, {
 
 // Import RDF Memory Card component
 import { RDFMemoryCard } from './RDFMemoryCard';
+import { 
+  checkGoogleTokenStatus, 
+  initiateGoogleOAuth 
+} from '~/services/googleIntegration';
 
 interface MemoryContentProps {
   tasksOverview: any;
@@ -24,7 +29,52 @@ interface MemoryContentProps {
   onEmailAction?: (action: string, data?: any) => void;
 }
 
-
+// 🆕 Google Authentication Prompt Component
+const GoogleAuthPrompt: React.FC<{
+  title: string;
+  description: string;
+  onConnect: () => void;
+  isConnecting: boolean;
+}> = ({ title, description, onConnect, isConnecting }) => {
+  const { isDark } = useTheme();
+  
+  return (
+    <View className={cn(
+      "p-4 rounded-lg border-2 border-dashed mt-2",
+      isDark ? "border-slate-600 bg-slate-800/50" : "border-gray-300 bg-gray-50"
+    )}>
+      <View className="items-center">
+        <Text className="text-3xl mb-2">🔐</Text>
+        <Text className={cn(
+          "text-sm font-medium text-center mb-1",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
+          {title}
+        </Text>
+        <Text className={cn(
+          "text-xs text-center mb-3",
+          isDark ? "text-slate-400" : "text-gray-600"
+        )}>
+          {description}
+        </Text>
+        
+        <TouchableOpacity
+          onPress={onConnect}
+          disabled={isConnecting}
+          className={cn(
+            "px-4 py-2 rounded-lg flex-row items-center",
+            isDark ? "bg-blue-600" : "bg-blue-500"
+          )}
+        >
+          <Text className="text-white text-sm font-medium mr-1">
+            {isConnecting ? "Connecting..." : "Connect Google"}
+          </Text>
+          <Text className="text-white text-xs">🔗</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
 export const MemoryContent: React.FC<MemoryContentProps> = ({
   tasksOverview,
@@ -38,9 +88,24 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
   onEmailAction
 }) => {
   const { isDark } = useTheme();
-  
-  // 🚀 Use passed props instead of hooks to prevent re-render loops
-  // The parent component will handle data fetching with our new cached hooks
+  const { user } = useAuth();
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+
+  // 🆕 Handle Google connection
+  const handleConnectGoogle = async () => {
+    try {
+      setIsConnectingGoogle(true);
+      await initiateGoogleOAuth();
+      
+      // The hooks will automatically refetch once tokens are available
+      console.log('[MemoryContent] ✅ Google OAuth completed - hooks will refetch automatically');
+      
+    } catch (error) {
+      console.error('[MemoryContent] ❌ Google OAuth failed:', error);
+    } finally {
+      setIsConnectingGoogle(false);
+    }
+  };
 
   return (
     <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
@@ -83,7 +148,18 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
             color="purple"
             data={tasksOverview}
             onExpand={() => onTaskAction('view_all')}
-            expandedContent={<TaskMemoryDetails data={tasksOverview} />}
+            expandedContent={
+              tasksOverview?.hasError ? (
+                <GoogleAuthPrompt
+                  title="Connect Google Tasks"
+                  description="Connect your Google account to view and manage your tasks with AI insights"
+                  onConnect={handleConnectGoogle}
+                  isConnecting={isConnectingGoogle}
+                />
+              ) : (
+                <TaskMemoryDetails data={tasksOverview} />
+              )
+            }
           />
 
           <MemorySummaryCard
@@ -140,7 +216,18 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
             color="orange"
             data={contactsData}
             onExpand={() => onContactAction?.('view_network')}
-            expandedContent={<ContactMemoryDetails data={contactsData} />}
+            expandedContent={
+              contactsData?.hasError ? (
+                <GoogleAuthPrompt
+                  title="Connect Google Contacts"
+                  description="Connect your Google account to analyze your professional network"
+                  onConnect={handleConnectGoogle}
+                  isConnecting={isConnectingGoogle}
+                />
+              ) : (
+                <ContactMemoryDetails data={contactsData} />
+              )
+            }
           />
 
           <MemorySummaryCard
@@ -167,7 +254,18 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
             color="red"
             data={emailData}
             onExpand={() => onEmailAction?.('view_patterns')}
-            expandedContent={<EmailMemoryDetails data={emailData} />}
+            expandedContent={
+              emailData?.hasError ? (
+                <GoogleAuthPrompt
+                  title="Connect Gmail"
+                  description="Connect your Gmail to analyze email patterns and get AI insights"
+                  onConnect={handleConnectGoogle}
+                  isConnecting={isConnectingGoogle}
+                />
+              ) : (
+                <EmailMemoryDetails data={emailData} />
+              )
+            }
           />
 
           {/* Neo4j Knowledge Graph with Brain Cache */}
@@ -256,7 +354,7 @@ const getInsightData = (color: string, index: number, data?: any): string => {
       } else {
         if (data?.isCacheValid) {
           return `Cache hit • ${data?.cacheStats?.avg_response_time_ms || 0}ms response`;
-        }
+      }
         return data?.isLoading ? "Brain memory loading..." : data?.hasError ? "Setup required" : "Cache miss";
       }
     case 'red': // Email - Use real data
@@ -424,7 +522,7 @@ const MemorySummaryCard: React.FC<MemorySummaryCardProps> = ({
           {expandedContent}
         </View>
       )}
-    </View>
+      </View>
   );
 };
 
@@ -439,28 +537,28 @@ const MemoryControlsSection: React.FC = () => {
         isDark ? "text-white" : "text-gray-900"
       )}>Memory Controls</Text>
       
-      <TouchableOpacity className={cn(
-        "flex-row items-center justify-between p-3 rounded-xl border",
-        isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
-      )}>
-        <View className="flex-row items-center">
-          <Text className="text-xl mr-3">🔒</Text>
-          <View>
-            <Text className={cn(
-              "font-medium",
-              isDark ? "text-white" : "text-gray-900"
-            )}>Privacy Settings</Text>
-            <Text className={cn(
-              "text-sm",
-              isDark ? "text-slate-400" : "text-gray-600"
+        <TouchableOpacity className={cn(
+          "flex-row items-center justify-between p-3 rounded-xl border",
+          isDark ? "bg-slate-800 border-slate-600" : "bg-white border-gray-200"
+        )}>
+          <View className="flex-row items-center">
+            <Text className="text-xl mr-3">🔒</Text>
+            <View>
+              <Text className={cn(
+                "font-medium",
+                isDark ? "text-white" : "text-gray-900"
+              )}>Privacy Settings</Text>
+              <Text className={cn(
+                "text-sm",
+                isDark ? "text-slate-400" : "text-gray-600"
             )}>Control your data retention</Text>
+            </View>
           </View>
-        </View>
-        <Text className={cn(
+          <Text className={cn(
           "text-lg",
-          isDark ? "text-slate-400" : "text-gray-500"
-        )}>→</Text>
-      </TouchableOpacity>
+            isDark ? "text-slate-400" : "text-gray-500"
+          )}>→</Text>
+        </TouchableOpacity>
     </View>
   );
 };
@@ -499,7 +597,7 @@ const TaskMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   const pendingTasks = allTasks
     .filter((task: any) => task.status === 'needsAction')
     .slice(0, 8);
-  
+
   return (
     <View className="mt-3">
       <Text className={cn("text-lg font-semibold mb-2", isDark ? "text-white" : "text-gray-900")}>
@@ -519,16 +617,16 @@ const TaskMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
           </Text>
           <View className="flex-row flex-wrap gap-1">
             {taskLists.map((list: any, index: number) => (
-              <View key={index} className={cn(
+            <View key={index} className={cn(
                 "px-2 py-1 rounded-full",
                 isDark ? "bg-purple-900/30" : "bg-purple-100"
-              )}>
+            )}>
                 <Text className={cn("text-xs", isDark ? "text-purple-300" : "text-purple-700")}>
                   {list.title} ({list.tasks?.length || 0})
                 </Text>
-              </View>
+                </View>
             ))}
-          </View>
+              </View>
         </View>
       )}
       
@@ -587,7 +685,7 @@ const CalendarMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
       </View>
     );
   }
-
+  
   const events = data?.events || [];
   const upcomingEvents = events
     .filter((event: any) => new Date(event.start) > new Date())
@@ -611,19 +709,19 @@ const CalendarMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
               <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
                 {new Date(event.start).toLocaleDateString()} at {new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               </Text>
-            </View>
+                </View>
           ))}
           {events.length > 5 && (
             <Text className={cn("text-xs text-center mt-2", isDark ? "text-slate-500" : "text-gray-500")}>
               ... and {events.length - 5} more events
             </Text>
           )}
-        </View>
+              </View>
       ) : (
         <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
           {data?.isLoading ? "Loading events..." : "No upcoming events"}
-        </Text>
-      )}
+                </Text>
+              )}
     </View>
   );
 };
@@ -643,7 +741,7 @@ const ContactMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
       </View>
     );
   }
-
+  
   const contacts = data?.contacts || [];
   const displayContacts = contacts.slice(0, 5);
   
@@ -666,12 +764,12 @@ const ContactMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
                   📧 {contact.emails[0]}
                 </Text>
-              )}
+                )}
               {contact.phones?.[0] && (
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
                   📱 {contact.phones[0]}
                 </Text>
-              )}
+                )}
             </View>
           ))}
           {contacts.length > 5 && (
@@ -704,7 +802,7 @@ const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
       </View>
     );
   }
-
+  
   const emails = data?.emails || [];
   const recentEmails = emails.slice(0, 6);
   const unreadEmails = emails.filter((e: any) => !e.isRead);
@@ -748,10 +846,10 @@ const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
                     ? email.subject.substring(0, 40) + '...' 
                     : email.subject || 'No Subject'}
                 </Text>
-                {!email.isRead && (
+                  {!email.isRead && (
                   <View className="w-2 h-2 rounded-full bg-blue-500" />
-                )}
-              </View>
+                  )}
+                </View>
               <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
                 📧 {email.sender?.split('<')[0]?.trim() || email.from || 'Unknown sender'}
               </Text>
@@ -764,7 +862,7 @@ const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
                   {email.preview.substring(0, 80)}...
                 </Text>
-              )}
+                )}
             </View>
           ))}
           {emails.length > 6 && (
@@ -797,7 +895,7 @@ const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
       </View>
     );
   }
-
+  
   const concepts = data?.concepts || [];
   const recentConcepts = concepts.slice(0, 6);
   
@@ -805,14 +903,14 @@ const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
     <View className="mt-3">
       <Text className={cn("text-lg font-semibold mb-2", isDark ? "text-white" : "text-gray-900")}>
         Brain Concepts ({data?.totalConcepts || concepts.length} loaded)
-      </Text>
+        </Text>
       
       {(data?.source === 'cache' || data?.isCacheValid) && (
         <Text className={cn("text-xs mb-2", isDark ? "text-blue-400" : "text-blue-600")}>
           🧠 Brain cache hit • {data?.responseTime || 0}ms response
         </Text>
       )}
-      
+  
       {data?.isConnected && (
         <View className={cn(
           "mb-3 p-2 rounded-lg",
@@ -833,38 +931,38 @@ const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
             )}>
               <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
                 {concept.text || concept.name || concept.title || 'Unknown Concept'}
-              </Text>
+            </Text>
               {concept.labels && Array.isArray(concept.labels) && (
                 <View className="flex-row flex-wrap gap-1 mt-1">
                   {concept.labels.slice(0, 3).map((label: string, idx: number) => (
                     <View key={idx} className={cn(
                       "px-1 py-0.5 rounded",
                       isDark ? "bg-blue-800/50" : "bg-blue-200"
-                    )}>
+              )}>
                       <Text className={cn("text-xs", isDark ? "text-blue-300" : "text-blue-700")}>
                         {label}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
               {concept.properties?.keywords && (
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
                   🏷️ {concept.properties.keywords}
-                </Text>
-              )}
+              </Text>
+            )}
               {concept.properties?.context && (
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
                   📝 {concept.properties.context.substring(0, 60)}...
-                </Text>
-              )}
-            </View>
-          ))}
+                  </Text>
+            )}
+          </View>
+        ))}
           {concepts.length > 6 && (
             <Text className={cn("text-xs text-center mt-2", isDark ? "text-slate-500" : "text-gray-500")}>
               ... and {concepts.length - 6} more concepts
-            </Text>
-          )}
+          </Text>
+        )}
         </View>
       ) : (
         <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>

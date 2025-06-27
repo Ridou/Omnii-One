@@ -94,59 +94,95 @@ export const useCachedContacts = (pageSize: number = 1000) => {
         }
       }
 
-      // Step 2: Cache miss - fetch from tRPC/Google API
-      console.log('[CachedContacts] 📭 Cache miss - fetching from Google Contacts API...');
-      const tRPCResult = await tRPCRefetch();
+      // Step 2: Cache miss - try to fetch from Google Contacts API (graceful failure)
+      console.log('[CachedContacts] 📭 Cache miss - attempting to fetch from Google Contacts API...');
       
-      console.log('[CachedContacts] 🔍 tRPC Response Debug:', {
-        hasError: !!tRPCResult.error,
-        errorMessage: tRPCResult.error?.message,
-        hasData: !!tRPCResult.data,
-        dataStructure: tRPCResult.data ? Object.keys(tRPCResult.data) : null,
-        success: tRPCResult.data?.success,
-        actualData: tRPCResult.data?.data ? 'present' : 'missing'
-      });
-      
-      if (tRPCResult.error) {
-        console.error('[CachedContacts] ❌ tRPC Error:', tRPCResult.error);
-        throw new Error(`tRPC Error: ${tRPCResult.error.message}`);
+      try {
+        const tRPCResult = await tRPCRefetch();
+        
+        console.log('[CachedContacts] 🔍 tRPC Response Debug:', {
+          hasError: !!tRPCResult.error,
+          errorMessage: tRPCResult.error?.message,
+          hasData: !!tRPCResult.data,
+          dataStructure: tRPCResult.data ? Object.keys(tRPCResult.data) : null,
+          success: tRPCResult.data?.success,
+          actualData: tRPCResult.data?.data ? 'present' : 'missing'
+        });
+        
+        if (tRPCResult.error) {
+          console.log('[CachedContacts] ⚠️ Google Contacts API not available - returning empty data');
+          // Return empty data structure instead of throwing error
+          const emptyData: ContactsListResponse = {
+            contacts: [],
+            totalCount: 0,
+          };
+          
+          setContactsData(emptyData);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          return emptyData;
+        }
+
+        let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
+        
+        if (!freshData) {
+          console.log('[CachedContacts] ⚠️ No Google Contacts data available - returning empty data');
+          // Return empty data structure instead of throwing error
+          const emptyData: ContactsListResponse = {
+            contacts: [],
+            totalCount: 0,
+          };
+          
+          setContactsData(emptyData);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          return emptyData;
+        }
+
+        // Step 3: Store in brain memory cache for future requests
+        const cacheData = {
+          contacts: freshData.contacts || [],
+          totalContacts: freshData.totalCount || 0,
+          lastSynced: new Date().toISOString(),
+          cacheVersion: 1,
+          dataType: 'google_contacts' as const,
+        };
+
+        await setCachedData(cacheData);
+
+        setContactsData(freshData);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
+        
+        console.log(`[CachedContacts] ✅ Fresh data cached: ${freshData.totalCount} contacts in ${Date.now() - startTime}ms`);
+        return freshData;
+
+      } catch (authError) {
+        console.log('[CachedContacts] ⚠️ Authentication required for Google Contacts - returning empty data');
+        // Return empty data structure when authentication fails
+        const emptyData: ContactsListResponse = {
+          contacts: [],
+          totalCount: 0,
+        };
+        
+        setContactsData(emptyData);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
+        return emptyData;
       }
-
-      let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
-      
-      if (!freshData) {
-        console.error('[CachedContacts] ❌ Google Contacts API returned no data. Possible causes:');
-        console.error('  - User not authenticated with Google');
-        console.error('  - Missing Google OAuth scopes');
-        console.error('  - tRPC endpoint configuration issue');
-        console.error('  - Google Contacts API quota exceeded');
-        throw new Error('No data received from Google Contacts API - check authentication and API configuration');
-      }
-
-      // Step 3: Store in brain memory cache for future requests
-      const cacheData = {
-        contacts: freshData.contacts || [],
-        totalContacts: freshData.totalCount || 0,
-        lastSynced: new Date().toISOString(),
-        cacheVersion: 1,
-        dataType: 'google_contacts' as const,
-      };
-
-      await setCachedData(cacheData);
-
-      setContactsData(freshData);
-      setLastFetchTime(Date.now());
-      setIsLoading(false);
-      
-      console.log(`[CachedContacts] ✅ Fresh data cached: ${freshData.totalCount} contacts in ${Date.now() - startTime}ms`);
-      return freshData;
 
     } catch (error) {
-      console.error('[CachedContacts] ❌ Error fetching contacts:', error);
+      console.log('[CachedContacts] ⚠️ Unexpected error - returning empty data');
+      const emptyData: ContactsListResponse = {
+        contacts: [],
+        totalCount: 0,
+      };
+      
+      setContactsData(emptyData);
       setHasError(true);
       setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
       setIsLoading(false);
-      return null;
+      return emptyData;
     } finally {
       initializingRef.current = false;
     }

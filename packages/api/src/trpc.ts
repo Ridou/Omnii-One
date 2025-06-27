@@ -267,6 +267,6 @@ export const googleServiceProcedure = t.procedure.use(({ ctx, next }) => {
         }
       },
       userId, // Direct access to user ID
-    },
+      },
+    });
   });
-});

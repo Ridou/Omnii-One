@@ -402,7 +402,7 @@ export const contactsRouter = {
 
   // Endpoint for listing all contacts using connections API
   listContacts: publicProcedure
-    .query(async ({ ctx }): Promise<ContactsResponse<ContactsListResponse>> => {
+    .query(async ({ ctx }) => {
       try {
         // Get user ID from headers (mobile app compatibility) 
         const userIdHeader = ctx.headers?.get?.('x-user-id') || '';
