@@ -84,10 +84,9 @@ export default function TabLayout() {
   };
 
     const shouldShowTabBar = useMemo(() => {
-    const show = isAuthenticated && user;
-    
-    return show;
-  }, [isAuthenticated, user, isDark]);
+    // Always show tab bar for authenticated users, regardless of screen
+    return !!(isAuthenticated && user);
+  }, [isAuthenticated, user]);
 
   const insets = useSafeAreaInsets();
 
@@ -145,7 +144,15 @@ export default function TabLayout() {
           name="tasks"
           options={{
             tabBarIcon: ({ color, size, focused }) => (
-              <HeaderLogo />
+              <View style={{ 
+                width: 60, 
+                height: 60, 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                transform: [{ scale: focused ? 1.1 : 1.0 }]
+              }}>
+                <HeaderLogo />
+              </View>
             ),
           }}
           listeners={{

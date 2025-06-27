@@ -11,10 +11,14 @@ import { useResponsiveDesign } from '~/utils/responsive';
 import type { ChatTab } from '~/types/chat';
 import { AuthGuard } from '~/components/common/AuthGuard';
 
-// Hooks
+// Hooks - Updated to use brain memory cache-first hooks
 import { useTasks, useTaskMutations } from '~/hooks/useTasks';
 import { useCalendar } from '~/hooks/useCalendar';
-import { useConcepts } from '~/hooks/useNeo4jSimple';
+import { useCachedTasks } from '~/hooks/useCachedTasks';
+import { useCachedCalendar } from '~/hooks/useCachedCalendar';
+import { useCachedNeo4j } from '~/hooks/useCachedNeo4j';
+import { useCachedContacts } from '~/hooks/useCachedContacts';
+import { useCachedEmail } from '~/hooks/useCachedEmail';
 import { useChatState } from '~/hooks/useChatState';
 import { useChatAnimations } from '~/hooks/useChatAnimations';
 import { useChatActions } from '~/hooks/useChatActions';
@@ -34,8 +38,8 @@ import { CHAT_TABS } from '~/constants/chat';
  * Main Chat Screen Component
  * 
  * This component serves as the primary interface for AI-powered chat interactions.
- * It integrates with various data sources (tasks, calendar, email) and provides
- * a multi-tab interface for different types of interactions.
+ * It integrates with various data sources (tasks, calendar, email, contacts) using
+ * our brain-inspired memory cache system for optimal performance.
  */
 export default function ChatScreen() {
     // Context hooks
@@ -48,10 +52,12 @@ export default function ChatScreen() {
     const { cheeringState, triggerCheering } = useMascotCheering();
     const mascotStage = getMascotStageByLevel(currentLevel);
 
-    // Data hooks
-    const tasksData = useTasks();
-    const calendarData = useCalendar();
-    const conceptsData = useConcepts();
+    // Data hooks - using brain memory cache system
+    const tasksData = useCachedTasks();
+    const calendarData = useCachedCalendar();
+    const contactsData = useCachedContacts();
+    const emailData = useCachedEmail();
+    const neo4jData = useCachedNeo4j();
     const taskMutations = useTaskMutations();
 
     // Chat state and handlers
@@ -100,7 +106,9 @@ export default function ChatScreen() {
                     <MemoryContent
                         tasksOverview={tasksData.tasksOverview}
                         calendarData={calendarData.calendarData}
-                        conceptsData={conceptsData}
+                        conceptsData={neo4jData}
+                        contactsData={contactsData}
+                        emailData={emailData}
                         onTaskAction={handleTaskAction}
                         onCalendarAction={handleCalendarAction}
                         onContactAction={handleContactAction}

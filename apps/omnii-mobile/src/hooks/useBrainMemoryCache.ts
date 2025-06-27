@@ -3,7 +3,40 @@ import { useAuth } from '~/context/AuthContext';
 import { supabase } from '~/lib/supabase';
 
 // Memory period types inspired by brain temporal processing
-export type MemoryPeriod = 'past_week' | 'current_week' | 'next_week';
+export type MemoryPeriod = 'past_week' | 'current_week' | 'next_week' | 'tasks' | 'calendar' | 'contacts' | 'emails';
+
+// 🚀 Phase 2: Extended data types for brain-inspired caching
+export type BrainDataType = 'neo4j_concepts' | 'google_tasks' | 'google_calendar' | 'google_contacts' | 'google_emails';
+
+// 🧠 Brain-inspired cache strategy - Keep data indefinitely, update smartly
+const BRAIN_CACHE_STRATEGY: Record<string, { duration: number; reason: string; refresh_strategy: string }> = {
+  // Google services - No expiration, just smart updates with OAuth token refresh
+  google_emails: {
+    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite with OAuth refresh
+    reason: 'Keep emails cached, update via smart refresh with OAuth tokens',
+    refresh_strategy: 'oauth_refresh'
+  },
+  google_tasks: {
+    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite with OAuth refresh
+    reason: 'Keep tasks cached, update via smart refresh with OAuth tokens',
+    refresh_strategy: 'oauth_refresh'
+  },
+  google_calendar: {
+    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite with OAuth refresh
+    reason: 'Keep calendar cached, update via smart refresh with OAuth tokens',
+    refresh_strategy: 'oauth_refresh'
+  },
+  google_contacts: {
+    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite with OAuth refresh
+    reason: 'Keep contacts cached, update via smart refresh with OAuth tokens',
+    refresh_strategy: 'oauth_refresh'
+  },
+  neo4j_concepts: {
+    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite, update when concepts change
+    reason: 'Keep concepts cached indefinitely, update when brain knowledge changes',
+    refresh_strategy: 'smart_update'
+  }
+};
 
 // Brain memory cache data structure
 interface BrainMemoryConcept {
@@ -24,11 +57,42 @@ interface BrainMemoryData {
   cacheVersion: number;
 }
 
+// Enhanced brain cache data interface
+interface BrainCacheData {
+  // Data storage
+  concepts?: any[];
+  tasks?: any[];
+  calendar?: any[];
+  contacts?: any[];
+  emails?: any[];
+  
+  // Metadata
+  lastSynced: string;
+  cacheVersion: number;
+  dataType: string;
+  totalConcepts?: number;
+  totalItems?: number;
+  
+  // Smart caching metadata
+  _cacheMetadata?: {
+    dataHash: string;
+    lastFullSync: string;
+    incrementalUpdates: number;
+    lastChangeDetection: string;
+    changesSinceLastSync: number;
+  };
+  
+  // Allow indexing for dynamic access
+  [key: string]: any;
+}
+
 interface CacheEntry {
   id: string;
   user_id: string;
   memory_period: MemoryPeriod;
-  concepts_data: BrainMemoryData;
+  data_type: BrainDataType;
+  cache_data: BrainCacheData;
+  concepts_data?: BrainMemoryData; // Legacy field for backward compatibility
   total_concepts: number;
   cache_version: number;
   last_synced_at: string;
@@ -37,11 +101,16 @@ interface CacheEntry {
   updated_at: string;
 }
 
+// Enhanced cache stats interface
 interface CacheStats {
   cache_hits: number;
   cache_misses: number;
-  neo4j_queries_saved: number;
-  avg_response_time_ms: number;
+  cache_writes?: number;
+  total_items_cached?: number;
+  avg_response_time_ms?: number;
+  last_update_type?: string;
+  changes_detected?: number;
+  neo4j_queries_saved?: number;
 }
 
 interface CacheStatus {
@@ -50,7 +119,11 @@ interface CacheStatus {
   lastUpdated?: string;
   expiresAt?: string;
   hitRatio?: number;
+  dataType?: BrainDataType;
 }
+
+// 🚨 EMERGENCY BYPASS - Set to true to skip caching when performance is poor
+const EMERGENCY_CACHE_BYPASS = false; // DISABLED to test proper caching with auth fix
 
 // Helper function to calculate memory period date ranges
 const getMemoryPeriodDates = (period: MemoryPeriod) => {
@@ -81,17 +154,169 @@ const getMemoryPeriodDates = (period: MemoryPeriod) => {
       nextWeekEnd.setHours(23, 59, 59, 999);
       return { start: nextWeekStart, end: nextWeekEnd };
 
+    // 🚀 For Google data types, we use current time ranges
+    case 'tasks':
+    case 'calendar':
+    case 'contacts':
+    case 'emails':
+      return { start: now, end: now };
+
     default:
       return { start: startOfWeek, end: new Date() };
   }
 };
 
-export const useBrainMemoryCache = (period: MemoryPeriod = 'current_week') => {
+/**
+ * 🧠 Smart Differential Caching Logic
+ * 
+ * Instead of always re-caching, this checks for differences and only updates
+ * what has changed. This prevents unnecessary cache churn and improves performance.
+ */
+
+// Helper function to deeply compare two objects
+const deepEqual = (obj1: any, obj2: any): boolean => {
+  if (obj1 === obj2) return true;
+  
+  if (obj1 == null || obj2 == null) return false;
+  
+  if (typeof obj1 !== typeof obj2) return false;
+  
+  if (typeof obj1 !== 'object') return obj1 === obj2;
+  
+  if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
+  
+  if (Array.isArray(obj1)) {
+    if (obj1.length !== obj2.length) return false;
+    for (let i = 0; i < obj1.length; i++) {
+      if (!deepEqual(obj1[i], obj2[i])) return false;
+    }
+    return true;
+  }
+  
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  
+  if (keys1.length !== keys2.length) return false;
+  
+  for (const key of keys1) {
+    if (!keys2.includes(key)) return false;
+    if (!deepEqual(obj1[key], obj2[key])) return false;
+  }
+  
+  return true;
+};
+
+// Helper function to calculate data hash for quick comparison
+const calculateDataHash = (data: any): string => {
+  return JSON.stringify(data).length.toString() + '_' + 
+         JSON.stringify(data).slice(0, 100).replace(/[^a-zA-Z0-9]/g, '').slice(-20);
+};
+
+// Helper function to find differences between cached and fresh data
+const findDataDifferences = (cachedData: any, freshData: any) => {
+  const differences = {
+    newItems: [] as any[],
+    updatedItems: [] as any[],
+    removedItems: [] as any[],
+    totalChanges: 0
+  };
+  
+  if (!cachedData || !freshData) {
+    return {
+      ...differences,
+      newItems: freshData || [],
+      totalChanges: (freshData || []).length
+    };
+  }
+  
+  // For arrays (most common case)
+  if (Array.isArray(cachedData) && Array.isArray(freshData)) {
+    const cachedIds = new Set(cachedData.map(item => item.id || item.name || JSON.stringify(item)));
+    const freshIds = new Set(freshData.map(item => item.id || item.name || JSON.stringify(item)));
+    
+    // Find new items
+    freshData.forEach(item => {
+      const itemId = item.id || item.name || JSON.stringify(item);
+      if (!cachedIds.has(itemId)) {
+        differences.newItems.push(item);
+      }
+    });
+    
+    // Find updated items
+    freshData.forEach(freshItem => {
+      const itemId = freshItem.id || freshItem.name || JSON.stringify(freshItem);
+      const cachedItem = cachedData.find(cached => 
+        (cached.id || cached.name || JSON.stringify(cached)) === itemId
+      );
+      
+      if (cachedItem && !deepEqual(cachedItem, freshItem)) {
+        differences.updatedItems.push({ cached: cachedItem, fresh: freshItem });
+      }
+    });
+    
+    // Find removed items
+    cachedData.forEach(item => {
+      const itemId = item.id || item.name || JSON.stringify(item);
+      if (!freshIds.has(itemId)) {
+        differences.removedItems.push(item);
+      }
+    });
+    
+    differences.totalChanges = differences.newItems.length + 
+                              differences.updatedItems.length + 
+                              differences.removedItems.length;
+  }
+  
+  return differences;
+};
+
+// Helper function to get the main data key for different data types
+const getMainDataKey = (dataType: string): string => {
+  switch (dataType) {
+    case 'neo4j_concepts': return 'concepts';
+    case 'google_tasks': return 'tasks';
+    case 'google_calendar': return 'calendar';
+    case 'google_contacts': return 'contacts';
+    case 'google_emails': return 'emails';
+    default: return 'data';
+  }
+};
+
+// Helper function to get total count from data
+const getTotalCount = (data: any): number => {
+  if (!data) return 0;
+  
+  const mainKey = getMainDataKey(data.dataType || 'unknown');
+  const items = data[mainKey] || data;
+  
+  if (Array.isArray(items)) {
+    return items.length;
+  }
+  
+  return data.totalConcepts || data.totalItems || 0;
+};
+
+// Helper function to get cache expiration in milliseconds
+const getCacheExpirationMs = (dataType: string): number => {
+  const strategy = BRAIN_CACHE_STRATEGY[dataType];
+  const fallbackDuration = 24 * 60 * 60 * 1000; // 24 hours default
+  return strategy?.duration ?? fallbackDuration;
+};
+
+// Enhanced cache data interface with change tracking
+interface SmartCacheData extends BrainCacheData {}
+
+// 🚀 Extended brain memory cache hook with multi-data-type support
+export const useBrainMemoryCache = (
+  period: MemoryPeriod = 'current_week', 
+  dataType: BrainDataType = 'neo4j_concepts'
+) => {
   const { user } = useAuth();
-  const [cache, setCache] = useState<BrainMemoryData | null>(null);
+  const [cache, setCache] = useState<BrainCacheData | null>(null);
   const [cacheStatus, setCacheStatus] = useState<CacheStatus>({
     isLoading: false,
-    isValid: false
+    isValid: false,
+    dataType
   });
   const [stats, setStats] = useState<CacheStats>({
     cache_hits: 0,
@@ -100,18 +325,20 @@ export const useBrainMemoryCache = (period: MemoryPeriod = 'current_week') => {
     avg_response_time_ms: 0
   });
 
-  // Check if cache exists and is valid for the given period
+  // Check if cache exists and is valid for the given period and data type (Optimized)
   const checkCacheValidity = useCallback(async (): Promise<CacheEntry | null> => {
     if (!user?.id) return null;
 
     try {
-      console.log(`[BrainCache] 🔍 Checking cache for period: ${period}`);
+      console.log(`[BrainCache] 🔍 Checking cache for ${dataType}:${period}`);
       
+      // 🔧 EMERGENCY REVERT - Back to original working query
       const { data, error } = await supabase
         .from('brain_memory_cache')
         .select('*')
         .eq('user_id', user.id)
         .eq('memory_period', period)
+        .eq('data_type', dataType)
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
@@ -120,114 +347,225 @@ export const useBrainMemoryCache = (period: MemoryPeriod = 'current_week') => {
       }
 
       if (!data) {
-        console.log('[BrainCache] 📭 No cache entry found for period:', period);
+        console.log(`[BrainCache] 📭 No cache entry found for ${dataType}:${period}`);
         return null;
       }
 
-      // Check if cache is expired
+      // Check if cache is expired (client-side check)
       const expiresAt = new Date(data.expires_at);
       const isExpired = expiresAt < new Date();
 
       if (isExpired) {
-        console.log('[BrainCache] ⏰ Cache expired for period:', period);
+        console.log(`[BrainCache] ⏰ Cache expired for ${dataType}:${period}`);
         return null;
       }
 
-      console.log(`[BrainCache] ✅ Valid cache found: ${data.total_concepts} concepts`);
+      console.log(`[BrainCache] ✅ Valid cache found: ${dataType} (${data.total_concepts} items)`);
       return data;
 
     } catch (error) {
       console.error('[BrainCache] ❌ Error in cache validity check:', error);
       return null;
     }
-  }, [user?.id, period]);
+  }, [user?.id, period, dataType]);
 
-  // Get cached data (cache hit)
-  const getCachedData = useCallback(async (): Promise<BrainMemoryData | null> => {
+  // Get cached data (cache hit) - Optimized for performance
+  const getCachedData = useCallback(async (): Promise<BrainCacheData | null> => {
+    if (EMERGENCY_CACHE_BYPASS) {
+      console.log(`[BrainCache] 🚨 EMERGENCY BYPASS ACTIVE - Skipping cache for ${dataType}:${period}`);
+      return null; // Always cache miss to force direct API calls
+    }
+
     const startTime = Date.now();
     setCacheStatus(prev => ({ ...prev, isLoading: true }));
 
     try {
+      // 🚀 Fast cache check with optimized query
+      const cacheCheckStart = Date.now();
       const cacheEntry = await checkCacheValidity();
+      const cacheCheckTime = Date.now() - cacheCheckStart;
       
       if (cacheEntry) {
         // Cache hit! 🎯
+        const processStart = Date.now();
         await updateCacheStats('hit', Date.now() - startTime);
         
-        const cacheData = cacheEntry.concepts_data as BrainMemoryData;
-        setCache(cacheData);
-        setCacheStatus({
-          isLoading: false,
-          isValid: true,
-          lastUpdated: cacheEntry.last_synced_at,
-          expiresAt: cacheEntry.expires_at
-        });
-
-        console.log(`[BrainCache] 🎯 Cache HIT for ${period}: ${cacheData.concepts.length} concepts in ${Date.now() - startTime}ms`);
-        return cacheData;
-      } else {
-        // Cache miss 📭
-        await updateCacheStats('miss', Date.now() - startTime);
+        // Handle both new cache_data field and legacy concepts_data field
+        const cacheData = cacheEntry.cache_data || 
+          (cacheEntry.concepts_data && {
+            ...cacheEntry.concepts_data,
+            dataType,
+            lastSynced: cacheEntry.last_synced_at,
+            cacheVersion: cacheEntry.cache_version
+          } as BrainCacheData);
         
-        setCacheStatus({
-          isLoading: false,
-          isValid: false
-        });
+        if (cacheData) {
+          setCache(cacheData);
+          setCacheStatus({
+            isLoading: false,
+            isValid: true,
+            lastUpdated: cacheEntry.last_synced_at,
+            expiresAt: cacheEntry.expires_at,
+            dataType
+          });
 
-        console.log(`[BrainCache] 📭 Cache MISS for ${period} in ${Date.now() - startTime}ms`);
-        return null;
+          const itemCount = cacheData.concepts?.length || 
+                           cacheData.tasks?.length || 
+                           cacheData.calendar?.length || 
+                           cacheData.contacts?.length || 
+                           cacheData.emails?.length || 0;
+
+          const totalTime = Date.now() - startTime;
+          console.log(`[BrainCache] 🎯 Cache HIT for ${dataType}:${period}: ${itemCount} items in ${totalTime}ms (query: ${cacheCheckTime}ms)`);
+          return cacheData;
+        }
       }
+      
+      // Cache miss 📭
+      await updateCacheStats('miss', Date.now() - startTime);
+      
+      setCacheStatus({
+        isLoading: false,
+        isValid: false,
+        dataType
+      });
+
+      console.log(`[BrainCache] 📭 Cache MISS for ${dataType}:${period} in ${Date.now() - startTime}ms`);
+      return null;
+
     } catch (error) {
       console.error('[BrainCache] ❌ Error getting cached data:', error);
-      setCacheStatus({ isLoading: false, isValid: false });
+      setCacheStatus({ isLoading: false, isValid: false, dataType });
       return null;
     }
-  }, [checkCacheValidity, period]);
+  }, [checkCacheValidity, period, dataType]);
 
-  // Store data in cache
-  const setCachedData = useCallback(async (data: BrainMemoryData): Promise<boolean> => {
-    if (!user?.id) return false;
+  // 💾 Set cached data with smart differential logic
+  const setCachedData = useCallback(async (newData: any, forceFullUpdate = false): Promise<boolean> => {
+    if (!user?.id) {
+      console.log(`[BrainCache] ❌ No user ID for ${dataType}:${period}`);
+      return false;
+    }
 
+    const startTime = Date.now();
+    
     try {
-      console.log(`[BrainCache] 💾 Storing cache for ${period}: ${data.concepts.length} concepts`);
-
-      const cacheEntry = {
-        user_id: user.id,
-        memory_period: period,
-        concepts_data: data,
-        total_concepts: data.concepts.length,
-        cache_version: data.cacheVersion || 1,
-        last_synced_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+      // Step 1: Get existing cache to compare
+      const existingCache = await getCachedData();
+      
+      // Step 2: Calculate data hash for quick comparison
+      const newDataHash = calculateDataHash(newData);
+      const existingDataHash = existingCache?._cacheMetadata?.dataHash;
+      
+      // Step 3: Quick hash comparison - if identical, skip update
+      if (!forceFullUpdate && newDataHash === existingDataHash) {
+        console.log(`[BrainCache] ⚡ Data unchanged for ${dataType}:${period} - skipping cache update`);
+        return true;
+      }
+      
+      // Step 4: Deep differential analysis
+      let shouldDoFullUpdate = forceFullUpdate;
+      let updateType = 'full';
+      let differences: any = null;
+      
+      if (!forceFullUpdate && existingCache) {
+        // Find specific differences
+        const mainDataKey = getMainDataKey(dataType);
+        const cachedMainData = existingCache[mainDataKey];
+        const freshMainData = newData[mainDataKey] || newData;
+        
+        differences = findDataDifferences(cachedMainData, freshMainData);
+        
+        console.log(`[BrainCache] 🔍 Change analysis for ${dataType}:${period}:`);
+        console.log(`  New items: ${differences.newItems.length}`);
+        console.log(`  Updated items: ${differences.updatedItems.length}`);
+        console.log(`  Removed items: ${differences.removedItems.length}`);
+        console.log(`  Total changes: ${differences.totalChanges}`);
+        
+        // Decide update strategy based on change volume
+        const changePercentage = cachedMainData ? 
+          (differences.totalChanges / cachedMainData.length) * 100 : 100;
+        
+        if (differences.totalChanges === 0) {
+          console.log(`[BrainCache] ✨ No changes detected - skipping update`);
+          return true;
+        } else if (changePercentage < 30 && differences.totalChanges < 20) {
+          // Small changes - do incremental update
+          updateType = 'incremental';
+          console.log(`[BrainCache] 🔄 Incremental update (${changePercentage.toFixed(1)}% changed)`);
+        } else {
+          // Large changes - do full update
+          shouldDoFullUpdate = true;
+          updateType = 'full';
+          console.log(`[BrainCache] 🔄 Full update required (${changePercentage.toFixed(1)}% changed)`);
+        }
+      }
+      
+      // Step 5: Prepare cache data with metadata
+      const enhancedData: SmartCacheData = {
+        ...newData,
+        _cacheMetadata: {
+          dataHash: newDataHash,
+          lastFullSync: shouldDoFullUpdate ? new Date().toISOString() : 
+                        (existingCache?._cacheMetadata?.lastFullSync || new Date().toISOString()),
+          incrementalUpdates: shouldDoFullUpdate ? 0 : 
+                             ((existingCache?._cacheMetadata?.incrementalUpdates || 0) + 1),
+          lastChangeDetection: new Date().toISOString(),
+          changesSinceLastSync: shouldDoFullUpdate ? 0 : differences?.totalChanges || 0
+        }
       };
-
+      
+      // Step 6: Perform the cache update
       const { error } = await supabase
         .from('brain_memory_cache')
-        .upsert(cacheEntry, {
-          onConflict: 'user_id,memory_period'
+        .upsert({
+          user_id: user.id,
+          data_type: dataType,
+          memory_period: period,
+          cache_data: enhancedData,
+          total_concepts: getTotalCount(newData),
+          expires_at: new Date(Date.now() + getCacheExpirationMs(dataType)).toISOString(),
+          last_synced_at: new Date().toISOString(),
+          cache_version: 1
+        }, { 
+          onConflict: 'user_id,data_type,memory_period' 
         });
 
       if (error) {
-        console.error('[BrainCache] ❌ Error storing cache:', error);
+        console.error(`[BrainCache] ❌ Cache storage error for ${dataType}:${period}:`, error.message);
         return false;
       }
 
-      setCache(data);
+      const duration = Date.now() - startTime;
+      console.log(`[BrainCache] ✅ ${updateType === 'full' ? 'Full' : 'Incremental'} cache update: ${dataType}:${period} in ${duration}ms`);
+      
+      // Step 7: Update local state
+      setCache(enhancedData);
       setCacheStatus({
         isLoading: false,
         isValid: true,
-        lastUpdated: cacheEntry.last_synced_at,
-        expiresAt: cacheEntry.expires_at
+        lastUpdated: Date.now(),
+        dataType
+      });
+      
+      // Step 8: Update stats
+      await updateCacheStats({
+        cache_hits: stats.cache_hits,
+        cache_misses: stats.cache_misses,
+        cache_writes: (stats.cache_writes || 0) + 1,
+        total_items_cached: getTotalCount(newData),
+        avg_response_time_ms: duration,
+        last_update_type: updateType,
+        changes_detected: differences?.totalChanges || 0
       });
 
-      console.log(`[BrainCache] ✅ Cache stored successfully for ${period}`);
       return true;
-
+      
     } catch (error) {
-      console.error('[BrainCache] ❌ Error in setCachedData:', error);
+      console.error(`[BrainCache] ❌ Error in smart cache update for ${dataType}:${period}:`, error);
       return false;
     }
-  }, [user?.id, period]);
+  }, [user?.id, dataType, period, supabase, getCachedData, stats]);
 
   // Update cache statistics
   const updateCacheStats = useCallback(async (operation: 'hit' | 'miss', responseTime: number) => {
@@ -269,40 +607,42 @@ export const useBrainMemoryCache = (period: MemoryPeriod = 'current_week') => {
     }
   }, [user?.id]);
 
-  // Invalidate cache for a specific period
-  const invalidateCache = useCallback(async (targetPeriod?: MemoryPeriod): Promise<boolean> => {
+  // Invalidate cache for a specific period and data type
+  const invalidateCache = useCallback(async (targetPeriod?: MemoryPeriod, targetDataType?: BrainDataType): Promise<boolean> => {
     if (!user?.id) return false;
 
     const periodToInvalidate = targetPeriod || period;
+    const dataTypeToInvalidate = targetDataType || dataType;
 
     try {
-      console.log(`[BrainCache] 🗑️ Invalidating cache for period: ${periodToInvalidate}`);
+      console.log(`[BrainCache] 🗑️ Invalidating cache for ${dataTypeToInvalidate}:${periodToInvalidate}`);
 
       const { error } = await supabase
         .from('brain_memory_cache')
         .delete()
         .eq('user_id', user.id)
-        .eq('memory_period', periodToInvalidate);
+        .eq('memory_period', periodToInvalidate)
+        .eq('data_type', dataTypeToInvalidate);
 
       if (error) {
         console.error('[BrainCache] ❌ Error invalidating cache:', error);
         return false;
       }
 
-      // Clear local cache if it's the current period
-      if (periodToInvalidate === period) {
+      // Clear local cache if it matches
+      if (periodToInvalidate === period && dataTypeToInvalidate === dataType) {
         setCache(null);
-        setCacheStatus({ isLoading: false, isValid: false });
+        setCacheStatus({ isLoading: false, isValid: false, dataType });
       }
 
-      console.log(`[BrainCache] ✅ Cache invalidated for ${periodToInvalidate}`);
+      console.log(`[BrainCache] ✅ Cache invalidated for ${dataTypeToInvalidate}:${periodToInvalidate}`);
       return true;
 
     } catch (error) {
       console.error('[BrainCache] ❌ Error in invalidateCache:', error);
       return false;
     }
-  }, [user?.id, period]);
+  }, [user?.id, period, dataType]);
 
   // Get cache statistics
   const getCacheStats = useCallback(async (): Promise<CacheStats | null> => {
@@ -336,12 +676,35 @@ export const useBrainMemoryCache = (period: MemoryPeriod = 'current_week') => {
     }
   }, [user?.id]);
 
-  // Initialize cache stats on mount
+  // Initialize cache stats on mount (Fixed to prevent infinite loops)
   useEffect(() => {
-    if (user?.id) {
-      getCacheStats();
-    }
-  }, [user?.id, getCacheStats]);
+    let isMounted = true;
+    
+    const initializeStats = async () => {
+      console.log(`[BrainCache] 🚀 EFFECT TRIGGERED - initializing stats for ${dataType}:${period}...`);
+      if (!user?.id || !isMounted) return;
+      
+      try {
+        await getCacheStats();
+      } catch (error) {
+        console.error('[BrainCache] ❌ Error initializing stats:', error);
+      }
+    };
+
+    initializeStats();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]); // 🔧 Only depend on user.id, not getCacheStats
+
+  // Log when getCacheStats function changes to debug re-renders
+  useEffect(() => {
+    console.log(`[BrainCache] 🔄 getCacheStats function changed for ${dataType}:${period}`, {
+      hasUser: !!user?.id,
+      getCacheStats: typeof getCacheStats
+    });
+  }, [getCacheStats, dataType, period]);
 
   return {
     // Cache data
@@ -363,10 +726,30 @@ export const useBrainMemoryCache = (period: MemoryPeriod = 'current_week') => {
     isLoading: cacheStatus.isLoading,
     isValid: cacheStatus.isValid,
     hitRatio: cacheStatus.hitRatio,
-    conceptCount: cache?.concepts.length || 0,
+    itemCount: cache?.concepts?.length || 
+               cache?.tasks?.length || 
+               cache?.calendar?.length || 
+               cache?.contacts?.length || 
+               cache?.emails?.length || 0,
     
     // Memory period info
     currentPeriod: period,
-    periodDates: getMemoryPeriodDates(period)
+    currentDataType: dataType,
+    periodDates: getMemoryPeriodDates(period),
+    cacheStrategy: BRAIN_CACHE_STRATEGY[dataType],
+    
+    // 🚀 Backward compatibility for existing Neo4j usage
+    conceptCount: cache?.concepts?.length || 0,
   };
-}; 
+};
+
+// 🚀 Convenience hooks for each data type with brain-inspired caching
+export const useBrainTasksCache = () => useBrainMemoryCache('tasks', 'google_tasks');
+export const useBrainContactsCache = () => useBrainMemoryCache('contacts', 'google_contacts');
+export const useBrainCalendarCache = () => useBrainMemoryCache('calendar', 'google_calendar');
+export const useBrainEmailCache = () => useBrainMemoryCache('emails', 'google_emails');
+export const useBrainNeo4jCache = () => useBrainMemoryCache('current_week', 'neo4j_concepts');
+
+// Legacy export for backward compatibility with existing Neo4j usage
+export const useBrainConceptsCache = (period: 'past_week' | 'current_week' | 'next_week' = 'current_week') => 
+  useBrainMemoryCache(period, 'neo4j_concepts'); 

@@ -261,8 +261,10 @@ export const useNeo4jCachedClient = (preferredPeriod: MemoryPeriod = 'current_we
     }
   }, [user?.id, cacheClient, neo4jClient]);
 
-  // Update memory system status
+  // Update memory system status (Fixed to prevent infinite loops)
   useEffect(() => {
+    console.log('[BrainMemory] 🔄 Memory status update triggered');
+    
     const updateStatus = () => {
       setMemorySystemStatus({
         neo4j: {
@@ -285,16 +287,39 @@ export const useNeo4jCachedClient = (preferredPeriod: MemoryPeriod = 'current_we
     };
 
     updateStatus();
-  }, [neo4jClient.connectionStatus, cacheClient]);
+  }, [
+    neo4jClient.connectionStatus.connected,
+    neo4jClient.connectionStatus.responseTime,
+    neo4jClient.connectionStatus.totalConcepts,
+    cacheClient.isValid,
+    cacheClient.hitRatio,
+    cacheClient.conceptCount,
+    cacheClient.cacheStatus.lastUpdated,
+    cacheClient.stats.neo4j_queries_saved,
+    cacheClient.stats.avg_response_time_ms
+  ]); // 🔧 Specific primitive dependencies instead of objects
 
-  // Automatic memory consolidation on connection
+  // Automatic memory consolidation on connection (Fixed to prevent infinite loops)
   useEffect(() => {
     if (neo4jClient.connectionStatus.connected && !cacheClient.isValid && user?.id) {
+      console.log('[BrainMemory] 🧠 Scheduling memory consolidation...');
+      
       // Delay consolidation to avoid blocking initial load
-      const timer = setTimeout(consolidateMemory, 2000);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(() => {
+        console.log('[BrainMemory] 🧠 Starting memory consolidation...');
+        consolidateMemory();
+      }, 2000);
+      
+      return () => {
+        console.log('[BrainMemory] 🧠 Cancelling memory consolidation timer');
+        clearTimeout(timer);
+      };
     }
-  }, [neo4jClient.connectionStatus.connected, cacheClient.isValid, user?.id, consolidateMemory]);
+  }, [
+    neo4jClient.connectionStatus.connected, 
+    cacheClient.isValid, 
+    user?.id
+  ]); // 🔧 Removed consolidateMemory from deps to prevent loops
 
   return {
     // Data state
