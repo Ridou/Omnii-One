@@ -224,6 +224,68 @@ export class EmailPlugin implements GoogleServicePlugin {
             console.log(`[EmailPlugin] 📋 RAW GMAIL API RESPONSE STRUCTURE:`);
             const structureOutline = this.getObjectStructure(parsed);
 
+            // ✅ COMPREHENSIVE GMAIL API ERROR DETECTION
+            // This catches 429 rate limit errors and other Gmail API failures
+            console.log(`[EmailPlugin] 🔍 GMAIL API ERROR DETECTION:`);
+            console.log(`[EmailPlugin] - Parsed.error:`, parsed?.error);
+            console.log(`[EmailPlugin] - Parsed.successful:`, parsed?.successful);
+            console.log(`[EmailPlugin] - Parsed.response_data:`, parsed?.response_data ? 'present' : 'missing');
+            
+            // Check for rate limit errors (429)
+            if (parsed?.error?.code === 429 || parsed?.error?.reason === 'rateLimitExceeded') {
+              console.log(`[EmailPlugin] 🚦 Gmail API rate limit exceeded`);
+              return builder
+                .setSuccess(false)
+                .setTitle("⏸️ Rate Limited")
+                .setContent("Gmail API rate limit reached. Please wait a few minutes and try again.")
+                .setMessage("Too many concurrent requests to Gmail API")
+                .build();
+            }
+            
+            // Check for quota exceeded errors
+            if (parsed?.error?.reason === 'quotaExceeded' || parsed?.error?.message?.includes('quota')) {
+              console.log(`[EmailPlugin] 📊 Gmail API quota exceeded`);
+              return builder
+                .setSuccess(false)
+                .setTitle("📊 Quota Exceeded")
+                .setContent("Gmail API quota exceeded. Please try again later.")
+                .setMessage("Daily or per-user quota exceeded")
+                .build();
+            }
+            
+            // Check for authentication errors
+            if (parsed?.error?.code === 401 || parsed?.error?.message?.includes('unauthorized')) {
+              console.log(`[EmailPlugin] 🔐 Gmail API authentication failed`);
+              return builder
+                .setSuccess(false)
+                .setTitle("🔐 Authentication Required")
+                .setContent("Gmail authentication failed. Please reconnect your Google account.")
+                .setMessage("Invalid or expired Gmail credentials")
+                .build();
+            }
+            
+            // Check for general API failures
+            if (parsed?.error && !parsed?.successful && !parsed?.response_data) {
+              console.log(`[EmailPlugin] ❌ Gmail API general error:`, parsed.error);
+              return builder
+                .setSuccess(false)
+                .setTitle("❌ Email Failed")
+                .setContent(`Gmail API error: ${parsed.error.message || 'Unknown error'}`)
+                .setMessage(JSON.stringify(parsed.error))
+                .build();
+            }
+            
+            // Check for missing response data (silent failures)
+            if (!parsed?.response_data && !parsed?.data && parsed?.successful !== true) {
+              console.log(`[EmailPlugin] 🤷 Gmail API returned no data - treating as failure`);
+              return builder
+                .setSuccess(false)
+                .setTitle("📭 No Response")
+                .setContent("Gmail API returned no data. The request may have failed silently.")
+                .setMessage("Empty response from Gmail API")
+                .build();
+            }
+
             // Server-side parsing and formatting
             const formattedResponse = this.formatEmailResponse(message, parsed, builder);
             

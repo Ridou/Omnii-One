@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { trpc } from '~/utils/api';
 import { useBrainTasksCache } from './useBrainMemoryCache';
 import { debugAuthStatus } from '~/utils/auth';
+import { cacheCoordinator } from '~/services/cacheCoordinator';
 
 import type { CompleteTaskOverview, TaskData, TaskListWithTasks } from '@omnii/validators';
 
@@ -94,11 +95,16 @@ export const useCachedTasks = () => {
         }
       }
 
-      // Step 2: Cache miss - try to fetch from Google Tasks API (graceful failure)
+      // Step 2: Cache miss - try to fetch from Google Tasks API with coordination
       console.log('[CachedTasks] 📭 Cache miss - attempting to fetch from Google Tasks API...');
       
       try {
-        const tRPCResult = await tRPCRefetch();
+        // ✅ Use CacheCoordinator to prevent rate limiting and cache stampedes
+        const tRPCResult = await cacheCoordinator.safeRefreshCache(
+          'google_tasks',
+          cacheStrategy?.refresh_strategy || 'rate_limited_smart',
+          async () => await tRPCRefetch()
+        );
         
         if (tRPCResult.error) {
           console.log('[CachedTasks] ⚠️ Google Tasks API not available - returning empty data');
@@ -176,9 +182,37 @@ export const useCachedTasks = () => {
         console.log(`[CachedTasks] ✅ Fresh data cached: ${freshData.totalTasks} tasks in ${Date.now() - startTime}ms`);
         return freshData;
 
-      } catch (authError) {
-        console.log('[CachedTasks] ⚠️ Authentication required for Google Tasks - returning empty data');
-        // Return empty data structure when authentication fails
+      } catch (apiError: any) {
+        // ✅ Enhanced error handling for rate limiting and other API issues
+        const errorMessage = apiError?.message || 'Unknown error';
+        
+        if (errorMessage.includes('Rate limited')) {
+          console.log('[CachedTasks] 🚦 Rate limited - returning stale cache data if available');
+          
+          // Try to return stale cache data during rate limiting
+          const staleData = await getCachedData();
+          if (staleData?.taskLists) {
+            const staleOverview: CompleteTaskOverview = {
+              taskLists: staleData.taskLists || [],
+              totalLists: staleData.totalLists || 0,
+              totalTasks: staleData.totalTasks || 0,
+              totalCompleted: staleData.totalCompleted || 0,
+              totalPending: staleData.totalPending || 0,
+              totalOverdue: staleData.totalOverdue || 0,
+              lastSyncTime: staleData.lastSyncTime || new Date().toISOString(),
+              syncSuccess: false, // Mark as stale
+            };
+            
+            setTasksOverview(staleOverview);
+            setLastFetchTime(Date.now());
+            setIsLoading(false);
+            console.log('[CachedTasks] 🔄 Returning stale data during rate limiting');
+            return staleOverview;
+          }
+        }
+        
+        console.log('[CachedTasks] ⚠️ API error or authentication required - returning empty data:', errorMessage);
+        // Return empty data structure when API fails
         const emptyData: CompleteTaskOverview = {
           taskLists: [],
           totalLists: 0,

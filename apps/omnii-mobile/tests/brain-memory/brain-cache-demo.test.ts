@@ -38,8 +38,8 @@ describe('🧠 Brain Memory Cache System Demo', () => {
       };
 
       // Test email cache (highest volatility)
-              expect(BRAIN_CACHE_STRATEGY.google_emails.duration).toBe(365 * 24 * 60 * 60 * 1000);
-        expect(BRAIN_CACHE_STRATEGY.google_emails.refresh_strategy).toBe('oauth_refresh');
+      expect(BRAIN_CACHE_STRATEGY.google_emails.duration).toBe(5 * 60 * 1000);
+      expect(BRAIN_CACHE_STRATEGY.google_emails.refresh_strategy).toBe('eager');
 
       // Test task cache (medium volatility)
       expect(BRAIN_CACHE_STRATEGY.google_tasks.duration).toBe(30 * 60 * 1000);

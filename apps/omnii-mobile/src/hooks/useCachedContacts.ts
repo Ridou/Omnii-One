@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { trpc } from '~/utils/api';
 import { useBrainContactsCache } from './useBrainMemoryCache';
 import { debugAuthStatus } from '~/utils/auth';
+import { cacheCoordinator } from '~/services/cacheCoordinator';
 
 import type { ContactData } from '@omnii/validators';
 
@@ -93,11 +94,16 @@ export const useCachedContacts = (pageSize: number = 1000) => {
         }
       }
 
-      // Step 2: Cache miss - try to fetch from Google Contacts API (graceful failure)
+      // Step 2: Cache miss - try to fetch from Google Contacts API with coordination
       console.log('[CachedContacts] 📭 Cache miss - attempting to fetch from Google Contacts API...');
       
       try {
-        const tRPCResult = await tRPCRefetch();
+        // ✅ Use CacheCoordinator to prevent rate limiting and cache stampedes
+        const tRPCResult = await cacheCoordinator.safeRefreshCache(
+          'google_contacts',
+          cacheStrategy?.refresh_strategy || 'rate_limited_background',
+          async () => await tRPCRefetch()
+        );
         
         console.log('[CachedContacts] 🔍 tRPC Response Debug:', {
           hasError: !!tRPCResult.error,
@@ -173,9 +179,31 @@ export const useCachedContacts = (pageSize: number = 1000) => {
         console.log(`[CachedContacts] ✅ Fresh data cached: ${freshData.totalCount} contacts in ${Date.now() - startTime}ms`);
         return freshData;
 
-      } catch (authError) {
-        console.log('[CachedContacts] ⚠️ Authentication required for Google Contacts - returning empty data');
-        // Return empty data structure when authentication fails
+      } catch (apiError: any) {
+        // ✅ Enhanced error handling for rate limiting and other API issues
+        const errorMessage = apiError?.message || 'Unknown error';
+        
+        if (errorMessage.includes('Rate limited')) {
+          console.log('[CachedContacts] 🚦 Rate limited - returning stale cache data if available');
+          
+          // Try to return stale cache data during rate limiting
+          const staleData = await getCachedData();
+          if (staleData?.contacts) {
+            const staleContacts: ContactsListResponse = {
+              contacts: staleData.contacts,
+              totalCount: staleData.totalContacts || staleData.contacts.length,
+            };
+            
+            setContactsData(staleContacts);
+            setLastFetchTime(Date.now());
+            setIsLoading(false);
+            console.log('[CachedContacts] 🔄 Returning stale data during rate limiting');
+            return staleContacts;
+          }
+        }
+        
+        console.log('[CachedContacts] ⚠️ API error or authentication required - returning empty data:', errorMessage);
+        // Return empty data structure when API fails
         const emptyData: ContactsListResponse = {
           contacts: [],
           totalCount: 0,

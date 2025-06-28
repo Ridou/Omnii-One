@@ -8,32 +8,32 @@ export type MemoryPeriod = 'past_week' | 'current_week' | 'next_week' | 'tasks' 
 // 🚀 Phase 2: Extended data types for brain-inspired caching
 export type BrainDataType = 'neo4j_concepts' | 'google_tasks' | 'google_calendar' | 'google_contacts' | 'google_emails';
 
-// 🧠 Brain-inspired cache strategy - Keep data indefinitely, update smartly
+// 🧠 Brain-inspired cache strategy - Volatility-based durations to prevent rate limiting
 const BRAIN_CACHE_STRATEGY: Record<string, { duration: number; reason: string; refresh_strategy: string }> = {
-  // Google services - No expiration, just smart updates with OAuth token refresh
+  // ✅ FIXED: Volatility-based cache durations to prevent 429 rate limits
   google_emails: {
-    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite with OAuth refresh
-    reason: 'Keep emails cached, update via smart refresh with OAuth tokens',
-    refresh_strategy: 'oauth_refresh'
+    duration: 5 * 60 * 1000, // 5 minutes - high volatility (new emails arrive frequently)
+    reason: 'New emails arrive frequently',
+    refresh_strategy: 'rate_limited_eager'
   },
   google_tasks: {
-    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite with OAuth refresh
-    reason: 'Keep tasks cached, update via smart refresh with OAuth tokens',
-    refresh_strategy: 'oauth_refresh'
+    duration: 30 * 60 * 1000, // 30 minutes - medium volatility (tasks created/completed regularly)
+    reason: 'Tasks created/completed regularly', 
+    refresh_strategy: 'rate_limited_smart'
   },
   google_calendar: {
-    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite with OAuth refresh
-    reason: 'Keep calendar cached, update via smart refresh with OAuth tokens',
-    refresh_strategy: 'oauth_refresh'
+    duration: 2 * 60 * 60 * 1000, // 2 hours - low volatility (events scheduled in advance)
+    reason: 'Events scheduled in advance',
+    refresh_strategy: 'rate_limited_lazy'
   },
   google_contacts: {
-    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite with OAuth refresh
-    reason: 'Keep contacts cached, update via smart refresh with OAuth tokens',
-    refresh_strategy: 'oauth_refresh'
+    duration: 24 * 60 * 60 * 1000, // 24 hours - very low volatility (contacts rarely change)
+    reason: 'Contacts rarely change',
+    refresh_strategy: 'rate_limited_background'
   },
   neo4j_concepts: {
-    duration: 365 * 24 * 60 * 60 * 1000, // 1 year - basically indefinite, update when concepts change
-    reason: 'Keep concepts cached indefinitely, update when brain knowledge changes',
+    duration: 24 * 60 * 60 * 1000, // 24 hours - low volatility (concepts update infrequently)
+    reason: 'Knowledge graph updates infrequently',
     refresh_strategy: 'smart_update'
   }
 };
@@ -545,14 +545,12 @@ export const useBrainMemoryCache = (
       setCacheStatus({
         isLoading: false,
         isValid: true,
-        lastUpdated: Date.now(),
+        lastUpdated: new Date().toISOString(),
         dataType
       });
       
-      // Step 8: Update stats
-      await updateCacheStats({
-        cache_hits: stats.cache_hits,
-        cache_misses: stats.cache_misses,
+      // Step 8: Update stats with cache write info
+      await updateCacheWriteStats({
         cache_writes: (stats.cache_writes || 0) + 1,
         total_items_cached: getTotalCount(newData),
         avg_response_time_ms: duration,
@@ -605,6 +603,47 @@ export const useBrainMemoryCache = (
 
     } catch (error) {
       console.error('[BrainCache] ❌ Error updating stats:', error);
+    }
+  }, [user?.id]);
+
+  // Update cache write statistics (separate from hit/miss stats)
+  const updateCacheWriteStats = useCallback(async (writeStats: {
+    cache_writes: number;
+    total_items_cached: number;
+    avg_response_time_ms: number;
+    last_update_type: string;
+    changes_detected: number;
+  }) => {
+    if (!user?.id) return;
+
+    try {
+      // Get current stats
+      const { data: currentStats } = await supabase
+        .from('brain_memory_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const newStats = {
+        user_id: user.id,
+        cache_hits: currentStats?.cache_hits || 0,
+        cache_misses: currentStats?.cache_misses || 0,
+        neo4j_queries_saved: currentStats?.neo4j_queries_saved || 0,
+        cache_writes: writeStats.cache_writes,
+        total_items_cached: writeStats.total_items_cached,
+        avg_response_time_ms: writeStats.avg_response_time_ms,
+        last_update_type: writeStats.last_update_type,
+        changes_detected: writeStats.changes_detected
+      };
+
+      await supabase
+        .from('brain_memory_stats')
+        .upsert(newStats, { onConflict: 'user_id' });
+
+      setStats(newStats);
+
+    } catch (error) {
+      console.error('[BrainCache] ❌ Error updating write stats:', error);
     }
   }, [user?.id]);
 
