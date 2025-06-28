@@ -8,7 +8,7 @@ const NEO4J_CONFIG = {
   username: 'neo4j',
   database: 'neo4j',
   // Password should be provided via environment variable or secure storage
-  password: process.env.EXPO_PUBLIC_NEO4J_PASSWORD || 'your_neo4j_password_here'
+  password: process.env.EXPO_PUBLIC_NEO4J_PASSWORD || '_o0JebFPkSb51lSjC7BUqdsvDhD4e5bYGFV1uoVv3QE'
 };
 
 // Enhanced interface for direct Neo4j concepts

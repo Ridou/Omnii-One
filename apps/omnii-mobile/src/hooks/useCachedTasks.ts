@@ -70,7 +70,6 @@ export const useCachedTasks = () => {
 
       // Step 1: Check brain memory cache first (unless forcing refresh)
       if (!forceRefresh) {
-        console.log('[CachedTasks] 🧠 Checking brain memory cache...');
         const cachedData = await getCachedData();
         
         if (cachedData?.taskLists && cachedData?.totalTasks !== undefined) {
@@ -121,7 +120,17 @@ export const useCachedTasks = () => {
           return emptyData;
         }
 
-        let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
+        // 🔧 FIX: Handle tRPC serialization wrapper (json/meta format)
+        let freshData = null;
+        
+        // Check if data is wrapped in serialization format: { json: { data: {...} }, meta: {...} }
+        if ((tRPCResult.data as any)?.json?.data) {
+          freshData = (tRPCResult.data as any).json.data;
+        } 
+        // Fallback: Direct success/data format
+        else if (tRPCResult.data?.success && tRPCResult.data?.data) {
+          freshData = tRPCResult.data.data;
+        }
         
         if (!freshData) {
           console.log('[CachedTasks] ⚠️ No Google Tasks data available - returning empty data');
@@ -210,10 +219,10 @@ export const useCachedTasks = () => {
     }
   }, [getCachedData, setCachedData, tRPCRefetch]);
 
-  // Initialize data on mount
+  // Initialize data on mount (run once only)
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+  }, []); // 🔧 Empty deps to prevent infinite loops
 
   // Refresh function (force cache refresh)
   const refetch = useCallback(() => {

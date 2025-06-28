@@ -97,7 +97,6 @@ export const useCachedNeo4j = () => {
 
       // Step 1: Check brain memory cache first (unless forcing refresh)
       if (!forceRefresh) {
-        console.log('[CachedNeo4j] 🧠 Checking brain memory cache...');
         const cachedData = await getCachedData();
         
         if (cachedData?.concepts && cachedData.concepts.length > 0) {
@@ -278,26 +277,14 @@ export const useCachedNeo4j = () => {
     }
   }, [getCachedData, setCachedData, neo4jClient, formatConceptsForCache]);
 
-  // Initialize data on mount (Fixed to prevent infinite loops)
+  // Initialize data on mount (run once only)
   useEffect(() => {
-    let isMounted = true;
+    // Delayed initialization to allow Neo4j client to connect
+    const timer = setTimeout(() => {
+      fetchConcepts();
+    }, 1000); // 1 second delay for connection
     
-    const initializeConcepts = async () => {
-      console.log('[CachedNeo4j] 🚀 EFFECT TRIGGERED - initializing concepts...');
-      if (!isMounted) return;
-      
-      try {
-        await fetchConcepts();
-      } catch (error) {
-        console.error('[CachedNeo4j] ❌ Error in initialization:', error);
-      }
-    };
-
-    initializeConcepts();
-    
-    return () => {
-      isMounted = false;
-    };
+    return () => clearTimeout(timer);
   }, []); // 🔧 Empty deps to prevent infinite loops
 
   // Refresh function (force cache refresh)

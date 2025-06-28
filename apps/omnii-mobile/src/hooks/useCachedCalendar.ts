@@ -93,7 +93,6 @@ export const useCachedCalendar = (params?: { timeMin?: string; timeMax?: string 
 
       // Step 1: Check brain memory cache first (unless forcing refresh)
       if (!forceRefresh) {
-        console.log('[CachedCalendar] 🧠 Checking brain memory cache...');
         const cachedData = await getCachedData();
         
         if (cachedData?.calendar && cachedData?.totalEvents !== undefined) {
@@ -120,7 +119,17 @@ export const useCachedCalendar = (params?: { timeMin?: string; timeMax?: string 
         throw new Error(tRPCResult.error.message);
       }
 
-      const freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
+              // 🔧 FIX: Handle tRPC serialization wrapper (json/meta format)
+        let freshData = null;
+        
+        // Check if data is wrapped in serialization format: { json: { data: {...} }, meta: {...} }
+        if ((tRPCResult.data as any)?.json?.data) {
+          freshData = (tRPCResult.data as any).json.data;
+        } 
+        // Fallback: Direct success/data format
+        else if (tRPCResult.data?.success && tRPCResult.data?.data) {
+          freshData = tRPCResult.data.data;
+        }
       
       if (!freshData) {
         console.log('[CachedCalendar] ⚠️ No Google Calendar data available - returning empty data');
@@ -166,10 +175,10 @@ export const useCachedCalendar = (params?: { timeMin?: string; timeMax?: string 
     }
   }, [getCachedData, setCachedData, tRPCRefetch]);
 
-  // Initialize data on mount
+  // Initialize data on mount (run once only)
   useEffect(() => {
     fetchCalendar();
-  }, [fetchCalendar]);
+  }, []); // 🔧 Empty deps to prevent infinite loops
 
   // Refresh function (force cache refresh)
   const refetch = useCallback(() => {

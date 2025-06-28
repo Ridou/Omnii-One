@@ -77,7 +77,6 @@ export const useCachedEmail = (maxResults: number = 20, query: string = "newer_t
 
       // Step 1: Check brain memory cache first (unless forcing refresh)
       if (!forceRefresh) {
-        console.log('[CachedEmail] 🧠 Checking brain memory cache...');
         const cachedData = await getCachedData();
         
         if (cachedData?.emails && cachedData?.totalEmails !== undefined) {
@@ -107,7 +106,10 @@ export const useCachedEmail = (maxResults: number = 20, query: string = "newer_t
           hasError: !!tRPCResult.error,
           errorMessage: tRPCResult.error?.message,
           hasData: !!tRPCResult.data,
-          dataStructure: tRPCResult.data ? Object.keys(tRPCResult.data) : null,
+          dataStructure: tRPCResult.data ? (Array.isArray(tRPCResult.data) ? tRPCResult.data : Object.keys(tRPCResult.data)) : null,
+          isArray: Array.isArray(tRPCResult.data),
+          dataType: typeof tRPCResult.data,
+          fullData: tRPCResult.data,
           success: tRPCResult.data?.success,
           actualData: tRPCResult.data?.data ? 'present' : 'missing'
         });
@@ -127,7 +129,21 @@ export const useCachedEmail = (maxResults: number = 20, query: string = "newer_t
           return emptyData;
         }
 
-        let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
+        // 🔧 FIX: Handle tRPC serialization wrapper (json/meta format)
+        let freshData: EmailsListResponse | null = null;
+        
+        // Check if data is wrapped in serialization format: { json: { data: {...} }, meta: {...} }
+        if ((tRPCResult.data as any)?.json?.data) {
+          freshData = (tRPCResult.data as any).json.data as EmailsListResponse;
+        } 
+        // Fallback: Direct success/data format
+        else if (tRPCResult.data?.success && tRPCResult.data?.data) {
+          freshData = tRPCResult.data.data as EmailsListResponse;
+        } 
+        // Fallback: Direct data format
+        else if (tRPCResult.data && typeof tRPCResult.data === 'object' && 'emails' in tRPCResult.data && 'totalCount' in tRPCResult.data && 'unreadCount' in tRPCResult.data) {
+          freshData = tRPCResult.data as EmailsListResponse;
+        }
         
         if (!freshData) {
           console.log('[CachedEmail] ⚠️ No Gmail data available - returning empty data');
@@ -196,36 +212,10 @@ export const useCachedEmail = (maxResults: number = 20, query: string = "newer_t
     }
   }, [getCachedData, setCachedData, tRPCRefetch]);
 
-  // Initialize data on mount (Fixed to prevent infinite loops)
+  // Initialize data on mount (run once only)
   useEffect(() => {
-    let isMounted = true;
-    
-    const initializeEmails = async () => {
-      console.log('[CachedEmail] 🚀 EFFECT TRIGGERED - initializing emails...');
-      if (!isMounted) return;
-      
-      try {
-        await fetchEmails();
-      } catch (error) {
-        console.error('[CachedEmail] ❌ Error in initialization:', error);
-      }
-    };
-
-    initializeEmails();
-    
-    return () => {
-      isMounted = false;
-    };
+    fetchEmails();
   }, []); // 🔧 Empty deps to prevent infinite loops
-
-  // Log when dependencies change to debug re-renders
-  useEffect(() => {
-    console.log('[CachedEmail] 🔄 Dependencies changed:', {
-      getCachedData: typeof getCachedData,
-      setCachedData: typeof setCachedData,
-      tRPCRefetch: typeof tRPCRefetch
-    });
-  }, [getCachedData, setCachedData, tRPCRefetch]);
 
   // Refresh function (force cache refresh)
   const refetch = useCallback(() => {
@@ -309,12 +299,12 @@ export const useEmailCacheMetrics = () => {
       ? Math.round((stats.cache_hits / (stats.cache_hits + stats.cache_misses)) * 100)
       : 0,
     
-    averageResponseTime: stats.avg_response_time_ms,
+    averageResponseTime: stats.avg_response_time_ms ?? 0,
     totalApiCallsSaved: stats.neo4j_queries_saved, // Reusing field for API calls
     
     // Performance insights
-    performanceImprovement: stats.avg_response_time_ms > 0 
-      ? Math.round((2000 - stats.avg_response_time_ms) / 2000 * 100) // Assuming 2s baseline for emails
+    performanceImprovement: (stats.avg_response_time_ms ?? 0) > 0 
+      ? Math.round((2000 - (stats.avg_response_time_ms ?? 0)) / 2000 * 100) // Assuming 2s baseline for emails
       : 0,
   };
 }; 

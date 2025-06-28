@@ -75,7 +75,6 @@ export const useCachedContacts = (pageSize: number = 1000) => {
 
       // Step 1: Check brain memory cache first (unless forcing refresh)
       if (!forceRefresh) {
-        console.log('[CachedContacts] 🧠 Checking brain memory cache...');
         const cachedData = await getCachedData();
         
         if (cachedData?.contacts && cachedData?.totalContacts !== undefined) {
@@ -104,7 +103,10 @@ export const useCachedContacts = (pageSize: number = 1000) => {
           hasError: !!tRPCResult.error,
           errorMessage: tRPCResult.error?.message,
           hasData: !!tRPCResult.data,
-          dataStructure: tRPCResult.data ? Object.keys(tRPCResult.data) : null,
+          dataStructure: tRPCResult.data ? (Array.isArray(tRPCResult.data) ? tRPCResult.data : Object.keys(tRPCResult.data)) : null,
+          isArray: Array.isArray(tRPCResult.data),
+          dataType: typeof tRPCResult.data,
+          fullData: tRPCResult.data,
           success: tRPCResult.data?.success,
           actualData: tRPCResult.data?.data ? 'present' : 'missing'
         });
@@ -123,9 +125,23 @@ export const useCachedContacts = (pageSize: number = 1000) => {
           return emptyData;
         }
 
-        let freshData = tRPCResult.data?.success ? tRPCResult.data.data : null;
+        // 🔧 FIX: Handle tRPC serialization wrapper (json/meta format)
+        let freshData: ContactsListResponse | null = null;
         
-        if (!freshData) {
+        // Check if data is wrapped in serialization format: { json: { data: {...} }, meta: {...} }
+        if ((tRPCResult.data as any)?.json?.data) {
+          freshData = (tRPCResult.data as any).json.data as ContactsListResponse;
+        } 
+        // Fallback: Direct success/data format
+        else if (tRPCResult.data?.success && tRPCResult.data?.data) {
+          freshData = tRPCResult.data.data as ContactsListResponse;
+        } 
+        // Fallback: Direct data format
+        else if (tRPCResult.data && typeof tRPCResult.data === 'object' && 'contacts' in tRPCResult.data && 'totalCount' in tRPCResult.data) {
+          freshData = tRPCResult.data as ContactsListResponse;
+        }
+        
+        if (!freshData || !freshData.contacts) {
           console.log('[CachedContacts] ⚠️ No Google Contacts data available - returning empty data');
           // Return empty data structure instead of throwing error
           const emptyData: ContactsListResponse = {
@@ -188,36 +204,12 @@ export const useCachedContacts = (pageSize: number = 1000) => {
     }
   }, [getCachedData, setCachedData, tRPCRefetch]);
 
-  // Initialize data on mount (Fixed to prevent infinite loops)
+  // Initialize data on mount (run once only)
   useEffect(() => {
-    let isMounted = true;
-    
-    const initializeContacts = async () => {
-      console.log('[CachedContacts] 🚀 EFFECT TRIGGERED - initializing contacts...');
-      if (!isMounted) return;
-      
-      try {
-        await fetchContacts();
-      } catch (error) {
-        console.error('[CachedContacts] ❌ Error in initialization:', error);
-      }
-    };
-
-    initializeContacts();
-    
-    return () => {
-      isMounted = false;
-    };
+    fetchContacts();
   }, []); // 🔧 Empty deps to prevent infinite loops
 
-  // Log when dependencies change to debug re-renders
-  useEffect(() => {
-    console.log('[CachedContacts] 🔄 Dependencies changed:', {
-      getCachedData: typeof getCachedData,
-      setCachedData: typeof setCachedData,
-      tRPCRefetch: typeof tRPCRefetch
-    });
-  }, [getCachedData, setCachedData, tRPCRefetch]);
+
 
   // Refresh function (force cache refresh)
   const refetch = useCallback(() => {
@@ -295,12 +287,12 @@ export const useContactsCacheMetrics = () => {
       ? Math.round((stats.cache_hits / (stats.cache_hits + stats.cache_misses)) * 100)
       : 0,
     
-    averageResponseTime: stats.avg_response_time_ms,
+    averageResponseTime: stats.avg_response_time_ms ?? 0,
     totalApiCallsSaved: stats.neo4j_queries_saved, // Reusing field for API calls
     
     // Performance insights
-    performanceImprovement: stats.avg_response_time_ms > 0 
-      ? Math.round((600 - stats.avg_response_time_ms) / 600 * 100) // Assuming 600ms baseline for contacts
+    performanceImprovement: (stats.avg_response_time_ms ?? 0) > 0 
+      ? Math.round((600 - (stats.avg_response_time_ms ?? 0)) / 600 * 100) // Assuming 600ms baseline for contacts
       : 0,
   };
 }; 

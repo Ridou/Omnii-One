@@ -91,6 +91,8 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
   const { user } = useAuth();
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
 
+  // Data successfully flowing to UI components!
+
   // 🆕 Handle Google connection
   const handleConnectGoogle = async () => {
     try {
@@ -762,12 +764,12 @@ const ContactMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
               </Text>
               {contact.emails?.[0] && (
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  📧 {contact.emails[0]}
+                  📧 {contact.emails[0].address || contact.emails[0]}
                 </Text>
                 )}
               {contact.phones?.[0] && (
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  📱 {contact.phones[0]}
+                  📱 {contact.phones[0].number || contact.phones[0]}
                 </Text>
                 )}
             </View>
