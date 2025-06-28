@@ -307,49 +307,44 @@ app.ws("/ws", {
             return;
           }
           
-          // ✅ NEW: Use Zod safeParse to check if this is a UnifiedToolResponse
-          console.log(`[app.ts] 🧪 *** USING ZOD SAFE PARSE FOR DETAILED VALIDATION ***`);
+          // ✅ SMART VALIDATION: Only validate as UnifiedToolResponse if it looks like one
+          console.log(`[app.ts] 🧪 *** SMART RESPONSE DETECTION ***`);
           
           let isUnifiedResponse = false;
           let validatedResponse: any = null;
-          let zodError: any = null;
           
-          const parseResult = safeParseUnifiedToolResponse(response);
+          // Pre-check: Does this look like a UnifiedToolResponse?
+          const looksLikeUnified = response && 
+            response.type && 
+            ['email', 'calendar', 'contact', 'task', 'general', 'rdf'].includes(response.type) &&
+            response.data &&
+            response.data.ui;
+            
+          const looksLikeLegacy = response && 
+            (response.status || response.type === 'response');
           
-          if (parseResult.success) {
-            console.log(`[app.ts] ✅ ZOD SAFE PARSE SUCCESS!`);
-            isUnifiedResponse = true;
-            validatedResponse = parseResult.data;
-            console.log(`[app.ts] Validated response type:`, validatedResponse.type);
-            console.log(`[app.ts] Has structured data:`, !!validatedResponse.data?.structured);
-          } else {
-            console.log(`[app.ts] ❌ ZOD SAFE PARSE FAILED`);
-            console.log(`[app.ts] Detailed validation error:`, parseResult.error);
-            zodError = parseResult.error;
-            isUnifiedResponse = false;
+          console.log(`[app.ts] 🔍 Pre-validation checks:`);
+          console.log(`[app.ts] - Looks like UnifiedToolResponse:`, looksLikeUnified);
+          console.log(`[app.ts] - Looks like legacy response:`, looksLikeLegacy);
+          
+          if (looksLikeUnified) {
+            console.log(`[app.ts] 🧪 Attempting UnifiedToolResponse validation...`);
+            const parseResult = safeParseUnifiedToolResponse(response);
             
-            // ✅ DETAILED ERROR ANALYSIS
-            console.log(`[app.ts] 🔍 *** ANALYZING WHY VALIDATION FAILED ***`);
-            
-            if (!response) {
-              console.log(`[app.ts] ❌ Response is null/undefined`);
+            if (parseResult.success) {
+              console.log(`[app.ts] ✅ ZOD VALIDATION SUCCESS!`);
+              isUnifiedResponse = true;
+              validatedResponse = parseResult.data;
+              console.log(`[app.ts] Validated response type:`, validatedResponse.type);
+              console.log(`[app.ts] Has structured data:`, !!validatedResponse.data?.structured);
             } else {
-              console.log(`[app.ts] 📋 Response structure analysis:`);
-              console.log(`[app.ts] - response.type:`, response.type, '(expected: email|calendar|contact|task|general)');
-              console.log(`[app.ts] - response.success:`, response.success, '(expected: boolean)');
-              console.log(`[app.ts] - response.data:`, !!response.data, '(expected: object)');
-              console.log(`[app.ts] - response.data.ui:`, !!response.data?.ui, '(expected: object)');
-              console.log(`[app.ts] - response.message:`, !!response.message, '(expected: string)');
-              console.log(`[app.ts] - response.id:`, !!response.id, '(expected: string)');
-              console.log(`[app.ts] - response.userId:`, !!response.userId, '(expected: string)');
-              console.log(`[app.ts] - response.timestamp:`, !!response.timestamp, '(expected: string)');
-              
-              // Check if this looks like a legacy response instead
-              console.log(`[app.ts] 🔍 *** LEGACY FORMAT CHECK ***`);
-              console.log(`[app.ts] - Has response.status:`, !!response.status, '(legacy indicator)');
-              console.log(`[app.ts] - response.type === "response":`, response.type === 'response', '(legacy indicator)');
-              console.log(`[app.ts] - Has response.data.message:`, !!response.data?.message, '(legacy structure)');
+              console.log(`[app.ts] ❌ ZOD VALIDATION FAILED despite looking unified`);
+              console.log(`[app.ts] Error details:`, parseResult.error);
+              isUnifiedResponse = false;
             }
+          } else {
+            console.log(`[app.ts] ⏭️ Skipping UnifiedToolResponse validation - doesn't match expected structure`);
+            isUnifiedResponse = false;
           }
           
           // Use Zod validation result instead of manual checks

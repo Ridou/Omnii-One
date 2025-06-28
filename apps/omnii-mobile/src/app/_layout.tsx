@@ -2,6 +2,19 @@ import 'react-native-url-polyfill/auto';
 import { Buffer } from 'buffer';
 import '../styles/global.css';
 
+// Configure Reanimated to disable strict mode warnings in development
+// This reduces console spam from Reanimated during development
+if (__DEV__) {
+  // Suppress Reanimated strict mode warnings
+  const originalWarn = console.warn;
+  console.warn = (...args: any[]) => {
+    if (args[0]?.includes?.('[Reanimated]')) {
+      return; // Suppress Reanimated warnings
+    }
+    originalWarn.apply(console, args);
+  };
+}
+
 // Add process polyfill globally
 import process from 'process';
 

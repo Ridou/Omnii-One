@@ -434,11 +434,14 @@ export const useNeo4jDirectClient = () => {
 
   // Initialize driver on mount (only once)
   useEffect(() => {
-    // 🚨 TEMPORARY FIX: Initialize driver without waiting for user authentication
-    if (!driver && !initializingRef.current) {
-      console.log('[Neo4j-DirectClient] 🚀 Initializing driver (bypassing auth check)');
-      initializeDriver();
-    }
+    // ✅ DISABLED: Direct Neo4j connections from mobile app
+    // Mobile app should use backend API instead of direct database connections
+    console.log('[Neo4j-DirectClient] ⏭️ Direct Neo4j connection disabled - using backend API instead');
+    
+    setConnectionStatus({
+      connected: false,
+      error: 'Direct connections disabled - using backend API'
+    });
     
     // Cleanup on unmount
     return () => {
@@ -447,7 +450,7 @@ export const useNeo4jDirectClient = () => {
         closeDriver();
       }
     };
-  }, []); // 🚨 TEMPORARY: Empty deps to initialize immediately
+  }, []); // Empty deps since we're not initializing
 
   // Refresh all data
   const refreshAll = useCallback(async () => {
