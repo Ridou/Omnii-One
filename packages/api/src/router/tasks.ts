@@ -568,8 +568,10 @@ class TasksService {
               `[TasksService] 🔄 Fetching tasks for list: "${taskList.title}" (${taskList.id})`,
             );
 
+            // ✅ Request ALL tasks with high maxResults (instead of default 100)
+            // This ensures ActionPlanner gets complete task list for accurate context  
             const tasksResponse = await this.makeGoogleTasksApiCall(
-              `https://tasks.googleapis.com/tasks/v1/lists/${taskList.id}/tasks?showCompleted=true&maxResults=100`,
+              `https://tasks.googleapis.com/tasks/v1/lists/${taskList.id}/tasks?showCompleted=true&maxResults=1000`,
               oauthToken.access_token,
             );
 

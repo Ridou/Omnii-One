@@ -640,6 +640,36 @@ export class WebSocketHandlerService {
         .setAuth(result.authRequired || false, result.authUrl || undefined)
         .build();
         
+      // ✅ CRITICAL FIX: Ensure required fields are present for Zod validation
+      if (!convertedResponse.data?.ui?.content) {
+        const uiContent = result.message || "Request processed";
+        convertedResponse.data = convertedResponse.data || {};
+        convertedResponse.data.ui = {
+          // Spread existing properties first
+          ...convertedResponse.data.ui,
+          // Override/ensure required properties
+          title: convertedResponse.data.ui?.title || (result.success ? "✅ Request Completed" : "❌ Request Failed"),
+          content: uiContent,
+          icon: convertedResponse.data.ui?.icon || "💬",
+          actions: convertedResponse.data.ui?.actions || [],
+          metadata: convertedResponse.data.ui?.metadata || {
+            category: 'general',
+            confidence: 0,
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
+      
+      // ✅ CRITICAL FIX: Ensure GeneralDataSchema.content is present for ServiceType.GENERAL
+      if (convertedResponse.type === 'general') {
+        const structuredContent = result.message || "Request processed";
+        convertedResponse.data.structured = {
+          content: structuredContent,
+          summary: `Request ${result.success ? 'completed' : 'failed'}`,
+          ...(convertedResponse.data.structured || {})
+        };
+      }
+        
       // NEW: Add RDF enhancement to structured data (only if RDF service is available)
       if (this.rdfService) {
         if (!convertedResponse.data) {

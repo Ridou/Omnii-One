@@ -416,7 +416,9 @@ export const contactsRouter = {
           ctx.session?.user?.id ? 'session' : userIdHeader ? 'header' : 'fallback'
         })`);
 
-        const result = await contactsService.listContacts(userId);
+        // ✅ Request ALL contacts with high pageSize (instead of default 20)
+        // This ensures ActionPlanner gets complete contact list for accurate resolution
+        const result = await contactsService.listContacts(userId, 1000);
 
         return {
           success: true,

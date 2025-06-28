@@ -438,9 +438,10 @@ export const emailRouter = {
           ctx.session?.user?.id ? 'session' : userIdHeader ? 'header' : 'fallback'
         })`);
 
-        // Use default parameters like tasks does
+        // ✅ Request ALL emails with high maxResults (instead of default 20)  
+        // This ensures ActionPlanner gets complete email list for accurate resolution
         const defaultParams = {
-          maxResults: 20,
+          maxResults: 500, // Increased from 20 to get all recent emails
           query: "newer_than:7d",
           includeSpamTrash: false,
         };

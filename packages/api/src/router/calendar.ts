@@ -242,9 +242,10 @@ export const calendarRouter = {
           ctx.session?.user?.id ? 'session' : userIdHeader ? 'header' : 'fallback'
         })`);
 
-        // Use default parameters
+        // ✅ Request ALL calendar events with high maxResults (instead of default 20)
+        // This ensures ActionPlanner gets complete calendar list for accurate context
         const defaultParams = {
-          maxResults: 20,
+          maxResults: 1000, // Increased from 20 to get all upcoming events
           timeMin: new Date().toISOString(),
           timeMax: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
           singleEvents: true,

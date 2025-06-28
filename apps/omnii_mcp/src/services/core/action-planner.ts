@@ -89,6 +89,14 @@ export class ActionPlanner {
         needsEmailResolution: e.needsEmailResolution
       })));
 
+      // ✅ NEW: Get all cached data for enhanced planning context
+      let allCachedData = null;
+      if (userUUID) {
+        console.log(`[ActionPlanner] 🧠 Loading brain memory cache for enhanced planning context`);
+        allCachedData = await this.getAllCachedData(userUUID);
+        console.log(`[ActionPlanner] 🧠 Brain memory context loaded - planning with complete data awareness`);
+      }
+
       // NEW: Step 1 - Check for RDF insights in execution context (RDF-first approach)
       const rdfInsights = executionContext?.rdfInsights;
       const rdfSuccess = executionContext?.rdfSuccess;
@@ -286,32 +294,61 @@ export class ActionPlanner {
   }
 
   /**
-   * Resolve entities using RDF reasoning and smart contact resolution
+   * Resolve entities using cached data first, then RDF reasoning as fallback
+   * ✅ FIXED: Now uses brain memory cache for fast contact resolution
    */
   private async resolveEntitiesWithRDF(
     entitiesNeedingResolution: CachedEntity[],
     allEntities?: CachedEntity[],
     userUUID?: string
   ): Promise<CachedEntity[]> {
-    console.log(`[ActionPlanner] 🧠 Resolving ${entitiesNeedingResolution.length} entities with RDF contact resolution`);
+    console.log(`[ActionPlanner] 🧠 Resolving ${entitiesNeedingResolution.length} entities with cached data first`);
     console.log(`[ActionPlanner] 🔑 Using userUUID: ${userUUID || 'undefined'}`);
     
     if (!userUUID) {
-      console.warn(`[ActionPlanner] ⚠️ No userUUID provided, cannot use brain memory for confidence boosting`);
+      console.warn(`[ActionPlanner] ⚠️ No userUUID provided, cannot use brain memory cache`);
     }
     
     const resolvedEntities: CachedEntity[] = [];
-    
-    // Initialize RDF contact analyzer and confidence booster
-    const rdfAnalyzer = new RDFContactAnalyzer();
-    const confidenceBooster = new ContactConfidenceBooster();
     
     for (const entity of entitiesNeedingResolution) {
       console.log(`[ActionPlanner] 🔍 Resolving entity: ${entity.type} = "${entity.value}"`);
       
       try {
-        // Step 1: Analyze the contact mention using RDF semantics
         const contactName = entity.value;
+        
+        // ✅ STEP 1: Check brain memory cache first (24hr cached contacts)
+        let cachedContactMatch = null;
+        if (userUUID) {
+          cachedContactMatch = await this.searchCachedContacts(contactName, userUUID);
+          
+          if (cachedContactMatch) {
+            console.log(`[ActionPlanner] 🎯 CACHE HIT: Found "${contactName}" in brain memory cache`);
+            console.log(`[ActionPlanner] 📧 Email: ${cachedContactMatch.email}`);
+            
+            const resolvedEntity: CachedEntity = {
+              type: EntityType.EMAIL,
+              value: entity.value,
+              email: cachedContactMatch.email,
+              displayName: cachedContactMatch.name,
+              resolvedAt: Date.now(),
+              confidence: 0.95, // High confidence for cached data
+            };
+            resolvedEntities.push(resolvedEntity);
+            continue; // Skip expensive RDF resolution
+          } else {
+            console.log(`[ActionPlanner] 📭 Cache miss for "${contactName}" - will try RDF fallback`);
+          }
+        }
+        
+        // ✅ STEP 2: Fallback to RDF reasoning (only if cache miss)
+        console.log(`[ActionPlanner] 🤖 Falling back to RDF contact resolution for "${contactName}"`);
+        
+        // Initialize RDF contact analyzer and confidence booster
+        const rdfAnalyzer = new RDFContactAnalyzer();
+        const confidenceBooster = new ContactConfidenceBooster();
+        
+        // Step 2a: Analyze the contact mention using RDF semantics
         const contextMessage = `Send email to ${contactName}`; // Reconstruct context
         
         const analysis = await rdfAnalyzer.analyzeMessage(contextMessage);
@@ -322,16 +359,16 @@ export class ActionPlanner {
           context: analysis.context_clues
         });
         
-        // Step 2: Expand the contact name for better matching
+        // Step 2b: Expand the contact name for better matching
         const expandedNames = await rdfAnalyzer.expandContactName(contactName);
         console.log(`[ActionPlanner] 📝 Name expansion: ${contactName} → [${expandedNames.join(', ')}]`);
         
-        // Step 3: Search for contacts using all name variations
+        // Step 2c: Search for contacts using all name variations (this will hit Google API)
         const searchResults = await rdfAnalyzer.searchContacts(expandedNames, userUUID);
-        console.log(`[ActionPlanner] 🔍 Found ${searchResults.length} potential contacts`);
+        console.log(`[ActionPlanner] 🔍 Found ${searchResults.length} potential contacts via RDF`);
         
         if (searchResults.length === 0) {
-          console.log(`[ActionPlanner] ❌ No contacts found for "${contactName}"`);
+          console.log(`[ActionPlanner] ❌ No contacts found for "${contactName}" in cache or via RDF`);
           resolvedEntities.push({
             ...entity,
             displayName: `${contactName} (not found)`,
@@ -339,11 +376,11 @@ export class ActionPlanner {
           continue;
         }
         
-        // Step 4: Apply contextual scoring and brain memory confidence boosting
+        // Step 2d: Apply contextual scoring and brain memory confidence boosting
         const scoredContacts = await rdfAnalyzer.scoreContacts(searchResults, analysis);
         console.log(`[ActionPlanner] 🎯 Scored ${scoredContacts.length} contacts`);
         
-        // Step 5: Boost confidence using brain memory (if userUUID available)
+        // Step 2e: Boost confidence using brain memory (if userUUID available)
         let boostedContacts = scoredContacts;
         if (userUUID) {
           try {
@@ -359,13 +396,13 @@ export class ActionPlanner {
           }
         }
         
-        // Step 6: Apply smart intervention logic
+        // Step 2f: Apply smart intervention logic
         const topContact = boostedContacts[0];
         const autoResolveThreshold = 0.8;
         
         if (topContact && topContact.confidence >= autoResolveThreshold) {
           // High confidence - auto-resolve
-          console.log(`[ActionPlanner] ✅ Auto-resolving: ${topContact.name} (${Math.round(topContact.confidence * 100)}% confidence)`);
+          console.log(`[ActionPlanner] ✅ Auto-resolving via RDF: ${topContact.name} (${Math.round(topContact.confidence * 100)}% confidence)`);
           
           const resolvedEntity: CachedEntity = {
             type: EntityType.EMAIL,
@@ -379,9 +416,8 @@ export class ActionPlanner {
           
         } else if (boostedContacts.length > 0) {
           // Multiple options or low confidence - use best match for now
-          // TODO: In the future, this could trigger user intervention
           const bestMatch = boostedContacts[0];
-          console.log(`[ActionPlanner] 💡 Using best match: ${bestMatch.name} (${Math.round(bestMatch.confidence * 100)}% confidence)`);
+          console.log(`[ActionPlanner] 💡 Using best match via RDF: ${bestMatch.name} (${Math.round(bestMatch.confidence * 100)}% confidence)`);
           
           if (bestMatch.email) {
             const resolvedEntity: CachedEntity = {
@@ -410,7 +446,7 @@ export class ActionPlanner {
         }
         
       } catch (error) {
-        console.error(`[ActionPlanner] Error in RDF contact resolution for "${entity.value}":`, error);
+        console.error(`[ActionPlanner] Error in contact resolution for "${entity.value}":`, error);
         resolvedEntities.push({
           ...entity,
           displayName: `${entity.value} (resolution error)`,
@@ -419,9 +455,285 @@ export class ActionPlanner {
     }
     
     const successfulResolutions = resolvedEntities.filter(e => e.email).length;
-    console.log(`[ActionPlanner] 🎯 RDF Resolution complete: ${successfulResolutions}/${entitiesNeedingResolution.length} entities resolved to emails`);
+    console.log(`[ActionPlanner] 🎯 Contact Resolution complete: ${successfulResolutions}/${entitiesNeedingResolution.length} entities resolved to emails`);
     
     return resolvedEntities;
+  }
+
+  /**
+   * ✅ Search cached contacts from brain memory cache (Supabase)
+   * This should find contacts like "Richard Santin" instantly from cache
+   */
+  private async searchCachedContacts(
+    searchName: string, 
+    userUUID: string
+  ): Promise<{ name: string; email: string } | null> {
+    try {
+      console.log(`[ActionPlanner] 🧠 Searching brain memory cache for: "${searchName}"`);
+      
+      // Try to get cached contacts from Supabase brain_memory_cache table
+      const baseUrl = process.env.RAILWAY_STATIC_URL 
+        ? `https://${process.env.RAILWAY_STATIC_URL}` 
+        : (process.env.BASE_URL || 'http://localhost:8000');
+      
+      const response = await fetch(`${baseUrl}/api/trpc/contacts.listContacts`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userUUID,
+        },
+      });
+      
+      if (!response.ok) {
+        console.log(`[ActionPlanner] ⚠️ Failed to fetch cached contacts: ${response.status}`);
+        return null;
+      }
+      
+          const contactsData = await response.json() as any;
+    // ✅ Use the CORRECT tRPC response structure: result.data.json.data.contacts
+    const contacts = contactsData?.result?.data?.json?.data?.contacts || 
+                    contactsData?.json?.data?.contacts || 
+                    contactsData?.data?.contacts || 
+                    contactsData?.contacts || [];
+      
+      if (!Array.isArray(contacts) || contacts.length === 0) {
+        console.log(`[ActionPlanner] 📭 No cached contacts found`);
+        return null;
+      }
+      
+      console.log(`[ActionPlanner] 🧠 Searching ${contacts.length} cached contacts for "${searchName}"`);
+      
+      // Search for exact and partial matches
+      const searchLower = searchName.toLowerCase();
+      const exactMatch = contacts.find((contact: any) => 
+        contact.name?.toLowerCase() === searchLower
+      );
+      
+      if (exactMatch && exactMatch.emails?.length > 0) {
+        console.log(`[ActionPlanner] 🎯 EXACT CACHE MATCH: ${exactMatch.name} → ${exactMatch.emails[0].address}`);
+        return {
+          name: exactMatch.name,
+          email: exactMatch.emails[0].address
+        };
+      }
+      
+      // Try partial match (e.g., "Richard Santin" matches "Richard")
+      const partialMatch = contacts.find((contact: any) => {
+        const contactNameLower = contact.name?.toLowerCase() || '';
+        return contactNameLower.includes(searchLower) || searchLower.includes(contactNameLower);
+      });
+      
+      if (partialMatch && partialMatch.emails?.length > 0) {
+        console.log(`[ActionPlanner] 🎯 PARTIAL CACHE MATCH: ${partialMatch.name} → ${partialMatch.emails[0].address}`);
+        return {
+          name: partialMatch.name,
+          email: partialMatch.emails[0].address
+        };
+      }
+      
+      console.log(`[ActionPlanner] 📭 No cache match found for "${searchName}"`);
+      return null;
+      
+    } catch (error) {
+      console.error(`[ActionPlanner] ❌ Error searching cached contacts:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * ✅ Search cached tasks from brain memory cache (Supabase)
+   * This should find task lists and tasks instantly from cache
+   */
+  private async searchCachedTasks(
+    userUUID: string
+  ): Promise<{ taskLists: any[]; totalTasks: number } | null> {
+    try {
+      console.log(`[ActionPlanner] 🧠 Searching brain memory cache for tasks`);
+      
+      // Get cached tasks from Supabase brain_memory_cache table
+      const baseUrl = process.env.RAILWAY_STATIC_URL 
+        ? `https://${process.env.RAILWAY_STATIC_URL}` 
+        : (process.env.BASE_URL || 'http://localhost:8000');
+      
+      const response = await fetch(`${baseUrl}/api/trpc/tasks.getCompleteOverview`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userUUID,
+        },
+      });
+      
+      if (!response.ok) {
+        console.log(`[ActionPlanner] ⚠️ Failed to fetch cached tasks: ${response.status}`);
+        return null;
+      }
+      
+      const tasksData = await response.json() as any;
+      // ✅ Use the CORRECT tRPC response structure: result.data.json.data
+      const taskOverview = tasksData?.result?.data?.json?.data || 
+                          tasksData?.json?.data || 
+                          tasksData?.data || 
+                          null;
+      
+      if (!taskOverview || !Array.isArray(taskOverview.taskLists)) {
+        console.log(`[ActionPlanner] 📭 No cached tasks found`);
+        return null;
+      }
+      
+      console.log(`[ActionPlanner] 🧠 Found ${taskOverview.taskLists.length} task lists with ${taskOverview.totalTasks} total tasks`);
+      
+      return {
+        taskLists: taskOverview.taskLists,
+        totalTasks: taskOverview.totalTasks
+      };
+      
+    } catch (error) {
+      console.error(`[ActionPlanner] 🧠 Brain memory tasks cache search failed:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * ✅ Search cached calendar events from brain memory cache (Supabase)
+   * This should find calendar events instantly from cache
+   */
+  private async searchCachedCalendar(
+    userUUID: string
+  ): Promise<{ events: any[]; totalCount: number } | null> {
+    try {
+      console.log(`[ActionPlanner] 🧠 Searching brain memory cache for calendar events`);
+      
+      // Get cached calendar from Supabase brain_memory_cache table
+      const baseUrl = process.env.RAILWAY_STATIC_URL 
+        ? `https://${process.env.RAILWAY_STATIC_URL}` 
+        : (process.env.BASE_URL || 'http://localhost:8000');
+      
+      const response = await fetch(`${baseUrl}/api/trpc/calendar.getEvents`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userUUID,
+        },
+      });
+      
+      if (!response.ok) {
+        console.log(`[ActionPlanner] ⚠️ Failed to fetch cached calendar: ${response.status}`);
+        return null;
+      }
+      
+      const calendarData = await response.json() as any;
+      // ✅ Use the CORRECT tRPC response structure: result.data.json.data
+      const eventData = calendarData?.result?.data?.json?.data || 
+                       calendarData?.json?.data || 
+                       calendarData?.data || 
+                       null;
+      
+      if (!eventData || !Array.isArray(eventData.events)) {
+        console.log(`[ActionPlanner] 📭 No cached calendar events found`);
+        return null;
+      }
+      
+      console.log(`[ActionPlanner] 🧠 Found ${eventData.events.length} calendar events`);
+      
+      return {
+        events: eventData.events,
+        totalCount: eventData.totalCount || eventData.events.length
+      };
+      
+    } catch (error) {
+      console.error(`[ActionPlanner] 🧠 Brain memory calendar cache search failed:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * ✅ Search cached emails from brain memory cache (Supabase)
+   * This should find recent emails instantly from cache
+   */
+  private async searchCachedEmails(
+    userUUID: string
+  ): Promise<{ emails: any[]; totalCount: number; unreadCount: number } | null> {
+    try {
+      console.log(`[ActionPlanner] 🧠 Searching brain memory cache for emails`);
+      
+      // Get cached emails from Supabase brain_memory_cache table
+      const baseUrl = process.env.RAILWAY_STATIC_URL 
+        ? `https://${process.env.RAILWAY_STATIC_URL}` 
+        : (process.env.BASE_URL || 'http://localhost:8000');
+      
+      const response = await fetch(`${baseUrl}/api/trpc/email.listEmails`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userUUID,
+        },
+      });
+      
+      if (!response.ok) {
+        console.log(`[ActionPlanner] ⚠️ Failed to fetch cached emails: ${response.status}`);
+        return null;
+      }
+      
+      const emailData = await response.json() as any;
+      // ✅ Use the CORRECT tRPC response structure: result.data.json.data
+      const emailResponse = emailData?.result?.data?.json?.data || 
+                           emailData?.json?.data || 
+                           emailData?.data || 
+                           null;
+      
+      if (!emailResponse || !Array.isArray(emailResponse.emails)) {
+        console.log(`[ActionPlanner] 📭 No cached emails found`);
+        return null;
+      }
+      
+      console.log(`[ActionPlanner] 🧠 Found ${emailResponse.emails.length} emails`);
+      
+      return {
+        emails: emailResponse.emails,
+        totalCount: emailResponse.totalCount || emailResponse.emails.length,
+        unreadCount: emailResponse.unreadCount || 0
+      };
+      
+    } catch (error) {
+      console.error(`[ActionPlanner] 🧠 Brain memory email cache search failed:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * ✅ Get all cached data from brain memory cache (Supabase)
+   * This provides complete context for ActionPlanner with all Google services data
+   */
+  private async getAllCachedData(
+    userUUID: string
+  ): Promise<{
+    contacts: { name: string; email: string }[] | null;
+    tasks: { taskLists: any[]; totalTasks: number } | null;
+    calendar: { events: any[]; totalCount: number } | null;
+    emails: { emails: any[]; totalCount: number; unreadCount: number } | null;
+  }> {
+    console.log(`[ActionPlanner] 🧠 Getting complete cached data context for user: ${userUUID}`);
+    
+    // Get all cached data in parallel for maximum speed
+    const [tasksResult, calendarResult, emailsResult] = await Promise.all([
+      this.searchCachedTasks(userUUID).catch(() => null),
+      this.searchCachedCalendar(userUUID).catch(() => null), 
+      this.searchCachedEmails(userUUID).catch(() => null)
+    ]);
+    
+    // Note: contacts are handled separately in resolveEntitiesWithRDF
+    
+    console.log(`[ActionPlanner] 🧠 Complete cache context ready:`);
+    console.log(`  - Tasks: ${tasksResult ? `${tasksResult.totalTasks} tasks in ${tasksResult.taskLists.length} lists` : 'none'}`);
+    console.log(`  - Calendar: ${calendarResult ? `${calendarResult.events.length} events` : 'none'}`);
+    console.log(`  - Emails: ${emailsResult ? `${emailsResult.emails.length} emails (${emailsResult.unreadCount} unread)` : 'none'}`);
+    
+    return {
+      contacts: null, // Handled separately in entity resolution
+      tasks: tasksResult,
+      calendar: calendarResult,
+      emails: emailsResult
+    };
   }
 
   /**
