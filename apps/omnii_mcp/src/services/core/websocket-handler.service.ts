@@ -320,36 +320,45 @@ export class WebSocketHandlerService {
           console.log(`[WebSocket] Full structured data keys:`, Object.keys(result.unifiedResponse.data.structured));
         }
         
-        // ✅ Use structure utility instead of full JSON dump
-        logObjectStructure(`[WebSocket] 🚀 SENDING TO CLIENT - UnifiedToolResponse structure`, result.unifiedResponse);
-        return result.unifiedResponse; // Return the UnifiedToolResponse directly
-      }
+              // ✅ Use structure utility instead of full JSON dump
+      logObjectStructure(`[WebSocket] 🚀 SENDING TO CLIENT - UnifiedToolResponse structure`, result.unifiedResponse);
+      return result.unifiedResponse; // Return the UnifiedToolResponse directly
+    }
 
-      // OLD: Fallback to legacy response format (preserve RDF enhancement)
-      console.log(`[WebSocket] 📤 Using legacy response format`);
-      const legacyData: any = {
-        message: result.message,
-        success: result.success,
-        userId: payload.userId,
-        processedAt: new Date().toISOString(),
-        error: result.error,
+    // ✅ FIXED: Check if result is already a UnifiedToolResponse (from converted legacy)
+    if (result && typeof result === 'object' && result.type && result.data?.ui) {
+      console.log(`[WebSocket] 🚀 Result is already UnifiedToolResponse - returning directly`);
+      console.log(`[WebSocket] - Type: ${result.type}`);
+      console.log(`[WebSocket] - Success: ${result.success}`);
+      console.log(`[WebSocket] - Has UI: ${!!result.data?.ui}`);
+      return result; // Return the UnifiedToolResponse directly
+    }
+
+    // OLD: Fallback to legacy response format (preserve RDF enhancement)
+    console.log(`[WebSocket] 📤 Using legacy response format`);
+    const legacyData: any = {
+      message: result.message,
+      success: result.success,
+      userId: payload.userId,
+      processedAt: new Date().toISOString(),
+      error: result.error,
+    };
+    
+    // NEW: Preserve RDF enhancement data from handleWithActionPlanner (only if RDF actually ran)
+    if (result.data?.structured?.rdf_enhancement) {
+      legacyData.structured = {
+        rdf_enhancement: result.data.structured.rdf_enhancement
       };
-      
-      // NEW: Preserve RDF enhancement data from handleWithActionPlanner (only if RDF actually ran)
-      if (result.data?.structured?.rdf_enhancement) {
-        legacyData.structured = {
-          rdf_enhancement: result.data.structured.rdf_enhancement
-        };
-      }
-      
-      return {
-        status: result.success
-          ? WebSocketResponseStatus.SUCCESS
-          : WebSocketResponseStatus.ERROR,
-        data: legacyData,
-        success: result.success, // Add success property for test compatibility
-        timestamp: Date.now(),
-      };
+    }
+    
+    return {
+      status: result.success
+        ? WebSocketResponseStatus.SUCCESS
+        : WebSocketResponseStatus.ERROR,
+      data: legacyData,
+      success: result.success, // Add success property for test compatibility
+      timestamp: Date.now(),
+    };
     } catch (error) {
       console.error("[WebSocket] Command processing error:", error);
       const errorMessage =
