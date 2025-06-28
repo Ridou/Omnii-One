@@ -194,6 +194,32 @@ export class EmailPlugin implements GoogleServicePlugin {
               parsed = toolResponse;
             }
 
+            // ✅ NEW: Enhanced Gmail API response debugging
+            console.log(`[EmailPlugin] 🔍 GMAIL API RESPONSE DEBUG:`);
+            console.log(`[EmailPlugin] - Tool response type:`, typeof toolResponse);
+            console.log(`[EmailPlugin] - Tool response is array:`, Array.isArray(toolResponse));
+            console.log(`[EmailPlugin] - Parsed keys:`, parsed ? Object.keys(parsed) : 'no parsed data');
+            
+            if (parsed) {
+              console.log(`[EmailPlugin] - Parsed.successful:`, parsed.successful);
+              console.log(`[EmailPlugin] - Parsed.response_data:`, !!parsed.response_data);
+              console.log(`[EmailPlugin] - Parsed.data:`, !!parsed.data);
+              
+              if (parsed.response_data) {
+                console.log(`[EmailPlugin] - response_data keys:`, Object.keys(parsed.response_data));
+                console.log(`[EmailPlugin] - response_data.id:`, parsed.response_data.id);
+                console.log(`[EmailPlugin] - response_data.message:`, parsed.response_data.message);
+              }
+              
+              if (parsed.data) {
+                console.log(`[EmailPlugin] - data keys:`, Object.keys(parsed.data));
+              }
+              
+              // Log a sample of the actual structure (first 500 chars)
+              const sampleStructure = JSON.stringify(parsed, null, 2).substring(0, 500);
+              console.log(`[EmailPlugin] - Structure sample:`, sampleStructure + '...');
+            }
+
             // Log the structure outline of the raw Gmail API response
             console.log(`[EmailPlugin] 📋 RAW GMAIL API RESPONSE STRUCTURE:`);
             const structureOutline = this.getObjectStructure(parsed);
@@ -407,9 +433,37 @@ export class EmailPlugin implements GoogleServicePlugin {
   }
 
   private formatDraftEmail(parsed: any, builder: UnifiedResponseBuilder): UnifiedToolResponse {
-    const to = parsed?.data?.to || parsed?.data?.recipient_email;
-    const subject = parsed?.data?.subject;
-    const draftId = parsed?.data?.response_data?.id || parsed?.data?.id;
+    // ✅ NEW: Enhanced draft email parsing with debugging
+    console.log(`[EmailPlugin] 🔍 FORMAT DRAFT EMAIL DEBUG:`);
+    console.log(`[EmailPlugin] - Parsed structure:`, parsed ? Object.keys(parsed) : 'no parsed data');
+    
+    // Try multiple possible paths for email data
+    const to = parsed?.data?.to || 
+               parsed?.data?.recipient_email || 
+               parsed?.response_data?.to ||
+               parsed?.response_data?.recipient_email ||
+               parsed?.to ||
+               parsed?.recipient_email;
+               
+    const subject = parsed?.data?.subject || 
+                    parsed?.response_data?.subject ||
+                    parsed?.subject;
+                    
+    const body = parsed?.data?.body || 
+                 parsed?.response_data?.body ||
+                 parsed?.body;
+                 
+    const draftId = parsed?.data?.response_data?.id || 
+                    parsed?.data?.id ||
+                    parsed?.response_data?.id ||
+                    parsed?.id;
+
+    console.log(`[EmailPlugin] - Extracted to:`, to);
+    console.log(`[EmailPlugin] - Extracted subject:`, subject);
+    console.log(`[EmailPlugin] - Extracted body:`, body);
+    console.log(`[EmailPlugin] - Extracted draftId:`, draftId);
+    console.log(`[EmailPlugin] - Parsed.successful:`, parsed?.successful);
+    console.log(`[EmailPlugin] - Parsed.error:`, parsed?.error);
 
     const structuredData: EmailData = {
       subject: subject || "No Subject",
