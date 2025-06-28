@@ -17,6 +17,15 @@ import {
   initiateGoogleOAuth 
 } from '~/services/googleIntegration';
 
+// Import Detail Modals
+import {
+  TaskDetailModal,
+  EmailDetailModal,
+  ContactDetailModal,
+  CalendarEventDetailModal,
+  ConceptDetailModal
+} from './DetailModals';
+
 interface MemoryContentProps {
   tasksOverview: any;
   calendarData: any;
@@ -91,6 +100,13 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
   const { user } = useAuth();
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
 
+  // Modal state management
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [selectedEmail, setSelectedEmail] = useState<any>(null);
+  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedConcept, setSelectedConcept] = useState<any>(null);
+
   // Data successfully flowing to UI components!
 
   // 🆕 Handle Google connection
@@ -110,204 +126,233 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
   };
 
   return (
-    <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
-      <View className="mb-4">
-        <Text className={cn(
-          "text-3xl font-bold mb-1",
-          isDark ? "text-white" : "text-gray-900"
-        )}>AI Memory</Text>
-        <Text className={cn(
-          "text-base leading-5",
-          isDark ? "text-slate-300" : "text-gray-600"
-        )}>
-          🧠 Brain-inspired memory system with smart caching. Fast responses from cached data.
-        </Text>
-      </View>
-
-      <View className="mb-4">
-        <View className="gap-2">
-          <MemorySummaryCard
-            icon="📋"
-            title="Task Analytics"
-            items={[
-              tasksOverview?.hasError 
-                ? "⚠️ Google authentication required"
-                : `${tasksOverview?.totalTasks || 0} total tasks`,
-              tasksOverview?.hasError
-                ? "Connect Google to view tasks"
-                : `${tasksOverview?.totalCompleted || 0} completed this month`,
-              tasksOverview?.hasError
-                ? "Brain cache ready for data"
-                : `${tasksOverview?.totalPending || 0} pending tasks`,
-              tasksOverview?.isLoading
-                ? "⏳ Loading from cache..."
-                : tasksOverview?.hasError
-                ? "🔧 Setup required"
-                : tasksOverview?.isCacheValid 
-                ? `📈 Cache hit (${tasksOverview?.cacheStats?.avg_response_time_ms || 0}ms)` 
-                : `${tasksOverview?.totalOverdue || 0} overdue items`
-            ]}
-            color="purple"
-            data={tasksOverview}
-            onExpand={() => onTaskAction('view_all')}
-            expandedContent={
-              tasksOverview?.hasError ? (
-                <GoogleAuthPrompt
-                  title="Connect Google Tasks"
-                  description="Connect your Google account to view and manage your tasks with AI insights"
-                  onConnect={handleConnectGoogle}
-                  isConnecting={isConnectingGoogle}
-                />
-              ) : (
-                <TaskMemoryDetails data={tasksOverview} />
-              )
-            }
-          />
-
-          <MemorySummaryCard
-            icon="📅"
-            title="Calendar Overview"
-            items={[
-              `${calendarData?.events?.filter((e: any) => new Date(e.start) > new Date()).length || 0} upcoming events`,
-              `${calendarData?.totalCount || 0} total events loaded`,
-              calendarData?.events?.length > 0 
-                ? (() => {
-                    const counts = calendarData.events.reduce((acc: any, event: any) => {
-                      const day = new Date(event.start).toLocaleDateString('en-US', { weekday: 'long' });
-                      acc[day] = (acc[day] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>);
-                    const entries = Object.entries(counts);
-                    const peakDay = entries.length > 0 
-                      ? entries.sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0] || 'Monday'
-                      : 'Monday';
-                    return `Peak day: ${peakDay}`;
-                  })()
-                : "Peak day: Monday",
-              calendarData?.events?.length > 0 
-                ? `${Math.round(calendarData.events.filter((e: any) => !!e.meetingLink).length / calendarData.events.length * 100) || 0}% virtual meetings`
-                : "0% virtual meetings"
-            ]}
-            color="green"
-            data={calendarData}
-            onExpand={() => onCalendarAction('view_patterns')}
-            expandedContent={<CalendarMemoryDetails data={calendarData} />}
-          />
-
-          <MemorySummaryCard
-            icon="👥"
-            title="Contact Statistics"
-            items={[
-              contactsData?.hasError 
-                ? "⚠️ Google authentication required"
-                : `${contactsData?.totalContacts || 0} total contacts`,
-              contactsData?.hasError
-                ? "Connect Google to view contacts"
-                : `${contactsData?.contacts?.filter((c: any) => c.emails?.length > 0).length || 0} have email addresses`,
-              contactsData?.hasError
-                ? "Brain cache ready for data"
-                : `${contactsData?.contacts?.filter((c: any) => c.phones?.length > 0).length || 0} have phone numbers`,
-              contactsData?.isLoading
-                ? "⏳ Loading from cache..."
-                : contactsData?.hasError
-                ? "🔧 Setup required"
-                : contactsData?.isCacheValid 
-                ? `📈 Cache hit (${contactsData?.cacheStats?.avg_response_time_ms || 0}ms)` 
-                : `🧠 Brain memory active`
-            ]}
-            color="orange"
-            data={contactsData}
-            onExpand={() => onContactAction?.('view_network')}
-            expandedContent={
-              contactsData?.hasError ? (
-                <GoogleAuthPrompt
-                  title="Connect Google Contacts"
-                  description="Connect your Google account to analyze your professional network"
-                  onConnect={handleConnectGoogle}
-                  isConnecting={isConnectingGoogle}
-                />
-              ) : (
-                <ContactMemoryDetails data={contactsData} />
-              )
-            }
-          />
-
-          <MemorySummaryCard
-            icon="📧"
-            title="Email Analytics"
-            items={[
-              emailData?.hasError
-                ? "⚠️ Gmail authentication required"
-                : `${emailData?.unreadCount || 0} unread emails`,
-              emailData?.hasError
-                ? "Connect Gmail to view emails"
-                : `${emailData?.totalEmails || 0} total emails loaded`,
-              emailData?.hasError
-                ? "Brain cache ready for data"
-                : `${emailData?.emails?.filter((e: any) => e.attachments?.length > 0).length || 0} have attachments`,
-              emailData?.isLoading
-                ? "⏳ Loading from cache..."
-                : emailData?.hasError
-                ? "🔧 Setup required"
-                : emailData?.isCacheValid 
-                ? `📈 Cache hit (${emailData?.cacheStats?.avg_response_time_ms || 0}ms)` 
-                : `🧠 Brain memory active`
-            ]}
-            color="red"
-            data={emailData}
-            onExpand={() => onEmailAction?.('view_patterns')}
-            expandedContent={
-              emailData?.hasError ? (
-                <GoogleAuthPrompt
-                  title="Connect Gmail"
-                  description="Connect your Gmail to analyze email patterns and get AI insights"
-                  onConnect={handleConnectGoogle}
-                  isConnecting={isConnectingGoogle}
-                />
-              ) : (
-                <EmailMemoryDetails data={emailData} />
-              )
-            }
-          />
-
-          {/* Neo4j Knowledge Graph with Brain Cache */}
-          <MemorySummaryCard
-            icon="🧠"
-            title="Brain Memory"
-            items={[
-              conceptsData?.hasError
-                ? "⚠️ Neo4j connection required"
-                : `${conceptsData?.conceptCount || 0} concepts loaded`,
-              conceptsData?.hasError
-                ? "Direct Neo4j connection needed"
-                : conceptsData?.source === 'cache' 
-                ? `📈 Cache hit (${conceptsData?.responseTime || 0}ms)`
-                : `🔗 Direct Neo4j (${conceptsData?.responseTime || 0}ms)`,
-              conceptsData?.hasError
-                ? "Brain cache ready for data"
-                : `${conceptsData?.totalConcepts || 0} total concepts in graph`,
-              conceptsData?.isLoading
-                ? "⏳ Loading from brain memory..."
-                : conceptsData?.hasError
-                ? "🔧 Connection setup required"
-                : conceptsData?.isConnected 
-                ? '✅ Connected to AuraDB' 
-                : '❌ Disconnected'
-            ]}
-            color="blue"
-            data={conceptsData}
-            onExpand={() => {}}
-            expandedContent={<BrainMemoryDetails data={conceptsData} />}
-          />
+    <>
+      <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
+        <View className="mb-4">
+          <Text className={cn(
+            "text-3xl font-bold mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>AI Memory</Text>
+          <Text className={cn(
+            "text-base leading-5",
+            isDark ? "text-slate-300" : "text-gray-600"
+          )}>
+            🧠 Brain-inspired memory system with smart caching. Fast responses from cached data.
+          </Text>
         </View>
 
-        {/* RDF Semantic Analysis Card */}
-        <RDFMemoryCard />
+        <View className="mb-4">
+          <View className="gap-2">
+            <MemorySummaryCard
+              icon="📋"
+              title="Task Analytics"
+              items={[
+                tasksOverview?.hasError 
+                  ? "⚠️ Google authentication required"
+                  : `${tasksOverview?.totalTasks || 0} total tasks`,
+                tasksOverview?.hasError
+                  ? "Connect Google to view tasks"
+                  : `${tasksOverview?.totalCompleted || 0} completed this month`,
+                tasksOverview?.hasError
+                  ? "Brain cache ready for data"
+                  : `${tasksOverview?.totalPending || 0} pending tasks`,
+                tasksOverview?.isLoading
+                  ? "⏳ Loading from cache..."
+                  : tasksOverview?.hasError
+                  ? "🔧 Setup required"
+                  : tasksOverview?.isCacheValid 
+                  ? `📈 Cache hit (${tasksOverview?.cacheStats?.avg_response_time_ms || 0}ms)` 
+                  : `${tasksOverview?.totalOverdue || 0} overdue items`
+              ]}
+              color="purple"
+              data={tasksOverview}
+              onExpand={() => onTaskAction('view_all')}
+              expandedContent={
+                tasksOverview?.hasError ? (
+                  <GoogleAuthPrompt
+                    title="Connect Google Tasks"
+                    description="Connect your Google account to view and manage your tasks with AI insights"
+                    onConnect={handleConnectGoogle}
+                    isConnecting={isConnectingGoogle}
+                  />
+                ) : (
+                  <TaskMemoryDetails data={tasksOverview} onTaskClick={setSelectedTask} />
+                )
+              }
+            />
 
-        {/* Memory Controls */}
-        <MemoryControlsSection />
-      </View>
-    </ScrollView>
+            <MemorySummaryCard
+              icon="📅"
+              title="Calendar Overview"
+              items={[
+                `${calendarData?.events?.filter((e: any) => new Date(e.start) > new Date()).length || 0} upcoming events`,
+                `${calendarData?.totalCount || 0} total events loaded`,
+                calendarData?.events?.length > 0 
+                  ? (() => {
+                      const counts = calendarData.events.reduce((acc: any, event: any) => {
+                        const day = new Date(event.start).toLocaleDateString('en-US', { weekday: 'long' });
+                        acc[day] = (acc[day] || 0) + 1;
+                        return acc;
+                      }, {} as Record<string, number>);
+                      const entries = Object.entries(counts);
+                      const peakDay = entries.length > 0 
+                        ? entries.sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0] || 'Monday'
+                        : 'Monday';
+                      return `Peak day: ${peakDay}`;
+                    })()
+                  : "Peak day: Monday",
+                calendarData?.events?.length > 0 
+                  ? `${Math.round(calendarData.events.filter((e: any) => !!e.meetingLink).length / calendarData.events.length * 100) || 0}% virtual meetings`
+                  : "0% virtual meetings"
+              ]}
+              color="green"
+              data={calendarData}
+              onExpand={() => onCalendarAction('view_patterns')}
+              expandedContent={<CalendarMemoryDetails data={calendarData} onEventClick={setSelectedEvent} />}
+            />
+
+            <MemorySummaryCard
+              icon="👥"
+              title="Contact Statistics"
+              items={[
+                contactsData?.hasError 
+                  ? "⚠️ Google authentication required"
+                  : `${contactsData?.totalContacts || 0} total contacts`,
+                contactsData?.hasError
+                  ? "Connect Google to view contacts"
+                  : `${contactsData?.contacts?.filter((c: any) => c.emails?.length > 0).length || 0} have email addresses`,
+                contactsData?.hasError
+                  ? "Brain cache ready for data"
+                  : `${contactsData?.contacts?.filter((c: any) => c.phones?.length > 0).length || 0} have phone numbers`,
+                contactsData?.isLoading
+                  ? "⏳ Loading from cache..."
+                  : contactsData?.hasError
+                  ? "🔧 Setup required"
+                  : contactsData?.isCacheValid 
+                  ? `📈 Cache hit (${contactsData?.cacheStats?.avg_response_time_ms || 0}ms)` 
+                  : `🧠 Brain memory active`
+              ]}
+              color="orange"
+              data={contactsData}
+              onExpand={() => onContactAction?.('view_network')}
+              expandedContent={
+                contactsData?.hasError ? (
+                  <GoogleAuthPrompt
+                    title="Connect Google Contacts"
+                    description="Connect your Google account to analyze your professional network"
+                    onConnect={handleConnectGoogle}
+                    isConnecting={isConnectingGoogle}
+                  />
+                ) : (
+                  <ContactMemoryDetails data={contactsData} onContactClick={setSelectedContact} />
+                )
+              }
+            />
+
+            <MemorySummaryCard
+              icon="📧"
+              title="Email Analytics"
+              items={[
+                emailData?.hasError
+                  ? "⚠️ Gmail authentication required"
+                  : `${emailData?.unreadCount || 0} unread emails`,
+                emailData?.hasError
+                  ? "Connect Gmail to view emails"
+                  : `${emailData?.totalEmails || 0} total emails loaded`,
+                emailData?.hasError
+                  ? "Brain cache ready for data"
+                  : `${emailData?.emails?.filter((e: any) => e.attachments?.length > 0).length || 0} have attachments`,
+                emailData?.isLoading
+                  ? "⏳ Loading from cache..."
+                  : emailData?.hasError
+                  ? "🔧 Setup required"
+                  : emailData?.isCacheValid 
+                  ? `📈 Cache hit (${emailData?.cacheStats?.avg_response_time_ms || 0}ms)` 
+                  : `🧠 Brain memory active`
+              ]}
+              color="red"
+              data={emailData}
+              onExpand={() => onEmailAction?.('view_patterns')}
+              expandedContent={
+                emailData?.hasError ? (
+                  <GoogleAuthPrompt
+                    title="Connect Gmail"
+                    description="Connect your Gmail to analyze email patterns and get AI insights"
+                    onConnect={handleConnectGoogle}
+                    isConnecting={isConnectingGoogle}
+                  />
+                ) : (
+                  <EmailMemoryDetails data={emailData} onEmailClick={setSelectedEmail} />
+                )
+              }
+            />
+
+            {/* Neo4j Knowledge Graph with Brain Cache */}
+            <MemorySummaryCard
+              icon="🧠"
+              title="Brain Memory"
+              items={[
+                conceptsData?.hasError
+                  ? "⚠️ Neo4j connection required"
+                  : `${conceptsData?.conceptCount || 0} concepts loaded`,
+                conceptsData?.hasError
+                  ? "Direct Neo4j connection needed"
+                  : conceptsData?.source === 'cache' 
+                  ? `📈 Cache hit (${conceptsData?.responseTime || 0}ms)`
+                  : `🔗 Direct Neo4j (${conceptsData?.responseTime || 0}ms)`,
+                conceptsData?.hasError
+                  ? "Brain cache ready for data"
+                  : `${conceptsData?.totalConcepts || 0} total concepts in graph`,
+                conceptsData?.isLoading
+                  ? "⏳ Loading from brain memory..."
+                  : conceptsData?.hasError
+                  ? "🔧 Connection setup required"
+                  : conceptsData?.isConnected 
+                  ? '✅ Connected to AuraDB' 
+                  : '❌ Disconnected'
+              ]}
+              color="blue"
+              data={conceptsData}
+              onExpand={() => {}}
+              expandedContent={<BrainMemoryDetails data={conceptsData} onConceptClick={setSelectedConcept} />}
+            />
+          </View>
+
+          {/* RDF Semantic Analysis Card */}
+          <RDFMemoryCard />
+
+          {/* Memory Controls */}
+          <MemoryControlsSection />
+        </View>
+      </ScrollView>
+
+      {/* Detail Modals */}
+      <TaskDetailModal
+        visible={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        task={selectedTask}
+      />
+      <EmailDetailModal
+        visible={!!selectedEmail}
+        onClose={() => setSelectedEmail(null)}
+        email={selectedEmail}
+      />
+      <ContactDetailModal
+        visible={!!selectedContact}
+        onClose={() => setSelectedContact(null)}
+        contact={selectedContact}
+      />
+      <CalendarEventDetailModal
+        visible={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        event={selectedEvent}
+      />
+      <ConceptDetailModal
+        visible={!!selectedConcept}
+        onClose={() => setSelectedConcept(null)}
+        concept={selectedConcept}
+      />
+    </>
   );
 };
 
@@ -566,7 +611,7 @@ const MemoryControlsSection: React.FC = () => {
 };
 
 // Detailed components showing actual data items
-const TaskMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
+const TaskMemoryDetails: React.FC<{ data: any; onTaskClick: (task: any) => void }> = ({ data, onTaskClick }) => {
   const { isDark } = useTheme();
   
   if (data?.hasError) {
@@ -598,7 +643,7 @@ const TaskMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   
   const pendingTasks = allTasks
     .filter((task: any) => task.status === 'needsAction')
-    .slice(0, 8);
+    .slice(0, 4); // Limit to 4 items
 
   return (
     <View className="mt-3">
@@ -633,36 +678,47 @@ const TaskMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
       )}
       
       {pendingTasks.length > 0 ? (
-        <View className="space-y-2">
-          {pendingTasks.map((task: any, index: number) => (
-            <View key={index} className={cn(
-              "p-3 rounded-lg border-l-2 border-l-purple-500",
-              isDark ? "bg-slate-700" : "bg-gray-50"
-            )}>
-              <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
-                {task.title}
-              </Text>
-              <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                📋 {task.listName}
-              </Text>
-              {task.due && (
-                <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  📅 Due: {new Date(task.due).toLocaleDateString()}
+        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+          <View className="space-y-2">
+            {pendingTasks.map((task: any, index: number) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => onTaskClick(task)}
+                className={cn(
+                  "p-3 rounded-lg border-l-2 border-l-purple-500",
+                  isDark ? "bg-slate-700" : "bg-gray-50"
+                )}
+              >
+                <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
+                  {task.title}
                 </Text>
-              )}
-              {task.notes && (
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  📝 {task.notes.substring(0, 50)}...
+                  📋 {task.listName}
                 </Text>
-              )}
-            </View>
-          ))}
-          {allTasks.length > 8 && (
-            <Text className={cn("text-xs text-center mt-2", isDark ? "text-slate-500" : "text-gray-500")}>
-              ... and {allTasks.length - 8} more tasks
-            </Text>
-          )}
-        </View>
+                {task.due && (
+                  <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                    📅 Due: {new Date(task.due).toLocaleDateString()}
+                  </Text>
+                )}
+                {task.notes && (
+                  <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                    📝 {task.notes.substring(0, 50)}...
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+            {allTasks.length > 4 && (
+              <View className={cn(
+                "p-3 rounded-lg border-dashed border-2 mt-2",
+                isDark ? "border-slate-600" : "border-gray-300"
+              )}>
+                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
+                  + {allTasks.length - 4} more tasks - tap any task for details
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
       ) : (
         <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
           {data?.isLoading ? "🔄 Loading tasks from brain memory..." : "✅ No pending tasks found"}
@@ -672,7 +728,7 @@ const TaskMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   );
 };
 
-const CalendarMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
+const CalendarMemoryDetails: React.FC<{ data: any; onEventClick: (event: any) => void }> = ({ data, onEventClick }) => {
   const { isDark } = useTheme();
   
   if (data?.hasError) {
@@ -691,7 +747,7 @@ const CalendarMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   const events = data?.events || [];
   const upcomingEvents = events
     .filter((event: any) => new Date(event.start) > new Date())
-    .slice(0, 5);
+    .slice(0, 4); // Limit to 4 items
   
   return (
     <View className="mt-3">
@@ -699,36 +755,47 @@ const CalendarMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
         Upcoming Events ({events.length} total)
       </Text>
       {upcomingEvents.length > 0 ? (
-        <View className="space-y-2">
-          {upcomingEvents.map((event: any, index: number) => (
-            <View key={index} className={cn(
-              "p-2 rounded-lg border-l-2 border-l-green-500",
-              isDark ? "bg-slate-700" : "bg-gray-50"
-            )}>
-              <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
-                {event.title || event.summary}
-              </Text>
-              <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                {new Date(event.start).toLocaleDateString()} at {new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-              </Text>
-                </View>
-          ))}
-          {events.length > 5 && (
-            <Text className={cn("text-xs text-center mt-2", isDark ? "text-slate-500" : "text-gray-500")}>
-              ... and {events.length - 5} more events
-            </Text>
-          )}
+        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+          <View className="space-y-2">
+            {upcomingEvents.map((event: any, index: number) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => onEventClick(event)}
+                className={cn(
+                  "p-3 rounded-lg border-l-2 border-l-green-500",
+                  isDark ? "bg-slate-700" : "bg-gray-50"
+                )}
+              >
+                <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
+                  {event.title || event.summary}
+                </Text>
+                <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                  {new Date(event.start).toLocaleDateString()} at {new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {events.length > 4 && (
+              <View className={cn(
+                "p-3 rounded-lg border-dashed border-2 mt-2",
+                isDark ? "border-slate-600" : "border-gray-300"
+              )}>
+                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
+                  + {events.length - 4} more events - tap any event for details
+                </Text>
               </View>
+            )}
+          </View>
+        </ScrollView>
       ) : (
         <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
           {data?.isLoading ? "Loading events..." : "No upcoming events"}
-                </Text>
-              )}
+        </Text>
+      )}
     </View>
   );
 };
 
-const ContactMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
+const ContactMemoryDetails: React.FC<{ data: any; onContactClick: (contact: any) => void }> = ({ data, onContactClick }) => {
   const { isDark } = useTheme();
   
   if (data?.hasError) {
@@ -745,7 +812,7 @@ const ContactMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   }
   
   const contacts = data?.contacts || [];
-  const displayContacts = contacts.slice(0, 5);
+  const displayContacts = contacts.slice(0, 4); // Limit to 4 items
   
   return (
     <View className="mt-3">
@@ -753,33 +820,44 @@ const ContactMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
         Recent Contacts ({contacts.length} total)
       </Text>
       {displayContacts.length > 0 ? (
-        <View className="space-y-2">
-          {displayContacts.map((contact: any, index: number) => (
-            <View key={index} className={cn(
-              "p-2 rounded-lg border-l-2 border-l-orange-500",
-              isDark ? "bg-slate-700" : "bg-gray-50"
-            )}>
-              <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
-                {contact.displayName || contact.name || 'Unknown'}
-              </Text>
-              {contact.emails?.[0] && (
-                <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  📧 {contact.emails[0].address || contact.emails[0]}
-                </Text>
+        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+          <View className="space-y-2">
+            {displayContacts.map((contact: any, index: number) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => onContactClick(contact)}
+                className={cn(
+                  "p-3 rounded-lg border-l-2 border-l-orange-500",
+                  isDark ? "bg-slate-700" : "bg-gray-50"
                 )}
-              {contact.phones?.[0] && (
-                <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  📱 {contact.phones[0].number || contact.phones[0]}
+              >
+                <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
+                  {contact.displayName || contact.name || 'Unknown'}
                 </Text>
+                {contact.emails?.[0] && (
+                  <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                    📧 {contact.emails[0].address || contact.emails[0]}
+                  </Text>
                 )}
-            </View>
-          ))}
-          {contacts.length > 5 && (
-            <Text className={cn("text-xs text-center mt-2", isDark ? "text-slate-500" : "text-gray-500")}>
-              ... and {contacts.length - 5} more contacts
-            </Text>
-          )}
-        </View>
+                {contact.phones?.[0] && (
+                  <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                    📱 {contact.phones[0].number || contact.phones[0]}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+            {contacts.length > 4 && (
+              <View className={cn(
+                "p-3 rounded-lg border-dashed border-2 mt-2",
+                isDark ? "border-slate-600" : "border-gray-300"
+              )}>
+                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
+                  + {contacts.length - 4} more contacts - tap any contact for details
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
       ) : (
         <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
           {data?.isLoading ? "Loading contacts..." : "No contacts found"}
@@ -789,7 +867,7 @@ const ContactMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   );
 };
 
-const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
+const EmailMemoryDetails: React.FC<{ data: any; onEmailClick: (email: any) => void }> = ({ data, onEmailClick }) => {
   const { isDark } = useTheme();
   
   if (data?.hasError) {
@@ -806,7 +884,7 @@ const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   }
   
   const emails = data?.emails || [];
-  const recentEmails = emails.slice(0, 6);
+  const recentEmails = emails.slice(0, 4); // Limit to 4 items
   const unreadEmails = emails.filter((e: any) => !e.isRead);
   
   return (
@@ -833,46 +911,57 @@ const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
       )}
       
       {recentEmails.length > 0 ? (
-        <View className="space-y-2">
-          {recentEmails.map((email: any, index: number) => (
-            <View key={index} className={cn(
-              "p-3 rounded-lg border-l-2 border-l-red-500",
-              isDark ? "bg-slate-700" : "bg-gray-50"
-            )}>
-              <View className="flex-row items-start justify-between">
-                <Text className={cn(
-                  "text-sm font-medium flex-1 mr-2",
-                  isDark ? "text-white" : "text-gray-900"
-                )}>
-                  {email.subject?.length > 40 
-                    ? email.subject.substring(0, 40) + '...' 
-                    : email.subject || 'No Subject'}
-                </Text>
+        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+          <View className="space-y-2">
+            {recentEmails.map((email: any, index: number) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => onEmailClick(email)}
+                className={cn(
+                  "p-3 rounded-lg border-l-2 border-l-red-500",
+                  isDark ? "bg-slate-700" : "bg-gray-50"
+                )}
+              >
+                <View className="flex-row items-start justify-between">
+                  <Text className={cn(
+                    "text-sm font-medium flex-1 mr-2",
+                    isDark ? "text-white" : "text-gray-900"
+                  )}>
+                    {email.subject?.length > 40 
+                      ? email.subject.substring(0, 40) + '...' 
+                      : email.subject || 'No Subject'}
+                  </Text>
                   {!email.isRead && (
-                  <View className="w-2 h-2 rounded-full bg-blue-500" />
+                    <View className="w-2 h-2 rounded-full bg-blue-500" />
                   )}
                 </View>
-              <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                📧 {email.sender?.split('<')[0]?.trim() || email.from || 'Unknown sender'}
-              </Text>
-              {email.date && (
                 <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  📅 {new Date(email.date).toLocaleDateString()}
+                  📧 {email.sender?.split('<')[0]?.trim() || email.from || 'Unknown sender'}
                 </Text>
-              )}
-              {email.preview && (
-                <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  {email.preview.substring(0, 80)}...
-                </Text>
+                {email.date && (
+                  <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                    📅 {new Date(email.date).toLocaleDateString()}
+                  </Text>
                 )}
-            </View>
-          ))}
-          {emails.length > 6 && (
-            <Text className={cn("text-xs text-center mt-2", isDark ? "text-slate-500" : "text-gray-500")}>
-              ... and {emails.length - 6} more emails
-            </Text>
-          )}
-        </View>
+                {email.preview && (
+                  <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                    {email.preview.substring(0, 80)}...
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+            {emails.length > 4 && (
+              <View className={cn(
+                "p-3 rounded-lg border-dashed border-2 mt-2",
+                isDark ? "border-slate-600" : "border-gray-300"
+              )}>
+                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
+                  + {emails.length - 4} more emails - tap any email for details
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
       ) : (
         <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
           {data?.isLoading ? "🔄 Loading emails from brain memory..." : "📭 No emails found"}
@@ -882,7 +971,7 @@ const EmailMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   );
 };
 
-const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
+const BrainMemoryDetails: React.FC<{ data: any; onConceptClick: (concept: any) => void }> = ({ data, onConceptClick }) => {
   const { isDark } = useTheme();
   
   if (data?.hasError) {
@@ -899,13 +988,13 @@ const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
   }
   
   const concepts = data?.concepts || [];
-  const recentConcepts = concepts.slice(0, 6);
+  const recentConcepts = concepts.slice(0, 4); // Limit to 4 items
   
   return (
     <View className="mt-3">
       <Text className={cn("text-lg font-semibold mb-2", isDark ? "text-white" : "text-gray-900")}>
         Brain Concepts ({data?.totalConcepts || concepts.length} loaded)
-        </Text>
+      </Text>
       
       {(data?.source === 'cache' || data?.isCacheValid) && (
         <Text className={cn("text-xs mb-2", isDark ? "text-blue-400" : "text-blue-600")}>
@@ -925,47 +1014,58 @@ const BrainMemoryDetails: React.FC<{ data: any }> = ({ data }) => {
       )}
       
       {recentConcepts.length > 0 ? (
-        <View className="space-y-2">
-          {recentConcepts.map((concept: any, index: number) => (
-            <View key={index} className={cn(
-              "p-3 rounded-lg border-l-2 border-l-blue-500",
-              isDark ? "bg-slate-700" : "bg-gray-50"
-            )}>
-              <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
-                {concept.text || concept.name || concept.title || 'Unknown Concept'}
-            </Text>
-              {concept.labels && Array.isArray(concept.labels) && (
-                <View className="flex-row flex-wrap gap-1 mt-1">
-                  {concept.labels.slice(0, 3).map((label: string, idx: number) => (
-                    <View key={idx} className={cn(
-                      "px-1 py-0.5 rounded",
-                      isDark ? "bg-blue-800/50" : "bg-blue-200"
+        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+          <View className="space-y-2">
+            {recentConcepts.map((concept: any, index: number) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => onConceptClick(concept)}
+                className={cn(
+                  "p-3 rounded-lg border-l-2 border-l-blue-500",
+                  isDark ? "bg-slate-700" : "bg-gray-50"
+                )}
+              >
+                <Text className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>
+                  {concept.text || concept.name || concept.title || 'Unknown Concept'}
+                </Text>
+                {concept.labels && Array.isArray(concept.labels) && (
+                  <View className="flex-row flex-wrap gap-1 mt-1">
+                    {concept.labels.slice(0, 3).map((label: string, idx: number) => (
+                      <View key={idx} className={cn(
+                        "px-1 py-0.5 rounded",
+                        isDark ? "bg-blue-800/50" : "bg-blue-200"
+                      )}>
+                        <Text className={cn("text-xs", isDark ? "text-blue-300" : "text-blue-700")}>
+                          {label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {concept.properties?.keywords && (
+                  <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                    🏷️ {concept.properties.keywords}
+                  </Text>
+                )}
+                {concept.properties?.context && (
+                  <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
+                    📝 {concept.properties.context.substring(0, 60)}...
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+            {concepts.length > 4 && (
+              <View className={cn(
+                "p-3 rounded-lg border-dashed border-2 mt-2",
+                isDark ? "border-slate-600" : "border-gray-300"
               )}>
-                      <Text className={cn("text-xs", isDark ? "text-blue-300" : "text-blue-700")}>
-                        {label}
+                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
+                  + {concepts.length - 4} more concepts - tap any concept for details
                 </Text>
               </View>
-            ))}
-          </View>
-        )}
-              {concept.properties?.keywords && (
-                <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  🏷️ {concept.properties.keywords}
-              </Text>
-            )}
-              {concept.properties?.context && (
-                <Text className={cn("text-xs mt-1", isDark ? "text-slate-400" : "text-gray-600")}>
-                  📝 {concept.properties.context.substring(0, 60)}...
-                  </Text>
             )}
           </View>
-        ))}
-          {concepts.length > 6 && (
-            <Text className={cn("text-xs text-center mt-2", isDark ? "text-slate-500" : "text-gray-500")}>
-              ... and {concepts.length - 6} more concepts
-          </Text>
-        )}
-        </View>
+        </ScrollView>
       ) : (
         <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
           {data?.isLoading ? "🔄 Loading concepts from brain memory..." : "🧠 No concepts found"}
