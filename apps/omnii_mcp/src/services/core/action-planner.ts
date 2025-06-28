@@ -46,6 +46,7 @@ import { TaskStepExecutor } from '../action-planner/step-executors/task-step-exe
 // Removed unused imports from action-planner-utils
 import { RDFContactAnalyzer } from '../rdf/rdf-contact-analyzer';
 import { ContactConfidenceBooster } from '../rdf/contact-confidence-booster';
+import { RDFActionMapper } from '../rdf/rdf-action-mapper';
 
 export class ActionPlanner {
   private openai: OpenAI;
@@ -54,6 +55,7 @@ export class ActionPlanner {
   private entityManager: EntityManager;
   private stepExecutorFactory: StepExecutorFactory;
   private smartContactResolver: SmartContactResolver;
+  private rdfActionMapper: RDFActionMapper;
 
   constructor(interventionManager?: InterventionManager) {
     this.openai = new OpenAI({
@@ -66,18 +68,20 @@ export class ActionPlanner {
       this.interventionManager
     );
     this.smartContactResolver = new SmartContactResolver();
+    this.rdfActionMapper = new RDFActionMapper();
   }
 
   /**
-   * Analyze message and create action plan
+   * Analyze message and create action plan (enhanced with RDF-first approach)
    */
   async createPlan(
     message: string,
     entities?: CachedEntity[],
-    userUUID?: string
+    userUUID?: string,
+    executionContext?: ExecutionContext
   ): Promise<ActionPlan> {
     try {
-      console.log(`[ActionPlanner] Creating plan for: "${message}"`);
+      console.log(`[ActionPlanner] 🧠 Creating RDF-driven semantic plan for: "${message}"`);
       console.log(`[ActionPlanner] 🔍 Input entities:`, entities?.map(e => ({
         type: e.type,
         value: e.value,
@@ -85,28 +89,92 @@ export class ActionPlanner {
         needsEmailResolution: e.needsEmailResolution
       })));
 
-      // Get initial plan from LLM
-      const initialPlan = await this.createPlanWithLLM(message, entities);
-      
-      console.log(`[ActionPlanner] 📋 Initial plan created:`, {
-        steps: initialPlan.steps.length,
-        stepDetails: initialPlan.steps.map(s => ({
-          type: s.type,
-          action: s.action,
-          recipientEmail: s.params?.recipient_email
-        }))
-      });
+      // NEW: Step 1 - Check for RDF insights in execution context (RDF-first approach)
+      const rdfInsights = executionContext?.rdfInsights;
+      const rdfSuccess = executionContext?.rdfSuccess;
 
-      // Apply placeholder patching if entities are available
+      if (rdfSuccess && rdfInsights) {
+        console.log(`[ActionPlanner] 🎯 RDF insights available - attempting semantic planning`);
+        
+        // Try RDF-driven action planning first
+        const rdfResult = await this.rdfActionMapper.mapSemanticInsightsToActions(
+          rdfInsights,
+          message,
+          userUUID || 'unknown'
+        );
+
+        if (!rdfResult.fallbackToLLM && rdfResult.actions.length > 0) {
+          console.log(`[ActionPlanner] ✅ RDF semantic planning successful - confidence: ${rdfResult.confidence.toFixed(2)}`);
+          console.log(`[ActionPlanner] 🎯 Generated ${rdfResult.actions.length} semantic actions:`, 
+            rdfResult.actions.map(a => `${a.type}:${a.action}`));
+          
+          // Create RDF-driven plan
+          const semanticPlan: ActionPlan = {
+            steps: rdfResult.actions,
+            originalMessage: message,
+            summary: this.generateSemanticSummary(rdfInsights, rdfResult.actions),
+            isMultiStep: rdfResult.actions.length > 1,
+            currentStepIndex: 0,
+            state: PlanState.CREATED,
+            // NEW: Mark as RDF-driven with metadata
+            planningMethod: 'rdf_semantic',
+            rdfConfidence: rdfResult.confidence,
+            semanticInsights: {
+              primaryIntent: rdfInsights.ai_reasoning?.intent_analysis?.primary_intent,
+              extractedConcepts: rdfInsights.ai_reasoning?.extracted_concepts?.map((c: any) => c.concept_name) || [],
+              actionMappingUsed: true,
+              fallbackReason: undefined
+            }
+          };
+
+          // Apply entity resolution to semantic plan if needed
+          if (entities && entities.length > 0) {
+            console.log(`[ActionPlanner] 🔧 Applying entity resolution to ${semanticPlan.steps.length} semantic steps`);
+            semanticPlan.steps = this.entityManager.patchEmailPlaceholders(semanticPlan.steps, entities);
+            
+            // Check for unresolved placeholders and apply RDF contact resolution
+            const hasUnresolvedPlaceholders = this.entityManager.hasUnresolvedPlaceholders(semanticPlan.steps);
+            if (hasUnresolvedPlaceholders) {
+              const entitiesNeedingResolution = entities.filter(e => 
+                e.type === EntityType.UNKNOWN || (e.type === EntityType.PERSON && e.needsEmailResolution)
+              );
+              
+              if (entitiesNeedingResolution.length > 0) {
+                const resolvedEntities = await this.resolveEntitiesWithRDF(entitiesNeedingResolution, entities, userUUID);
+                semanticPlan.steps = this.patchEntityPlaceholders(semanticPlan.steps, resolvedEntities);
+                semanticPlan.steps = await this.enhanceEmailStepsWithContext(semanticPlan.steps, message, userUUID);
+              }
+            }
+          }
+
+          console.log(`[ActionPlanner] 🚀 Returning RDF-driven semantic plan with ${semanticPlan.steps.length} steps`);
+          return semanticPlan;
+        } else {
+          console.log(`[ActionPlanner] ⚠️ RDF semantic planning failed - ${rdfResult.reasoning}`);
+        }
+      } else {
+        console.log(`[ActionPlanner] ⚠️ No RDF insights available - RDF success: ${rdfSuccess}, insights: ${!!rdfInsights}`);
+      }
+
+      // Step 2: Fallback to LLM-based planning (existing logic)
+      console.log(`[ActionPlanner] 🤖 Falling back to LLM-based planning`);
+      const llmPlan = await this.createPlanWithLLM(message, entities);
+      
+      // Mark as LLM fallback with reasoning
+      llmPlan.planningMethod = 'llm_fallback';
+      llmPlan.rdfConfidence = rdfInsights ? 0.3 : 0;
+      llmPlan.semanticInsights = {
+        actionMappingUsed: false,
+        fallbackReason: rdfInsights ? 'RDF confidence too low' : 'No RDF insights available'
+      };
+
+      // Apply existing entity resolution logic for LLM plan
       if (entities && entities.length > 0) {
         console.log(`[ActionPlanner] 🔧 Patching email placeholders with ${entities.length} entities...`);
-        initialPlan.steps = this.entityManager.patchEmailPlaceholders(
-          initialPlan.steps,
-          entities
-        );
+        llmPlan.steps = this.entityManager.patchEmailPlaceholders(llmPlan.steps, entities);
         
         console.log(`[ActionPlanner] 📋 After placeholder patching:`, {
-          stepDetails: initialPlan.steps.map(s => ({
+          stepDetails: llmPlan.steps.map(s => ({
             type: s.type,
             action: s.action,
             recipientEmail: s.params?.recipient_email
@@ -117,32 +185,21 @@ export class ActionPlanner {
       }
 
       // Validate plan dependencies before proceeding
-      const validationResult =
-        this.stepExecutorFactory.validatePlanDependencies(initialPlan.steps);
+      const validationResult = this.stepExecutorFactory.validatePlanDependencies(llmPlan.steps);
       if (!validationResult.valid) {
-        console.warn(
-          `[ActionPlanner] Plan validation found issues:`,
-          validationResult.errors
-        );
-        // Log but don't fail - we'll handle issues during execution
+        console.warn(`[ActionPlanner] Plan validation found issues:`, validationResult.errors);
       }
 
-      // Check for unresolved placeholders after patching
-      const hasUnresolvedPlaceholders = this.entityManager.hasUnresolvedPlaceholders(initialPlan.steps);
+      // Check for unresolved placeholders after patching (existing logic)
+      const hasUnresolvedPlaceholders = this.entityManager.hasUnresolvedPlaceholders(llmPlan.steps);
       console.log(`[ActionPlanner] 🔍 Has unresolved placeholders: ${hasUnresolvedPlaceholders}`);
       
       if (hasUnresolvedPlaceholders) {
-        console.log(
-          `[ActionPlanner] Found unresolved placeholders, checking for entities that need resolution`
-        );
+        console.log(`[ActionPlanner] Found unresolved placeholders, checking for entities that need resolution`);
 
-        // Find entities that need resolution (either UNKNOWN or PERSON entities needing email)
-        const entitiesNeedingResolution =
-          entities?.filter(
-            (e) =>
-              e.type === EntityType.UNKNOWN ||
-              (e.type === EntityType.PERSON && e.needsEmailResolution)
-          ) || [];
+        const entitiesNeedingResolution = entities?.filter(e => 
+          e.type === EntityType.UNKNOWN || (e.type === EntityType.PERSON && e.needsEmailResolution)
+        ) || [];
 
         console.log(`[ActionPlanner] 🔍 Entities needing resolution:`, entitiesNeedingResolution.map(e => ({
           type: e.type,
@@ -151,24 +208,10 @@ export class ActionPlanner {
         })));
 
         if (entitiesNeedingResolution.length > 0) {
-          console.log(
-            `[ActionPlanner] 🧠 Found ${entitiesNeedingResolution.length} entities needing resolution - using RDF reasoning instead of user intervention`
-          );
+          console.log(`[ActionPlanner] 🧠 Found ${entitiesNeedingResolution.length} entities needing resolution - using RDF reasoning`);
 
-          // Use RDF + smart reasoning to resolve entities automatically  
           const resolvedEntities = await this.resolveEntitiesWithRDF(entitiesNeedingResolution, entities, userUUID);
-
-          console.log(`[ActionPlanner] 🎯 RDF Resolution returned ${resolvedEntities.length} entities:`, resolvedEntities.map(e => ({
-            type: e.type,
-            value: e.value,
-            email: e.email,
-            confidence: e.confidence
-          })));
-
-          // Update the plan's entity placeholders with resolved emails
-          const updatedSteps = this.patchEntityPlaceholders(initialPlan.steps, resolvedEntities);
-          
-          // Generate contextual subjects for email steps that lack them
+          const updatedSteps = this.patchEntityPlaceholders(llmPlan.steps, resolvedEntities);
           const enhancedSteps = await this.enhanceEmailStepsWithContext(updatedSteps, message, userUUID);
 
           console.log(`[ActionPlanner] 📋 Final plan after RDF resolution and email enhancement:`, {
@@ -181,9 +224,9 @@ export class ActionPlanner {
           });
 
           return {
-            ...initialPlan,
+            ...llmPlan,
             steps: enhancedSteps,
-            isMultiStep: initialPlan.isMultiStep,
+            isMultiStep: llmPlan.isMultiStep,
             currentStepIndex: 0,
             state: PlanState.CREATED,
           };
@@ -194,15 +237,15 @@ export class ActionPlanner {
         console.log(`[ActionPlanner] ✅ No unresolved placeholders found`);
       }
 
-      console.log(`[ActionPlanner] 📋 Returning plan as-is:`, {
-        stepDetails: initialPlan.steps.map(s => ({
+      console.log(`[ActionPlanner] 📋 Returning LLM plan as-is:`, {
+        stepDetails: llmPlan.steps.map(s => ({
           type: s.type,
           action: s.action,
           recipientEmail: s.params?.recipient_email
         }))
       });
 
-      return initialPlan;
+      return llmPlan;
     } catch (error) {
       console.error(`[ActionPlanner] Error creating plan:`, error);
 
@@ -221,8 +264,25 @@ export class ActionPlanner {
         isMultiStep: false,
         currentStepIndex: 0,
         state: PlanState.CREATED,
+        planningMethod: 'llm_fallback',
+        rdfConfidence: 0,
+        semanticInsights: {
+          actionMappingUsed: false,
+          fallbackReason: 'Error during planning'
+        }
       };
     }
+  }
+
+  /**
+   * Generate semantic summary from RDF insights and actions
+   */
+  private generateSemanticSummary(rdfInsights: any, actions: ActionStep[]): string {
+    const primaryIntent = rdfInsights.ai_reasoning?.intent_analysis?.primary_intent || 'unknown';
+    const actionTypes = actions.map(a => a.type).join(', ');
+    const conceptCount = rdfInsights.ai_reasoning?.extracted_concepts?.length || 0;
+    
+    return `Semantic analysis detected ${primaryIntent} intent with ${conceptCount} concepts, executing ${actionTypes} actions`;
   }
 
   /**

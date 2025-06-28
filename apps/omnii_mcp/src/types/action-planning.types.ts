@@ -169,6 +169,16 @@ export interface ActionStep {
   }[];
   // For backward compatibility
   dependsOn?: string[];
+  
+  // NEW: RDF semantic enhancement fields (optional for backward compatibility)
+  confidence?: number; // Confidence score from RDF analysis (0-1)
+  semanticContext?: {
+    primaryIntent?: string; // Primary intent detected by RDF
+    urgencyLevel?: string; // 'low' | 'medium' | 'high' | 'critical'
+    formalityLevel?: string; // 'casual' | 'neutral' | 'formal' | 'business'
+    temporalContext?: any; // Time-related context from RDF
+    conceptsUsed?: string[]; // Concepts that drove this action selection
+  };
 }
 
 /**
@@ -196,6 +206,16 @@ export interface ActionPlan {
   state: PlanState;
   currentStepIndex: number;
   isMultiStep?: boolean;
+  
+  // NEW: RDF semantic enhancement fields (optional for backward compatibility)
+  planningMethod?: 'rdf_semantic' | 'llm_fallback' | 'hybrid'; // How the plan was created
+  rdfConfidence?: number; // Overall RDF confidence score (0-1)
+  semanticInsights?: {
+    primaryIntent?: string; // Main intent detected by RDF
+    extractedConcepts?: string[]; // Key concepts from semantic analysis
+    actionMappingUsed?: boolean; // Whether semantic→action mapping was used
+    fallbackReason?: string; // Why LLM fallback was used (if applicable)
+  };
 }
 
 /**

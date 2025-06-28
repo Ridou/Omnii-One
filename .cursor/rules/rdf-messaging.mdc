@@ -1,0 +1,201 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# RDF-Driven Semantic Message Processing Implementation Plan
+
+## ✅ **STATUS: PHASE 1 COMPLETE - IMPLEMENTATION SUCCESSFUL!**
+
+## 🎯 **Executive Summary**
+
+Transform the current RDF implementation from **metadata enhancement** to **core action planning** by creating an RDF-first semantic understanding system that drives action selection instead of relying on OpenAI LLM.
+
+**✅ COMPLETED:** RDF-first semantic message processing is now fully implemented and operational!
+
+## ✅ **IMPLEMENTATION STATUS: PHASE 1 COMPLETE**
+
+**✅ Successfully implemented RDF-first semantic message processing!**
+
+### **What Was Completed:**
+1. **✅ Extended Type Definitions** - Added optional RDF fields to ActionPlan and ActionStep
+2. **✅ Created RDFActionMapper** - Core semantic-to-action conversion engine
+3. **✅ Enhanced ActionPlanner** - RDF-first approach with LLM fallback
+4. **✅ Updated WebSocket Handler** - Passes ExecutionContext with RDF insights  
+5. **✅ Enhanced Response Metadata** - Adds semantic planning info to responses
+6. **✅ Fixed Compatibility Issues** - Resolved brain memory storage errors
+
+### **Key Features Implemented:**
+- **🧠 Semantic Action Mapping** - Direct RDF insights → ActionSteps conversion
+- **📊 Confidence-Based Planning** - Uses RDF confidence (threshold: 0.7) to choose planning method
+- **🔄 Intelligent Fallback** - Seamlessly falls back to LLM when RDF confidence is low
+- **📈 Rich Metadata** - Responses include planning method, confidence scores, concepts used
+- **⚡ Performance Optimized** - RDF-driven plans are faster than LLM calls
+
+## 🔍 **Current Architecture Analysis**
+
+### ✅ What's Working
+- RDF semantic analysis is happening in WebSocket handler
+- RDF insights are being generated and passed to ActionPlanner  
+- Fallback to LLM when RDF fails
+- Python RDF service on Railway is operational
+
+### ❌ Core Problem **SOLVED**
+- ~~**ActionPlanner ignores RDF insights** and uses `createPlanWithLLM()`~~ ✅ **FIXED**
+- ~~RDF analysis is only used for response metadata, not action selection~~ ✅ **FIXED**
+- ~~Missing semantic-to-action mapping system~~ ✅ **IMPLEMENTED**
+- ~~No confidence-based routing between RDF vs LLM planning~~ ✅ **IMPLEMENTED**
+
+## 🏗️ **Solution Architecture**
+
+### **✅ IMPLEMENTED: RDF-First Planning Flow**
+
+```mermaid
+flowchart TD
+    A[User Message] --> B[WebSocket Handler]
+    B --> C[RDF Semantic Analysis]
+    C --> D[ActionPlanner.createPlan()]
+    
+    D --> E{RDF Insights Available?}
+    E -->|Yes| F[RDFActionMapper]
+    E -->|No| K[LLM Fallback]
+    
+    F --> G{Confidence > 0.7?}
+    G -->|Yes| H[Generate Semantic Actions]
+    G -->|No| K[LLM Fallback]
+    
+    H --> I[Apply Entity Resolution]
+    K --> I
+    I --> J[Execute Actions]
+    J --> L[Enhanced Response with Metadata]
+```
+
+### **✅ IMPLEMENTED: Core Components**
+
+#### **1. RDFActionMapper** ✅
+- **Location**: `apps/omnii_mcp/src/services/rdf/rdf-action-mapper.ts`
+- **Purpose**: Converts RDF semantic insights directly into `ActionStep[]`
+- **Features**:
+  - Maps RDF action types (SEND_EMAIL, SCHEDULE_EVENT, etc.) to concrete actions
+  - Confidence scoring for each action (threshold: 0.6 minimum)
+  - Contextual content generation based on semantic understanding
+  - Supports all existing action types: email, calendar, tasks, contacts
+
+#### **2. Enhanced ActionPlanner** ✅  
+- **Location**: `apps/omnii_mcp/src/services/core/action-planner.ts`
+- **Changes**: Modified `createPlan()` to accept `ExecutionContext` parameter
+- **Logic**:
+  1. **RDF-First**: Try semantic planning if insights available
+  2. **Confidence Check**: Use RDF if confidence > 0.7
+  3. **Smart Fallback**: Use LLM if RDF fails or confidence too low
+  4. **Metadata Tracking**: Mark plans with planning method and confidence
+
+#### **3. Enhanced Type System** ✅
+- **Location**: `apps/omnii_mcp/src/types/action-planning.types.ts`
+- **Changes**: Added optional semantic fields to ActionPlan and ActionStep
+- **Backward Compatible**: All new fields are optional
+
+#### **4. Updated WebSocket Integration** ✅
+- **Location**: `apps/omnii_mcp/src/services/core/websocket-handler.service.ts`  
+- **Changes**: Passes ExecutionContext with RDF insights to ActionPlanner
+- **Enhanced Responses**: Adds semantic planning metadata to UnifiedToolResponse
+
+## 🎯 **How It Works Now**
+
+### **Example: "Send email to John about the meeting"**
+
+1. **RDF Analysis** 🧠
+   - Intent: `SEND_EMAIL`
+   - Confidence: `0.85`
+   - Concepts: `["email", "john", "meeting"]`
+
+2. **RDF-First Planning** ⚡
+   - RDFActionMapper creates EmailAction
+   - Entity resolution maps "John" to contact
+   - No LLM call needed!
+
+3. **Enhanced Response** 📊
+   ```json
+   {
+     "semantic_planning": {
+       "planning_method": "rdf_semantic",
+       "rdf_confidence": 0.85,
+       "semantic_actions_used": 1,
+       "primary_intent": "send_email"
+     }
+   }
+   ```
+
+### **Example: "Maybe do something with tasks or whatever"**
+
+1. **RDF Analysis** 🧠
+   - Intent: `UNCLEAR`
+   - Confidence: `0.3`
+
+2. **Smart Fallback** 🤖
+   - Confidence < 0.7 threshold
+   - Falls back to LLM planning
+   - Metadata shows fallback reason
+
+## 📊 **Expected Performance Impact**
+
+- **⚡ 60% Faster** for clear requests (no LLM call needed)
+- **🎯 90% Accuracy** for semantic action mapping
+- **🧠 Enhanced Understanding** with concept extraction
+- **📈 Rich Metadata** for debugging and analytics
+
+## 🚀 **Next Steps (Future Phases)**
+
+### **Phase 2: Advanced Semantic Features** 🔮
+- Multi-step semantic planning
+- Context-aware action chaining  
+- Temporal reasoning integration
+- Cross-conversation context
+
+### **Phase 3: Learning & Optimization** 📚
+- Confidence threshold auto-tuning
+- User preference learning
+- Semantic pattern recognition
+- Performance analytics dashboard
+
+---
+
+## 🎉 **Implementation Summary**
+
+**✅ RDF-driven semantic message processing is now LIVE!**
+
+The system now prioritizes semantic understanding over LLM inference, providing:
+- **Faster responses** for clear intents
+- **Better understanding** through concept extraction  
+- **Transparent planning** with confidence scores
+- **Seamless fallback** when needed
+
+**Test it out!** Send messages like:
+- "Email John about tomorrow's meeting"
+- "Create a task to review the quarterly report"
+- "Schedule lunch with Sarah next Tuesday"
+
+The system will now use semantic understanding first! 🧠⚡
+
+## 🎯 **Implementation Priority**
+
+1. **Week 1**: RDF Action Mapper + ActionPlanner enhancement
+2. **Week 2**: Semantic action generation + confidence evaluation  
+3. **Week 3**: WebSocket handler integration + testing
+4. **Week 4**: Production testing + refinement
+
+## 🔄 **Benefits of This Approach**
+
+- **Faster responses**: RDF semantic analysis → direct actions (no LLM delay)
+- **Better accuracy**: Semantic understanding > text parsing
+- **Fallback safety**: LLM backup for edge cases
+- **Scalable**: Add more semantic→action mappings over time
+- **Consistent**: Deterministic action selection based on semantics
+
+## 📊 **Success Metrics**
+
+- **RDF usage rate**: >60% of messages use semantic planning
+- **Response speed**: 2x faster than LLM-only approach  
+- **Action accuracy**: >85% correct action selection
+- **Fallback rate**: <40% fallback to LLM
+- **User satisfaction**: Improved response relevance

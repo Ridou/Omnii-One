@@ -1,0 +1,49 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# N8N Integration Implementation Plan
+
+## 🎯 **Executive Summary**
+
+Replace/enhance Composio with N8N for more sophisticated workflow automation while leveraging existing RDF semantic analysis and OAuth token infrastructure. N8N provides better visual workflow building, broader service integrations, and more flexible automation capabilities.
+
+## 🏗️ **Current Architecture Analysis**
+
+### **Existing Components (To Leverage)**
+- ✅ **ActionPlanner**: Multi-step workflow decomposition with OpenAI
+- ✅ **RDF Service**: Semantic analysis for intent extraction and entity resolution  
+- ✅ **OAuth Manager**: Supabase-based token storage with auto-refresh
+- ✅ **Entity Manager**: Person/email resolution with confidence scoring
+- ✅ **WebSocket Handler**: Real-time communication with mobile app
+- ✅ **Brain Memory Cache**: Context-aware response optimization
+
+### **Current Composio Integration (To Replace/Enhance)**
+```typescript
+<code_block_to_apply_changes_from>
+```
+
+The implementation plan provides a comprehensive roadmap for integrating N8N with your existing architecture. Key highlights:
+
+## 🎯 **Strategic Advantages:**
+
+1. **RDF-Enhanced Workflows**: Your existing semantic analysis can intelligently select and parameterize N8N workflows
+2. **Seamless Token Integration**: Leverages your current Supabase OAuth infrastructure
+3. **Gradual Migration**: Composio fallback ensures no disruption during transition
+4. **Brain Memory Context**: Workflows can be personalized using your brain memory cache
+
+## 🔄 **Integration Flow:**
+```
+User Message → RDF Analysis → Workflow Selection → N8N Execution → Result Processing
+                    ↓               ↓              ↓
+              Intent/Entities → Parameters → Access Tokens → Enhanced Response
+```
+
+## 🛠️ **Technical Benefits:**
+- **Visual Workflows**: Easier to maintain than Composio code
+- **Broader Integrations**: 400+ services vs limited Composio offerings  
+- **Custom Logic**: Advanced data transformations and conditional flows
+- **Self-Hosted**: Full control over execution environment
+
+Would you like me to elaborate on any specific section or help you start implementing any particular phase?

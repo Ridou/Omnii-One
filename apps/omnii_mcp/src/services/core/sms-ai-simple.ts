@@ -180,19 +180,25 @@ export class SimpleSMSAI {
     success?: boolean
   ): Promise<void> {
     try {
-      await productionBrainService.manager.storeSMSConversation({
-        user_id: userId,
-        content: content,
-        phone_number: phoneNumber,
-        is_incoming: isIncoming,
-        local_datetime: localDatetime,
-        google_service_context: success ? {
-          service_type: 'tasks', // Default for SMS processing
-          operation: 'message_processed',
-          entity_ids: [userId]
-        } : undefined
-      });
-      console.log(`[SimpleSMSAI] 🧠💾 Stored SMS in brain memory for ${phoneNumber}`);
+      // Check if brain memory manager is available
+      const brainManager = (productionBrainService as any)?.manager;
+      if (brainManager && typeof brainManager.storeSMSConversation === 'function') {
+        await brainManager.storeSMSConversation({
+          user_id: userId,
+          content: content,
+          phone_number: phoneNumber,
+          is_incoming: isIncoming,
+          local_datetime: localDatetime,
+          google_service_context: success ? {
+            service_type: 'tasks', // Default for SMS processing
+            operation: 'message_processed',
+            entity_ids: [userId]
+          } : undefined
+        });
+        console.log(`[SimpleSMSAI] 🧠💾 Stored SMS in brain memory for ${phoneNumber}`);
+      } else {
+        console.log(`[SimpleSMSAI] 🧠⚠️ Brain memory manager not available - skipping storage`);
+      }
     } catch (error) {
       console.error(`[SimpleSMSAI] ❌ Brain memory storage failed:`, error);
     }

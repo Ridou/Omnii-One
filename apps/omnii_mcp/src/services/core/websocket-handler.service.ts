@@ -500,11 +500,19 @@ export class WebSocketHandlerService {
       const plan = await this.actionPlanner.createPlan(
         message,
         resolvedEntities,
-        userId // Pass userUUID for contact resolution
+        userId, // Pass userUUID for contact resolution
+        context  // NEW: Pass ExecutionContext with RDF insights for semantic planning
       );
       console.log(
         `[WebSocket] 📝 Plan created with ${plan.steps.length} steps`
       );
+
+      // NEW: Log planning method and confidence
+      console.log(`[WebSocket] 🧠 Planning method: ${plan.planningMethod || 'unknown'}`);
+      console.log(`[WebSocket] 📊 RDF confidence: ${plan.rdfConfidence?.toFixed(2) || 'N/A'}`);
+      if (plan.semanticInsights?.extractedConcepts?.length) {
+        console.log(`[WebSocket] 🎯 Extracted concepts: ${plan.semanticInsights.extractedConcepts.join(', ')}`);
+      }
 
       console.log(`[WebSocket] ⚡ Executing plan...`);
       const result = await this.actionPlanner.executePlan(plan, context);
@@ -586,6 +594,22 @@ export class WebSocketHandlerService {
                 concept_count: 0
               }
             };
+          }
+          
+          // NEW: Add semantic planning metadata if plan has semantic insights
+          if (plan.planningMethod && plan.rdfConfidence !== undefined) {
+            result.unifiedResponse.data.structured.semantic_planning = {
+              planning_method: plan.planningMethod,
+              rdf_confidence: plan.rdfConfidence,
+              semantic_actions_used: plan.steps.filter(s => s.semanticContext).length,
+              total_actions: plan.steps.length,
+              primary_intent: plan.semanticInsights?.primaryIntent,
+              extracted_concepts: plan.semanticInsights?.extractedConcepts || [],
+              action_mapping_used: plan.semanticInsights?.actionMappingUsed || false,
+              fallback_reason: plan.semanticInsights?.fallbackReason
+            };
+            
+            console.log(`[WebSocket] 🧠 Added semantic planning metadata - method: ${plan.planningMethod}, confidence: ${plan.rdfConfidence.toFixed(2)}`);
           }
         }
         
@@ -712,21 +736,27 @@ export class WebSocketHandlerService {
     success?: boolean
   ): Promise<void> {
     try {
-      await productionBrainService.manager.storeChatConversation({
-        user_id: userId,
-        content: content,
-        chat_id: chatId,
-        is_incoming: isIncoming,
-        websocket_session_id: `ws_${userId}_${Date.now()}`,
-        is_group_chat: false,
-        participants: [userId],
-        google_service_context: success ? {
-          service_type: 'tasks', // Default for chat processing
-          operation: 'chat_processed',
-          entity_ids: [userId]
-        } : undefined
-      });
-      console.log(`[WebSocket] 🧠💾 Stored chat in brain memory for ${chatId}`);
+      // Check if brain memory manager is available (SimpleNeo4jService doesn't have manager)
+      const brainManager = (productionBrainService as any)?.manager;
+      if (brainManager && typeof brainManager.storeChatConversation === 'function') {
+        await brainManager.storeChatConversation({
+          user_id: userId,
+          content: content,
+          chat_id: chatId,
+          is_incoming: isIncoming,
+          websocket_session_id: `ws_${userId}_${Date.now()}`,
+          is_group_chat: false,
+          participants: [userId],
+          google_service_context: success ? {
+            service_type: 'tasks', // Default for chat processing
+            operation: 'chat_processed',
+            entity_ids: [userId]
+          } : undefined
+        });
+        console.log(`[WebSocket] 🧠💾 Stored chat in brain memory for ${chatId}`);
+      } else {
+        console.log(`[WebSocket] 🧠⚠️ Brain memory manager not available - skipping storage`);
+      }
     } catch (error) {
       console.error(`[WebSocket] ❌ Brain memory storage failed:`, error);
     }
