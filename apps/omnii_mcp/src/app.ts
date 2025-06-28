@@ -234,15 +234,12 @@ console.log("🔧 Setting up WebSocket endpoint at /ws");
 
 app.ws("/ws", {
   open(ws) {
-    console.log(`🔌 WebSocket client connected! ID: ${ws.id}`);
-    console.log(`📊 Connection details:`, {
-      id: ws.id,
-      readyState: ws.readyState,
-    });
+    console.log(`🔌 WebSocket client connected!`);
+    console.log(`📊 Connection established for WebSocket client`);
   },
 
   message(ws, message) {
-    console.log(`📨 WebSocket message received from ${ws.id}:`, message);
+    console.log(`📨 WebSocket message received:`, message);
     console.log(`📝 Message type:`, typeof message);
     if (typeof message === "string") {
       console.log(`📏 Message length:`, message.length);
@@ -424,20 +421,24 @@ app.ws("/ws", {
     }
   },
 
-  close(ws, code, reason) {
-    console.log(
-      `❌ WebSocket client disconnected! ID: ${ws.id}, Code: ${code}, Reason: ${reason}`
-    );
+  close(ws) {
+    console.log(`❌ WebSocket client disconnected!`);
 
     // Find and remove the user connection properly
     const connectedUsers = wsHandler.getConnectedUsers();
     let removedUserId: string | null = null;
 
     for (const userId of connectedUsers) {
-      console.log(`🔍 Checking if user ${userId} matches connection ${ws.id}`);
+      console.log(`🔍 Checking if user ${userId} has active connection`);
       try {
-        const isConnected = wsHandler.isUserConnected(userId);
-        if (!isConnected) {
+        // Since we can't check connection state directly, we'll try to send a test message
+        // If it fails, we know the connection is dead
+        try {
+          ws.send(JSON.stringify({ type: 'ping' }));
+          // If send succeeds, connection is still alive, skip this user
+          continue;
+        } catch (sendError) {
+          // Send failed, this connection is dead
           wsHandler.removeConnectionForUser(userId);
           removedUserId = userId;
           console.log(`🧹 Cleaned up dead connection for user: ${userId}`);
@@ -453,9 +454,7 @@ app.ws("/ws", {
     }
 
     if (!removedUserId) {
-      console.log(
-        `⚠️ Could not determine which user disconnected (ws.id: ${ws.id})`
-      );
+      console.log(`⚠️ Could not determine which user disconnected`);
     }
   },
 });
