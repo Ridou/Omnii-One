@@ -26,6 +26,9 @@ import {
   ConceptDetailModal
 } from './DetailModals';
 
+// Import Concepts Memory Card
+import { ConceptsMemoryCard } from './ConceptsMemoryCard';
+
 interface MemoryContentProps {
   tasksOverview: any;
   calendarData: any;
@@ -317,6 +320,9 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
               expandedContent={<BrainMemoryDetails data={conceptsData} onConceptClick={setSelectedConcept} />}
             />
           </View>
+
+          {/* Neo4j Concepts Search Card with Brain Cache */}
+          <ConceptsMemoryCard onConceptClick={setSelectedConcept} />
 
           {/* RDF Semantic Analysis Card */}
           <RDFMemoryCard />
@@ -642,8 +648,7 @@ const TaskMemoryDetails: React.FC<{ data: any; onTaskClick: (task: any) => void 
   });
   
   const pendingTasks = allTasks
-    .filter((task: any) => task.status === 'needsAction')
-    .slice(0, 4); // Limit to 4 items
+    .filter((task: any) => task.status === 'needsAction');
 
   return (
     <View className="mt-3">
@@ -678,7 +683,7 @@ const TaskMemoryDetails: React.FC<{ data: any; onTaskClick: (task: any) => void 
       )}
       
       {pendingTasks.length > 0 ? (
-        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+        <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
           <View className="space-y-2">
             {pendingTasks.map((task: any, index: number) => (
               <TouchableOpacity
@@ -707,16 +712,7 @@ const TaskMemoryDetails: React.FC<{ data: any; onTaskClick: (task: any) => void 
                 )}
               </TouchableOpacity>
             ))}
-            {allTasks.length > 4 && (
-              <View className={cn(
-                "p-3 rounded-lg border-dashed border-2 mt-2",
-                isDark ? "border-slate-600" : "border-gray-300"
-              )}>
-                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
-                  + {allTasks.length - 4} more tasks - tap any task for details
-                </Text>
-              </View>
-            )}
+            {/* All tasks are now shown - no more limit */}
           </View>
         </ScrollView>
       ) : (
@@ -746,8 +742,7 @@ const CalendarMemoryDetails: React.FC<{ data: any; onEventClick: (event: any) =>
   
   const events = data?.events || [];
   const upcomingEvents = events
-    .filter((event: any) => new Date(event.start) > new Date())
-    .slice(0, 4); // Limit to 4 items
+    .filter((event: any) => new Date(event.start) > new Date());
   
   return (
     <View className="mt-3">
@@ -755,7 +750,7 @@ const CalendarMemoryDetails: React.FC<{ data: any; onEventClick: (event: any) =>
         Upcoming Events ({events.length} total)
       </Text>
       {upcomingEvents.length > 0 ? (
-        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+        <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
           <View className="space-y-2">
             {upcomingEvents.map((event: any, index: number) => (
               <TouchableOpacity
@@ -774,16 +769,7 @@ const CalendarMemoryDetails: React.FC<{ data: any; onEventClick: (event: any) =>
                 </Text>
               </TouchableOpacity>
             ))}
-            {events.length > 4 && (
-              <View className={cn(
-                "p-3 rounded-lg border-dashed border-2 mt-2",
-                isDark ? "border-slate-600" : "border-gray-300"
-              )}>
-                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
-                  + {events.length - 4} more events - tap any event for details
-                </Text>
-              </View>
-            )}
+            {/* All events are now shown - no more limit */}
           </View>
         </ScrollView>
       ) : (
@@ -812,7 +798,7 @@ const ContactMemoryDetails: React.FC<{ data: any; onContactClick: (contact: any)
   }
   
   const contacts = data?.contacts || [];
-  const displayContacts = contacts.slice(0, 4); // Limit to 4 items
+  const displayContacts = contacts; // Show all contacts
   
   return (
     <View className="mt-3">
@@ -820,7 +806,7 @@ const ContactMemoryDetails: React.FC<{ data: any; onContactClick: (contact: any)
         Recent Contacts ({contacts.length} total)
       </Text>
       {displayContacts.length > 0 ? (
-        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+        <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
           <View className="space-y-2">
             {displayContacts.map((contact: any, index: number) => (
               <TouchableOpacity
@@ -846,16 +832,7 @@ const ContactMemoryDetails: React.FC<{ data: any; onContactClick: (contact: any)
                 )}
               </TouchableOpacity>
             ))}
-            {contacts.length > 4 && (
-              <View className={cn(
-                "p-3 rounded-lg border-dashed border-2 mt-2",
-                isDark ? "border-slate-600" : "border-gray-300"
-              )}>
-                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
-                  + {contacts.length - 4} more contacts - tap any contact for details
-                </Text>
-              </View>
-            )}
+            {/* All contacts are now shown - no more limit */}
           </View>
         </ScrollView>
       ) : (
@@ -884,7 +861,7 @@ const EmailMemoryDetails: React.FC<{ data: any; onEmailClick: (email: any) => vo
   }
   
   const emails = data?.emails || [];
-  const recentEmails = emails.slice(0, 4); // Limit to 4 items
+  const recentEmails = emails; // Show all emails
   const unreadEmails = emails.filter((e: any) => !e.isRead);
   
   return (
@@ -911,7 +888,7 @@ const EmailMemoryDetails: React.FC<{ data: any; onEmailClick: (email: any) => vo
       )}
       
       {recentEmails.length > 0 ? (
-        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+        <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
           <View className="space-y-2">
             {recentEmails.map((email: any, index: number) => (
               <TouchableOpacity
@@ -950,16 +927,7 @@ const EmailMemoryDetails: React.FC<{ data: any; onEmailClick: (email: any) => vo
                 )}
               </TouchableOpacity>
             ))}
-            {emails.length > 4 && (
-              <View className={cn(
-                "p-3 rounded-lg border-dashed border-2 mt-2",
-                isDark ? "border-slate-600" : "border-gray-300"
-              )}>
-                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
-                  + {emails.length - 4} more emails - tap any email for details
-                </Text>
-              </View>
-            )}
+            {/* All emails are now shown - no more limit */}
           </View>
         </ScrollView>
       ) : (
@@ -988,7 +956,7 @@ const BrainMemoryDetails: React.FC<{ data: any; onConceptClick: (concept: any) =
   }
   
   const concepts = data?.concepts || [];
-  const recentConcepts = concepts.slice(0, 4); // Limit to 4 items
+  const recentConcepts = concepts; // Show all concepts
   
   return (
     <View className="mt-3">
@@ -1014,7 +982,7 @@ const BrainMemoryDetails: React.FC<{ data: any; onConceptClick: (concept: any) =
       )}
       
       {recentConcepts.length > 0 ? (
-        <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+        <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
           <View className="space-y-2">
             {recentConcepts.map((concept: any, index: number) => (
               <TouchableOpacity
@@ -1054,16 +1022,7 @@ const BrainMemoryDetails: React.FC<{ data: any; onConceptClick: (concept: any) =
                 )}
               </TouchableOpacity>
             ))}
-            {concepts.length > 4 && (
-              <View className={cn(
-                "p-3 rounded-lg border-dashed border-2 mt-2",
-                isDark ? "border-slate-600" : "border-gray-300"
-              )}>
-                <Text className={cn("text-xs text-center", isDark ? "text-slate-400" : "text-gray-600")}>
-                  + {concepts.length - 4} more concepts - tap any concept for details
-                </Text>
-              </View>
-            )}
+            {/* All concepts are now shown - no more limit */}
           </View>
         </ScrollView>
       ) : (

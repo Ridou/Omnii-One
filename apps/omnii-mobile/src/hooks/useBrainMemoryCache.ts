@@ -3,7 +3,7 @@ import { useAuth } from '~/context/AuthContext';
 import { supabase } from '~/lib/supabase';
 
 // Memory period types inspired by brain temporal processing
-export type MemoryPeriod = 'past_week' | 'current_week' | 'next_week' | 'tasks' | 'calendar' | 'contacts' | 'emails';
+export type MemoryPeriod = 'past_week' | 'current_week' | 'next_week' | 'tasks' | 'calendar' | 'contacts' | 'emails' | 'concepts';
 
 // 🚀 Phase 2: Extended data types for brain-inspired caching
 export type BrainDataType = 'neo4j_concepts' | 'google_tasks' | 'google_calendar' | 'google_contacts' | 'google_emails';
@@ -159,6 +159,7 @@ const getMemoryPeriodDates = (period: MemoryPeriod) => {
     case 'calendar':
     case 'contacts':
     case 'emails':
+    case 'concepts':
       return { start: now, end: now };
 
     default:
@@ -752,4 +753,7 @@ export const useBrainNeo4jCache = () => useBrainMemoryCache('current_week', 'neo
 
 // Legacy export for backward compatibility with existing Neo4j usage
 export const useBrainConceptsCache = (period: 'past_week' | 'current_week' | 'next_week' = 'current_week') => 
-  useBrainMemoryCache(period, 'neo4j_concepts'); 
+  useBrainMemoryCache(period, 'neo4j_concepts');
+
+// New export for concepts cache using 'concepts' memory period
+export const useBrainConceptsNewCache = () => useBrainMemoryCache('concepts', 'neo4j_concepts'); 
