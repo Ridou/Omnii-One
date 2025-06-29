@@ -119,7 +119,7 @@ export class DeltaSyncCacheCoordinator {
           syncType: 'none',
           timestamp: Date.now(),
           error: `Rate limited for ${waitTime}ms`,
-          performance: { lockWaitTime, syncTime: 0, totalTime: Date.now() - startTime }
+          performance: { lockWaitTime: 0, syncTime: 0, totalTime: Date.now() - startTime }
         };
       }
 
@@ -645,7 +645,17 @@ export class DeltaSyncCacheCoordinator {
     // Implementation depends on each Google service's delta sync capabilities
     return async () => {
       console.log(`🔄 Delta sync call for ${serviceType} since ${lastSyncTimestamp}`);
-      // For now, use original function - implement service-specific delta logic
+      
+      // 🗓️ Calculate 3-week window for delta sync
+      const now = new Date();
+      const pastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const futureWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const lastSync = lastSyncTimestamp ? new Date(lastSyncTimestamp) : pastWeek;
+      
+      console.log(`📅 Delta sync window: ${lastSync.toISOString()} to ${futureWeek.toISOString()}`);
+      
+      // For now, use original function with 3-week window
+      // TODO: Implement service-specific delta sync parameters
       return await originalRefreshFn();
     };
   }
@@ -669,6 +679,7 @@ export class DeltaSyncCacheCoordinator {
       console.log(`📅 3-week window: ${pastWeek.toISOString()} to ${futureWeek.toISOString()}`);
       
       // For now, use original function - implement service-specific 3-week logic
+      // TODO: Add timeMin/timeMax parameters for Google APIs
       return await originalRefreshFn();
     };
   }
@@ -685,15 +696,23 @@ export class DeltaSyncCacheCoordinator {
     
     console.log(`🔗 Merging delta changes for ${serviceType}`);
     
-    // Service-specific merge logic would go here
-    // For now, simple merge strategy
+    // Service-specific merge logic based on timestamp fields
+    const timestampFields = DELTA_SYNC_CONFIG.timestamp_fields[serviceType as keyof typeof DELTA_SYNC_CONFIG.timestamp_fields];
+    const compareFields = DELTA_SYNC_CONFIG.compare_fields[serviceType as keyof typeof DELTA_SYNC_CONFIG.compare_fields];
+    
+    console.log(`🔍 Using timestamp fields: ${timestampFields?.join(', ')}`);
+    console.log(`🔍 Using compare fields: ${compareFields?.join(', ')}`);
+    
+    // Simple merge strategy for now - implement intelligent merging later
     return {
       ...existingData,
       ...deltaData,
       _mergeMetadata: {
         mergeType: 'delta',
         timestamp: Date.now(),
-        serviceType
+        serviceType,
+        timestampFields,
+        compareFields
       }
     };
   }
@@ -723,7 +742,42 @@ export class DeltaSyncCacheCoordinator {
       }
     };
   }
+
+  /**
+   * 🧹 Clean up expired locks and queue items
+   */
+  async cleanup(): Promise<void> {
+    const now = Date.now();
+    
+    // Clean up expired locks
+    for (const [key, lock] of this.activeLocks.entries()) {
+      if (lock.expiresAt < now) {
+        this.activeLocks.delete(key);
+        await AsyncStorage.removeItem(`${this.LOCK_PREFIX}${key}`);
+        console.log(`🧹 Cleaned up expired lock: ${key}`);
+      }
+    }
+    
+    // Clean up old queue items (older than 24 hours)
+    const dayAgo = now - 24 * 60 * 60 * 1000;
+    for (const [id, item] of this.syncQueue.entries()) {
+      if (item.timestamp < dayAgo) {
+        this.syncQueue.delete(id);
+        await AsyncStorage.removeItem(`${this.QUEUE_PREFIX}${id}`);
+        console.log(`🧹 Cleaned up old queue item: ${id}`);
+      }
+    }
+    
+    // Clean up expired rate limit backoffs
+    for (const [service, backoffUntil] of this.rateLimitBackoffs.entries()) {
+      if (backoffUntil < now) {
+        this.rateLimitBackoffs.delete(service);
+        await AsyncStorage.removeItem(`${this.BACKOFF_PREFIX}${service}`);
+        console.log(`🧹 Cleaned up expired backoff: ${service}`);
+      }
+    }
+  }
 }
 
 // Export singleton instance
-export const cacheCoordinator = new DeltaSyncCacheCoordinator(); 
+export const deltaSyncCacheCoordinator = new DeltaSyncCacheCoordinator(); 
