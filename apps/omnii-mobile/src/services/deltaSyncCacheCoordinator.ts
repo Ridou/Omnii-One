@@ -472,36 +472,227 @@ export class DeltaSyncCacheCoordinator {
 
   /**
    * 🗂️ Get stale cache data (fallback during rate limiting)
+   * ✅ FIXED: Now integrates with Supabase brain memory cache instead of AsyncStorage
    */
   private async getStaleCache(serviceType: string): Promise<any> {
     try {
-      const cacheKey = `cache_${serviceType}`;
-      const cached = await AsyncStorage.getItem(cacheKey);
-      return cached ? JSON.parse(cached) : null;
+      console.log(`🗂️ Getting stale cache for ${serviceType} from Supabase brain memory cache`);
+      
+      // ✅ Import Supabase client for brain memory cache integration
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.EXPO_PUBLIC_SUPABASE_URL,
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+      );
+
+      // Get user ID from AsyncStorage (stored by auth system)
+      const userDataString = await AsyncStorage.getItem('user');
+      const userData = userDataString ? JSON.parse(userDataString) : null;
+      const userId = userData?.id;
+
+      if (!userId) {
+        console.log(`🗂️ No user ID found for stale cache lookup`);
+        return null;
+      }
+
+      // ✅ Map service types to memory periods for brain cache lookup
+      const memoryPeriodMap: Record<string, string> = {
+        'google_tasks': 'tasks',
+        'google_contacts': 'contacts', 
+        'google_calendar': 'calendar',
+        'google_emails': 'emails',
+        'neo4j_concepts': 'current_week'
+      };
+
+      const memoryPeriod = memoryPeriodMap[serviceType];
+      if (!memoryPeriod) {
+        console.log(`🗂️ No memory period mapping for ${serviceType}`);
+        return null;
+      }
+
+      // ✅ Query Supabase brain memory cache
+      const { data: cacheEntry, error } = await supabase
+        .from('brain_memory_cache')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('memory_period', memoryPeriod)
+        .eq('data_type', serviceType)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error(`🗂️ Error getting stale cache for ${serviceType}:`, error);
+        return null;
+      }
+
+      if (!cacheEntry) {
+        console.log(`🗂️ No stale cache found for ${serviceType}:${memoryPeriod}`);
+        return null;
+      }
+
+      // ✅ Extract and format cache data for mobile app consumption
+      const cacheData = cacheEntry.cache_data || cacheEntry.concepts_data;
+      if (!cacheData) {
+        console.log(`🗂️ Stale cache entry has no data for ${serviceType}`);
+        return null;
+      }
+
+      // ✅ Transform cache data to expected mobile app format
+      let formattedData;
+      switch (serviceType) {
+        case 'google_tasks':
+          formattedData = {
+            taskLists: cacheData.taskLists || [],
+            totalTasks: cacheData.totalTasks || 0,
+            totalLists: cacheData.totalLists || 0,
+            totalCompleted: cacheData.totalCompleted || 0,
+            totalPending: cacheData.totalPending || 0,
+            totalOverdue: cacheData.totalOverdue || 0,
+            lastSyncTime: cacheData.lastSyncTime || cacheEntry.last_synced_at,
+            syncSuccess: true
+          };
+          break;
+
+        case 'google_contacts':
+          formattedData = {
+            contacts: cacheData.contacts || [],
+            totalCount: cacheData.totalCount || 0
+          };
+          break;
+
+        case 'google_calendar':
+          formattedData = {
+            events: cacheData.events || cacheData.calendar || [],
+            totalCount: cacheData.totalCount || (cacheData.events?.length || 0)
+          };
+          break;
+
+        case 'google_emails':
+          formattedData = {
+            emails: cacheData.emails || [],
+            totalCount: cacheData.totalCount || 0
+          };
+          break;
+
+        case 'neo4j_concepts':
+          formattedData = {
+            concepts: cacheData.concepts || [],
+            totalConcepts: cacheData.totalConcepts || 0
+          };
+          break;
+
+        default:
+          formattedData = cacheData;
+      }
+
+      const itemCount = this.getItemCount(formattedData, serviceType);
+      console.log(`🗂️ ✅ Found stale cache for ${serviceType}: ${itemCount} items from ${cacheEntry.last_synced_at}`);
+      
+      return formattedData;
+
     } catch (error) {
-      console.error(`Error getting stale cache for ${serviceType}:`, error);
+      console.error(`🗂️ Error getting stale cache for ${serviceType}:`, error);
       return null;
     }
   }
 
   /**
    * 💾 Update cache data with timestamp tracking
+   * ✅ FIXED: Now updates both AsyncStorage (for delta sync) and Supabase (for brain memory cache)
    */
-  private async updateCacheData(serviceType: string, data: any, syncType: 'delta' | 'full'): Promise<void> {
-    const cacheKey = `cache_${serviceType}`;
-    const cacheData = {
-      ...data,
-      _cacheMetadata: {
-        serviceType,
-        syncType,
-        timestamp: Date.now(),
-        threeWeekWindow: true,
-        deltaCapable: true
+  private async updateCacheData(serviceType: string, data: any, syncType: string): Promise<void> {
+    try {
+      // ✅ Update AsyncStorage for delta sync coordinator tracking
+      const asyncStorageCacheKey = `cache_${serviceType}`;
+      const asyncStorageCacheData = {
+        ...data,
+        _cacheMetadata: {
+          serviceType,
+          syncType,
+          timestamp: Date.now(),
+          threeWeekWindow: true,
+          cacheStrategy: 'extended_window'
+        }
+      };
+      
+      await AsyncStorage.setItem(asyncStorageCacheKey, JSON.stringify(asyncStorageCacheData));
+
+      // ✅ Update Supabase brain memory cache for mobile app consumption
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.EXPO_PUBLIC_SUPABASE_URL,
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+      );
+
+      // Get user ID
+      const userDataString = await AsyncStorage.getItem('user');
+      const userData = userDataString ? JSON.parse(userDataString) : null;
+      const userId = userData?.id;
+
+      if (!userId) {
+        console.log(`💾 No user ID found for cache update`);
+        return;
       }
-    };
-    
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData));
-    console.log(`💾 Updated cache for ${serviceType} (${syncType} sync)`);
+
+      // Map service types to memory periods
+      const memoryPeriodMap: Record<string, string> = {
+        'google_tasks': 'tasks',
+        'google_contacts': 'contacts', 
+        'google_calendar': 'calendar',
+        'google_emails': 'emails',
+        'neo4j_concepts': 'current_week'
+      };
+
+      const memoryPeriod = memoryPeriodMap[serviceType];
+      if (!memoryPeriod) {
+        console.log(`💾 No memory period mapping for ${serviceType}`);
+        return;
+      }
+
+      // ✅ Update Supabase brain memory cache
+      const { error } = await supabase
+        .from('brain_memory_cache')
+        .upsert({
+          user_id: userId,
+          data_type: serviceType,
+          memory_period: memoryPeriod,
+          cache_data: data,
+          total_concepts: this.getItemCount(data, serviceType),
+          expires_at: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(), // 3 weeks
+          last_synced_at: new Date().toISOString(),
+          cache_version: 1
+        }, { 
+          onConflict: 'user_id,data_type,memory_period' 
+        });
+
+      if (error) {
+        console.error(`💾 Error updating Supabase cache for ${serviceType}:`, error);
+      } else {
+        console.log(`💾 ✅ Updated both AsyncStorage and Supabase cache for ${serviceType} (${syncType} sync)`);
+      }
+      
+    } catch (error) {
+      console.error(`💾 Error in updateCacheData for ${serviceType}:`, error);
+    }
+  }
+
+  /**
+   * 📊 Helper to get item count for different data types
+   */
+  private getItemCount(data: any, serviceType: string): number {
+    switch (serviceType) {
+      case 'google_tasks':
+        return data?.totalTasks || 0;
+      case 'google_contacts':
+        return data?.totalCount || data?.contacts?.length || 0;
+      case 'google_calendar':
+        return data?.totalCount || data?.events?.length || 0;
+      case 'google_emails':
+        return data?.totalCount || data?.emails?.length || 0;
+      case 'neo4j_concepts':
+        return data?.totalConcepts || data?.concepts?.length || 0;
+      default:
+        return 0;
+    }
   }
 
   /**

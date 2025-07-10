@@ -172,6 +172,7 @@ export const useCachedConcepts = () => {
       if (!forceRefresh) {
         const cachedData = await getCachedData();
         
+        // 🔧 FIXED: Access cache data directly like working hooks (contacts, calendar, tasks)
         if (cachedData?.concepts && Array.isArray(cachedData.concepts)) {
           // Cache hit! 🎯 Use cached data
           const cachedOverview: ConceptsOverview = {
@@ -203,8 +204,33 @@ export const useCachedConcepts = () => {
         const tRPCResult = await tRPCConceptsRefetch();
         
         if (tRPCResult.error) {
-          console.log('[CachedConcepts] ⚠️ Neo4j API not available - returning empty data');
-          // Return empty data structure instead of throwing error
+          console.log('[CachedConcepts] ⚠️ Neo4j API not available - checking for stale cache...');
+          
+          // 🔧 FIX: Try to use stale cache data when tRPC fails
+          const staleCache = await getCachedData();
+          if (staleCache?.concepts && Array.isArray(staleCache.concepts) && staleCache.concepts.length > 0) {
+            console.log(`[CachedConcepts] 🔄 Using stale cache with ${staleCache.concepts.length} concepts`);
+            const staleOverview: ConceptsOverview = {
+              concepts: staleCache.concepts,
+              totalConcepts: staleCache.totalConcepts || staleCache.concepts.length,
+              isConnected: false, // Mark as disconnected but with data
+              lastSyncTime: staleCache.lastSynced || new Date().toISOString(),
+              syncSuccess: false,
+              connectionStatus: {
+                connected: false,
+                totalConcepts: staleCache.totalConcepts || staleCache.concepts.length,
+                version: 'stale-cache'
+              }
+            };
+            
+            setConceptsOverview(staleOverview);
+            setLastFetchTime(Date.now());
+            setIsLoading(false);
+            return staleOverview;
+          }
+          
+          // Only return empty if no cache available
+          console.log('[CachedConcepts] 📭 No cache available - returning empty data');
           const emptyData: ConceptsOverview = {
             concepts: [],
             totalConcepts: 0,

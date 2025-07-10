@@ -1,32 +1,49 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { trpc } from '~/utils/api';
 import { useBrainTasksCache } from './useBrainMemoryCache';
 import { debugAuthStatus } from '~/utils/auth';
-import { deltaSyncCacheCoordinator } from '~/services/deltaSyncCacheCoordinator';
+import { performanceMonitor } from '../services/performanceMonitor';
+import { concurrencyManager } from '../services/concurrencyManager';
 
-import type { CompleteTaskOverview, TaskData, TaskListWithTasks } from '@omnii/validators';
+import type { TaskData } from '@omnii/validators';
+
+interface TasksCompleteOverviewResponse {
+  taskLists: Array<{
+    id: string;
+    title: string;
+    tasks: TaskData[];
+  }>;
+  totalTasks: number;
+  totalLists: number;
+  totalCompleted: number;
+  totalPending: number;
+  totalOverdue: number;
+  lastSyncTime?: string;
+  syncSuccess: boolean;
+}
 
 /**
- * 🧠 Enhanced Cache-First Tasks Hook with 3-Week Window System
+ * 🧠 Cache-First Tasks Hook with Brain-Inspired Memory
  * 
- * NEW APPROACH: 3-Week Cache Windows with Delta Synchronization
- * - Past week + Present week + Future week = comprehensive task view
- * - Prevents Google API concurrent requests (max 1 per service)
- * - Delta sync reduces API calls by 95%+ 
- * - Real-time cache updates with smart concurrency control
- * - Graceful degradation during rate limiting
+ * ✅ REVERTED: Back to working Calendar pattern (no Delta Sync Coordinator)
+ * 
+ * This hook implements a brain-inspired caching strategy:
+ * 1. Check brain memory cache first (3-week cache for comprehensive task view)
+ * 2. If cache miss, fetch from Google Tasks API via tRPC
+ * 3. Store result in brain cache for future requests
+ * 4. Expected 95%+ reduction in API calls with <100ms cached responses
  */
 
 export const useCachedTasks = () => {
   const initializingRef = useRef(false);
-  const [tasksOverview, setTasksOverview] = useState<CompleteTaskOverview | null>(null);
+  const [tasksData, setTasksData] = useState<TasksCompleteOverviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
 
-  // ✅ NEW: 3-week brain memory cache for comprehensive task coverage
+  // Brain memory cache for tasks (3-week cache - comprehensive task view)
   const {
     cache,
     getCachedData,
@@ -45,7 +62,7 @@ export const useCachedTasks = () => {
     checkAuth();
   }, []);
 
-  // Direct tRPC query (used for cache misses with 3-week window parameters)
+  // Direct tRPC query (used for cache misses)
   const {
     data: tRPCData,
     isLoading: tRPCLoading,
@@ -55,212 +72,189 @@ export const useCachedTasks = () => {
     ...trpc.tasks.getCompleteOverview.queryOptions(),
     enabled: false, // Only fetch manually when cache misses
     refetchOnWindowFocus: false,
-    staleTime: 21 * 24 * 60 * 60 * 1000, // 3 weeks to match new cache strategy
+    staleTime: 21 * 24 * 60 * 60 * 1000, // 3 weeks to match cache strategy
   });
 
-  // ✅ Enhanced cache-first data fetching with 3-week window and delta sync
-  const fetchTasks = useCallback(async (forceRefresh = false): Promise<CompleteTaskOverview | null> => {
+  // ✅ Cache-First Tasks Fetching with Concurrency Prevention
+  const fetchTasks = useCallback(async (forceRefresh = false): Promise<TasksCompleteOverviewResponse | null> => {
     if (initializingRef.current) return null;
-    initializingRef.current = true;
+    
+    const resourceKey = `tasks-${forceRefresh ? 'force' : 'normal'}`;
+    
+    // Use concurrency manager to prevent simultaneous requests
+    return concurrencyManager.preventConcurrentRefresh(resourceKey, async () => {
+      initializingRef.current = true;
 
-    try {
-      setIsLoading(true);
-      setHasError(false);
-      setErrorMessage(null);
-      
-      const startTime = Date.now();
+      try {
+        console.log(`[CachedTasks] 🗓️ Starting 3-week cache fetch (force: ${forceRefresh})`);
+        setIsLoading(true);
+        setHasError(false);
+        setErrorMessage(null);
+        
+        const startTime = Date.now();
 
-      console.log(`[CachedTasks] 🗓️ Starting 3-week cache fetch (force: ${forceRefresh})`);
+      // Step 1: Check brain memory cache first (unless forcing refresh)
+      if (!forceRefresh) {
+        const cachedData = await getCachedData();
+        
+        if (cachedData?.tasks && cachedData?.totalTasks !== undefined) {
+          // Cache hit! 🎯 Track performance and transform cached data
+          const cacheDuration = Date.now() - startTime;
+          performanceMonitor.recordMetric('tasks-cache-hit', cacheDuration, true);
+          
+          const cachedTasks: TasksCompleteOverviewResponse = {
+            taskLists: cachedData.taskLists || [],
+            totalTasks: cachedData.totalTasks || 0,
+            totalLists: cachedData.totalLists || 0,
+            totalCompleted: cachedData.totalCompleted || 0,
+            totalPending: cachedData.totalPending || 0,
+            totalOverdue: cachedData.totalOverdue || 0,
+            lastSyncTime: cachedData.lastSyncTime,
+            syncSuccess: true
+          };
 
-      // ✅ NEW: Use DeltaSyncCacheCoordinator with 3-week window and concurrency prevention
-      const deltaSyncResult = await deltaSyncCacheCoordinator.safeRefreshCache(
-        'google_tasks',
-        cacheStrategy?.refresh_strategy || 'delta_sync_smart',
-        async () => await tRPCRefetch(),
-        {
-          forceFullRefresh: forceRefresh,
-          priority: 'high',
-          bypassConcurrencyCheck: false
+          setTasksData(cachedTasks);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          
+          console.log(`[CachedTasks] 🎯 Cache HIT: ${cachedData.totalTasks} tasks in ${cacheDuration}ms`);
+          return cachedTasks;
         }
-      );
-
-      console.log(`[CachedTasks] 🔄 Delta sync result:`, {
-        success: deltaSyncResult.success,
-        source: deltaSyncResult.source,
-        syncType: deltaSyncResult.syncType,
-        cached: deltaSyncResult.cached,
-        performance: deltaSyncResult.performance
-      });
-
-      if (!deltaSyncResult.success && !deltaSyncResult.data) {
-        console.log('[CachedTasks] ⚠️ No data available - returning empty overview');
-        const emptyData: CompleteTaskOverview = {
-          taskLists: [],
-          totalLists: 0,
-          totalTasks: 0,
-          totalCompleted: 0,
-          totalPending: 0,
-          totalOverdue: 0,
-          lastSyncTime: new Date().toISOString(),
-          syncSuccess: false,
-        };
-        
-        setTasksOverview(emptyData);
-        setLastFetchTime(Date.now());
-        setIsLoading(false);
-        return emptyData;
       }
 
-      // ✅ Process the 3-week window data (handle both cached and fresh data)
-      let processedData = deltaSyncResult.data;
+      // Step 2: Cache miss - fetch from Google Tasks API
+      console.log('[CachedTasks] 📭 Cache miss - fetching from Google Tasks API...');
+      const apiStartTime = Date.now();
+      const tRPCResult = await tRPCRefetch();
+      const apiDuration = Date.now() - apiStartTime;
+      performanceMonitor.recordMetric('tasks-api-call', apiDuration, false);
       
-      // Handle tRPC serialization wrapper if present
-      if (processedData?.json?.data) {
-        processedData = processedData.json.data;
-      } else if (processedData?.data) {
-        processedData = processedData.data;
+      if (tRPCResult.error) {
+        throw new Error(tRPCResult.error.message);
       }
 
-      if (!processedData || !processedData.taskLists) {
-        console.log('[CachedTasks] ⚠️ Invalid data structure - returning empty overview');
-        const emptyData: CompleteTaskOverview = {
+      // 🔧 Handle tRPC serialization wrapper (json/meta format)
+      let freshData: TasksCompleteOverviewResponse | null = null;
+      
+      // Helper function to convert raw tRPC data to our expected format
+      const convertToTasksOverview = (rawData: any): TasksCompleteOverviewResponse => {
+        return {
+          taskLists: rawData?.taskLists || [],
+          totalTasks: rawData?.totalTasks || 0,
+          totalLists: rawData?.totalLists || 0,
+          totalCompleted: rawData?.totalCompleted || 0,
+          totalPending: rawData?.totalPending || 0,
+          totalOverdue: rawData?.totalOverdue || 0,
+          lastSyncTime: rawData?.lastSyncTime,
+          syncSuccess: true
+        };
+      };
+      
+      // Check if data is wrapped in serialization format: { json: { data: {...} }, meta: {...} }
+      if ((tRPCResult.data as any)?.json?.data) {
+        const rawData = (tRPCResult.data as any).json.data;
+        freshData = convertToTasksOverview(rawData);
+      } 
+      // Fallback: Direct success/data format
+      else if (tRPCResult.data?.success && (tRPCResult.data as any)?.data) {
+        const rawData = (tRPCResult.data as any).data;
+        freshData = convertToTasksOverview(rawData);
+      } 
+      // Fallback: Direct data format
+      else if (tRPCResult.data && typeof tRPCResult.data === 'object' && 'taskLists' in tRPCResult.data) {
+        const rawData = tRPCResult.data as any;
+        freshData = convertToTasksOverview(rawData);
+      }
+      
+      if (!freshData) {
+        console.log('[CachedTasks] ⚠️ No Google Tasks data available - returning empty data');
+        // Return empty data structure instead of throwing error
+        const emptyData: TasksCompleteOverviewResponse = {
           taskLists: [],
-          totalLists: 0,
           totalTasks: 0,
+          totalLists: 0,
           totalCompleted: 0,
           totalPending: 0,
           totalOverdue: 0,
-          lastSyncTime: new Date().toISOString(),
-          syncSuccess: false,
+          syncSuccess: false
         };
         
-        setTasksOverview(emptyData);
+        setTasksData(emptyData);
         setLastFetchTime(Date.now());
         setIsLoading(false);
         return emptyData;
       }
 
-      // ✅ Update Supabase cache if we got fresh data from API
-      if (deltaSyncResult.source === 'full_refresh' || deltaSyncResult.source === 'delta_sync') {
-        const cacheData = {
-          taskLists: processedData.taskLists || [],
-          totalLists: processedData.totalLists || 0,
-          totalTasks: processedData.totalTasks || 0,
-          totalCompleted: processedData.totalCompleted || 0,
-          totalPending: processedData.totalPending || 0,
-          totalOverdue: processedData.totalOverdue || 0,
-          lastSyncTime: processedData.lastSyncTime || new Date().toISOString(),
-          syncSuccess: true,
-          lastSynced: new Date().toISOString(),
-          cacheVersion: 1,
-          dataType: 'google_tasks' as const,
-          _3weekMetadata: {
-            cacheStrategy: '3-week-window',
-            syncType: deltaSyncResult.syncType,
-            source: deltaSyncResult.source,
-            refreshedAt: new Date().toISOString(),
-            performance: deltaSyncResult.performance
-          }
-        };
+      // Step 3: Store in brain memory cache for future requests
+      const cacheData = {
+        tasks: freshData.taskLists || [],
+        taskLists: freshData.taskLists || [],
+        totalTasks: freshData.totalTasks || 0,
+        totalLists: freshData.totalLists || 0,
+        totalCompleted: freshData.totalCompleted || 0,
+        totalPending: freshData.totalPending || 0,
+        totalOverdue: freshData.totalOverdue || 0,
+        lastSyncTime: freshData.lastSyncTime || new Date().toISOString(),
+        lastSynced: new Date().toISOString(),
+        cacheVersion: 1,
+        dataType: 'google_tasks' as const,
+      };
 
-        await setCachedData(cacheData);
-        console.log(`[CachedTasks] 💾 Updated 3-week cache: ${processedData.totalTasks} tasks`);
-      }
+      await setCachedData(cacheData);
 
-      setTasksOverview(processedData as CompleteTaskOverview);
+      setTasksData(freshData);
       setLastFetchTime(Date.now());
       setIsLoading(false);
       
-      const totalTime = Date.now() - startTime;
-      const source = deltaSyncResult.cached ? '🎯 3-week cache' : '🔄 API + cache';
-      
-      console.log(`[CachedTasks] ✅ ${source}: ${processedData.totalTasks} tasks in ${totalTime}ms`);
-      console.log(`[CachedTasks] 📊 Performance: lock(${deltaSyncResult.performance.lockWaitTime}ms) sync(${deltaSyncResult.performance.syncTime}ms)`);
-      
-      return processedData;
+      console.log(`[CachedTasks] ✅ Fresh data cached: ${freshData.totalTasks} tasks in ${Date.now() - startTime}ms`);
+      return freshData;
 
-    } catch (error: any) {
-      console.error(`[CachedTasks] ❌ Error in 3-week cache fetch:`, error);
+    } catch (error) {
+      console.error('[CachedTasks] ❌ Error fetching tasks:', error);
       
-      // ✅ Enhanced error handling with stale data fallback
-      if (error.message?.includes('Rate limited') || error.message?.includes('429')) {
-        console.log('[CachedTasks] 🚦 Rate limited - trying to get stale cache data');
-        
-        try {
-          const staleData = await getCachedData();
-          if (staleData?.taskLists) {
-            const staleOverview: CompleteTaskOverview = {
-              taskLists: staleData.taskLists || [],
-              totalLists: staleData.totalLists || 0,
-              totalTasks: staleData.totalTasks || 0,
-              totalCompleted: staleData.totalCompleted || 0,
-              totalPending: staleData.totalPending || 0,
-              totalOverdue: staleData.totalOverdue || 0,
-              lastSyncTime: staleData.lastSyncTime || new Date().toISOString(),
-              syncSuccess: false, // Mark as stale
-            };
-            
-            setTasksOverview(staleOverview);
-            setLastFetchTime(Date.now());
-            setIsLoading(false);
-            setErrorMessage('Using cached data due to rate limiting');
-            
-            console.log('[CachedTasks] 🔄 Returning stale 3-week cache during rate limiting');
-            return staleOverview;
-          }
-        } catch (staleError) {
-          console.error('[CachedTasks] ❌ Failed to get stale cache:', staleError);
-        }
-      }
-      
-      console.log('[CachedTasks] ⚠️ Returning empty data due to error');
-      const emptyData: CompleteTaskOverview = {
+      // Graceful degradation - return empty data instead of crashing
+      const emptyData: TasksCompleteOverviewResponse = {
         taskLists: [],
-        totalLists: 0,
         totalTasks: 0,
+        totalLists: 0,
         totalCompleted: 0,
         totalPending: 0,
         totalOverdue: 0,
-        lastSyncTime: new Date().toISOString(),
-        syncSuccess: false,
+        syncSuccess: false
       };
       
-      setTasksOverview(emptyData);
+      setTasksData(emptyData);
       setHasError(true);
-      setErrorMessage(error.message);
+      setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
       setIsLoading(false);
       return emptyData;
     } finally {
       initializingRef.current = false;
     }
-  }, [getCachedData, setCachedData, tRPCRefetch, cacheStrategy]);
+    }); // Close concurrency manager preventConcurrentRefresh
+  }, [getCachedData, setCachedData, tRPCRefetch]);
 
   // Initialize data on mount (run once only)
   useEffect(() => {
     fetchTasks();
-  }, []); // 🔧 Empty deps to prevent infinite loops
+  }, []); // Empty deps to prevent infinite loops
 
   // Refresh function (force cache refresh)
   const refetch = useCallback(() => {
     return fetchTasks(true);
   }, [fetchTasks]);
 
-  // Invalidate cache function with 3-week cleanup
+  // Invalidate cache function
   const invalidateCacheAndRefresh = useCallback(async () => {
-    console.log('[CachedTasks] 🗑️ Invalidating 3-week cache and refreshing');
     await invalidateCache();
     return fetchTasks(true);
   }, [invalidateCache, fetchTasks]);
 
-  // Helper function to get all tasks from all task lists
-  const getAllTasksFromOverview = useCallback((overview: CompleteTaskOverview | null): TaskData[] => {
-    if (!overview?.taskLists) return [];
-    return overview.taskLists.flatMap(list => list.tasks || []);
-  }, []);
-
   return {
-    // 🧠 3-week cached data with enhanced performance
-    tasksOverview,
+    // 🧠 Brain-cached data with enhanced performance
+    tasksData,
+    tasksOverview: tasksData,
+    taskLists: tasksData?.taskLists ?? [],
     isLoading,
     isRefetching: isLoading,
     
@@ -268,14 +262,9 @@ export const useCachedTasks = () => {
     hasError,
     errorMessage,
     
-    // ✅ Enhanced cache performance metrics for 3-week system
+    // Cache performance metrics
     isCacheValid,
-    cacheStrategy: {
-      ...cacheStrategy,
-      cacheType: '3-week-window',
-      concurrencyPrevention: true,
-      deltaSyncEnabled: true
-    },
+    cacheStrategy,
     cacheStats: stats,
     lastFetchTime,
     
@@ -283,33 +272,82 @@ export const useCachedTasks = () => {
     refetch,
     invalidateCache: invalidateCacheAndRefresh,
     
-    // Computed values with null safety (3-week comprehensive view)
-    totalTasks: tasksOverview?.totalTasks ?? 0,
-    totalLists: tasksOverview?.taskLists.length ?? 0,
-    totalCompleted: tasksOverview?.totalCompleted ?? 0,
-    totalPending: tasksOverview?.totalPending ?? 0,
-    totalOverdue: tasksOverview?.totalOverdue ?? 0,
-    syncSuccess: tasksOverview?.syncSuccess ?? true,
-    lastSyncTime: tasksOverview?.lastSyncTime 
-      ? new Date(tasksOverview.lastSyncTime).toISOString()
-      : new Date().toISOString(),
+    // Computed values with null safety
+    totalTasks: tasksData?.totalTasks ?? 0,
+    totalLists: tasksData?.totalLists ?? 0,
+    totalCompleted: tasksData?.totalCompleted ?? 0,
+    totalPending: tasksData?.totalPending ?? 0,
+    totalOverdue: tasksData?.totalOverdue ?? 0,
+    syncSuccess: tasksData?.syncSuccess ?? false,
+    hasTasks: (tasksData?.totalTasks ?? 0) > 0,
     
-    // Helper functions with proper typing
-    getTaskListById: useCallback((id: string): TaskListWithTasks | undefined => 
-      tasksOverview?.taskLists.find((list: TaskListWithTasks) => list.id === id), [tasksOverview]),
+    // ✅ COMPATIBILITY: Add back expected helper functions for Tasks screen
+    getAllTasks: useCallback((): TaskData[] => {
+      const allTasks: TaskData[] = [];
+      for (const taskList of tasksData?.taskLists ?? []) {
+        allTasks.push(...taskList.tasks);
+      }
+      return allTasks;
+    }, [tasksData]),
+
+    getPendingTasks: useCallback((): TaskData[] => {
+      const allTasks: TaskData[] = [];
+      for (const taskList of tasksData?.taskLists ?? []) {
+        allTasks.push(...taskList.tasks.filter((task: TaskData) => task.status === 'needsAction'));
+      }
+      return allTasks;
+    }, [tasksData]),
     
-    getAllTasks: useCallback((): TaskData[] => 
-      getAllTasksFromOverview(tasksOverview), [tasksOverview, getAllTasksFromOverview]),
+    // Other helper functions with proper typing
+    getTaskById: useCallback((id: string): TaskData | undefined => {
+      for (const taskList of tasksData?.taskLists ?? []) {
+        const task = taskList.tasks.find((task: TaskData) => task.id === id);
+        if (task) return task;
+      }
+      return undefined;
+    }, [tasksData]),
+    
+    getTasksByStatus: useCallback((status: 'needsAction' | 'completed'): TaskData[] => {
+      const allTasks: TaskData[] = [];
+      for (const taskList of tasksData?.taskLists ?? []) {
+        allTasks.push(...taskList.tasks.filter((task: TaskData) => task.status === status));
+      }
+      return allTasks;
+    }, [tasksData]),
+
+    getTasksByList: useCallback((listId: string): TaskData[] => {
+      const taskList = tasksData?.taskLists.find(list => list.id === listId);
+      return taskList?.tasks ?? [];
+    }, [tasksData]),
+
+    getOverdueTasks: useCallback((): TaskData[] => {
+      const now = new Date();
+      const allTasks: TaskData[] = [];
+      for (const taskList of tasksData?.taskLists ?? []) {
+        allTasks.push(...taskList.tasks.filter((task: TaskData) => {
+          if (!task.due || task.status === 'completed') return false;
+          const dueDate = new Date(task.due);
+          return dueDate < now;
+        }));
+      }
+      return allTasks;
+    }, [tasksData]),
+
+    getTasksDueToday: useCallback((): TaskData[] => {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
       
-    getPendingTasks: useCallback((): TaskData[] =>
-      getAllTasksFromOverview(tasksOverview).filter((task: TaskData) => task.status === 'needsAction'), [tasksOverview, getAllTasksFromOverview]),
-        
-    getOverdueTasks: useCallback((): TaskData[] =>
-      getAllTasksFromOverview(tasksOverview).filter((task: TaskData) => 
-        task.status === 'needsAction' && 
-        task.due && 
-        new Date(task.due) < new Date()
-      ), [tasksOverview, getAllTasksFromOverview]),
+      const allTasks: TaskData[] = [];
+      for (const taskList of tasksData?.taskLists ?? []) {
+        allTasks.push(...taskList.tasks.filter((task: TaskData) => {
+          if (!task.due || task.status === 'completed') return false;
+          const dueDate = new Date(task.due);
+          return dueDate >= startOfDay && dueDate < endOfDay;
+        }));
+      }
+      return allTasks;
+    }, [tasksData]),
   };
 };
 

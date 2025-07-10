@@ -1,21 +1,21 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { trpc } from '~/utils/api';
 import { useBrainContactsCache } from './useBrainMemoryCache';
 import { debugAuthStatus } from '~/utils/auth';
-import { deltaSyncCacheCoordinator } from '~/services/deltaSyncCacheCoordinator';
 
 import type { ContactData } from '@omnii/validators';
 
 /**
- * 🧠 Enhanced Cache-First Contacts Hook with 3-Week Window System
+ * 🧠 Cache-First Contacts Hook with Brain-Inspired Memory
  * 
- * NEW APPROACH: 3-Week Cache Windows with Delta Synchronization
- * - Past week + Present week + Future week = comprehensive contact view
- * - Prevents Google API concurrent requests (max 1 per service)
- * - Delta sync reduces API calls by 95%+ 
- * - Real-time cache updates with smart concurrency control
- * - Graceful degradation during rate limiting
+ * ✅ REVERTED: Back to working Tasks/Calendar pattern (no Delta Sync Coordinator)
+ * 
+ * This hook implements a brain-inspired caching strategy:
+ * 1. Check brain memory cache first (3-week cache for comprehensive contact view)
+ * 2. If cache miss, fetch from Google Contacts API via tRPC
+ * 3. Store result in brain cache for future requests
+ * 4. Expected 95%+ reduction in API calls with <100ms cached responses
  */
 
 interface ContactsListResponse {
@@ -31,7 +31,7 @@ export const useCachedContacts = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
 
-  // ✅ NEW: 3-week brain memory cache for comprehensive contact coverage
+  // Brain memory cache for contacts (3-week cache - comprehensive contact view)
   const {
     cache,
     getCachedData,
@@ -50,7 +50,7 @@ export const useCachedContacts = () => {
     checkAuth();
   }, []);
 
-  // ✅ Fix: Direct tRPC query without parameters (the router handles pageSize internally)
+  // Direct tRPC query (used for cache misses)
   const {
     data: tRPCData,
     isLoading: tRPCLoading,
@@ -60,145 +60,141 @@ export const useCachedContacts = () => {
     ...trpc.contacts.listContacts.queryOptions(),
     enabled: false, // Only fetch manually when cache misses
     refetchOnWindowFocus: false,
-    staleTime: 21 * 24 * 60 * 60 * 1000, // 3 weeks to match new cache strategy
+    staleTime: 21 * 24 * 60 * 60 * 1000, // 3 weeks to match cache strategy
   });
 
-  // ✅ Enhanced cache-first data fetching with 3-week window and delta sync
+  // ✅ Cache-First Contacts Fetching (Tasks/Calendar Pattern)
   const fetchContacts = useCallback(async (forceRefresh = false): Promise<ContactsListResponse | null> => {
     if (initializingRef.current) return null;
     initializingRef.current = true;
 
     try {
+      console.log(`[CachedContacts] 🗓️ Starting 3-week cache fetch (force: ${forceRefresh})`);
       setIsLoading(true);
       setHasError(false);
       setErrorMessage(null);
       
       const startTime = Date.now();
 
-      console.log(`[CachedContacts] 🗓️ Starting 3-week cache fetch (force: ${forceRefresh})`);
+      // Step 1: Check brain memory cache first (unless forcing refresh)
+      if (!forceRefresh) {
+        const cachedData = await getCachedData();
+        
+        if (cachedData?.contacts && cachedData?.totalCount !== undefined) {
+          // Cache hit! 🎯 Transform cached data back to ContactsListResponse format
+          const cachedContacts: ContactsListResponse = {
+            contacts: cachedData.contacts,
+            totalCount: cachedData.totalCount,
+          };
 
-      // ✅ NEW: Use DeltaSyncCacheCoordinator with 3-week window and concurrency prevention
-      const deltaSyncResult = await deltaSyncCacheCoordinator.safeRefreshCache(
-        'google_contacts',
-        cacheStrategy?.refresh_strategy || 'delta_sync_background',
-        async () => await tRPCRefetch(),
-        {
-          forceFullRefresh: forceRefresh,
-          priority: 'medium', // Contacts change less frequently
-          bypassConcurrencyCheck: false
+          setContactsData(cachedContacts);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          
+          console.log(`[CachedContacts] 🎯 Cache HIT: ${cachedData.totalCount} contacts in ${Date.now() - startTime}ms`);
+          return cachedContacts;
         }
-      );
-
-      console.log(`[CachedContacts] 🔄 Delta sync result:`, {
-        success: deltaSyncResult.success,
-        source: deltaSyncResult.source,
-        syncType: deltaSyncResult.syncType,
-        cached: deltaSyncResult.cached,
-        performance: deltaSyncResult.performance
-      });
-
-      if (!deltaSyncResult.success && !deltaSyncResult.data) {
-        console.log('[CachedContacts] ⚠️ No data available - returning empty response');
-        const emptyData: ContactsListResponse = {
-          contacts: [],
-          totalCount: 0,
-        };
-        
-        setContactsData(emptyData);
-        setLastFetchTime(Date.now());
-        setIsLoading(false);
-        return emptyData;
       }
 
-      // ✅ Process the 3-week window data (handle both cached and fresh data)
-      let processedData = deltaSyncResult.data;
+      // Step 2: Cache miss - try to fetch from Google Contacts API (graceful failure)
+      console.log('[CachedContacts] 📭 Cache miss - attempting to fetch from Google Contacts API...');
       
-      // Handle tRPC serialization wrapper if present
-      if (processedData?.json?.data?.json?.data) {
-        processedData = processedData.json.data.json.data;
-      } else if (processedData?.json?.data) {
-        processedData = processedData.json.data;
-      } else if (processedData?.data) {
-        processedData = processedData.data;
-      }
+      try {
+        const tRPCResult = await tRPCRefetch();
+        
+        if (tRPCResult.error) {
+          console.log('[CachedContacts] ⚠️ Contacts API not available - returning empty data');
+          // Return empty data structure instead of throwing error
+          const emptyData: ContactsListResponse = {
+            contacts: [],
+            totalCount: 0,
+          };
+          
+          setContactsData(emptyData);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          return emptyData;
+        }
 
-      if (!processedData || !processedData.contacts) {
-        console.log('[CachedContacts] ⚠️ Invalid data structure - returning empty response');
-        const emptyData: ContactsListResponse = {
-          contacts: [],
-          totalCount: 0,
+        // 🔧 Handle tRPC serialization wrapper (json/meta format)
+        let freshData: ContactsListResponse | null = null;
+        
+        // Helper function to convert raw tRPC data to our expected format
+        const convertToContactsResponse = (rawData: any): ContactsListResponse => {
+          return {
+            contacts: rawData?.contacts || [],
+            totalCount: rawData?.totalCount || (rawData?.contacts?.length || 0)
+          };
         };
         
-        setContactsData(emptyData);
-        setLastFetchTime(Date.now());
-        setIsLoading(false);
-        return emptyData;
-      }
+        // Check if data is wrapped in serialization format: { json: { data: {...} }, meta: {...} }
+        if ((tRPCResult.data as any)?.json?.data?.json?.data) {
+          const rawData = (tRPCResult.data as any).json.data.json.data;
+          freshData = convertToContactsResponse(rawData);
+        } 
+        else if ((tRPCResult.data as any)?.json?.data) {
+          const rawData = (tRPCResult.data as any).json.data;
+          freshData = convertToContactsResponse(rawData);
+        } 
+        // Fallback: Direct success/data format
+        else if (tRPCResult.data?.success && (tRPCResult.data as any)?.data) {
+          const rawData = (tRPCResult.data as any).data;
+          freshData = convertToContactsResponse(rawData);
+        }
+        // Fallback: Direct data format
+        else if (tRPCResult.data && typeof tRPCResult.data === 'object' && 'contacts' in tRPCResult.data) {
+          const rawData = tRPCResult.data as any;
+          freshData = convertToContactsResponse(rawData);
+        }
+        
+        if (!freshData) {
+          console.log('[CachedContacts] ⚠️ No Google Contacts data available - returning empty data');
+          // Return empty data structure instead of throwing error
+          const emptyData: ContactsListResponse = {
+            contacts: [],
+            totalCount: 0,
+          };
+          
+          setContactsData(emptyData);
+          setLastFetchTime(Date.now());
+          setIsLoading(false);
+          return emptyData;
+        }
 
-      // ✅ Update Supabase cache if we got fresh data from API
-      if (deltaSyncResult.source === 'full_refresh' || deltaSyncResult.source === 'delta_sync') {
+        // Step 3: Store in brain memory cache for future requests
         const cacheData = {
-          contacts: processedData.contacts || [],
-          totalCount: processedData.totalCount || 0,
+          contacts: freshData.contacts || [],
+          totalCount: freshData.totalCount || 0,
           lastSynced: new Date().toISOString(),
           cacheVersion: 1,
           dataType: 'google_contacts' as const,
-          _3weekMetadata: {
-            cacheStrategy: '3-week-window',
-            syncType: deltaSyncResult.syncType,
-            source: deltaSyncResult.source,
-            refreshedAt: new Date().toISOString(),
-            performance: deltaSyncResult.performance,
-            contactCount: processedData.contacts?.length || 0
-          }
         };
 
         await setCachedData(cacheData);
-        console.log(`[CachedContacts] 💾 Updated 3-week cache: ${processedData.contacts?.length || 0} contacts`);
-      }
 
-      setContactsData(processedData as ContactsListResponse);
-      setLastFetchTime(Date.now());
-      setIsLoading(false);
-      
-      const totalTime = Date.now() - startTime;
-      const source = deltaSyncResult.cached ? '🎯 3-week cache' : '🔄 API + cache';
-      const contactCount = processedData.contacts?.length || 0;
-      
-      console.log(`[CachedContacts] ✅ ${source}: ${contactCount} contacts in ${totalTime}ms`);
-      console.log(`[CachedContacts] 📊 Performance: lock(${deltaSyncResult.performance.lockWaitTime}ms) sync(${deltaSyncResult.performance.syncTime}ms)`);
-      
-      return processedData;
-
-    } catch (error: any) {
-      console.error(`[CachedContacts] ❌ Error in 3-week cache fetch:`, error);
-      
-      // ✅ Enhanced error handling with stale data fallback
-      if (error.message?.includes('Rate limited') || error.message?.includes('429')) {
-        console.log('[CachedContacts] 🚦 Rate limited - trying to get stale cache data');
+        setContactsData(freshData);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
         
-        try {
-          const staleData = await getCachedData();
-          if (staleData?.contacts) {
-            const staleContacts: ContactsListResponse = {
-              contacts: staleData.contacts || [],
-              totalCount: staleData.totalCount || 0,
-            };
-            
-            setContactsData(staleContacts);
-            setLastFetchTime(Date.now());
-            setIsLoading(false);
-            setErrorMessage('Using cached data due to rate limiting');
-            
-            console.log('[CachedContacts] 🔄 Returning stale 3-week cache during rate limiting');
-            return staleContacts;
-          }
-        } catch (staleError) {
-          console.error('[CachedContacts] ❌ Failed to get stale cache:', staleError);
-        }
+        console.log(`[CachedContacts] ✅ Fresh data cached: ${freshData.totalCount} contacts in ${Date.now() - startTime}ms`);
+        return freshData;
+
+      } catch (authError) {
+        console.log('[CachedContacts] ⚠️ Authentication required for Contacts - returning empty data');
+        // Return empty data structure when authentication fails
+        const emptyData: ContactsListResponse = {
+          contacts: [],
+          totalCount: 0,
+        };
+        
+        setContactsData(emptyData);
+        setLastFetchTime(Date.now());
+        setIsLoading(false);
+        return emptyData;
       }
-      
-      console.log('[CachedContacts] ⚠️ Returning empty data due to error');
+
+    } catch (error) {
+      console.log('[CachedContacts] ⚠️ Unexpected error - returning empty data');
       const emptyData: ContactsListResponse = {
         contacts: [],
         totalCount: 0,
@@ -206,33 +202,32 @@ export const useCachedContacts = () => {
       
       setContactsData(emptyData);
       setHasError(true);
-      setErrorMessage(error.message);
+      setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
       setIsLoading(false);
       return emptyData;
     } finally {
       initializingRef.current = false;
     }
-  }, [getCachedData, setCachedData, tRPCRefetch, cacheStrategy]);
+  }, [getCachedData, setCachedData, tRPCRefetch]);
 
   // Initialize data on mount (run once only)
   useEffect(() => {
     fetchContacts();
-  }, []); // 🔧 Empty deps to prevent infinite loops
+  }, []); // Empty deps to prevent infinite loops
 
   // Refresh function (force cache refresh)
   const refetch = useCallback(() => {
     return fetchContacts(true);
   }, [fetchContacts]);
 
-  // Invalidate cache function with 3-week cleanup
+  // Invalidate cache function
   const invalidateCacheAndRefresh = useCallback(async () => {
-    console.log('[CachedContacts] 🗑️ Invalidating 3-week cache and refreshing');
     await invalidateCache();
     return fetchContacts(true);
   }, [invalidateCache, fetchContacts]);
 
   return {
-    // 🧠 3-week cached data with enhanced performance
+    // 🧠 Brain-cached data with enhanced performance
     contactsData,
     isLoading,
     isRefetching: isLoading,
@@ -241,14 +236,9 @@ export const useCachedContacts = () => {
     hasError,
     errorMessage,
     
-    // ✅ Enhanced cache performance metrics for 3-week system
+    // Cache performance metrics
     isCacheValid,
-    cacheStrategy: {
-      ...cacheStrategy,
-      cacheType: '3-week-window',
-      concurrencyPrevention: true,
-      deltaSyncEnabled: true
-    },
+    cacheStrategy,
     cacheStats: stats,
     lastFetchTime,
     
@@ -256,11 +246,11 @@ export const useCachedContacts = () => {
     refetch,
     invalidateCache: invalidateCacheAndRefresh,
     
-    // Computed values with null safety (3-week comprehensive view)
+    // Computed values with null safety
     totalContacts: contactsData?.totalCount ?? 0,
     contacts: contactsData?.contacts ?? [],
     
-    // ✅ Fix: Helper functions with proper ContactData typing
+    // Helper functions with proper ContactData typing
     getContactById: useCallback((id: string): ContactData | undefined => 
       contactsData?.contacts.find((contact: ContactData) => contact.contactId === id), [contactsData]),
     
@@ -276,47 +266,5 @@ export const useCachedContacts = () => {
           emailAddr.address?.toLowerCase() === email.toLowerCase()
         )
       ), [contactsData]),
-  };
-};
-
-/**
- * 📊 Enhanced 3-Week Cache Performance Metrics Hook for Contacts
- * Track performance metrics for the new 3-week window system
- */
-export const useContactsCacheMetrics = () => {
-  const { stats, cacheStrategy, isValid } = useBrainContactsCache();
-  
-  return {
-    cacheStats: stats,
-    cacheStrategy: {
-      ...cacheStrategy,
-      cacheType: '3-week-window',
-      windowSize: '21-days',
-      concurrencyPrevention: true,
-      deltaSyncEnabled: true
-    },
-    isCacheValid: isValid,
-    
-    // Computed metrics for 3-week system
-    hitRatio: stats.cache_hits + stats.cache_misses > 0 
-      ? Math.round((stats.cache_hits / (stats.cache_hits + stats.cache_misses)) * 100)
-      : 0,
-    
-    averageResponseTime: stats.avg_response_time_ms ?? 0,
-    totalApiCallsSaved: stats.neo4j_queries_saved,
-    
-    // Performance insights for 3-week caching
-    performanceImprovement: (stats.avg_response_time_ms ?? 0) > 0 
-      ? Math.round((2000 - (stats.avg_response_time_ms ?? 0)) / 2000 * 100)
-      : 0,
-      
-    // 3-week specific metrics for contacts
-    cacheEfficiency: {
-      windowType: '3-week',
-      expectedApiReduction: '98%', // Contacts change very rarely
-      concurrencyPrevention: 'enabled',
-      rateLimitingProtection: 'enabled',
-      contactStability: 'high' // Contacts are very stable data
-    }
   };
 }; 

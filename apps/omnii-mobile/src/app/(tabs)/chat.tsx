@@ -57,7 +57,7 @@ export default function ChatScreen() {
     const calendarData = useCachedCalendar();
     const contactsData = useCachedContacts();
     const emailData = useCachedEmail();
-    const neo4jData = useCachedNeo4j();
+    const { conceptsOverview: neo4jData } = useCachedNeo4j();
     const taskMutations = useTaskMutations();
 
     // Chat state and handlers

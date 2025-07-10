@@ -16,6 +16,7 @@ import {
 } from "@omnii/validators";
 
 import { protectedProcedure, publicProcedure } from "../trpc";
+import { BrainCacheService } from "../services/brain-cache.service";
 
 // ============================================================================
 // AUTHENTICATION HELPER
@@ -529,7 +530,18 @@ class TasksService {
     );
 
     try {
-      // Step 1: Get OAuth token
+      // 🧠 Brain Cache Integration - Step 1: Check cache first
+      const brainCache = new BrainCacheService();
+      const cachedData = await brainCache.getCachedData(userId, 'google_tasks');
+      
+      if (cachedData && !brainCache.isExpired(cachedData)) {
+        console.log(`[TasksService] 🎯 Cache HIT - returning cached tasks overview`);
+        return cachedData.data as CompleteTaskOverview;
+      }
+
+      console.log(`[TasksService] 📭 Cache MISS - fetching fresh data from Google Tasks API`);
+
+      // Step 2: Get OAuth token (cache miss - need to fetch fresh data)
       const oauthToken = await this.oauthManager.getGoogleOAuthToken(userId);
       console.log(`[TasksService] ✅ OAuth token retrieved successfully`);
 
@@ -756,12 +768,35 @@ class TasksService {
         `[TasksService] 🎉 Complete overview ready: ${totalTasks} tasks across ${taskListsWithTasks.length} lists`,
       );
 
+      // 🧠 Brain Cache Integration - Step 3: Store fresh data in cache
+      try {
+        const brainCache = new BrainCacheService();
+        await brainCache.setCachedData(userId, 'google_tasks', completeOverviewResult.data);
+        console.log(`[TasksService] 💾 Fresh data cached for future requests`);
+      } catch (cacheError) {
+        console.warn(`[TasksService] ⚠️ Failed to cache data (non-critical):`, cacheError);
+        // Don't throw - cache failure shouldn't break the main functionality
+      }
+
       return completeOverviewResult.data;
     } catch (error) {
       console.error(
         `[TasksService] 💥 Failed to fetch complete task overview:`,
         error,
       );
+      
+      // 🧠 Brain Cache Integration - Fallback to stale cache on error
+      try {
+        const brainCache = new BrainCacheService();
+        const staleCache = await brainCache.getCachedData(userId, 'google_tasks');
+        if (staleCache) {
+          console.log(`[TasksService] 🔄 Returning stale cache due to API error`);
+          return staleCache.data as CompleteTaskOverview;
+        }
+      } catch (fallbackError) {
+        console.warn(`[TasksService] ⚠️ Stale cache fallback failed:`, fallbackError);
+      }
+      
       throw error;
     }
   }

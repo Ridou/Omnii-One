@@ -6,6 +6,7 @@ import { CalendarListDataSchema } from "@omnii/validators";
 
 import { protectedProcedure, publicProcedure } from "../trpc";
 import { TasksOAuthManager } from "./tasks";
+import { BrainCacheService } from "../services/brain-cache.service";
 
 class CalendarService {
   private oauthManager: TasksOAuthManager;
@@ -26,6 +27,18 @@ class CalendarService {
     );
 
     try {
+      // 🧠 Brain Cache Integration - Step 1: Check cache first
+      const brainCache = new BrainCacheService();
+      const cachedData = await brainCache.getCachedData(userId, 'google_calendar');
+      
+      if (cachedData && !brainCache.isExpired(cachedData)) {
+        console.log(`[CalendarService] 🎯 Cache HIT - returning cached calendar events`);
+        return cachedData.data as CalendarListData;
+      }
+
+      console.log(`[CalendarService] 📭 Cache MISS - fetching fresh data from Google Calendar API`);
+
+      // Step 2: Fetch fresh data from Google API
       const oauthToken = await this.oauthManager.getGoogleOAuthToken(userId);
       console.log(`[CalendarService] ✅ OAuth token retrieved successfully`);
 
@@ -96,12 +109,35 @@ class CalendarService {
       console.log(
         `[CalendarService] 🎉 Successfully fetched ${events.length} calendar events`,
       );
+
+      // 🧠 Brain Cache Integration - Step 3: Store fresh data in cache
+      try {
+        const brainCache = new BrainCacheService();
+        await brainCache.setCachedData(userId, 'google_calendar', validationResult.data);
+        console.log(`[CalendarService] 💾 Fresh calendar data cached for future requests`);
+      } catch (cacheError) {
+        console.warn(`[CalendarService] ⚠️ Failed to cache calendar data (non-critical):`, cacheError);
+      }
+
       return validationResult.data;
     } catch (error) {
       console.error(
         `[CalendarService] 💥 Failed to fetch calendar events:`,
         error,
       );
+      
+      // 🧠 Brain Cache Integration - Fallback to stale cache on error
+      try {
+        const brainCache = new BrainCacheService();
+        const staleCache = await brainCache.getCachedData(userId, 'google_calendar');
+        if (staleCache) {
+          console.log(`[CalendarService] 🔄 Returning stale calendar cache due to API error`);
+          return staleCache.data as CalendarListData;
+        }
+      } catch (fallbackError) {
+        console.warn(`[CalendarService] ⚠️ Stale calendar cache fallback failed:`, fallbackError);
+      }
+      
       throw error;
     }
   }

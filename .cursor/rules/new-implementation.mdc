@@ -1,0 +1,287 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# New Implementation Plan - Feature Prioritization
+
+## 🎯 **Feature Priority Analysis**
+
+Based on codebase analysis and current state assessment, here are the features prioritized by effectiveness and time investment:
+
+### **TIER 1: High Impact, Low Time Investment (1-2 weeks)**
+
+#### 1. **Complete Brain Memory Cache Extension** ⭐⭐⭐⭐⭐
+- **Status**: 70% complete
+- **Time**: 1-2 weeks
+- **Impact**: Massive performance gains (90%+ API call reduction)
+- **Current State**: 
+  - ✅ Database schema extended for all Google data types
+  - ✅ Brain cache hooks created (useBrainTasksCache, useBrainContactsCache, etc.)
+  - ✅ 3-week cache strategy implemented
+  - ✅ Delta sync coordinator partially implemented
+- **What's left**: 
+  - Update tRPC routers to use cache-first strategy
+  - Switch mobile components to cached hooks
+  - Test and optimize cache hit rates
+  - Performance monitoring and analytics
+- **ROI**: Immediate user experience improvement + cost savings
+- **Files to modify**:
+  - `packages/api/src/router/tasks.ts`
+  - `packages/api/src/router/calendar.ts`
+  - `packages/api/src/router/contacts.ts`
+  - `packages/api/src/router/email.ts`
+  - Mobile components: `TasksMemoryCard.tsx`, `CalendarMemoryCard.tsx`, etc.
+
+#### 2. **Mascot Health Bar System** ⭐⭐⭐⭐
+- **Status**: 80% mascot system done, 0% health bar
+- **Time**: 1-2 weeks
+- **Impact**: Strong user engagement and retention
+- **Current State**:
+  - ✅ Mascot component with animations
+  - ✅ Level progression system
+  - ✅ XP and achievement systems
+  - ✅ Mascot evolution stages (seed/flower/tree)
+- **What's needed**:
+  - Health context with decay/recovery logic
+  - Health bar UI component
+  - Integration with existing mascot animations
+  - Activity tracking hooks
+  - Health-based notifications
+- **ROI**: Proven gamification increases daily active users by 30%+
+- **Files to create**:
+  - `apps/omnii-mobile/src/context/HealthContext.tsx`
+  - `apps/omnii-mobile/src/components/common/HealthBar.tsx`
+  - `apps/omnii-mobile/src/components/common/MascotHealthDisplay.tsx`
+  - `apps/omnii-mobile/src/services/health/HealthBackgroundService.ts`
+
+### **TIER 2: High Impact, Medium Time Investment (2-4 weeks)**
+
+#### 3. **Neo4j Service Transfer to Railway** ⭐⭐⭐⭐
+- **Status**: 20% complete
+- **Time**: 2-3 weeks
+- **Impact**: Eliminates current AuraDB connection issues
+- **Current State**:
+  - ✅ SimpleNeo4jService implemented
+  - ✅ Direct AuraDB connection working locally
+  - ❌ Railway deployment connection issues
+- **What's needed**:
+  - Deploy Railway Neo4j template
+  - Extract service from omnii_mcp
+  - Create internal networking client
+  - Data migration from AuraDB
+- **ROI**: Reliability improvement + cost reduction
+- **Files to create**:
+  - `apps/neo4j-service/` (entire new service)
+  - `apps/omnii_mcp/src/services/neo4j-client.ts`
+  - Railway deployment configurations
+
+#### 4. **RDF System Optimization** ⭐⭐⭐
+- **Status**: 90% complete (Phase 1 done)
+- **Time**: 1 week
+- **Impact**: Better AI understanding and faster responses
+- **Current State**:
+  - ✅ RDF-first semantic message processing
+  - ✅ RDFActionMapper implemented
+  - ✅ WebSocket handler integration
+  - ✅ Confidence-based planning
+- **What's needed**:
+  - Performance optimizations
+  - Edge case handling
+  - Enhanced confidence scoring
+  - Better fallback mechanisms
+- **ROI**: Improved AI accuracy and response speed
+- **Files to optimize**:
+  - `apps/omnii_mcp/src/services/rdf/rdf-action-mapper.ts`
+  - `apps/omnii_mcp/src/services/rdf/rdf-contact-analyzer.ts`
+  - `apps/omnii_mcp/src/services/rdf/rdf-client.ts`
+
+### **TIER 3: Medium Impact, High Time Investment (4-8 weeks)**
+
+#### 5. **N8N Integration** ⭐⭐⭐
+- **Status**: 10% complete
+- **Time**: 4-6 weeks
+- **Impact**: Enhanced workflow automation
+- **Current State**:
+  - ✅ Composio integration working well
+  - ✅ Workflow manager structure exists
+  - ❌ N8N deployment not started
+- **What's needed**:
+  - N8N deployment and setup
+  - Workflow migration from Composio
+  - Visual workflow builder
+  - Testing and optimization
+- **ROI**: More flexible automation but Composio already works well
+- **Priority**: Lower since current system works
+
+#### 6. **Advanced Analytics Dashboard** ⭐⭐
+- **Status**: 5% complete
+- **Time**: 3-4 weeks
+- **Impact**: Better insights and optimization
+- **Current State**:
+  - ✅ Basic cache stats tracking
+  - ✅ XP and achievement metrics
+  - ❌ No unified dashboard
+- **What's needed**:
+  - Cache performance metrics
+  - User behavior analytics
+  - Health system metrics
+  - Performance monitoring
+- **ROI**: Data-driven optimization opportunities
+
+### **TIER 4: Nice to Have (Future Considerations)**
+
+#### 7. **Social Features** ⭐⭐
+- **Status**: 0% complete
+- **Time**: 6-8 weeks
+- **Impact**: Community engagement
+- **What's needed**:
+  - Friend system
+  - Leaderboards
+  - Shared achievements
+- **ROI**: Long-term engagement but not immediate priority
+
+## 📊 **Recommended Implementation Order**
+
+### **Sprint 1 (Next 2 weeks): Complete Brain Cache**
+```
+Week 1: Update tRPC routers for cache-first strategy
+- Modify packages/api/src/router/tasks.ts
+- Modify packages/api/src/router/calendar.ts
+- Modify packages/api/src/router/contacts.ts
+- Modify packages/api/src/router/email.ts
+
+Week 2: Switch mobile components to cached hooks + testing
+- Update TasksMemoryCard.tsx to use useCachedTasks
+- Update CalendarMemoryCard.tsx to use useCachedCalendar
+- Update ContactsMemoryCard.tsx to use useCachedContacts
+- Create EmailMemoryCard.tsx with useCachedEmail
+- Performance testing and optimization
+
+Expected: 90%+ API call reduction, sub-100ms response times
+```
+
+### **Sprint 2 (Weeks 3-4): Mascot Health Bar**
+```
+Week 3: Health system logic + UI components
+- Create HealthContext.tsx with decay/recovery logic
+- Create HealthBar.tsx component
+- Create MascotHealthDisplay.tsx component
+- Database schema updates for health tracking
+
+Week 4: Integration with activities + animations
+- Integrate health with existing XP system
+- Add health-based mascot animations
+- Create health notifications
+- Testing and balancing
+
+Expected: 30%+ increase in daily active users
+```
+
+### **Sprint 3 (Weeks 5-7): Neo4j Service Transfer**
+```
+Week 5: Deploy Railway Neo4j template
+- Deploy Railway Neo4j GraphDB template
+- Configure internal networking
+- Test basic connectivity
+
+Week 6: Extract service + create client
+- Create apps/neo4j-service/
+- Implement Railway-optimized Neo4j client
+- Update omnii_mcp to use service client
+
+Week 7: Data migration + testing
+- Migrate data from AuraDB to Railway Neo4j
+- End-to-end testing
+- Performance optimization
+
+Expected: 99.9% uptime + cost reduction
+```
+
+### **Sprint 4 (Weeks 8-9): RDF Optimization**
+```
+Week 8: Performance optimizations
+- Optimize RDF processing pipeline
+- Improve confidence scoring algorithms
+- Add intelligent caching
+
+Week 9: Edge case handling + testing
+- Handle edge cases and errors
+- Improve fallback mechanisms
+- Comprehensive testing
+
+Expected: 20% faster AI responses
+```
+
+## 🎯 **Why This Order?**
+
+1. **Brain Cache**: Immediate massive performance gains with existing infrastructure
+2. **Health Bar**: High user engagement boost with manageable complexity
+3. **Neo4j Transfer**: Solves current reliability issues before they become critical
+4. **RDF Optimization**: Polish the already-working system for better performance
+
+## 💡 **Key Insights**
+
+- **Current Composio integration is working well** - no urgent need to replace with N8N
+- **Brain cache system is 70% done** - highest ROI to complete first
+- **Health bar missing entirely** - but mascot system is ready for it
+- **Neo4j AuraDB issues** - need Railway solution before production scale
+
+## 🔧 **Technical Dependencies**
+
+### Sprint 1 Dependencies:
+- Existing brain cache infrastructure ✅
+- tRPC setup ✅
+- Mobile components ✅
+
+### Sprint 2 Dependencies:
+- Existing mascot system ✅
+- XP and achievement systems ✅
+- Supabase user profiles ✅
+
+### Sprint 3 Dependencies:
+- Railway account and deployment ✅
+- Neo4j knowledge ✅
+- Data migration tools (need to create)
+
+### Sprint 4 Dependencies:
+- Existing RDF system ✅
+- Python RDF service ✅
+- Performance monitoring tools (need to create)
+
+## 📈 **Success Metrics**
+
+### Sprint 1 (Brain Cache):
+- Cache hit rate: >90%
+- Response time: <100ms
+- API call reduction: >90%
+
+### Sprint 2 (Health Bar):
+- Daily active users: +30%
+- Session length: +25%
+- User retention: +20%
+
+### Sprint 3 (Neo4j):
+- Uptime: 99.9%
+- Response time: <200ms
+- Cost reduction: 40%
+
+### Sprint 4 (RDF):
+- AI accuracy: +15%
+- Response time: -20%
+- Confidence score: >0.8
+
+## 🚀 **Getting Started**
+
+To begin Sprint 1 (Brain Cache completion):
+
+1. **Review current cache hooks**: `apps/omnii-mobile/src/hooks/useCachedTasks.ts`
+2. **Update tRPC routers**: Start with `packages/api/src/router/tasks.ts`
+3. **Test cache performance**: Use existing test infrastructure
+4. **Monitor metrics**: Leverage existing brain memory stats
+
+This plan provides a clear roadmap for the next 2 months of development with measurable success criteria and concrete deliverables.
+
+
+I want to add a feature where we combine achievements and analytics because analytics is a part of the achievements completed I guess.. Reason being I want a social aspect of tasks completed. With leaderbaords... Group creation and integrated using the emails that are known from Google contacts to invite friends to their group which can abring people into the app so make it seamless. In the group then you can choose to open privacy to tasks and being able to manage which group sees your tasks as an attribute of the group allowed to see the tasks. Make it easy to decide which group sees it and by default all groups see your task completed. Groups can have common tasks and should try to encourage common tasks to be done together in a group to make it more efficient and in this moment we suggest how to break up the roadmap knowing the skills of each user. 
+

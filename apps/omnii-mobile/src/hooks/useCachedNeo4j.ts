@@ -99,7 +99,8 @@ export const useCachedNeo4j = () => {
       if (!forceRefresh) {
         const cachedData = await getCachedData();
         
-        if (cachedData?.concepts && cachedData.concepts.length > 0) {
+        // 🔧 FIXED: Access cache data directly like working hooks (contacts, calendar, tasks)
+        if (cachedData?.concepts && Array.isArray(cachedData.concepts) && cachedData.concepts.length > 0) {
           // Cache hit! 🎯 Transform cached data back to ConceptOverview format
           const cachedOverview: ConceptOverview = {
             concepts: cachedData.concepts.slice(0, limit),
@@ -277,14 +278,51 @@ export const useCachedNeo4j = () => {
     }
   }, [getCachedData, setCachedData, neo4jClient, formatConceptsForCache]);
 
+  // 🔧 FIXED: Cache-only initialization - never call Neo4j directly on mount
   // Initialize data on mount (run once only)
   useEffect(() => {
-    // Delayed initialization to allow Neo4j client to connect
-    const timer = setTimeout(() => {
-      fetchConcepts();
-    }, 1000); // 1 second delay for connection
+    // Only load from cache - never call Neo4j directly
+    const loadFromCacheOnly = async () => {
+      try {
+        console.log('[CachedNeo4j] 🔄 Loading from cache only (no Neo4j calls)...');
+        
+        const cachedData = await getCachedData();
+        
+        // 🔧 FIXED: Access cache data directly like working hooks (contacts, calendar, tasks)
+        if (cachedData?.concepts && Array.isArray(cachedData.concepts) && cachedData.concepts.length > 0) {
+          // Cache hit! Use cached data
+          const cachedOverview: ConceptOverview = {
+            concepts: cachedData.concepts,
+            totalConcepts: cachedData.totalConcepts || cachedData.concepts.length,
+            lastSyncTime: cachedData.lastSynced,
+            syncSuccess: true,
+            responseTime: 0,
+            source: 'cache'
+          };
+
+          setConceptsOverview(cachedOverview);
+          setLastFetchTime(Date.now());
+          console.log(`[CachedNeo4j] 🎯 Cache-only HIT: ${cachedData.concepts.length} concepts loaded`);
+        } else {
+          // No cache data available - set empty state (don't call Neo4j)
+          console.log('[CachedNeo4j] 📭 No cache data available - setting empty state');
+          setConceptsOverview({
+            concepts: [],
+            totalConcepts: 0,
+            lastSyncTime: new Date().toISOString(),
+            syncSuccess: false,
+            responseTime: 0,
+            source: 'cache'
+          });
+        }
+      } catch (error) {
+        console.error('[CachedNeo4j] ❌ Cache-only load failed:', error);
+        setHasError(true);
+        setErrorMessage('Failed to load cached concepts');
+      }
+    };
     
-    return () => clearTimeout(timer);
+    loadFromCacheOnly();
   }, []); // 🔧 Empty deps to prevent infinite loops
 
   // Refresh function (force cache refresh)

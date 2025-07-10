@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Pressable, TextInput } from 'react-native';
 import { useTheme } from '~/context/ThemeContext';
 import { useAuth } from '~/context/AuthContext';
 import { cn } from '~/utils/cn';
@@ -290,39 +290,34 @@ export const MemoryContent: React.FC<MemoryContentProps> = ({
               }
             />
 
-            {/* Neo4j Knowledge Graph with Brain Cache */}
+            {/* Brain Concepts Analytics - Same style as Email Analytics */}
             <MemorySummaryCard
               icon="🧠"
-              title="Brain Memory"
+              title="Brain Concepts"
               items={[
                 conceptsData?.hasError
                   ? "⚠️ Neo4j connection required"
-                  : `${conceptsData?.conceptCount || 0} concepts loaded`,
+                  : `${conceptsData?.totalConcepts || 0} concepts loaded`,
                 conceptsData?.hasError
-                  ? "Direct Neo4j connection needed"
-                  : conceptsData?.source === 'cache' 
-                  ? `📈 Cache hit (${conceptsData?.responseTime || 0}ms)`
-                  : `🔗 Direct Neo4j (${conceptsData?.responseTime || 0}ms)`,
+                  ? "Connect Neo4j to view concepts"
+                  : `${conceptsData?.concepts?.filter((c: any) => c.properties?.importance > 15).length || 0} high-importance concepts`,
                 conceptsData?.hasError
                   ? "Brain cache ready for data"
-                  : `${conceptsData?.totalConcepts || 0} total concepts in graph`,
+                  : `${conceptsData?.concepts?.filter((c: any) => c.labels?.includes('Note')).length || 0} notes and insights`,
                 conceptsData?.isLoading
                   ? "⏳ Loading from brain memory..."
                   : conceptsData?.hasError
-                  ? "🔧 Connection setup required"
-                  : conceptsData?.isConnected 
-                  ? '✅ Connected to AuraDB' 
-                  : '❌ Disconnected'
+                  ? "🔧 Setup required"
+                  : conceptsData?.isCacheValid 
+                  ? `📈 Cache hit (${conceptsData?.responseTime || 0}ms)` 
+                  : `🧠 Brain memory active`
               ]}
               color="blue"
               data={conceptsData}
               onExpand={() => {}}
-              expandedContent={<BrainMemoryDetails data={conceptsData} onConceptClick={setSelectedConcept} />}
+              expandedContent={<BrainConceptsDetails data={conceptsData} onConceptClick={setSelectedConcept} />}
             />
           </View>
-
-          {/* Neo4j Concepts Search Card with Brain Cache */}
-          <ConceptsMemoryCard onConceptClick={setSelectedConcept} />
 
           {/* RDF Semantic Analysis Card */}
           <RDFMemoryCard />
@@ -939,8 +934,9 @@ const EmailMemoryDetails: React.FC<{ data: any; onEmailClick: (email: any) => vo
   );
 };
 
-const BrainMemoryDetails: React.FC<{ data: any; onConceptClick: (concept: any) => void }> = ({ data, onConceptClick }) => {
+const BrainConceptsDetails: React.FC<{ data: any; onConceptClick: (concept: any) => void }> = ({ data, onConceptClick }) => {
   const { isDark } = useTheme();
+  const [searchQuery, setSearchQuery] = useState('');
   
   if (data?.hasError) {
     return (
@@ -949,24 +945,64 @@ const BrainMemoryDetails: React.FC<{ data: any; onConceptClick: (concept: any) =
           Brain Concepts
         </Text>
         <Text className={cn("text-sm", isDark ? "text-slate-400" : "text-gray-600")}>
-          ⚠️ Neo4j AuraDB connection required to view concepts
+          ⚠️ Neo4j connection required to view concepts
         </Text>
       </View>
     );
   }
   
   const concepts = data?.concepts || [];
-  const recentConcepts = concepts; // Show all concepts
+  
+  // Filter concepts based on search query
+  const filteredConcepts = searchQuery.trim() 
+    ? concepts.filter((concept: any) => 
+        concept.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        concept.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        concept.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        concept.properties?.keywords?.some((keyword: string) => 
+          keyword.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      )
+    : concepts;
   
   return (
     <View className="mt-3">
       <Text className={cn("text-lg font-semibold mb-2", isDark ? "text-white" : "text-gray-900")}>
-        Brain Concepts ({data?.totalConcepts || concepts.length} loaded)
+        {data?.totalConcepts || concepts.length} concepts loaded
       </Text>
       
-      {(data?.source === 'cache' || data?.isCacheValid) && (
+      {data?.isCacheValid && (
         <Text className={cn("text-xs mb-2", isDark ? "text-blue-400" : "text-blue-600")}>
           🧠 Brain cache hit • {data?.responseTime || 0}ms response
+        </Text>
+      )}
+
+      {/* Search Input */}
+      <View className={cn(
+        "mb-3 flex-row items-center p-2 rounded-lg border",
+        isDark ? "bg-slate-700 border-slate-600" : "bg-gray-50 border-gray-200"
+      )}>
+        <Text className={cn("mr-2", isDark ? "text-slate-400" : "text-gray-500")}>🔍</Text>
+        <TextInput
+          className={cn(
+            "flex-1 text-sm",
+            isDark ? "text-white" : "text-gray-900"
+          )}
+          placeholder="Search concepts..."
+          placeholderTextColor={isDark ? "#64748b" : "#6b7280"}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Text className={cn("ml-2", isDark ? "text-slate-400" : "text-gray-500")}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {searchQuery.length > 0 && (
+        <Text className={cn("text-xs mb-2", isDark ? "text-slate-400" : "text-gray-600")}>
+          Found {filteredConcepts.length} concepts matching "{searchQuery}"
         </Text>
       )}
   
@@ -981,10 +1017,10 @@ const BrainMemoryDetails: React.FC<{ data: any; onConceptClick: (concept: any) =
         </View>
       )}
       
-      {recentConcepts.length > 0 ? (
+      {filteredConcepts.length > 0 ? (
         <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
           <View className="space-y-2">
-            {recentConcepts.map((concept: any, index: number) => (
+            {filteredConcepts.map((concept: any, index: number) => (
               <TouchableOpacity
                 key={index}
                 onPress={() => onConceptClick(concept)}

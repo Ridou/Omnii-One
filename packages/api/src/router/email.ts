@@ -5,6 +5,7 @@ import type { EmailData } from "@omnii/validators";
 import { EmailDataSchema } from "@omnii/validators";
 
 import { protectedProcedure, publicProcedure } from "../trpc";
+import { BrainCacheService } from "../services/brain-cache.service";
 
 // ============================================================================
 // INPUT VALIDATION SCHEMAS
@@ -178,7 +179,7 @@ class EmailService {
   }
 
   /**
-   * List emails using Gmail API
+   * List emails using Gmail API with brain cache integration
    */
   async listEmails(
     userId: string,
@@ -186,35 +187,100 @@ class EmailService {
   ): Promise<EmailsListResponse> {
     console.log(`[EmailService] 📧 Listing emails for user: ${userId}`);
     
-    const oauthToken = await this.oauthManager.getGoogleOAuthToken(userId);
-    
-    // Step 1: Get message list
-    const messagesList = await this.getMessagesList(
-      oauthToken.access_token,
-      params
-    );
+    try {
+      // 🧠 Brain Cache Integration - Step 1: Check cache first
+      const brainCache = new BrainCacheService();
+      const cachedData = await brainCache.getCachedData(userId, 'google_emails');
+      
+      if (cachedData && !brainCache.isExpired(cachedData)) {
+        console.log(`[EmailService] 🎯 Cache HIT - returning cached emails`);
+        return cachedData.data as EmailsListResponse;
+      }
 
-    const messages = messagesList?.messages ?? [];
-    console.log(`[EmailService] 📨 Found ${messages.length} messages`);
+      console.log(`[EmailService] 📭 Cache MISS - fetching fresh data from Gmail API`);
 
-    // Step 2: Get message details for each message
-    const emailPromises = messages.slice(0, params.maxResults).map((msg: any) =>
-      this.getMessageDetails(oauthToken.access_token, msg.id, "metadata")
-    );
+      // Step 2: Fetch fresh data from Gmail API
+      const oauthToken = await this.oauthManager.getGoogleOAuthToken(userId);
+      
+      // Step 3: Get message list
+      const messagesList = await this.getMessagesList(
+        oauthToken.access_token,
+        params
+      );
 
-    const messageDetails = await Promise.all(emailPromises);
+      const messages = messagesList?.messages ?? [];
+      console.log(`[EmailService] 📨 Found ${messages.length} messages`);
 
-    // Transform to our email schema
-    const formattedEmails = messageDetails
-      .map(detail => this.transformGmailMessageToSchema(detail))
-      .filter(Boolean) as EmailData[];
+      // Step 4: Get message details for each message (with 429 rate limit handling)
+      const emailPromises = messages.slice(0, params.maxResults).map(async (msg: any) => {
+        try {
+          return await this.getMessageDetails(oauthToken.access_token, msg.id, "metadata");
+        } catch (detailError) {
+          // If we hit rate limits on individual message details, skip this message
+          if (detailError instanceof Error && detailError.message.includes('429')) {
+            console.warn(`[EmailService] 🚦 Rate limited on message ${msg.id}, skipping...`);
+            return null;
+          }
+          throw detailError; // Re-throw non-rate-limit errors
+        }
+      });
 
-    return {
-      emails: formattedEmails,
-      totalCount: messagesList?.resultSizeEstimate ?? messages.length,
-      unreadCount: await this.getUnreadCount(oauthToken.access_token),
-      nextPageToken: messagesList?.nextPageToken,
-    };
+      const messageDetails = (await Promise.all(emailPromises)).filter(Boolean);
+
+      // Transform to our email schema
+      const formattedEmails = messageDetails
+        .map(detail => this.transformGmailMessageToSchema(detail))
+        .filter(Boolean) as EmailData[];
+
+      const result: EmailsListResponse = {
+        emails: formattedEmails,
+        totalCount: messagesList?.resultSizeEstimate ?? messages.length,
+        unreadCount: await this.getUnreadCount(oauthToken.access_token),
+        nextPageToken: messagesList?.nextPageToken,
+      };
+
+      // 🧠 Brain Cache Integration - Step 5: Store fresh data in cache
+      try {
+        await brainCache.setCachedData(userId, 'google_emails', result);
+        console.log(`[EmailService] 💾 Fresh email data cached for future requests`);
+      } catch (cacheError) {
+        console.warn(`[EmailService] ⚠️ Failed to cache email data (non-critical):`, cacheError);
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error(`[EmailService] ❌ Error listing emails:`, error);
+      
+      // 🧠 Brain Cache Integration - Enhanced fallback for Gmail 429 rate limits
+      const isRateLimited = error instanceof Error && (
+        error.message.includes('429') || 
+        error.message.includes('Too many concurrent requests') ||
+        error.message.includes('rateLimitExceeded')
+      );
+      
+      if (isRateLimited) {
+        console.log(`[EmailService] 🚦 Gmail rate limit detected, attempting stale cache fallback...`);
+      }
+      
+      try {
+        const brainCache = new BrainCacheService();
+        const staleCache = await brainCache.getCachedData(userId, 'google_emails');
+        if (staleCache) {
+          const cacheAge = new Date().getTime() - new Date(staleCache.metadata.lastSynced).getTime();
+          const cacheAgeMinutes = Math.round(cacheAge / (1000 * 60));
+          
+          console.log(`[EmailService] 🔄 Returning stale email cache (${cacheAgeMinutes}min old) due to ${isRateLimited ? 'rate limit' : 'API error'}`);
+          return staleCache.data as EmailsListResponse;
+        } else {
+          console.warn(`[EmailService] 📭 No stale cache available for fallback`);
+        }
+      } catch (fallbackError) {
+        console.warn(`[EmailService] ⚠️ Stale email cache fallback failed:`, fallbackError);
+      }
+      
+      throw error;
+    }
   }
 
   /**

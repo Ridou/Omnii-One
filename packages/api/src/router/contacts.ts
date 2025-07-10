@@ -5,6 +5,7 @@ import type { ContactData } from "@omnii/validators";
 import { ContactDataSchema } from "@omnii/validators";
 
 import { protectedProcedure, publicProcedure } from "../trpc";
+import { BrainCacheService } from "../services/brain-cache.service";
 
 // ============================================================================
 // INPUT VALIDATION SCHEMAS
@@ -169,7 +170,7 @@ class ContactsService {
   }
 
   /**
-   * List all contacts using Google People API
+   * List all contacts using Google People API with brain cache integration
    */
   async listContacts(
     userId: string,
@@ -177,25 +178,66 @@ class ContactsService {
   ): Promise<ContactsListResponse> {
     console.log(`[ContactsService] 📋 Listing all contacts for user: ${userId}`);
     
-    const oauthToken = await this.oauthManager.getGoogleOAuthToken(userId);
-    
-    const response = await this.listContactsApiCall(
-      oauthToken.access_token,
-      pageSize
-    );
+    try {
+      // 🧠 Brain Cache Integration - Step 1: Check cache first
+      const brainCache = new BrainCacheService();
+      const cachedData = await brainCache.getCachedData(userId, 'google_contacts');
+      
+      if (cachedData && !brainCache.isExpired(cachedData)) {
+        console.log(`[ContactsService] 🎯 Cache HIT - returning cached contacts`);
+        return cachedData.data as ContactsListResponse;
+      }
 
-    const connections = response?.connections || [];
-    console.log(`[ContactsService] 📞 Found ${connections.length} contacts`);
+      console.log(`[ContactsService] 📭 Cache MISS - fetching fresh data from Google Contacts API`);
 
-    // Transform to our contact schema
-    const formattedContacts = connections
-      .map((person: any) => this.transformGoogleContactToSchema(person))
-      .filter(Boolean) as ContactData[];
+      // Step 2: Fetch fresh data from Google API
+      const oauthToken = await this.oauthManager.getGoogleOAuthToken(userId);
+      
+      const response = await this.listContactsApiCall(
+        oauthToken.access_token,
+        pageSize
+      );
 
-    return {
-      contacts: formattedContacts,
-      totalCount: response?.totalPeople || connections.length,
-    };
+      const connections = response?.connections || [];
+      console.log(`[ContactsService] 📞 Found ${connections.length} contacts`);
+
+      // Transform to our contact schema
+      const formattedContacts = connections
+        .map((person: any) => this.transformGoogleContactToSchema(person))
+        .filter(Boolean) as ContactData[];
+
+      const result: ContactsListResponse = {
+        contacts: formattedContacts,
+        totalCount: response?.totalPeople || connections.length,
+      };
+
+      // 🧠 Brain Cache Integration - Step 3: Store fresh data in cache
+      try {
+        await brainCache.setCachedData(userId, 'google_contacts', result);
+        console.log(`[ContactsService] 💾 Fresh contacts cached for future requests`);
+      } catch (cacheError) {
+        console.warn(`[ContactsService] ⚠️ Failed to cache contacts (non-critical):`, cacheError);
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error(`[ContactsService] ❌ Error listing contacts:`, error);
+      
+      // 🧠 Brain Cache Integration - Fallback to stale cache on error
+      try {
+        const brainCache = new BrainCacheService();
+        const staleCache = await brainCache.getCachedData(userId, 'google_contacts');
+        if (staleCache) {
+          console.log(`[ContactsService] 🔄 Returning stale contacts cache due to API error`);
+          return staleCache.data as ContactsListResponse;
+        }
+      } catch (fallbackError) {
+        console.warn(`[ContactsService] ⚠️ Stale cache fallback failed:`, fallbackError);
+      }
+      
+      throw error;
+    }
   }
 
   /**
