@@ -60,6 +60,13 @@ export enum ResponseCategory {
   TASK_SINGLE = 'task_single',
   TASK_LIST = 'task_list',
   TASK_COMPLETE_OVERVIEW = 'task_complete_overview', // NEW: Complete task overview with all lists and tasks
+  
+  // n8n Agent categories
+  N8N_AGENT_RESPONSE = 'n8n_agent_response',
+  AGENT_AUTOMATION = 'agent_automation',
+  WEB_RESEARCH = 'web_research',
+  YOUTUBE_SEARCH = 'youtube_search',
+  WORKFLOW_COORDINATION = 'workflow_coordination',
 }
 
 export enum ActionResult {
@@ -158,6 +165,11 @@ export class ChatService {
         return;
       }
 
+      // ✅ NEW: Handle enhanced system messages for immediate responses and data updates
+      if (data.type === 'system' && data.data?.action) {
+        this.handleEnhancedSystemMessage(data);
+        return;
+      }
       
       // ✅ CRITICAL: First, let's see the exact structure we received
 
@@ -241,6 +253,8 @@ export class ChatService {
         }
       }
     } catch (error) {
+      
+      this.emit('error', new Error('Failed to parse WebSocket message'));
     }
   };
 
@@ -1145,5 +1159,95 @@ export class ChatService {
    */
   private addMessage(message: any): void {
     this.emit('message', message);
+  }
+
+  // ✅ NEW: Handle enhanced system messages from the new WebSocket handler
+  private handleEnhancedSystemMessage(data: any) {
+    console.log(`[ChatService] 💬 Handling enhanced system message:`, data.data.action);
+    
+    if (data.data.action === 'executive_response') {
+      // Handle immediate executive assistant response (ChatGPT-like)
+      const chatMessage = {
+        id: `executive-${Date.now()}`,
+        content: data.data.message || 'Let me help you with that strategically...',
+        sender: 'assistant' as const,
+        timestamp: new Date().toISOString(),
+        type: 'text' as const,
+        metadata: {
+          action: 'executive_response',
+          responseType: 'executive_assistant',
+          style: 'conversational_paragraph',
+          priority: 'immediate',
+          ...data.data.metadata
+        },
+      };
+      
+      console.log(`[ChatService] 🎯 Sending executive response:`, chatMessage.content.substring(0, 100));
+      this.emit('message', chatMessage);
+      
+    } else if (data.data.action === 'context_dropdown') {
+      // Handle context dropdown (collapsible, loads asynchronously)
+      const chatMessage = {
+        id: `context-${Date.now()}`,
+        content: `Context: ${data.data.contextSummary.totalItems} relevant items found`,
+        sender: 'assistant' as const,
+        timestamp: new Date().toISOString(),
+        type: 'text' as const,
+        metadata: {
+          action: 'context_dropdown',
+          responseType: 'context',
+          style: 'collapsible_dropdown',
+          priority: 'background',
+          contextSummary: data.data.contextSummary,
+          relevantContext: data.data.relevantContext,
+          rdfInsights: data.data.rdfInsights,
+          collapsed: true, // Start collapsed by default
+          ...data.data.metadata
+        },
+      };
+      
+      console.log(`[ChatService] 📊 Sending context dropdown: ${data.data.contextSummary.totalItems} items`);
+      this.emit('message', chatMessage);
+      
+    } else if (data.data.action === 'immediate_response') {
+      // Handle legacy immediate conversational response
+      const chatMessage = {
+        id: `immediate-${Date.now()}`,
+        content: data.data.message || 'Processing your request...',
+        sender: 'assistant' as const,
+        timestamp: new Date().toISOString(),
+        type: 'text' as const,
+        metadata: {
+          action: 'immediate_response',
+          responseType: 'conversational',
+          reasoning: data.data.reasoning,
+          ...data.data.metadata
+        },
+      };
+      
+      console.log(`[ChatService] 💬 Sending immediate response message:`, chatMessage.content.substring(0, 100));
+      this.emit('message', chatMessage);
+      
+    } else if (data.data.action === 'data_update') {
+      // Handle legacy compact data update
+      const chatMessage = {
+        id: `data-update-${Date.now()}`,
+        content: 'Here\'s the relevant information:',
+        sender: 'assistant' as const,
+        timestamp: new Date().toISOString(),
+        type: 'text' as const,
+        metadata: {
+          action: 'data_update',
+          compactData: data.data.compactData,
+          ...data.data.metadata
+        },
+      };
+      
+      console.log(`[ChatService] 📊 Sending data update message:`, data.data.compactData?.type);
+      this.emit('message', chatMessage);
+      
+    } else {
+      console.log(`[ChatService] ⚠️ Unknown system action:`, data.data.action);
+    }
   }
 }

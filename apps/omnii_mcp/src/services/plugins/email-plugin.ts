@@ -575,126 +575,91 @@ export class EmailPlugin implements GoogleServicePlugin {
     if (!Array.isArray(emails) || emails.length === 0) {
       return builder
         .setSuccess(true)
-        .setTitle("📥 Inbox")
-        .setContent("No emails found")
-        .setMessage(`📥 ${EmailResponsePattern.NO_RESULTS}`)
+        .setTitle("📭 No Emails")
+        .setContent("I didn't find any emails in your inbox right now.")
+        .setMessage("📭 Your inbox appears to be empty or all caught up!")
         .build();
     }
 
     console.log(`[EmailPlugin] 🔍 PROCESSING ${emails.length} EMAILS`);
     console.log(`[EmailPlugin] - First email structure:`, emails[0] ? Object.keys(emails[0]) : 'no first email');
+
+    // ✅ NEW: Build conversational message based on email data
+    const unreadCount = emails.filter(email => !this.isEmailRead(email)).length;
+    const totalCount = emails.length;
     
-    // NEW: Enhanced email extraction using rich raw data fields
+    // ✅ Create conversational response
+    let conversationalMessage = '';
+    if (unreadCount > 0) {
+      conversationalMessage = `I found ${totalCount} email${totalCount !== 1 ? 's' : ''} in your inbox, with ${unreadCount} unread. Here's what needs your attention:`;
+    } else {
+      conversationalMessage = `I found ${totalCount} email${totalCount !== 1 ? 's' : ''} in your inbox. Everything's read and organized:`;
+    }
+
+    // Build structured email data for UI components
+    const structuredEmails: EmailData[] = emails.map((email: any) => {
+      const attachments = this.extractAttachments(email);
+      
+      return {
+        id: email.id || this.generateId(),
+        subject: this.extractSubject(email),
+        from: this.extractFrom(email),
+        to: [this.extractTo(email)],
+        body: this.extractBody(email),
+        preview: this.extractPreview(email),
+        date: this.extractDate(email),
+        isRead: this.isEmailRead(email),
+        isDraft: false,
+        threadId: email.threadId,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        importance: email.importance || 'normal',
+        hasAttachments: attachments.length > 0,
+        labels: email.labelIds || [],
+        snippet: email.snippet || this.extractPreview(email),
+      };
+    });
+
     const emailListData: EmailListData = {
-      emails: emails.map((email: any) => {
-        // Check what fields are available in this email
-        const availableFields = Object.keys(email);
-        console.log(`[EmailPlugin] 📧 Processing email with fields:`, availableFields);
-        
-        // NEW: Extract rich data directly from parsed structure
-        const extractedEmail = {
-          id: email.id || email.messageId || this.generateId(),
-          subject: email.subject || this.extractSubject(email),
-          from: email.from || this.extractFrom(email),
-          to: [email.to || this.extractTo(email)],
-          body: email.body || this.extractBody(email), // Keep for backward compatibility
-          // NEW: Rich fields from raw Gmail data
-          messageText: email.messageText || email.body || this.extractBody(email), // Full message content
-          preview: this.extractPreview(email), // Enhanced preview extraction
-          sender: email.sender || email.from || this.extractFrom(email), // Detailed sender info
-          date: email.date || email.messageTimestamp || this.extractDate(email),
-          threadId: email.threadId,
-          messageId: email.messageId || email.id,
-          messageTimestamp: email.messageTimestamp || email.date,
-          labelIds: email.labelIds || [],
-          isRead: this.isEmailRead(email),
-          isDraft: false,
-          attachments: this.extractAttachments(email)
-        };
-        
-        // Log what we extracted for debugging
-        console.log(`[EmailPlugin] 📧 Extracted email data:`, {
-          id: extractedEmail.id,
-          subject: extractedEmail.subject,
-          hasMessageText: !!extractedEmail.messageText,
-          hasPreview: !!extractedEmail.preview,
-          messageTextLength: extractedEmail.messageText?.length || 0,
-          previewLength: extractedEmail.preview?.length || 0,
-          sender: extractedEmail.sender,
-          labelIds: extractedEmail.labelIds
-        });
-        
-        return extractedEmail;
-      }),
-      totalCount: emails.length,
-      unreadCount: emails.filter((email: any) => !this.isEmailRead(email)).length,
-      hasMore: emails.length >= 20
+      emails: structuredEmails,
+      totalCount,
+      unreadCount,
+      hasMore: false, // For now, we don't support pagination
     };
 
-    // Enhanced actions for email list
     const actions: UnifiedAction[] = [
       {
-        id: "open_first_email",
-        label: "Open First Email",
+        id: "reply_first",
+        label: "Reply to First",
         type: "primary",
-        icon: "📖"
+        icon: "💬"
       },
       {
-        id: "reply_first_email",
-        label: "Reply to First",
+        id: "mark_all_read",
+        label: "Mark All Read",
         type: "secondary", 
-        icon: "💬"
+        icon: "✅"
       }
     ];
 
-    // Add "Load More" action if there are many emails
-    if (emailListData.hasMore) {
-      actions.push({
-        id: "load_more_emails",
-        label: "Load More Emails",
-        type: "secondary",
-        icon: "⬇️",
-        command: "fetch more emails"
-      });
-    }
+    // ✅ CONVERSATIONAL: Build natural subtitle
+    const subtitle = unreadCount > 0 
+      ? `${unreadCount} need${unreadCount !== 1 ? '' : 's'} your attention`
+      : 'All caught up!';
 
-    // Compact content for UI (not the full email list)
-    const content = `Found ${emails.length} email${emails.length === 1 ? '' : 's'}${emailListData.unreadCount > 0 ? ` (${emailListData.unreadCount} unread)` : ''}`;
-
-    const result = builder
+    return builder
       .setSuccess(true)
-      .setTitle("📥 Latest Emails")
-      .setSubtitle(`${emails.length} email${emails.length === 1 ? '' : 's'}`)
-      .setContent(content) // Compact summary instead of full list
-      .setMessage(`${EmailResponsePattern.SUCCESS_FETCH}\n${content}`)
-      .setStructuredData(emailListData) // Rich data for component rendering
+      .setTitle("📧 Your Emails") // Simple, clean title
+      .setSubtitle(subtitle) // Conversational subtitle
+      .setContent(conversationalMessage) // Natural conversation
+      .setMessage(conversationalMessage) // Main response message
+      .setStructuredData(emailListData)
       .setRawData(parsed)
-      .setMetadata({ 
-        confidence: 95, 
-        source: 'Gmail'
-      });
-
-    // Add all actions to the builder
-    actions.forEach(action => result.addAction(action));
-    
-    const finalResponse = result.build();
-    
-    // NEW: Enhanced logging to show rich data extraction
-    console.log(`[EmailPlugin] 🔑 RICH DATA EXTRACTION SUMMARY:`);
-    console.log(`[EmailPlugin] - Total emails processed:`, emailListData.emails.length);
-    console.log(`[EmailPlugin] - Emails with messageText:`, emailListData.emails.filter(e => e.messageText).length);
-    console.log(`[EmailPlugin] - Emails with preview:`, emailListData.emails.filter(e => e.preview).length);
-    console.log(`[EmailPlugin] - First email messageText length:`, emailListData.emails[0]?.messageText?.length || 0);
-    
-    // Safe preview logging with type checking
-    const firstEmailPreview = emailListData.emails[0]?.preview;
-    const previewSample = firstEmailPreview && typeof firstEmailPreview === 'string' 
-      ? firstEmailPreview.substring(0, 100) 
-      : firstEmailPreview || 'none';
-    console.log(`[EmailPlugin] - First email preview:`, previewSample);
-    
-    return finalResponse;
+      .addAction(actions[0])
+      .addAction(actions[1])
+      .build();
   }
+
+
 
   // NEW: Helper method to extract attachments
   private extractAttachments(email: any): Array<{ name: string; type: string; size: number; downloadUrl?: string; }> {
@@ -937,18 +902,26 @@ IMPORTANT RULES:
 4. When creating drafts, ensure all required parameters: recipient_email, subject, body
 5. Default to creating drafts unless explicitly asked to send
 
-FETCH EMAILS PARAMETERS:
-- ALWAYS set max_results to 10 or more (default is only 1!)
-- Use max_results: 20 for "latest emails", "check email", "inbox"
-- Use max_results: 50 for "all emails" or "show all"
+FETCH EMAILS PARAMETERS - RESPECT USER'S SPECIFIC NUMBERS:
+- ALWAYS respect the exact number requested by the user!
+- If user says "latest 5 emails" → max_results: 5
+- If user says "10 emails" → max_results: 10
+- If user says "3 emails" → max_results: 3
+- For general requests without numbers:
+  - "latest emails", "check email", "inbox" → max_results: 10 (reasonable default)
+  - "all emails" or "show all" → max_results: 20
 - Include query parameter for specific searches (e.g., "from:john", "subject:meeting")
 - Set include_payload: true to get full email content
 
 Examples:
-- "check my emails" → max_results: 20
-- "latest emails" → max_results: 20  
-- "show all emails" → max_results: 50
-- "emails from john" → query: "from:john", max_results: 20
+- "latest 5 emails" → max_results: 5 (EXACT NUMBER!)
+- "show me 3 emails" → max_results: 3 (EXACT NUMBER!)
+- "check my emails" → max_results: 10
+- "latest emails" → max_results: 10  
+- "show all emails" → max_results: 20
+- "emails from john" → query: "from:john", max_results: 10
+
+CRITICAL: Always use the EXACT number when the user specifies one!
 
 Extract the correct parameters and call the appropriate Gmail action.`;
   }

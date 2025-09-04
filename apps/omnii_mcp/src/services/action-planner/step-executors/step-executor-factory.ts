@@ -5,6 +5,7 @@ import { TaskStepExecutor } from "./task-step-executor";
 import { ContactStepExecutor } from "./contact-step-executor";
 import { AnalysisStepExecutor } from "./analysis-step-executor";
 import { SystemStepExecutor } from "./system-step-executor";
+import { N8nAgentStepExecutor } from "./n8n-agent-executor";
 import { DependencyResolver } from "../dependency-resolver";
 import {
   ActionStep,
@@ -32,11 +33,16 @@ export class StepExecutorFactory {
     this.executors.set("task", new TaskStepExecutor());
     this.executors.set("contact", new ContactStepExecutor());
     this.executors.set("analysis", new AnalysisStepExecutor());
+    
+    // NEW: Register n8n agent executor for AI-powered automation
+    this.executors.set("n8n_agent", new N8nAgentStepExecutor());
 
     // System executor needs intervention manager
     if (interventionManager) {
       this.executors.set("system", new SystemStepExecutor(interventionManager));
     }
+    
+    console.log(`[StepExecutorFactory] ✅ Registered ${this.executors.size} step executors including n8n agent`);
   }
 
   /**

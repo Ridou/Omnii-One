@@ -33,6 +33,26 @@ export interface ChatMessage {
     category?: string; // Response category
     result?: string; // Action result
     
+    // NEW: Executive assistant response fields
+    action?: string; // Message action type (e.g., 'executive_response', 'context_dropdown')
+    responseType?: string; // Response type (e.g., 'executive_assistant', 'context')
+    style?: string; // Style type (e.g., 'conversational_paragraph', 'collapsible_dropdown')
+    priority?: string; // Priority level (e.g., 'immediate', 'background')
+    
+    // NEW: Context dropdown fields
+    contextSummary?: {
+      totalItems: number;
+      emailCount: number;
+      taskCount: number;
+      calendarCount: number;
+      contactCount: number;
+      conceptCount: number;
+      reasoning: string[];
+    };
+    relevantContext?: any;
+    rdfInsights?: any;
+    collapsed?: boolean;
+    
     // Component data for rich rendering (using unified types)
     componentData?: ComponentData;
     componentActions?: ComponentAction[];

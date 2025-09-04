@@ -17,7 +17,7 @@ import { cors } from "@elysiajs/cors";
 import { helmet } from "elysia-helmet";
 import { swagger } from "@elysiajs/swagger";
 import routes from "./routes";
-import { WebSocketHandlerService } from "./services/core/websocket-handler.service";
+import { EnhancedWebSocketHandler } from "./services/core/enhanced-websocket-handler";
 import {
   WebSocketMessageType,
   WebSocketResponseStatus,
@@ -225,7 +225,7 @@ app.use(routes);
 console.log("🚀 Routes registered, initializing WebSocket handler...");
 
 // Initialize services
-const wsHandler = new WebSocketHandlerService();
+const wsHandler = new EnhancedWebSocketHandler();
 
 console.log("🚀 WebSocket handler initialized, setting up WebSocket endpoint...");
 

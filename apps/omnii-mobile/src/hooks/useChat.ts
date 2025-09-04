@@ -61,6 +61,16 @@ export function useChat() {
 
     chatService.on('message', (message: ChatMessage) => {
       
+      // 🔍 DEBUG: Log all incoming messages to see executive assistant responses
+      console.log('🔍 INCOMING MESSAGE DEBUG:');
+      console.log('  - Type:', message.type);
+      console.log('  - Sender:', message.sender);
+      console.log('  - Content preview:', message.content?.substring(0, 100));
+      console.log('  - Metadata action:', message.metadata?.action);
+      console.log('  - Metadata responseType:', message.metadata?.responseType);
+      console.log('  - Has executive metadata:', !!message.metadata?.action?.includes('executive'));
+      console.log('  - Full metadata keys:', message.metadata ? Object.keys(message.metadata) : 'none');
+      
       // NEW: Log complete raw message structure
       // Message details logged for debugging
       

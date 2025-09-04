@@ -53,6 +53,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           setIsFocused(false); // Hide helpers after sending
           inputRef.current?.blur(); // Remove focus from input
           onSend();
+          // ✅ NEW: Clear input text after sending (like normal texting)
+          setMessageInput('');
           Keyboard.dismiss();
         }
       }
@@ -79,6 +81,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setIsFocused(false); // Hide helpers after sending
       inputRef.current?.blur(); // Remove focus from input
       onSend();
+      // ✅ NEW: Clear input text after sending (like normal texting)
+      setMessageInput('');
     }
   };
 
@@ -156,6 +160,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 setIsFocused(false);
                 inputRef.current?.blur();
                 onSend();
+                // ✅ NEW: Clear input text after sending (like normal texting)
+                setMessageInput('');
               }
             }}
             blurOnSubmit={false}

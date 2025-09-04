@@ -29,6 +29,13 @@ export enum ResponseCategory {
   // Task categories
   TASK_SINGLE = "task_single",
   TASK_LIST = "task_list",
+  
+  // n8n Agent categories
+  N8N_AGENT_RESPONSE = "n8n_agent_response",
+  AGENT_AUTOMATION = "agent_automation",
+  WEB_RESEARCH = "web_research",
+  YOUTUBE_SEARCH = "youtube_search",
+  WORKFLOW_COORDINATION = "workflow_coordination",
 }
 
 /**
@@ -115,6 +122,43 @@ export enum EditOperation {
 }
 
 /**
+ * n8n Agent-specific action types for AI-powered automation
+ */
+export enum N8nAgentActionType {
+  // Email automation (enhanced beyond current EmailActionType)
+  SMART_EMAIL_COMPOSE = "smart_email_compose",
+  EMAIL_THREAD_ANALYSIS = "email_thread_analysis", 
+  EMAIL_BULK_OPERATIONS = "email_bulk_operations",
+  EMAIL_CONTEXT_SEARCH = "email_context_search",
+  
+  // Calendar intelligence (enhanced beyond current CalendarActionType)
+  SMART_SCHEDULING = "smart_scheduling",
+  MEETING_COORDINATION = "meeting_coordination",
+  CALENDAR_OPTIMIZATION = "calendar_optimization",
+  MULTI_PERSON_SCHEDULING = "multi_person_scheduling",
+  
+  // Contact intelligence (enhanced beyond current ContactActionType)
+  CONTACT_ENRICHMENT = "contact_enrichment",
+  RELATIONSHIP_MAPPING = "relationship_mapping",
+  CONTACT_DEDUPLICATION = "contact_deduplication",
+  
+  // Cross-service automation (new capabilities)
+  WORKFLOW_AUTOMATION = "workflow_automation",
+  MULTI_SERVICE_COORDINATION = "multi_service_coordination",
+  TASK_EMAIL_INTEGRATION = "task_email_integration",
+  
+  // Web and research (new capabilities)
+  WEB_RESEARCH = "web_research",
+  INFORMATION_GATHERING = "information_gathering",
+  COMPETITIVE_ANALYSIS = "competitive_analysis",
+  
+  // YouTube content (new capabilities)  
+  YOUTUBE_CONTENT_SEARCH = "youtube_content_search",
+  LEARNING_PATH_CREATION = "learning_path_creation",
+  VIDEO_SUMMARY_GENERATION = "video_summary_generation",
+}
+
+/**
  * Types of actions that can be performed
  */
 export type ActionType =
@@ -124,12 +168,14 @@ export type ActionType =
   | "analysis"
   | "email"
   | "system"
+  | "n8n_agent"
   | CalendarActionType
   | TaskActionType
   | ContactActionType
   | AnalysisActionType
   | EmailActionType
-  | SystemActionType;
+  | SystemActionType
+  | N8nAgentActionType;
 
 /**
  * Recognized entity from user message

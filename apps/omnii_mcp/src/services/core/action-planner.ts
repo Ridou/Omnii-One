@@ -960,6 +960,36 @@ Available action types:
 - contact: search_contacts, get_all_contacts, create_contact
 - analysis: find_free_time, suggest_times, check_conflicts
 - email: send_email, create_draft, fetch_emails, add_label, create_label, delete_draft, delete_message, fetch_message_by_id, fetch_message_by_thread_id, get_attachment, list_drafts, list_labels, list_threads, modify_thread_labels, move_to_trash, remove_label, reply_to_thread, get_profile
+- n8n_agent: smart_email_compose, smart_scheduling, contact_enrichment, web_research, youtube_content_search, workflow_automation, multi_service_coordination, email_thread_analysis, meeting_coordination, information_gathering
+
+ROUTING DECISION RULES:
+Use n8n_agent when the request involves:
+1. Complex multi-step automation across multiple services
+2. Web research, information gathering, or external data needs
+3. YouTube content discovery and video search
+4. Smart email composition requiring AI context awareness
+5. Intelligent scheduling coordination with multiple people
+6. Cross-service workflow automation
+7. Contact enrichment with external data sources
+8. Any request that would benefit from AI reasoning beyond simple API calls
+
+Use local executors (email, calendar, task, contact) for:
+1. Simple, direct Google API operations
+2. Single-step actions (list emails, create task, show calendar)
+3. Real-time operations requiring <2 second response
+4. Basic CRUD operations without complex logic
+
+Examples of n8n_agent usage:
+- "Research the latest AI trends and email a summary to my team" → n8n_agent: workflow_automation
+- "Find YouTube videos about React hooks and create learning tasks" → n8n_agent: multi_service_coordination  
+- "Compose a professional email to John about the project delay with context from recent emails" → n8n_agent: smart_email_compose
+- "Search for information about quantum computing and schedule a meeting to discuss" → n8n_agent: workflow_automation
+
+Examples of local executor usage:
+- "List my emails from today" → email: fetch_emails
+- "Create a task: Buy groceries" → task: create_task
+- "What's on my calendar tomorrow?" → calendar: list_events
+- "Find contact John Smith" → contact: search_contacts
 
 Return a JSON object with this structure:
 {
@@ -967,7 +997,7 @@ Return a JSON object with this structure:
   "summary": "Brief description of what will be done",
   "steps": [
     {
-      "type": "calendar|task|contact|analysis|email",
+      "type": "calendar|task|contact|analysis|email|n8n_agent",
       "action": "specific_action",
       "params": { "key": "value" },
       "description": "What this step does",
@@ -1063,6 +1093,102 @@ Reference the following email actions and their parameters:
         state: PlanState.CREATED,
       };
     }
+  }
+
+  /**
+   * Determine if message should use n8n agents based on complexity and intent
+   */
+  private shouldUseN8nAgent(
+    message: string, 
+    rdfInsights: any,
+    entities: CachedEntity[]
+  ): boolean {
+    console.log(`[ActionPlanner] 🤔 Analyzing n8n routing for: "${message.substring(0, 50)}..."`);
+    
+    // Factors for n8n routing:
+    
+    // 1. Message complexity (multiple verbs, cross-service coordination)
+    const wordCount = message.split(' ').length;
+    const hasMultipleVerbs = (message.match(/\b(send|create|find|search|schedule|update|analyze|research|compose|coordinate|optimize)\b/gi) || []).length > 1;
+    
+    // 2. RDF-detected intent analysis
+    const primaryIntent = rdfInsights?.ai_reasoning?.intent_analysis?.primary_intent;
+    const complexIntents = ['workflow_automation', 'research_task', 'multi_service_coordination', 'information_seeking'];
+    const isComplexIntent = complexIntents.includes(primaryIntent);
+    
+    // 3. Web/research component detection
+    const hasWebComponent = /\b(research|search|find information|look up|what is|how to|latest|trends|news)\b/i.test(message);
+    const hasYouTubeComponent = /\b(youtube|video|tutorial|watch|learn|course|lesson)\b/i.test(message);
+    
+    // 4. Cross-service coordination indicators
+    const hasCrossService = this.detectCrossServiceNeed(message);
+    
+    // 5. AI reasoning requirement indicators
+    const needsAIReasoning = /\b(smart|intelligent|analyze|summarize|recommend|suggest|optimize|professional|context)\b/i.test(message);
+    
+    // 6. Multi-step workflow indicators
+    const hasWorkflowKeywords = /\b(and then|after that|also|plus|additionally|coordinate|automate)\b/i.test(message);
+    
+    // Decision logic with weighted scoring
+    const complexityScore = (
+      (wordCount > 10 ? 1 : 0) +
+      (hasMultipleVerbs ? 1 : 0) +
+      (isComplexIntent ? 2 : 0) +
+      (hasWebComponent ? 2 : 0) +
+      (hasYouTubeComponent ? 2 : 0) +
+      (hasCrossService ? 2 : 0) +
+      (needsAIReasoning ? 1 : 0) +
+      (hasWorkflowKeywords ? 1 : 0)
+    );
+    
+    // Threshold: Use n8n for complexity score >= 2
+    const shouldUseN8n = complexityScore >= 2;
+    
+    console.log(`[ActionPlanner] 🤔 n8n routing analysis:`);
+    console.log(`[ActionPlanner] 📊 Complexity score: ${complexityScore} (threshold: 2)`);
+    console.log(`[ActionPlanner] 🎯 Decision: ${shouldUseN8n ? 'USE n8n Agent' : 'USE Local System'}`);
+    console.log(`[ActionPlanner] 📈 Factors: words=${wordCount}, multiVerb=${hasMultipleVerbs}, intent=${primaryIntent}, web=${hasWebComponent}, youtube=${hasYouTubeComponent}, cross=${hasCrossService}, ai=${needsAIReasoning}, workflow=${hasWorkflowKeywords}`);
+    
+    return shouldUseN8n;
+  }
+
+  /**
+   * Detect patterns that require multiple service coordination
+   */
+  private detectCrossServiceNeed(message: string): boolean {
+    const crossServicePatterns = [
+      // Email + Calendar coordination
+      /email.*calendar/i,
+      /calendar.*email/i,
+      /schedule.*email/i,
+      /meeting.*email/i,
+      
+      // Task + Email coordination
+      /task.*email/i,
+      /email.*task/i,
+      /remind.*email/i,
+      
+      // Contact + Email coordination
+      /contact.*email/i,
+      /email.*contact/i,
+      
+      // Research + Action coordination
+      /research.*email/i,
+      /research.*create/i,
+      /find.*send/i,
+      /search.*schedule/i,
+      
+      // Multi-action patterns
+      /find.*create/i,
+      /search.*send/i,
+      /analyze.*schedule/i,
+      /summarize.*email/i,
+    ];
+    
+    const hasCrossService = crossServicePatterns.some(pattern => pattern.test(message));
+    console.log(`[ActionPlanner] 🔗 Cross-service coordination detected: ${hasCrossService}`);
+    
+    return hasCrossService;
   }
 
   /**
