@@ -86,7 +86,7 @@ export class N8nAgentStepExecutor extends BaseStepExecutor {
       }
       
       // Return error result if no fallback possible
-      return this.createStepResult(
+      const errorResult = this.createStepResult(
         step,
         false,
         undefined,
@@ -96,6 +96,21 @@ export class N8nAgentStepExecutor extends BaseStepExecutor {
         false,
         null
       );
+
+      // Add error-specific properties
+      errorResult.category = ResponseCategory.N8N_AGENT_RESPONSE;
+      errorResult.uiData = {
+        title: 'n8n Agent Error',
+        subtitle: step.action,
+        content: error.message,
+        icon: '❌',
+        metadata: {
+          error: error.message,
+          stepId: step.id,
+        }
+      };
+
+      return errorResult;
     }
   }
 
@@ -145,7 +160,7 @@ export class N8nAgentStepExecutor extends BaseStepExecutor {
     
     console.log(`[N8nAgentExecutor] 📊 Parsing response: ${response.agent} → ${category}`);
     
-    return this.createStepResult(
+    const baseResult = this.createStepResult(
       step,
       response.success,
       response.result,
@@ -155,24 +170,28 @@ export class N8nAgentStepExecutor extends BaseStepExecutor {
       response.error,
       response.success ? StepState.COMPLETED : StepState.FAILED,
       false, // n8n handles auth internally
-      null,
-      category,
-      response.result, // structuredData
-      {
-        title: `${response.agent} Result`,
-        subtitle: response.action,
-        content: response.success ? 'Operation completed successfully' : response.error,
-        icon: this.getAgentIcon(response.agent),
-        actions: this.generateAgentActions(response),
-        metadata: {
-          executionTime: response.execution_time,
-          agent: response.agent,
-          action: response.action,
-          requestId: response.metadata?.requestId,
-          confidence: response.metadata?.confidence,
-        }
-      }
+      null
     );
+
+    // Add n8n-specific properties
+    baseResult.category = category;
+    baseResult.structuredData = response.result;
+    baseResult.uiData = {
+      title: `${response.agent} Result`,
+      subtitle: response.action,
+      content: response.success ? 'Operation completed successfully' : response.error,
+      icon: this.getAgentIcon(response.agent),
+      actions: this.generateAgentActions(response),
+      metadata: {
+        executionTime: response.execution_time,
+        agent: response.agent,
+        action: response.action,
+        requestId: response.metadata?.requestId,
+        confidence: response.metadata?.confidence,
+      }
+    };
+
+    return baseResult;
   }
 
   /**

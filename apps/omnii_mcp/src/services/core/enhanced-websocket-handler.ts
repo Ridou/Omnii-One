@@ -13,6 +13,8 @@ import {
   PlanState,
   ExecutionContextType,
   BrainMemoryContext,
+  ResponseCategory,
+  StepResult,
 } from "../../types/action-planning.types";
 import { TimezoneManager } from "../integrations/timezone-manager";
 import { UnifiedGoogleManager } from "../integrations/unified-google-manager";
@@ -253,43 +255,79 @@ export class EnhancedWebSocketHandler {
     }
 
     try {
-      console.log(`[EnhancedWebSocket] 🧠 Processing like ChatGPT: "${payload.message}"`);
+      console.log(`[EnhancedWebSocket] 🧠 Processing message: "${payload.message}"`);
 
-      // Step 1: Immediate executive assistant response (no waiting for context)
-      await this.sendExecutiveAssistantResponse(
-        payload.userId, 
-        payload.message
-      );
+      // Step 1: Quick RDF analysis to determine routing
+      const rdfInsights = await this.performQuickRDFAnalysis(payload.message);
+      
+      // Step 2: Check if this should route to n8n agents (complex automation)
+      const shouldUseN8n = this.shouldRouteToN8nAgent(payload.message, rdfInsights);
+      
+      if (shouldUseN8n) {
+        console.log(`[EnhancedWebSocket] 🤖 Routing to n8n Agent Swarm for complex automation`);
+        
+        // For n8n requests, execute immediately and return the result
+        const cachedData = await this.loadCachedDataForUser(payload.userId);
+        const relevantContext = await this.contextEngine.analyzeRelevantContext(
+          payload.message,
+          rdfInsights,
+          cachedData
+        );
+        
+        const result = await this.executeWithEnhancedContext(
+          payload.message,
+          payload.userId,
+          payload.localDatetime,
+          relevantContext,
+          undefined,
+          rdfInsights
+        );
+        
+        console.log(`[EnhancedWebSocket] 🤖 n8n execution completed, returning result`);
+        return result;
+        
+      } else {
+        console.log(`[EnhancedWebSocket] 💼 Using executive assistant flow for simple request`);
+        
+        // Step 1: Immediate executive assistant response (no waiting for context)
+        await this.sendExecutiveAssistantResponse(
+          payload.userId, 
+          payload.message
+        );
 
-      // Step 2: Background context loading and RDF analysis (async)
-      const [rdfInsights, cachedData] = await Promise.all([
-        this.performQuickRDFAnalysis(payload.message),
-        this.loadCachedDataForUser(payload.userId)
-      ]);
+        // Step 2: Background context loading and analysis
+        const cachedData = await this.loadCachedDataForUser(payload.userId);
+        const relevantContext = await this.contextEngine.analyzeRelevantContext(
+          payload.message,
+          rdfInsights,
+          cachedData
+        );
 
-      // Step 3: Analyze context relevance
-      const relevantContext = await this.contextEngine.analyzeRelevantContext(
-        payload.message,
-        rdfInsights,
-        cachedData
-      );
+        // Step 3: Send context dropdown (asynchronously, hidden by default)
+        if (relevantContext.totalRelevanceScore > 0.2) {
+          await this.sendContextDropdown(payload.userId, relevantContext, rdfInsights);
+        }
 
-      // Step 4: Send context dropdown (asynchronously, hidden by default)
-      if (relevantContext.totalRelevanceScore > 0.2) {
-        await this.sendContextDropdown(payload.userId, relevantContext, rdfInsights);
+        // Step 4: Execute actual actions (in background) and send results as follow-up messages
+        this.executeWithEnhancedContext(
+          payload.message,
+          payload.userId,
+          payload.localDatetime,
+          relevantContext,
+          undefined,
+          rdfInsights
+        ).then((result: any) => {
+          console.log(`[EnhancedWebSocket] 🔍 Background execution completed, checking for results...`);
+          
+          // Send any action results as follow-up
+          if (result && result.data) {
+            console.log(`[EnhancedWebSocket] 📤 Sending action result as follow-up message`);
+            this.sendToClient(payload.userId, result);
+          }
+        }).catch((error: any) => {
+          console.warn(`[EnhancedWebSocket] ⚠️ Background action execution failed:`, error);
+        });
       }
-
-      // Step 5: Execute actual actions if needed (in background, don't return result)
-      this.executeWithEnhancedContext(
-        payload.message,
-        payload.userId,
-        payload.localDatetime,
-        relevantContext,
-        undefined,
-        rdfInsights
-      ).catch((error: any) => {
-        console.warn(`[EnhancedWebSocket] ⚠️ Background action execution failed:`, error);
-      });
 
       // Return simple success - executive response already sent
       console.log(`[EnhancedWebSocket] ✅ Executive assistant flow completed`);
@@ -1412,5 +1450,120 @@ Respond immediately with executive-level insight, even without specific data. Us
     ];
     
     return stepResult.category ? n8nCategories.includes(stepResult.category) : false;
+  }
+
+  /**
+   * Check if execution result contains n8n agent responses
+   */
+  private containsN8nAgentResponse(result: any): boolean {
+    // Check if the result itself is an n8n response
+    if (result.data?.metadata?.agent || result.data?.category?.includes('n8n')) {
+      return true;
+    }
+    
+    // Check if result has step results with n8n responses
+    if (result.stepResults && Array.isArray(result.stepResults)) {
+      return result.stepResults.some((stepResult: any) => this.isN8nAgentResponse(stepResult));
+    }
+    
+    // Check for n8n response indicators in data
+    const n8nIndicators = [
+      'n8n_agent', 'web_research', 'youtube_search', 'workflow_coordination', 'agent_automation'
+    ];
+    
+    const resultString = JSON.stringify(result).toLowerCase();
+    return n8nIndicators.some(indicator => resultString.includes(indicator));
+  }
+
+  /**
+   * Determine if message should route to n8n agents (same logic as ActionPlanner)
+   */
+  private shouldRouteToN8nAgent(message: string, rdfInsights: any): boolean {
+    console.log(`[EnhancedWebSocket] 🤔 Analyzing n8n routing for: "${message.substring(0, 50)}..."`);
+    
+    // Factors for n8n routing (same as ActionPlanner logic):
+    
+    // 1. Message complexity
+    const wordCount = message.split(' ').length;
+    const hasMultipleVerbs = (message.match(/\b(send|create|find|search|schedule|update|analyze|research|compose|coordinate|optimize)\b/gi) || []).length > 1;
+    
+    // 2. RDF-detected intent analysis
+    const primaryIntent = rdfInsights?.ai_reasoning?.intent_analysis?.primary_intent;
+    const complexIntents = ['workflow_automation', 'research_task', 'multi_service_coordination', 'information_seeking'];
+    const isComplexIntent = complexIntents.includes(primaryIntent);
+    
+    // 3. Web/research component detection
+    const hasWebComponent = /\b(research|search|find information|look up|what is|how to|latest|trends|news)\b/i.test(message);
+    const hasYouTubeComponent = /\b(youtube|video|tutorial|watch|learn|course|lesson)\b/i.test(message);
+    
+    // 4. Cross-service coordination indicators
+    const hasCrossService = this.detectCrossServiceNeed(message);
+    
+    // 5. AI reasoning requirement indicators
+    const needsAIReasoning = /\b(smart|intelligent|analyze|summarize|recommend|suggest|optimize|professional|context)\b/i.test(message);
+    
+    // 6. Multi-step workflow indicators
+    const hasWorkflowKeywords = /\b(and then|after that|also|plus|additionally|coordinate|automate)\b/i.test(message);
+    
+    // Decision logic with weighted scoring
+    const complexityScore = (
+      (wordCount > 10 ? 1 : 0) +
+      (hasMultipleVerbs ? 1 : 0) +
+      (isComplexIntent ? 2 : 0) +
+      (hasWebComponent ? 2 : 0) +
+      (hasYouTubeComponent ? 2 : 0) +
+      (hasCrossService ? 2 : 0) +
+      (needsAIReasoning ? 1 : 0) +
+      (hasWorkflowKeywords ? 1 : 0)
+    );
+    
+    // Threshold: Use n8n for complexity score >= 1 (lowered for testing)
+    const shouldUseN8n = complexityScore >= 1;
+    
+    console.log(`[EnhancedWebSocket] 🤔 n8n routing analysis:`);
+    console.log(`[EnhancedWebSocket] 📊 Complexity score: ${complexityScore} (threshold: 1)`);
+    console.log(`[EnhancedWebSocket] 🎯 Decision: ${shouldUseN8n ? 'USE n8n Agent' : 'USE Executive Assistant'}`);
+    console.log(`[EnhancedWebSocket] 📈 Factors: words=${wordCount}, multiVerb=${hasMultipleVerbs}, intent=${primaryIntent}, web=${hasWebComponent}, youtube=${hasYouTubeComponent}, cross=${hasCrossService}, ai=${needsAIReasoning}, workflow=${hasWorkflowKeywords}`);
+    
+    return shouldUseN8n;
+  }
+
+  /**
+   * Detect patterns that require multiple service coordination
+   */
+  private detectCrossServiceNeed(message: string): boolean {
+    const crossServicePatterns = [
+      // Email + Calendar coordination
+      /email.*calendar/i,
+      /calendar.*email/i,
+      /schedule.*email/i,
+      /meeting.*email/i,
+      
+      // Task + Email coordination
+      /task.*email/i,
+      /email.*task/i,
+      /remind.*email/i,
+      
+      // Contact + Email coordination
+      /contact.*email/i,
+      /email.*contact/i,
+      
+      // Research + Action coordination
+      /research.*email/i,
+      /research.*create/i,
+      /find.*send/i,
+      /search.*schedule/i,
+      
+      // Multi-action patterns
+      /find.*create/i,
+      /search.*send/i,
+      /analyze.*schedule/i,
+      /summarize.*email/i,
+    ];
+    
+    const hasCrossService = crossServicePatterns.some(pattern => pattern.test(message));
+    console.log(`[EnhancedWebSocket] 🔗 Cross-service coordination detected: ${hasCrossService}`);
+    
+    return hasCrossService;
   }
 } 

@@ -80,6 +80,7 @@ export class N8nAgentClient {
     const startTime = Date.now();
     console.log(`[N8nAgentClient] 🤖 Sending request to Agent Swarm: "${request.message.substring(0, 50)}..."`);
     console.log(`[N8nAgentClient] 👤 User: ${request.user_id}, Agent: ${request.agent_type || 'auto'}`);
+    console.log(`[N8nAgentClient] 📤 Full request:`, JSON.stringify(request, null, 2));
     
     // Validate configuration
     if (!N8nConfigManager.validateConfig()) {
