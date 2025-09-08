@@ -208,7 +208,10 @@ export class EnhancedWebSocketHandler {
       switch (message.type) {
         case WebSocketMessageType.COMMAND:
           console.log(`[EnhancedWebSocket] 🚀 Processing context-aware command:`, message.payload);
-          return await this.processContextAwareCommand(message.payload);
+          console.log(`[EnhancedWebSocket] 🔍 About to call processContextAwareCommand...`);
+          const result = await this.processContextAwareCommand(message.payload);
+          console.log(`[EnhancedWebSocket] 🔍 processContextAwareCommand completed:`, result);
+          return result;
 
         case WebSocketMessageType.SYSTEM:
           console.log(`[EnhancedWebSocket] 🔧 Processing system message:`, message.payload);
@@ -246,7 +249,10 @@ export class EnhancedWebSocketHandler {
   private async processContextAwareCommand(
     payload: CommandPayload
   ): Promise<WebSocketResponse | any> {
+    console.log(`[EnhancedWebSocket] 🔥 ENTERING processContextAwareCommand with payload:`, payload);
+    
     if (!payload?.userId) {
+      console.log(`[EnhancedWebSocket] ❌ Missing userId in command`);
       return {
         status: WebSocketResponseStatus.ERROR,
         data: { error: "Missing userId in command" },
@@ -256,6 +262,7 @@ export class EnhancedWebSocketHandler {
 
     try {
       console.log(`[EnhancedWebSocket] 🧠 Processing message: "${payload.message}"`);
+      console.log(`[EnhancedWebSocket] 👤 User ID: ${payload.userId}`);
 
       // Step 1: Quick RDF analysis to determine routing
       const rdfInsights = await this.performQuickRDFAnalysis(payload.message);
