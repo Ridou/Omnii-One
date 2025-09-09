@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChatService } from '~/services/chat/ChatService';
+import { HttpChatService } from '~/services/chat/HttpChatService';
 import { useAuth } from '~/context/AuthContext';   
 import type { ChatMessage } from '~/types/chat';
 import type { ChatServiceState } from '~/types/chat-service.types';
 import { getWebSocketUrl } from '~/lib/env';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+
+// Feature flag for HTTP vs WebSocket mode
+const USE_HTTP_CHAT = process.env.EXPO_PUBLIC_USE_HTTP_CHAT === 'true' || false;
 
 const initialState: ChatServiceState = {
   messages: [],
@@ -18,158 +22,201 @@ const initialState: ChatServiceState = {
 export function useChat() {
   const { user, session } = useAuth();
   const chatServiceRef = useRef<ChatService | null>(null);
+  const httpChatServiceRef = useRef<HttpChatService | null>(null);
   const [state, setState] = useState<ChatServiceState>(initialState);
 
   useEffect(() => {
     
     if (!user || !session) {
       // Clean up if user logs out
-      if (chatServiceRef.current) {
-        chatServiceRef.current.disconnect();
-        chatServiceRef.current = null;
-        setState(initialState);
+      if (USE_HTTP_CHAT) {
+        if (httpChatServiceRef.current) {
+          httpChatServiceRef.current.disconnect();
+          httpChatServiceRef.current = null;
+        }
+      } else {
+        if (chatServiceRef.current) {
+          chatServiceRef.current.disconnect();
+          chatServiceRef.current = null;
+        }
       }
+      setState(initialState);
       return;
     }
     
-    
-    // Initialize chat service with WebSocket URL from environment
-    const wsUrl = getWebSocketUrl();
-
-
-    // For testing, use the test user ID if in development
     const userId = user.id;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    const chatService = new ChatService({
-      url: wsUrl,
-      userId: userId,
-      authToken: session.access_token,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    });
-
-    chatServiceRef.current = chatService;
-
-    // Set up event listeners
-    
-    chatService.on('connected', () => {
-      setState((prev) => ({ ...prev, isConnected: true, error: null }));
-    });
-
-    chatService.on('disconnected', (reason: string) => {
-      setState((prev) => ({ ...prev, isConnected: false }));
-    });
-
-    chatService.on('message', (message: ChatMessage) => {
+    if (USE_HTTP_CHAT) {
+      console.log('[useChat] Initializing HTTP Chat Service');
       
-      // 🔍 DEBUG: Log all incoming messages to see executive assistant responses
-      console.log('🔍 INCOMING MESSAGE DEBUG:');
-      console.log('  - Type:', message.type);
-      console.log('  - Sender:', message.sender);
-      console.log('  - Content preview:', message.content?.substring(0, 100));
-      console.log('  - Metadata action:', message.metadata?.action);
-      console.log('  - Metadata responseType:', message.metadata?.responseType);
-      console.log('  - Has executive metadata:', !!message.metadata?.action?.includes('executive'));
-      console.log('  - Full metadata keys:', message.metadata ? Object.keys(message.metadata) : 'none');
-      
-      // NEW: Log complete raw message structure
-      // Message details logged for debugging
-      
-      // NEW: Deep analysis of metadata
-      if (message.metadata) {
-        
-        // NEW: Log componentData structure if present
-        if (message.metadata.componentData) {
-          
-          // Special handling for email data - check if it's actually email data
-          if ('emails' in message.metadata.componentData && 
-              Array.isArray(message.metadata.componentData.emails)) {
-            const emailData = message.metadata.componentData as any; // Type assertion for logging
-            
-            if (emailData.emails && emailData.emails.length > 0) {
-              // Email data structure logged for debugging
-            }
-          }
-          
-          // Log full componentData structure
-        }
-        
-        // NEW: Log unifiedResponse if present
-        if (message.metadata.unifiedResponse) {
-        }
-      }
-      
-      
-      setState((prev) => {
-        // Message state updates logged for debugging
-        
-        const newMessages = [...prev.messages, message];
-        
-        return {
-          ...prev,
-          messages: newMessages,
-          isTyping: false,
-        };
+      // Initialize HTTP chat service
+      const httpChatService = new HttpChatService({
+        userId: userId,
+        authToken: session.access_token,
+        timezone: timezone,
       });
-    });
 
-    chatService.on('typing', (isTyping: boolean) => {
-      setState((prev) => ({ ...prev, isTyping }));
-    });
+      httpChatServiceRef.current = httpChatService;
 
-    chatService.on('error', (error: Error) => {
-      setState((prev) => ({ ...prev, error: error.message }));
-    });
+      // Set up HTTP event listeners
+      httpChatService.on('connected', () => {
+        setState((prev) => ({ ...prev, isConnected: true, error: null }));
+      });
 
-    chatService.on('authRequired', async (authUrl: string) => {
-      try {
-        // Open OAuth flow in browser
-        const result = await WebBrowser.openAuthSessionAsync(
-          authUrl,
-          Linking.createURL('oauth-callback')
-        );
+      httpChatService.on('disconnected', (reason: string) => {
+        setState((prev) => ({ ...prev, isConnected: false }));
+      });
 
-        if (result.type === 'success') {
-          // OAuth completed, service should auto-retry
+      httpChatService.on('message', (message: ChatMessage) => {
+        setState((prev) => {
+          const existingIndex = prev.messages.findIndex(m => m.id === message.id);
+          
+          if (existingIndex >= 0) {
+            // Update existing message
+            const updatedMessages = [...prev.messages];
+            updatedMessages[existingIndex] = message;
+            return { ...prev, messages: updatedMessages, isTyping: false };
+          } else {
+            // Add new message
+            return {
+              ...prev,
+              messages: [...prev.messages, message],
+              isTyping: false,
+            };
+          }
+        });
+      });
+
+      httpChatService.on('error', (error: Error) => {
+        setState((prev) => ({ ...prev, error: error.message }));
+      });
+
+      // Connect to HTTP service
+      httpChatService.connect();
+
+      // Return cleanup function for HTTP service
+      return () => {
+        httpChatService.disconnect();
+      };
+
+    } else {
+      console.log('[useChat] Initializing WebSocket Chat Service');
+      
+      // Initialize WebSocket chat service (existing logic)
+      const wsUrl = getWebSocketUrl();
+      const chatService = new ChatService({
+        url: wsUrl,
+        userId: userId,
+        authToken: session.access_token,
+        timezone: timezone,
+      });
+
+      chatServiceRef.current = chatService;
+
+      // Set up event listeners
+      
+      chatService.on('connected', () => {
+        setState((prev) => ({ ...prev, isConnected: true, error: null }));
+      });
+
+      chatService.on('disconnected', (reason: string) => {
+        setState((prev) => ({ ...prev, isConnected: false }));
+      });
+
+      chatService.on('message', (message: ChatMessage) => {
+        
+        // 🔍 DEBUG: Log all incoming messages to see executive assistant responses
+        console.log('🔍 INCOMING MESSAGE DEBUG:');
+        console.log('  - Type:', message.type);
+        console.log('  - Sender:', message.sender);
+        console.log('  - Content preview:', message.content?.substring(0, 100));
+        console.log('  - Metadata action:', message.metadata?.action);
+
+        setState((prev) => {
+          const existingIndex = prev.messages.findIndex(m => m.id === message.id);
+          
+          if (existingIndex >= 0) {
+            // Update existing message
+            const updatedMessages = [...prev.messages];
+            updatedMessages[existingIndex] = message;
+            return { ...prev, messages: updatedMessages, isTyping: false };
+          } else {
+            // Add new message
+            return {
+              ...prev,
+              messages: [...prev.messages, message],
+              isTyping: false,
+            };
+          }
+        });
+      });
+
+      chatService.on('typing', (isTyping: boolean) => {
+        setState((prev) => ({ ...prev, isTyping }));
+      });
+
+      chatService.on('error', (error: Error) => {
+        setState((prev) => ({ ...prev, error: error.message }));
+      });
+
+      chatService.on('authRequired', async (authUrl: string) => {
+        try {
+          // Open OAuth flow in browser
+          const result = await WebBrowser.openAuthSessionAsync(
+            authUrl,
+            Linking.createURL('oauth-callback')
+          );
+
+          if (result.type === 'success') {
+            // OAuth completed, service should auto-retry
+          }
+        } catch {
+          setState((prev) => ({
+            ...prev,
+            error: 'Authentication failed. Please try again.',
+          }));
         }
-      } catch (error) {
-        setState((prev) => ({
-          ...prev,
-          error: 'Authentication failed. Please try again.',
-        }));
-      }
-    });
+      });
 
-    // Connect to WebSocket
-    chatService.connect();
+      // Connect to WebSocket
+      chatService.connect();
 
-    // Load initial welcome message
-    const welcomeMessage: ChatMessage = {
-      id: 'welcome',
-      content:
-        "Hello! I'm your AI assistant. I can help you manage your calendar, emails, tasks, and more. What would you like to do today?",
-      sender: 'ai',
-      timestamp: new Date().toISOString(),
-      type: 'text',
-      confidence: 100,
-    };
+      // Load initial welcome message
+      const welcomeMessage: ChatMessage = {
+        id: 'welcome',
+        content:
+          "Hello! I'm your AI assistant. I can help you manage your calendar, emails, tasks, and more. What would you like to do today?",
+        sender: 'ai',
+        timestamp: new Date().toISOString(),
+        type: 'text',
+        confidence: 100,
+      };
 
-    setState((prev) => {
-      // Welcome message state logged for debugging
-      const newState = { ...prev, messages: [welcomeMessage] };
-      return newState;
-    });
+      setState((prev) => {
+        // Welcome message state logged for debugging
+        const newState = { ...prev, messages: [welcomeMessage] };
+        return newState;
+      });
 
-    return () => {
-      chatService.disconnect();
-    };
+      // Return cleanup function for WebSocket service
+      return () => {
+        chatService.disconnect();
+      };
+    }
   }, [user, session]);
 
   const sendMessage = useCallback(async (content: string) => {
     
-    if (!chatServiceRef.current || !content.trim()) {
+    if (!content.trim()) {
       return;
     }
 
+    // Check which service mode we're using
+    const service = USE_HTTP_CHAT ? httpChatServiceRef.current : chatServiceRef.current;
+    if (!service) {
+      return;
+    }
 
     // Optimistically add user message
     const userMessage: ChatMessage = {
@@ -189,8 +236,8 @@ export function useChat() {
     });
 
     try {
-      await chatServiceRef.current.sendMessage(content);
-    } catch (error) {
+      await service.sendMessage(content);
+    } catch {
       setState((prev) => ({
         ...prev,
         error: 'Failed to send message. Please try again.',
@@ -252,8 +299,9 @@ export function useChat() {
   }, [sendMessage, state.isConnected]);
 
   const reconnect = useCallback(() => {
-    if (chatServiceRef.current) {
-      chatServiceRef.current.connect();
+    const service = USE_HTTP_CHAT ? httpChatServiceRef.current : chatServiceRef.current;
+    if (service) {
+      service.connect();
     }
   }, []);
 

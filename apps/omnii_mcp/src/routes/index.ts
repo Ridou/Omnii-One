@@ -5,6 +5,8 @@ import neo4jDirectRoutes from './neo4j-direct';
 import smsRoutes from './sms';
 import rdfRoutes from './rdf';
 import brainRoutes from './brain-monitoring.routes';
+import chatHttpRoutes from './chat-http';
+import n8nWebhookRoutes from './n8n-webhooks';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
 
@@ -67,6 +69,8 @@ export default (app: Elysia) => {
   api.use(smsRoutes);
   api.use(rdfRoutes);
   api.use(brainRoutes);
+  api.use(chatHttpRoutes);
+  api.use(n8nWebhookRoutes);
   
   // Mount the API routes under /api
   return app.use(api);

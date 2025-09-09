@@ -26,6 +26,10 @@ export interface N8nAgentRequest {
     priority?: 'low' | 'normal' | 'high';
     timeout?: number;
     sessionId?: string;
+    callbackUrls?: {
+      progress?: string;
+      response?: string;
+    };
   };
 }
 

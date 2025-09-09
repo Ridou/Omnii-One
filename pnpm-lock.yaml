@@ -305,7 +305,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/validators
       '@supabase/supabase-js':
-        specifier: ^2.49.10
+        specifier: ^2.50.0
         version: 2.50.0(bufferutil@4.0.9)
       '@trpc/server':
         specifier: ^11.1.4
@@ -392,6 +392,9 @@ importers:
       bun-types:
         specifier: latest
         version: 1.2.21(@types/react@19.1.8)
+      eventsource:
+        specifier: ^4.0.0
+        version: 4.0.0
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@22.15.32)(ts-node@10.9.2(@types/node@22.15.32)(typescript@5.8.3))
@@ -5253,6 +5256,10 @@ packages:
   eventsource@3.0.7:
     resolution: {integrity: sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==}
     engines: {node: '>=18.0.0'}
+
+  eventsource@4.0.0:
+    resolution: {integrity: sha512-fvIkb9qZzdMxgZrEQDyll+9oJsyaVvY92I2Re+qK0qEJ+w5s0X3dtz+M0VAPOjP1gtU3iqWyjQ0G3nvd5CLZ2g==}
+    engines: {node: '>=20.0.0'}
 
   evp_bytestokey@1.0.3:
     resolution: {integrity: sha512-/f2Go4TognH/KvCISP7OUsHn85hT9nUkxxA9BEWxFn+Oj9o8ZNLm/40hdlgSLyuOimsrTKLUMEorQexp/aPQeA==}
@@ -14741,6 +14748,10 @@ snapshots:
   eventsource-parser@3.0.2: {}
 
   eventsource@3.0.7:
+    dependencies:
+      eventsource-parser: 3.0.2
+
+  eventsource@4.0.0:
     dependencies:
       eventsource-parser: 3.0.2
 
