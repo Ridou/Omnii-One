@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChatService } from '~/services/chat/ChatService';
 import { HttpChatService } from '~/services/chat/HttpChatService';
+import { DirectN8nChatService } from '~/services/chat/DirectN8nChatService';
 import { useAuth } from '~/context/AuthContext';   
 import type { ChatMessage } from '~/types/chat';
 import type { ChatServiceState } from '~/types/chat-service.types';
@@ -8,8 +9,9 @@ import { getWebSocketUrl } from '~/lib/env';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 
-// Feature flag for HTTP vs WebSocket mode - DISABLED for debugging
-const USE_HTTP_CHAT = false; // process.env.EXPO_PUBLIC_USE_HTTP_CHAT === 'true' || false;
+// Feature flag for chat mode
+const USE_HTTP_CHAT = process.env.EXPO_PUBLIC_USE_HTTP_CHAT === 'true' || false;
+const USE_DIRECT_N8N = process.env.EXPO_PUBLIC_USE_DIRECT_N8N === 'true' || true; // Enable by default
 
 const initialState: ChatServiceState = {
   messages: [],
@@ -23,13 +25,19 @@ export function useChat() {
   const { user, session } = useAuth();
   const chatServiceRef = useRef<ChatService | null>(null);
   const httpChatServiceRef = useRef<HttpChatService | null>(null);
+  const directN8nServiceRef = useRef<DirectN8nChatService | null>(null);
   const [state, setState] = useState<ChatServiceState>(initialState);
 
   useEffect(() => {
     
     if (!user || !session) {
       // Clean up if user logs out
-      if (USE_HTTP_CHAT) {
+      if (USE_DIRECT_N8N) {
+        if (directN8nServiceRef.current) {
+          directN8nServiceRef.current.disconnect();
+          directN8nServiceRef.current = null;
+        }
+      } else if (USE_HTTP_CHAT) {
         if (httpChatServiceRef.current) {
           httpChatServiceRef.current.disconnect();
           httpChatServiceRef.current = null;
@@ -47,7 +55,64 @@ export function useChat() {
     const userId = user.id;
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    if (USE_HTTP_CHAT) {
+    if (USE_DIRECT_N8N) {
+      console.log('[useChat] Initializing Direct n8n Chat Service');
+      
+      // Initialize Direct n8n chat service
+      const directN8nService = new DirectN8nChatService({
+        userId: userId,
+        authToken: session.access_token,
+        timezone: timezone,
+      });
+
+      directN8nServiceRef.current = directN8nService;
+
+      // Set up Direct n8n event listeners
+      directN8nService.on('connected', () => {
+        setState((prev) => ({ ...prev, isConnected: true, error: null }));
+      });
+
+      directN8nService.on('disconnected', (reason: string) => {
+        setState((prev) => ({ ...prev, isConnected: false }));
+      });
+
+      directN8nService.on('message', (message: ChatMessage) => {
+        setState((prev) => {
+          const existingIndex = prev.messages.findIndex(m => m.id === message.id);
+          
+          if (existingIndex >= 0) {
+            // Update existing message
+            const updatedMessages = [...prev.messages];
+            updatedMessages[existingIndex] = message;
+            return { ...prev, messages: updatedMessages, isTyping: false };
+          } else {
+            // Add new message
+            return {
+              ...prev,
+              messages: [...prev.messages, message],
+              isTyping: false,
+            };
+          }
+        });
+      });
+
+      directN8nService.on('typing', (isTyping: boolean) => {
+        setState((prev) => ({ ...prev, isTyping }));
+      });
+
+      directN8nService.on('error', (error: Error) => {
+        setState((prev) => ({ ...prev, error: error.message }));
+      });
+
+      // Connect to Direct n8n service
+      directN8nService.connect();
+
+      // Return cleanup function for Direct n8n service
+      return () => {
+        directN8nService.disconnect();
+      };
+
+    } else if (USE_HTTP_CHAT) {
       console.log('[useChat] Initializing HTTP Chat Service');
       
       // Initialize HTTP chat service
@@ -213,7 +278,11 @@ export function useChat() {
     }
 
     // Check which service mode we're using
-    const service = USE_HTTP_CHAT ? httpChatServiceRef.current : chatServiceRef.current;
+    const service = USE_DIRECT_N8N 
+      ? directN8nServiceRef.current 
+      : USE_HTTP_CHAT 
+        ? httpChatServiceRef.current 
+        : chatServiceRef.current;
     if (!service) {
       return;
     }
@@ -299,7 +368,11 @@ export function useChat() {
   }, [sendMessage, state.isConnected]);
 
   const reconnect = useCallback(() => {
-    const service = USE_HTTP_CHAT ? httpChatServiceRef.current : chatServiceRef.current;
+    const service = USE_DIRECT_N8N 
+      ? directN8nServiceRef.current 
+      : USE_HTTP_CHAT 
+        ? httpChatServiceRef.current 
+        : chatServiceRef.current;
     if (service) {
       service.connect();
     }

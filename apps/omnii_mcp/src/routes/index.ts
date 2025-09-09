@@ -7,6 +7,7 @@ import rdfRoutes from './rdf';
 import brainRoutes from './brain-monitoring.routes';
 import chatHttpRoutes from './chat-http';
 import n8nWebhookRoutes from './n8n-webhooks';
+import chatDirectN8nRoutes from './chat-direct-n8n';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
 
@@ -71,6 +72,7 @@ export default (app: Elysia) => {
   api.use(brainRoutes);
   api.use(chatHttpRoutes);
   api.use(n8nWebhookRoutes);
+  api.use(chatDirectN8nRoutes);
   
   // Mount the API routes under /api
   return app.use(api);

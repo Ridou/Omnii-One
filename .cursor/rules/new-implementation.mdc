@@ -70,18 +70,38 @@ private connections = new Map<string, ElysiaWebSocket>() // ❌ All users in one
 - ✅ Chat history persistence
 - ✅ Better n8n integration
 
+## 🚨 **ACTUAL PROBLEM IDENTIFIED FROM MOBILE APP**
+
+### **Current Issue (From Screenshot):**
+- ❌ **Generic Responses**: Chat shows "Executive assistant response sent" instead of real data
+- ❌ **Wrong Routing**: Simple requests like "What's my schedule like today?" should go to n8n Agent Swarm
+- ❌ **Executive Flow Problem**: Current system uses executive assistant flow instead of n8n routing
+
+### **Working n8n Command (User Provided):**
+```bash
+curl -X POST https://omnii-agent-swarm-production.up.railway.app/webhook/agent-input \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Show me my latest emails",
+    "user_id": "cd9bdc60-35af-4bb6-b87e-1932e96fb354"
+  }'
+```
+
+### **What Should Happen:**
+- ✅ **Direct n8n Routing**: Simple requests should hit n8n Agent Swarm directly
+- ✅ **Structured Responses**: Get actual email/calendar/task data, not generic messages
+- ✅ **Use Existing Components**: Mobile app already has n8n components ready
+
 ## 🎯 **Detailed Architecture Comparison**
 
-| Feature | WebSocket (Current) | HTTP + SSE (Proposed) |
+| Feature | WebSocket (Current) | Direct n8n HTTP (Fixed) |
 |---------|--------------------|-----------------------|
-| **Multiple Users** | ❌ Connection map per instance | ✅ Stateless, any instance |
-| **Railway Scaling** | ❌ Connections lost on scale | ✅ Seamless scaling |
-| **Chat Persistence** | ❌ Memory only, resets | ✅ Database stored |
-| **n8n Integration** | ❌ Instance-specific | ✅ Any instance can handle |
-| **Connection Reliability** | ❌ Drops on navigation | ✅ Stateless HTTP calls |
-| **Real-time Updates** | ✅ Instant via WebSocket | ✅ Near-instant via SSE |
-| **Complexity** | ❌ High (connection mgmt) | ✅ Lower (stateless) |
-| **Mobile Battery** | ❌ Constant connection | ✅ Only when needed |
+| **Message Routing** | ❌ Executive assistant flow | ✅ Direct to n8n Agent Swarm |
+| **Response Quality** | ❌ Generic "response sent" | ✅ Structured data responses |
+| **Chat Shortcuts** | ❌ Not working properly | ✅ Direct n8n integration |
+| **Railway Scaling** | ❌ Connections lost on scale | ✅ Stateless HTTP to n8n |
+| **Data Freshness** | ❌ Cached data only | ✅ Real-time via n8n agents |
+| **User Experience** | ❌ Generic responses | ✅ Rich, actionable responses |
 
 ## 🚀 **Recommended Architecture: HTTP + SSE**
 
@@ -107,34 +127,73 @@ private connections = new Map<string, ElysiaWebSocket>() // ❌ All users in one
 - 🔄 **Response Speed**: HTTP can be faster than WebSocket for single requests
 - 🔄 **UI Experience**: Same chat interface, different backend
 
-## 📋 **Implementation Plan Based on Current Codebase**
+## 📋 **UPDATED Implementation Plan - Fix n8n Routing**
 
-### **Current Architecture Analysis:**
-- ✅ **Mobile App**: Uses `ChatService` class with WebSocket connection
-- ✅ **Backend**: `EnhancedWebSocketHandler` processes messages via WebSocket
-- ✅ **Database**: Has Drizzle ORM with PostgreSQL (Vercel Postgres)
-- ✅ **Brain Memory**: `BrainConversationManager` stores chat in Neo4j
-- ✅ **Action Planning**: `ActionPlanner` processes messages and creates steps
-- ✅ **n8n Integration**: Already implemented with routing logic
+### **Root Cause Analysis:**
+- ❌ **Wrong Routing Logic**: `EnhancedWebSocketHandler.shouldRouteToN8nAgent()` has too high complexity threshold
+- ❌ **Executive Flow Overuse**: Simple requests like "show my calendar" use executive flow instead of n8n
+- ❌ **Missing Direct Integration**: Chat doesn't directly call n8n Agent Swarm like the working curl command
 
-### **Phase 1: Add HTTP Chat Endpoints (Week 1)**
+### **SOLUTION: Direct n8n Integration for ALL Requests**
 
-#### **1.1 Create New HTTP Routes (apps/omnii_mcp/src/routes/)**
-- Add `chat-http.ts` route file alongside existing routes
-- Integrate with existing `ActionPlanner` and `EnhancedWebSocketHandler` logic
-- Use existing `BrainConversationManager` for chat persistence
-- Reuse existing n8n integration from `n8n-agent-executor.ts`
+#### **Option A: Route ALL Requests to n8n (RECOMMENDED)**
+Instead of complex routing logic, route ALL chat requests directly to n8n Agent Swarm:
 
-#### **1.2 Database Schema Addition (packages/db/src/)**
-- Add chat tables to existing `schema.ts` file
-- Use existing Drizzle ORM setup
-- Integrate with current user authentication system
+**Current Flow (Broken):**
+```
+Mobile App → WebSocket → EnhancedWebSocketHandler → Executive Assistant → Generic Response
+```
 
-#### **1.3 Leverage Existing Systems**
-- **Chat Persistence**: Use existing `BrainConversationManager.storeChatConversation()` 
-- **Message Processing**: Reuse existing `ActionPlanner.createPlan()` logic
-- **n8n Integration**: Use existing `N8nAgentStepExecutor` and routing
-- **Database**: Add chat tables to existing Drizzle schema in `packages/db/src/schema.ts`
+**Fixed Flow:**
+```
+Mobile App → HTTP → Direct n8n Agent Swarm → Rich Structured Response → Mobile Components
+```
+
+#### **Option B: Fix WebSocket Routing Threshold**
+Lower the complexity threshold so simple requests also go to n8n:
+- Change `shouldRouteToN8nAgent` threshold from 2 to 0
+- Route "show my calendar", "list emails" to n8n Agent Swarm
+- Keep executive responses for very simple queries only
+
+### **Phase 1: Implement Direct n8n Integration**
+
+#### **1.1 Create Direct n8n Chat Route**
+```typescript
+// apps/omnii_mcp/src/routes/chat-direct-n8n.ts
+app.post('/api/chat/n8n-direct', async ({ body }) => {
+  const { userId, message } = body;
+  
+  // Call n8n Agent Swarm directly (like the working curl command)
+  const response = await fetch('https://omnii-agent-swarm-production.up.railway.app/webhook/agent-input', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: message,
+      user_id: userId
+    })
+  });
+  
+  return await response.json();
+});
+```
+
+#### **1.2 Update Mobile App to Use Direct n8n**
+```typescript
+// apps/omnii-mobile/src/services/chat/ChatService.ts
+async sendMessage(content: string) {
+  // Send directly to n8n Agent Swarm instead of WebSocket
+  const response = await fetch(`${baseUrl}/api/chat/n8n-direct`, {
+    method: 'POST',
+    body: JSON.stringify({
+      userId: this.config.userId,
+      message: content
+    })
+  });
+  
+  const data = await response.json();
+  // Process n8n response and display with existing n8n components
+}
+```
 
 ### **Phase 2: Enhance Existing n8n Integration (Week 2)**
 
