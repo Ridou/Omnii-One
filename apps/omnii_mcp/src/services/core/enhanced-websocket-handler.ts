@@ -324,12 +324,26 @@ export class EnhancedWebSocketHandler {
           undefined,
           rdfInsights
         ).then((result: any) => {
-          console.log(`[EnhancedWebSocket] 🔍 Background execution completed, checking for results...`);
+          console.log(`[EnhancedWebSocket] 🔍 Background execution completed!`);
+          console.log(`[EnhancedWebSocket] 🔍 Result type:`, typeof result);
+          console.log(`[EnhancedWebSocket] 🔍 Result keys:`, result ? Object.keys(result) : 'null');
+          console.log(`[EnhancedWebSocket] 🔍 Has data:`, !!result?.data);
+          console.log(`[EnhancedWebSocket] 🔍 Has unifiedResponse:`, !!result?.unifiedResponse);
           
           // Send any action results as follow-up
-          if (result && result.data) {
+          if (result && (result.data || result.unifiedResponse)) {
             console.log(`[EnhancedWebSocket] 📤 Sending action result as follow-up message`);
-            this.sendToClient(payload.userId, result);
+            
+            // If we have a unifiedResponse, send that (contains structured data)
+            if (result.unifiedResponse) {
+              console.log(`[EnhancedWebSocket] 🎯 Sending UnifiedToolResponse with structured data`);
+              this.sendToClient(payload.userId, result.unifiedResponse);
+            } else if (result.data) {
+              console.log(`[EnhancedWebSocket] 📋 Sending regular result data`);
+              this.sendToClient(payload.userId, result);
+            }
+          } else {
+            console.log(`[EnhancedWebSocket] ⚠️ No follow-up data to send (result was empty or invalid)`);
           }
         }).catch((error: any) => {
           console.warn(`[EnhancedWebSocket] ⚠️ Background action execution failed:`, error);
@@ -398,29 +412,100 @@ export class EnhancedWebSocketHandler {
     contacts?: ContactData[];
     concepts?: CachedConcept[];
   }> {
-    console.log(`[EnhancedWebSocket] 🔄 Loading cached data for context analysis`);
+    console.log(`[EnhancedWebSocket] 🔄 Loading REAL cached data for user: ${userId}`);
     
     try {
-      // For now, let's load brain concepts and return basic structure
-      // TODO: Integrate with actual cache data from Supabase brain_memory_cache
-      const concepts = await this.loadBrainConcepts(userId);
+      // Load actual cached data from your brain memory cache system
+      const [concepts, cachedTasks, cachedEmails, cachedCalendar, cachedContacts] = await Promise.all([
+        this.loadBrainConcepts(userId).catch(() => []),
+        this.loadCachedTasks(userId).catch(() => []),
+        this.loadCachedEmails(userId).catch(() => []),
+        this.loadCachedCalendar(userId).catch(() => []),
+        this.loadCachedContacts(userId).catch(() => [])
+      ]);
 
       const cachedData: any = {
-        // Placeholder data - in full implementation these would come from cache
-        emails: [],
-        tasks: [],
-        calendar: [],
-        contacts: [],
+        emails: cachedEmails,
+        tasks: cachedTasks,
+        calendar: cachedCalendar,
+        contacts: cachedContacts,
         concepts: concepts
       };
 
-      console.log(`[EnhancedWebSocket] ✅ Context data loading completed (simplified)`);
-      console.log(`[EnhancedWebSocket] 🧠 Loaded ${concepts.length} brain concepts for context`);
+      console.log(`[EnhancedWebSocket] ✅ REAL cached data loaded:`);
+      console.log(`[EnhancedWebSocket] 📧 Emails: ${cachedEmails.length}`);
+      console.log(`[EnhancedWebSocket] ✅ Tasks: ${cachedTasks.length}`);
+      console.log(`[EnhancedWebSocket] 📅 Calendar: ${cachedCalendar.length}`);
+      console.log(`[EnhancedWebSocket] 👥 Contacts: ${cachedContacts.length}`);
+      console.log(`[EnhancedWebSocket] 🧠 Concepts: ${concepts.length}`);
+      
       return cachedData;
 
     } catch (error) {
       console.error(`[EnhancedWebSocket] ❌ Error loading cached data:`, error);
-      return {};
+      return {
+        emails: [],
+        tasks: [],
+        calendar: [],
+        contacts: [],
+        concepts: []
+      };
+    }
+  }
+
+  /**
+   * Load cached tasks from brain memory cache
+   */
+  private async loadCachedTasks(userId: string): Promise<any[]> {
+    try {
+      // Use the existing ActionPlanner method
+      const taskData = await this.actionPlanner['searchCachedTasks'](userId);
+      return taskData?.taskLists?.flatMap((list: any) => list.tasks || []) || [];
+    } catch (error) {
+      console.error(`[EnhancedWebSocket] Error loading cached tasks:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Load cached emails from brain memory cache
+   */
+  private async loadCachedEmails(userId: string): Promise<any[]> {
+    try {
+      // Use the existing ActionPlanner method
+      const emailData = await this.actionPlanner['searchCachedEmails'](userId);
+      return emailData?.emails || [];
+    } catch (error) {
+      console.error(`[EnhancedWebSocket] Error loading cached emails:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Load cached calendar from brain memory cache
+   */
+  private async loadCachedCalendar(userId: string): Promise<any[]> {
+    try {
+      // Use the existing ActionPlanner method
+      const calendarData = await this.actionPlanner['searchCachedCalendar'](userId);
+      return calendarData?.events || [];
+    } catch (error) {
+      console.error(`[EnhancedWebSocket] Error loading cached calendar:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Load cached contacts from brain memory cache
+   */
+  private async loadCachedContacts(userId: string): Promise<any[]> {
+    try {
+      // Use the existing ActionPlanner method - contacts are handled in entity resolution
+      // For now, return empty array since contacts are loaded differently
+      return [];
+    } catch (error) {
+      console.error(`[EnhancedWebSocket] Error loading cached contacts:`, error);
+      return [];
     }
   }
 

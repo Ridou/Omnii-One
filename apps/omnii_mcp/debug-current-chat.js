@@ -61,16 +61,15 @@ class ChatDebugger {
   async testSingleMessage(message) {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(TEST_CONFIG.websocketUrl);
-      let responseReceived = false;
+      let responseCount = 0;
       let messageTimeout;
 
+      // Wait longer to catch follow-up messages
       messageTimeout = setTimeout(() => {
-        if (!responseReceived) {
-          console.log('⏰ TIMEOUT: No response received within 15 seconds');
-          ws.close();
-          resolve();
-        }
-      }, TEST_CONFIG.timeout);
+        console.log(`⏰ TIMEOUT: Received ${responseCount} responses total`);
+        ws.close();
+        resolve();
+      }, 20000); // Increased to 20 seconds
 
       ws.on('open', () => {
         console.log('🔌 WebSocket connected');
@@ -91,18 +90,29 @@ class ChatDebugger {
       });
 
       ws.on('message', (data) => {
-        responseReceived = true;
-        clearTimeout(messageTimeout);
+        responseCount++;
+        let response;
         
         try {
-          const response = JSON.parse(data.toString());
-          console.log('📥 RESPONSE RECEIVED:');
+          response = JSON.parse(data.toString());
+          console.log(`📥 RESPONSE ${responseCount} RECEIVED:`);
           console.log('  Type:', response.type);
           console.log('  Status:', response.status);
           console.log('  Action:', response.data?.action);
           console.log('  Category:', response.data?.category);
           console.log('  Message preview:', response.data?.message?.substring(0, 100) || 'No message');
-          console.log('  Full response:', JSON.stringify(response, null, 2));
+          
+          // Check for structured data
+          if (response.data?.structured) {
+            console.log('🎯 STRUCTURED DATA FOUND:');
+            console.log('  Structured keys:', Object.keys(response.data.structured));
+            if (response.data.structured.emails) {
+              console.log('  📧 Email count:', response.data.structured.emails.length);
+            }
+            if (response.data.structured.tasks) {
+              console.log('  ✅ Task count:', response.data.structured.tasks.length);
+            }
+          }
           
           // Check if this looks like a proper response
           if (response.type && response.data) {
@@ -111,12 +121,21 @@ class ChatDebugger {
             console.log('❌ INVALID RESPONSE FORMAT');
           }
           
+          // Don't close immediately - wait for potential follow-up messages
+          if (responseCount === 1) {
+            console.log('⏳ Waiting for potential follow-up messages...');
+          }
+          
         } catch (error) {
           console.log('❌ INVALID JSON RESPONSE:', data.toString());
         }
         
-        ws.close();
-        resolve();
+        // Only close after multiple responses or if this is clearly the final response
+        if (responseCount >= 3 || response.type === 'final' || response.data?.final === true) {
+          clearTimeout(messageTimeout);
+          ws.close();
+          resolve();
+        }
       });
 
       ws.on('error', (error) => {
