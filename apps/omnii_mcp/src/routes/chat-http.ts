@@ -54,22 +54,33 @@ export default (app: Elysia) =>
             const { userId, message, sessionId } = body;
             const actualSessionId = sessionId || uuidv4();
 
-            console.log(`[HTTP Chat] Processing message for user: ${userId}`);
+            console.log(`🚀 [HTTP Chat] === PROCESSING MESSAGE ===`);
+            console.log(`👤 User ID: ${userId}`);
+            console.log(`💬 Message: "${message}"`);
+            console.log(`🔗 Session ID: ${actualSessionId}`);
+            console.log(`📝 Body received:`, JSON.stringify(body, null, 2));
 
             // Store user message in existing Supabase messages table
-            await supabase
+            console.log(`💾 [HTTP Chat] Storing user message in Supabase...`);
+            const { data: insertData, error: insertError } = await supabase
               .from('messages')
               .insert({
                 chat_id: actualSessionId,
                 user_id: userId,
                 content: message,
                 role: 'user'
-              });
+              })
+              .select();
 
-            console.log(`[HTTP Chat] User message stored: ${message}`);
+            if (insertError) {
+              console.error(`❌ [HTTP Chat] Supabase insert error:`, insertError);
+              throw insertError;
+            }
+
+            console.log(`✅ [HTTP Chat] User message stored successfully:`, insertData);
 
             // Process message through existing enhanced WebSocket handler logic
-            // This reuses all your ActionPlanner, n8n routing, and brain memory logic
+            console.log(`🧠 [HTTP Chat] Processing through ActionPlanner...`);
             const mockWebSocketMessage = {
               type: 'command' as const,
               payload: {
@@ -81,22 +92,28 @@ export default (app: Elysia) =>
               timestamp: Date.now()
             };
 
+            console.log(`📦 [HTTP Chat] Mock WebSocket message:`, JSON.stringify(mockWebSocketMessage, null, 2));
+
             // Create a mock WebSocket for the handler
             const mockWs = {
               send: (data: string) => {
+                console.log(`📤 [HTTP Chat] Mock WebSocket send called with:`, data);
                 // Parse the response and store it
                 try {
                   const response = JSON.parse(data);
+                  console.log(`🔄 [HTTP Chat] Parsed response:`, JSON.stringify(response, null, 2));
                   handleAIResponse(userId, actualSessionId, response);
                 } catch (error) {
-                  console.error('[HTTP Chat] Error parsing WebSocket response:', error);
+                  console.error('❌ [HTTP Chat] Error parsing WebSocket response:', error);
                 }
               },
               readyState: 1 // OPEN
             };
 
+            console.log(`⚡ [HTTP Chat] Calling enhancedHandler.processMessage...`);
             // Process through existing handler (this handles ActionPlanner, n8n routing, etc.)
             const result = await enhancedHandler.processMessage(mockWebSocketMessage, mockWs as any);
+            console.log(`✅ [HTTP Chat] Handler result:`, JSON.stringify(result, null, 2));
 
             // Store the conversation in brain memory (existing system)
             await brainManager.storeChatConversation({
@@ -280,22 +297,40 @@ export default (app: Elysia) =>
  */
 async function handleAIResponse(userId: string, sessionId: string, response: any) {
   try {
+    console.log(`🤖 [HTTP Chat] === HANDLING AI RESPONSE ===`);
+    console.log(`👤 User ID: ${userId}`);
+    console.log(`🔗 Session ID: ${sessionId}`);
+    console.log(`📝 Response data:`, JSON.stringify(response, null, 2));
+
+    const aiMessage = response.data?.message || JSON.stringify(response);
+    console.log(`💬 AI Message content: "${aiMessage}"`);
+
     // Store AI response in existing Supabase messages table
-    await supabase
+    console.log(`💾 [HTTP Chat] Storing AI response in Supabase...`);
+    const { data: aiInsertData, error: aiInsertError } = await supabase
       .from('messages')
       .insert({
         chat_id: sessionId,
         user_id: userId,
-        content: response.data?.message || JSON.stringify(response),
+        content: aiMessage,
         role: 'assistant'
-      });
+      })
+      .select();
 
-    console.log(`[HTTP Chat] AI response stored: ${response.data?.message || 'response received'}`);
+    if (aiInsertError) {
+      console.error(`❌ [HTTP Chat] AI message Supabase insert error:`, aiInsertError);
+      throw aiInsertError;
+    }
+
+    console.log(`✅ [HTTP Chat] AI response stored successfully:`, aiInsertData);
 
     // Send real-time update via SSE
+    console.log(`📡 [HTTP Chat] Sending SSE update...`);
     const controller = sseConnections.get(sessionId);
+    console.log(`🔌 [HTTP Chat] SSE controller found:`, !!controller);
+    
     if (controller) {
-      controller.enqueue(`data: ${JSON.stringify({
+      const sseMessage = {
         type: 'message',
         message: {
           id: uuidv4(),
@@ -309,10 +344,16 @@ async function handleAIResponse(userId: string, sessionId: string, response: any
           }
         },
         timestamp: Date.now()
-      })}\n\n`);
+      };
+      
+      console.log(`📤 [HTTP Chat] Sending SSE message:`, JSON.stringify(sseMessage, null, 2));
+      controller.enqueue(`data: ${JSON.stringify(sseMessage)}\n\n`);
+      console.log(`✅ [HTTP Chat] SSE message sent successfully`);
+    } else {
+      console.log(`⚠️ [HTTP Chat] No SSE controller found for session: ${sessionId}`);
     }
 
-    console.log(`[HTTP Chat] AI response processed and sent via SSE for session: ${sessionId}`);
+    console.log(`🎉 [HTTP Chat] AI response processing complete for session: ${sessionId}`);
 
   } catch (error) {
     console.error('[HTTP Chat] Error handling AI response:', error);

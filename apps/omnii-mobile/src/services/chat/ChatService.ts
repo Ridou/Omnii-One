@@ -156,8 +156,11 @@ export class ChatService {
 
   private handleMessage = (event: any) => {
     try {
+      console.log('📥 [ChatService] === RECEIVED MESSAGE ===');
+      console.log('📦 Raw event data:', event.data);
       
       const data = JSON.parse(event.data);
+      console.log('🔍 [ChatService] Parsed data:', JSON.stringify(data, null, 2));
 
       // Handle ping/pong messages (filter out)
       if (data.data?.pong || data.type === WebSocketMessageType.PONG || 
@@ -541,10 +544,19 @@ export class ChatService {
   }
 
   async sendMessage(content: string, metadata?: any): Promise<void> {
+    console.log('🚀 [ChatService] === SENDING MESSAGE ===');
+    console.log('💬 Content:', content);
+    console.log('📋 Metadata:', metadata);
+    console.log('🔌 Is Connected:', this.isConnected);
+    console.log('🌐 WebSocket URL:', this.config.url);
+    console.log('👤 User ID:', this.config.userId);
     
     // Enhanced: Create request with priority
     const requestId = this.generateId();
     const priority = this.determinePriority(content, metadata);
+    
+    console.log('🆔 Request ID:', requestId);
+    console.log('⚡ Priority:', priority);
     
     const request: RequestContext = {
       id: requestId,
@@ -593,7 +605,9 @@ export class ChatService {
         timestamp: Date.now(),
       };
 
+      console.log('📤 [ChatService] Sending WebSocket message:', JSON.stringify(wsMessage, null, 2));
       this.ws.send(JSON.stringify(wsMessage));
+      console.log('✅ [ChatService] WebSocket message sent successfully');
       this.emit('typing', true);
     } else {
       await this.queuePriorityMessage(request);

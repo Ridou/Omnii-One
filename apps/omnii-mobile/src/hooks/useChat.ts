@@ -8,8 +8,8 @@ import { getWebSocketUrl } from '~/lib/env';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 
-// Feature flag for HTTP vs WebSocket mode
-const USE_HTTP_CHAT = process.env.EXPO_PUBLIC_USE_HTTP_CHAT === 'true' || false;
+// Feature flag for HTTP vs WebSocket mode - DISABLED for debugging
+const USE_HTTP_CHAT = false; // process.env.EXPO_PUBLIC_USE_HTTP_CHAT === 'true' || false;
 
 const initialState: ChatServiceState = {
   messages: [],
