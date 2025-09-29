@@ -38,7 +38,7 @@ describe('n8n Agent Integration', () => {
     stepFactory = new StepExecutorFactory();
     
     // Set test environment variables
-    process.env.N8N_AGENT_SWARM_URL = 'https://omnii-agent-swarm-production.up.railway.app';
+    process.env.N8N_AGENT_SWARM_URL = 'https://santino62.app.n8n.cloud';
     process.env.N8N_AGENT_ENABLED = 'true';
     process.env.N8N_AGENT_TIMEOUT = '30000'; // Shorter timeout for tests
     process.env.N8N_FALLBACK_ENABLED = 'true';
@@ -58,7 +58,7 @@ describe('n8n Agent Integration', () => {
 
     it('should have correct webhook URL', () => {
       const webhookUrl = N8nConfigManager.getWebhookUrl();
-      expect(webhookUrl).toBe('https://omnii-agent-swarm-production.up.railway.app/webhook/agent-input');
+      expect(webhookUrl).toBe('https://santino62.app.n8n.cloud/webhook/agent-input');
     });
 
     it('should check agent enablement correctly', () => {
@@ -113,7 +113,7 @@ describe('n8n Agent Integration', () => {
       expect(stats).toHaveProperty('requestCount');
       expect(stats).toHaveProperty('healthStatus');
       expect(stats).toHaveProperty('config');
-      expect(stats.config.baseUrl).toBe('https://omnii-agent-swarm-production.up.railway.app');
+      expect(stats.config.baseUrl).toBe('https://santino62.app.n8n.cloud');
     });
   });
 

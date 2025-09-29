@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import twilioService from '../services/integrations/twilio-service';
+import { getTwilioService } from '../services/integrations/twilio-service';
 import { SimpleSMSAI } from '../services/core/sms-ai-simple';
 
 // Initialize simple AI service
@@ -48,17 +48,22 @@ export default (app: Elysia) =>
         async ({ body, request }) => {
           // In production, you should validate the Twilio webhook signature
           if (process.env.NODE_ENV !== 'development') {
-            const signature = request.headers.get('x-twilio-signature');
-            const url = `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}${new URL(request.url).pathname}`;
-            const params = Object.fromEntries(new URLSearchParams(await request.text()));
-            
-            if (!signature || !twilioService.validateRequest(
-              process.env.TWILIO_AUTH_TOKEN!,
-              signature,
-              url,
-              params
-            )) {
-              throw new HttpError(401, 'Invalid Twilio webhook signature');
+            const twilioService = getTwilioService();
+            if (twilioService) {
+              const signature = request.headers.get('x-twilio-signature');
+              const url = `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}${new URL(request.url).pathname}`;
+              const params = Object.fromEntries(new URLSearchParams(await request.text()));
+              
+              if (!signature || !twilioService.validateRequest(
+                process.env.TWILIO_AUTH_TOKEN!,
+                signature,
+                url,
+                params
+              )) {
+                throw new HttpError(401, 'Invalid Twilio webhook signature');
+              }
+            } else {
+              console.warn('⚠️ Twilio service not available - skipping webhook validation');
             }
           }
 
@@ -108,6 +113,11 @@ export default (app: Elysia) =>
         '/send',
         async ({ body }) => {
           try {
+            const twilioService = getTwilioService();
+            if (!twilioService) {
+              throw new HttpError(503, 'Twilio service not configured - SMS features are disabled');
+            }
+            
             const result = await twilioService.sendMessage({
               to: body.to,
               body: body.body,
@@ -125,7 +135,10 @@ export default (app: Elysia) =>
             } as const;
           } catch (error) {
             console.error('Error sending message:', error);
-            throw new HttpError(500, error instanceof Error ? error.message : 'Failed to send message');
+            throw new HttpError(
+              error instanceof HttpError ? error.status : 500, 
+              error instanceof Error ? error.message : 'Failed to send message'
+            );
           }
         },
         {

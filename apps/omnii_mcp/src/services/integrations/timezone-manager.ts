@@ -1,5 +1,5 @@
 import { OpenAI } from "openai";
-import twilioService from "./twilio-service";
+import { getTwilioService } from "./twilio-service";
 
 export class TimezoneManager {
   private openai: OpenAI;
@@ -60,6 +60,12 @@ Just reply with your city name, like:
 I'll figure out your timezone automatically! 🌍`;
 
     try {
+      const twilioService = getTwilioService();
+      if (!twilioService) {
+        console.error('❌ Cannot send timezone SMS - Twilio service not configured');
+        return;
+      }
+      
       await twilioService.sendMessage({
         to: phoneNumber,
         body: message,

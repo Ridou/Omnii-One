@@ -17,7 +17,7 @@ export interface N8nAgentConfig {
 }
 
 export const n8nAgentConfig: N8nAgentConfig = {
-  baseUrl: process.env.N8N_AGENT_SWARM_URL || 'https://omnii-agent-swarm-production.up.railway.app',
+  baseUrl: process.env.N8N_AGENT_SWARM_URL || 'https://santino62.app.n8n.cloud',
   timeout: parseInt(process.env.N8N_AGENT_TIMEOUT || '600000'), // 10 minutes (matches n8n timeout)
   retryAttempts: parseInt(process.env.N8N_RETRY_ATTEMPTS || '3'),
   fallbackEnabled: process.env.N8N_FALLBACK_ENABLED !== 'false',

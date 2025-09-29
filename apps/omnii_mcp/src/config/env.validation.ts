@@ -34,7 +34,7 @@ const Neo4jConfigSchema = z.object({
   BASE_URL: z.string().url().describe('Base application URL'),
   
   // n8n Agent Swarm Configuration
-  N8N_AGENT_SWARM_URL: z.string().url().default('https://omnii-agent-swarm-production.up.railway.app').describe('n8n Agent Swarm webhook URL'),
+  N8N_AGENT_SWARM_URL: z.string().url().default('https://santino62.app.n8n.cloud').describe('n8n Agent Swarm webhook URL'),
   N8N_AGENT_ENABLED: z.coerce.boolean().default(true).describe('Enable n8n agent integration'),
   N8N_AGENT_TIMEOUT: z.coerce.number().int().min(1000).max(600000).default(600000).describe('n8n agent request timeout in milliseconds'),
   N8N_FALLBACK_ENABLED: z.coerce.boolean().default(true).describe('Enable fallback to local system when n8n unavailable'),

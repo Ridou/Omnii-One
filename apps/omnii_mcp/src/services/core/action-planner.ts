@@ -21,7 +21,7 @@ import {
 import { CachedEntity, EntityType } from "../../types/entity.types";
 import unifiedGoogleManager from "../integrations/unified-google-manager";
 import { CalendarTemporalManager } from "../integrations/calendar-temporal-manager";
-import twilioService from "../integrations/twilio-service";
+import { getTwilioService } from "../integrations/twilio-service";
 import { redisCache } from "../caching/redis-cache";
 import {
   InterventionManager,
@@ -1129,6 +1129,11 @@ Reference the following email actions and their parameters:
     // 6. Multi-step workflow indicators
     const hasWorkflowKeywords = /\b(and then|after that|also|plus|additionally|coordinate|automate)\b/i.test(message);
     
+    // 7. NEW: Simple Google service queries (these should ALWAYS go to n8n)
+    const hasGoogleServiceQuery = /\b(email|emails|mail|calendar|schedule|meeting|task|tasks|todo|contact|contacts)\b/i.test(message);
+    const isSimpleQuery = /\b(show|list|check|what|get|display|view|look at|see|my)\b/i.test(message);
+    const isGoogleServiceRequest = hasGoogleServiceQuery && isSimpleQuery;
+    
     // Decision logic with weighted scoring
     const complexityScore = (
       (wordCount > 10 ? 1 : 0) +
@@ -1138,7 +1143,8 @@ Reference the following email actions and their parameters:
       (hasYouTubeComponent ? 2 : 0) +
       (hasCrossService ? 2 : 0) +
       (needsAIReasoning ? 1 : 0) +
-      (hasWorkflowKeywords ? 1 : 0)
+      (hasWorkflowKeywords ? 1 : 0) +
+      (isGoogleServiceRequest ? 2 : 0)  // NEW: Add 2 points for simple Google service queries
     );
     
     // Threshold: Use n8n for complexity score >= 2
@@ -1428,6 +1434,12 @@ Reference the following email actions and their parameters:
     message: string
   ): Promise<void> {
     try {
+      const twilioService = getTwilioService();
+      if (!twilioService) {
+        console.error('❌ Cannot send SMS notification - Twilio service not configured');
+        return;
+      }
+      
       await twilioService.sendMessage({
         to: phoneNumber,
         body: message,

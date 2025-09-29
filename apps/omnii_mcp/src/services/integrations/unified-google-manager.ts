@@ -1,7 +1,7 @@
 import { OpenAI } from "openai";
 import { OpenAIToolSet } from "composio-core";
 import { createClient } from "@supabase/supabase-js";
-import twilioService from "./twilio-service";
+import { getTwilioService } from "./twilio-service";
 import { TasksPlugin } from "../plugins/tasks-plugin";
 import { CalendarPlugin } from "../plugins/calendar-plugin";
 import { ContactsPlugin } from "../plugins/contacts-plugin";
@@ -542,6 +542,12 @@ Return ONLY the service name (CALENDAR, CONTACTS, TASKS, EMAIL) or "NONE" if unc
         } else {
           // For SMS: Send the OAuth URL via SMS (original behavior)
           try {
+            const twilioService = getTwilioService();
+            if (!twilioService) {
+              console.error('❌ Cannot send OAuth SMS - Twilio service not configured');
+              throw new Error('SMS service not available');
+            }
+            
             await twilioService.sendMessage({
               to: userId,
               body: oauthMessage,

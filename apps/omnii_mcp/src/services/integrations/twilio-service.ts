@@ -113,11 +113,40 @@ export class TwilioService {
   }
 }
 
-// Create and export a singleton instance
-const twilioService = new TwilioService({
-  accountSid: process.env.TWILIO_ACCOUNT_SID!,
-  authToken: process.env.TWILIO_AUTH_TOKEN!,
-  phoneNumber: process.env.TWILIO_PHONE_NUMBER!,
-});
+// Create a lazy-loaded singleton instance
+let twilioServiceInstance: TwilioService | null = null;
 
-export default twilioService;
+function getTwilioService(): TwilioService | null {
+  // Only initialize if Twilio credentials are properly configured
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
+  
+  // Check if credentials are valid (not placeholders)
+  if (!accountSid || !authToken || !phoneNumber ||
+      accountSid === 'your_twilio_account_sid' ||
+      !accountSid.startsWith('AC')) {
+    console.warn('⚠️ Twilio service not configured - SMS features disabled');
+    return null;
+  }
+  
+  if (!twilioServiceInstance) {
+    try {
+      twilioServiceInstance = new TwilioService({
+        accountSid,
+        authToken,
+        phoneNumber,
+      });
+      console.log('✅ Twilio service initialized successfully');
+    } catch (error) {
+      console.error('❌ Failed to initialize Twilio service:', error);
+      return null;
+    }
+  }
+  
+  return twilioServiceInstance;
+}
+
+// Export both the getter function and a default that might be null
+export { getTwilioService };
+export default { getTwilioService };

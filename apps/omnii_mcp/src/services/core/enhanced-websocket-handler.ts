@@ -1597,6 +1597,11 @@ Respond immediately with executive-level insight, even without specific data. Us
     // 6. Multi-step workflow indicators
     const hasWorkflowKeywords = /\b(and then|after that|also|plus|additionally|coordinate|automate)\b/i.test(message);
     
+    // 7. NEW: Simple Google service queries (these should ALWAYS go to n8n)
+    const hasGoogleServiceQuery = /\b(email|emails|mail|calendar|schedule|meeting|task|tasks|todo|contact|contacts)\b/i.test(message);
+    const isSimpleQuery = /\b(show|list|check|what|get|display|view|look at|see|my)\b/i.test(message);
+    const isGoogleServiceRequest = hasGoogleServiceQuery && isSimpleQuery;
+    
     // Decision logic with weighted scoring
     const complexityScore = (
       (wordCount > 10 ? 1 : 0) +
@@ -1606,7 +1611,8 @@ Respond immediately with executive-level insight, even without specific data. Us
       (hasYouTubeComponent ? 2 : 0) +
       (hasCrossService ? 2 : 0) +
       (needsAIReasoning ? 1 : 0) +
-      (hasWorkflowKeywords ? 1 : 0)
+      (hasWorkflowKeywords ? 1 : 0) +
+      (isGoogleServiceRequest ? 2 : 0)  // NEW: Add 2 points for simple Google service queries
     );
     
     // Threshold: Use n8n for complexity score >= 1 (lowered for testing)

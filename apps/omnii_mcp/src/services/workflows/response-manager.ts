@@ -1,6 +1,6 @@
 import { ExecutionContextType } from "../../types/action-planning.types";
 import { StepResult } from "../../types/action-planning.types";
-import twilioService from "../integrations/twilio-service";
+import { getTwilioService } from "../integrations/twilio-service";
 
 export class ResponseManager {
   /**
@@ -22,6 +22,12 @@ export class ResponseManager {
 
     // For SMS, send via Twilio
     try {
+      const twilioService = getTwilioService();
+      if (!twilioService) {
+        console.error('❌ Cannot send SMS response - Twilio service not configured');
+        return;
+      }
+      
       await twilioService.sendMessage({
         to: userId,
         body: formattedMessage,

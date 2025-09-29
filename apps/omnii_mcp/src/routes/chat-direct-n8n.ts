@@ -30,10 +30,11 @@ export default (app: Elysia) =>
             console.log(`🚀 [Direct n8n] === SENDING TO N8N AGENT SWARM ===`);
             console.log(`👤 User ID: ${userId}`);
             console.log(`💬 Message: "${message}"`);
-            console.log(`🌐 n8n URL: https://omnii-agent-swarm-production.up.railway.app/webhook/agent-input`);
+            const n8nUrl = `${process.env.N8N_AGENT_SWARM_URL || 'https://santino62.app.n8n.cloud'}/webhook/agent-input`;
+            console.log(`🌐 n8n URL: ${n8nUrl}`);
 
             // Call n8n Agent Swarm directly (exactly like the working curl command)
-            const n8nResponse = await fetch('https://omnii-agent-swarm-production.up.railway.app/webhook/agent-input', {
+            const n8nResponse = await fetch(n8nUrl, {
               method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
@@ -116,7 +117,8 @@ export default (app: Elysia) =>
         async () => {
           try {
             // Test n8n Agent Swarm connectivity
-            const testResponse = await fetch('https://omnii-agent-swarm-production.up.railway.app/webhook/agent-input', {
+            const n8nUrl = `${process.env.N8N_AGENT_SWARM_URL || 'https://santino62.app.n8n.cloud'}/webhook/agent-input`;
+            const testResponse = await fetch(n8nUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -130,7 +132,7 @@ export default (app: Elysia) =>
             return {
               status: isHealthy ? 'healthy' : 'unhealthy',
               service: 'n8n-agent-swarm',
-              url: 'https://omnii-agent-swarm-production.up.railway.app/webhook/agent-input',
+              url: n8nUrl,
               responseStatus: testResponse.status,
               timestamp: new Date().toISOString()
             };

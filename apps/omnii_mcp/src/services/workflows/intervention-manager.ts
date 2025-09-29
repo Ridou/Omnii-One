@@ -4,7 +4,7 @@ import {
   UserInterventionParams,
   Entity,
 } from "../../types/action-planning.types";
-import twilioService from "../integrations/twilio-service";
+import { getTwilioService } from "../integrations/twilio-service";
 import { redisCache } from "../caching/redis-cache";
 import { WebSocketHandlerService } from "../core/websocket-handler.service";
 import {
@@ -134,6 +134,12 @@ export class InterventionManager {
       request.timeout / 60
     )} minutes.`;
 
+    const twilioService = getTwilioService();
+    if (!twilioService) {
+      console.error('❌ Cannot send intervention SMS - Twilio service not configured');
+      throw new Error('SMS service not available for intervention');
+    }
+    
     await twilioService.sendMessage({
       to: request.phoneNumber,
       body: message,
