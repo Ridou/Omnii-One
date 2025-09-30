@@ -337,13 +337,52 @@ export class EnhancedWebSocketHandler {
             // If we have a unifiedResponse, send that (contains structured data)
             if (result.unifiedResponse) {
               console.log(`[EnhancedWebSocket] 🎯 Sending UnifiedToolResponse with structured data`);
-              this.sendToClient(payload.userId, result.unifiedResponse);
+              // Extract message content from unifiedResponse
+              const content = result.unifiedResponse.message || result.unifiedResponse.data?.message || 'Action completed';
+              this.sendToClient(payload.userId, {
+                id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                content: content,
+                sender: 'ai' as const,
+                timestamp: new Date().toISOString(),
+                type: 'unified_tool_response' as const,
+                metadata: {
+                  action: 'n8n_agent_response',
+                  responseType: 'n8n',
+                  rawResponse: result.unifiedResponse
+                }
+              });
             } else if (result.data) {
               console.log(`[EnhancedWebSocket] 📋 Sending regular result data`);
-              this.sendToClient(payload.userId, result);
+              const content = result.data.message || result.message || 'Action completed';
+              this.sendToClient(payload.userId, {
+                id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                content: content,
+                sender: 'ai' as const,
+                timestamp: new Date().toISOString(),
+                type: 'text' as const,
+                metadata: {
+                  action: 'n8n_agent_response',
+                  responseType: 'n8n',
+                  rawResponse: result
+                }
+              });
             }
+            
+            // No need for processing_complete - the AI message already clears the state
           } else {
             console.log(`[EnhancedWebSocket] ⚠️ No follow-up data to send (result was empty or invalid)`);
+            // Send a completion message even if no data
+            this.sendToClient(payload.userId, {
+              id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              content: 'I completed processing your request but there was no specific output to display.',
+              sender: 'ai' as const,
+              timestamp: new Date().toISOString(),
+              type: 'text' as const,
+              metadata: {
+                action: 'completion',
+                responseType: 'status'
+              }
+            });
           }
         }).catch((error: any) => {
           console.warn(`[EnhancedWebSocket] ⚠️ Background action execution failed:`, error);
@@ -1197,16 +1236,20 @@ export class EnhancedWebSocketHandler {
     // Generate data-driven executive response using real information
     const executiveResponse = await this.generateDataDrivenExecutiveResponse(message, userData);
     
-    // Send immediate response with correct message type for mobile app
+    // Send immediate response with correct ChatMessage format for mobile app
     const immediateMessage = {
-      type: 'executive_response',
-      data: {
-        message: executiveResponse,
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      content: executiveResponse,
+      sender: 'ai' as const, // Critical: This clears the processing state
+      timestamp: new Date().toISOString(),
+      type: 'text' as const,
+      metadata: {
+        action: 'executive_response',
+        responseType: 'executive_assistant',
         style: 'conversational_paragraph',
         priority: 'immediate',
-        userData: userData // Include data summary for UI enhancements
-      },
-      timestamp: Date.now(),
+        userData: userData
+      }
     };
     
     console.log(`[EnhancedWebSocket] ⚡ Sending data-driven executive response: "${executiveResponse.substring(0, 100)}..."`);
@@ -1322,17 +1365,23 @@ export class EnhancedWebSocketHandler {
       reasoning: relevantContext.reasoning || []
     };
     
-    // Send dropdown with correct message type for mobile app
+    // Send dropdown with correct ChatMessage format for mobile app
     const contextMessage = {
-      type: 'context_dropdown',
-      data: {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      content: 'Context information loaded', // Placeholder content
+      sender: 'ai' as const, // Critical: This clears the processing state
+      timestamp: new Date().toISOString(),
+      type: 'text' as const,
+      metadata: {
+        action: 'context_dropdown',
+        responseType: 'context',
+        style: 'collapsible_dropdown',
+        priority: 'background',
         contextSummary,
         relevantContext,
         rdfInsights,
-        style: 'collapsible_dropdown',
-        priority: 'background'
-      },
-      timestamp: Date.now(),
+        collapsed: true
+      }
     };
     
     console.log(`[EnhancedWebSocket] 📋 Context items: ${contextSummary.totalItems} total`);
