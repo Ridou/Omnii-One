@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 0 of 7 (Monorepo Consolidation Preparation)
-Plan: 3 of 5 (Plan 00-03 complete)
+Plan: 4 of 5 (Plan 00-04 complete)
 Status: In progress
-Last activity: 2026-01-24 - Completed 00-03-PLAN.md (MCP Feature Merge)
+Last activity: 2026-01-24 - Completed 00-04-PLAN.md (Environment Variable Reconciliation)
 
-Progress: [███░░░░░░░] 60% (3/5 plans in phase 0)
+Progress: [████░░░░░░] 80% (4/5 plans in phase 0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 5min
-- Total execution time: 16min
+- Total execution time: 21min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 0 | 3/5 | 16min | 5min |
+| Phase 0 | 4/5 | 21min | 5min |
 
 **Recent Trend:**
-- Last plan: 00-03 (4min)
-- Previous: 00-02 (6min)
-- Trend: Improving velocity (6→6→4min)
+- Last plan: 00-04 (5min)
+- Previous: 00-03 (4min)
+- Trend: Consistent velocity (6→6→4→5min)
 
 *Updated after each plan completion*
 
@@ -59,6 +59,13 @@ Recent decisions affecting current work:
 - Skip git merge of standalone omnii-mcp: No unique features, 7-8 months stale, would introduce 24 package conflicts with zero benefit
 - Workspace MCP is canonical: 28+ unique features (RDF, n8n, brain monitoring), 107% more code, modular architecture vs flat
 - Standalone archival strategy: No code porting needed - all 24 standalone files superseded by better workspace implementations
+
+**From Phase 0 Plan 04 (00-04):**
+- OMNII_* namespace for shared infrastructure: Prevents conflicts with third-party libraries, makes project vars greppable, future-proof pattern (OMNII_SUPABASE_URL, OMNII_NEO4J_URI, etc.)
+- MCP_* namespace for MCP-specific vars: Enables multiple MCP apps with different BASE_URL/PORT without collision
+- Keep EXPO_PUBLIC_* as-is: React Native Metro bundler hardcoded to look for this prefix, don't fight the framework
+- Turborepo cache invalidation: globalEnv for all tasks, task env for specific tasks, globalDependencies for .env files
+- Environment loading order: System env → Root .env → App .env → App .env.local (gitignored overrides)
 
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
@@ -93,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-24 21:57:51Z
-Stopped at: Completed 00-03-PLAN.md (MCP Feature Merge) - 2 tasks committed, SUMMARY created
+Last session: 2026-01-24 21:59:30Z
+Stopped at: Completed 00-04-PLAN.md (Environment Variable Reconciliation) - 2 tasks committed, SUMMARY created
 Resume file: None
