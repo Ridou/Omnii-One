@@ -29,7 +29,7 @@
     "ios": "expo run:ios"
   },
   "devDependencies": {
-    "@turbo/gen": "^2.5.4",
+    "@turbo/gen": "2.5.4",
     "prettier": "catalog:",
     "syncpack": "^13.0.4",
     "turbo": "2.5.4",

@@ -24,7 +24,7 @@
     {
       "label": "Pin exact versions for build tools",
       "packages": ["**"],
-      "dependencies": ["turbo", "typescript"],
+      "dependencies": ["turbo", "@turbo/gen", "typescript"],
       "range": ""
     }
   ]
