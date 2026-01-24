@@ -12,7 +12,7 @@ This roadmap consolidates three divergent codebases (omnii monorepo, omnii-mobil
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 0: Monorepo Consolidation Preparation** - Establish tooling and merge strategy before consolidation
+- [x] **Phase 0: Monorepo Consolidation Preparation** - Establish tooling and merge strategy before consolidation ✓
 - [ ] **Phase 1: Foundation Infrastructure** - Authentication, Neo4j multi-tenancy, compatibility resolution
 - [ ] **Phase 2: Graph Core & MCP Server** - Graph schema, basic CRUD, MCP protocol implementation
 - [ ] **Phase 3: GraphRAG & Advanced MCP** - Dual-channel retrieval, domain-aware tools, multi-AI support
@@ -40,11 +40,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 5 plans in 4 waves
 
 Plans:
-- [ ] 00-01-PLAN.md — Bootstrap monorepo from omnii with git history preservation
-- [ ] 00-02-PLAN.md — Deep divergence analysis and merge strategy documentation
-- [ ] 00-03-PLAN.md — Merge unique features from standalone omnii-mcp
-- [ ] 00-04-PLAN.md — Environment variable reconciliation and turbo.json updates
-- [ ] 00-05-PLAN.md — Validate Turborepo tooling and configure Syncpack
+- [x] 00-01-PLAN.md — Bootstrap monorepo from omnii with git history preservation
+- [x] 00-02-PLAN.md — Deep divergence analysis and merge strategy documentation
+- [x] 00-03-PLAN.md — Merge unique features from standalone omnii-mcp
+- [x] 00-04-PLAN.md — Environment variable reconciliation and turbo.json updates
+- [x] 00-05-PLAN.md — Validate Turborepo tooling and configure Syncpack
 
 ---
 
@@ -213,7 +213,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Monorepo Consolidation Preparation | 0/5 | Planned | - |
+| 0. Monorepo Consolidation Preparation | 5/5 | ✓ Complete | 2026-01-24 |
 | 1. Foundation Infrastructure | 0/0 | Not started | - |
 | 2. Graph Core & MCP Server | 0/0 | Not started | - |
 | 3. GraphRAG & Advanced MCP | 0/0 | Not started | - |
@@ -224,4 +224,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-24*
+*Last updated: 2026-01-24 — Phase 0 complete*
