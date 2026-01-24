@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 0 of 7 (Monorepo Consolidation Preparation)
-Plan: 4 of 5 (Plan 00-04 complete)
-Status: In progress
-Last activity: 2026-01-24 - Completed 00-04-PLAN.md (Environment Variable Reconciliation)
+Plan: 5 of 5 (Plan 00-05 complete)
+Status: Phase complete
+Last activity: 2026-01-24 - Completed 00-05-PLAN.md (Monorepo Tooling Validation)
 
-Progress: [████░░░░░░] 80% (4/5 plans in phase 0)
+Progress: [█████░░░░░] 100% (5/5 plans in phase 0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: 5min
-- Total execution time: 21min
+- Total execution time: 24min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 0 | 4/5 | 21min | 5min |
+| Phase 0 | 5/5 | 24min | 5min |
 
 **Recent Trend:**
-- Last plan: 00-04 (5min)
-- Previous: 00-03 (4min)
-- Trend: Consistent velocity (6→6→4→5min)
+- Last plan: 00-05 (3min)
+- Previous: 00-04 (5min)
+- Trend: Accelerating (6→6→4→5→3min)
 
 *Updated after each plan completion*
 
@@ -67,6 +67,12 @@ Recent decisions affecting current work:
 - Turborepo cache invalidation: globalEnv for all tasks, task env for specific tasks, globalDependencies for .env files
 - Environment loading order: System env → Root .env → App .env → App .env.local (gitignored overrides)
 
+**From Phase 0 Plan 05 (00-05):**
+- Version enforcement via pnpm catalog + overrides: pnpm-workspace.yaml catalog defines versions, resolutions + pnpm.overrides enforce them across all dependencies
+- Exact version pinning for build tools: turbo and @turbo/gen pinned to 2.5.4 (prevents version drift in CI/CD)
+- Accept catalog: references in syncpack: Not actual mismatches - pnpm catalogs work correctly, syncpack just doesn't understand them
+- Python RDF package.json documented as known issue: Python service uses requirements.txt/Poetry, adding package.json would be artificial
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -77,12 +83,12 @@ None yet.
 
 ### Blockers/Concerns
 
-**Phase 0 critical decisions:**
+**Phase 0 - COMPLETE:**
 - ~~Monorepo tool selection (Turborepo vs. Nx)~~ - RESOLVED: Using Turborepo from omnii (already working)
 - ~~Codebase "source of truth" per domain~~ - RESOLVED: Monorepo for all domains (see Plan 00-02 decisions)
 - ~~MCP merge strategy~~ - RESOLVED: Skip merge, workspace is canonical (see Plan 00-03 decisions)
-- Python RDF service lacks package.json (sherif warning - not blocking, but should be addressed)
-- Runtime validation needed: omnii-mcp app startup tested (✅ initializes), full runtime needs env vars
+- ~~Runtime validation needed~~ - RESOLVED: omnii-mcp app startup confirmed (✅ initializes, env var failure expected)
+- Python RDF service lacks package.json (sherif warning - documented as known non-blocking issue)
 
 **Phase 1 critical decisions:**
 - Neo4j-Bun compatibility mitigation strategy - HTTP proxy vs. alternative database (research flag)
@@ -100,6 +106,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-24 21:59:30Z
-Stopped at: Completed 00-04-PLAN.md (Environment Variable Reconciliation) - 2 tasks committed, SUMMARY created
+Last session: 2026-01-24 22:05:43Z
+Stopped at: Completed 00-05-PLAN.md (Monorepo Tooling Validation) - Phase 0 complete, 2 tasks committed, SUMMARY created
 Resume file: None
+
+**Phase 0 Status:** COMPLETE - Ready for Phase 1
