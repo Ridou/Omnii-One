@@ -151,7 +151,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INGEST-03 | Phase 4 | Pending |
 | INGEST-04 | Phase 4 | Pending |
 | INGEST-05 | Phase 4 | Pending |
-| INGEST-06 | Phase 5 | Pending |
+| INGEST-06 | Phase 4 | Pending |
 | INGEST-07 | Phase 4 | Pending |
 | INGEST-08 | Phase 4 | Pending |
 | MOBILE-01 | Phase 5 | Pending |
@@ -175,10 +175,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-05 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 44 total
-- Mapped to phases: 44
-- Unmapped: 0 ✓
+- v1 requirements: 48 total
+- Mapped to phases: 48
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-01-24*
-*Last updated: 2026-01-24 after initial definition*
+*Last updated: 2026-01-24 after roadmap creation*
