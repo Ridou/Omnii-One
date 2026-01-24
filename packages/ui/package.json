@@ -34,7 +34,7 @@
   "devDependencies": {
     "@omnii/eslint-config": "workspace:*",
     "@omnii/prettier-config": "workspace:*",
-    "@omnii/tailwind-config": "workspace:*",
+    "@omnii/tailwind-config": "workspace:^",
     "@omnii/tsconfig": "workspace:*",
     "@types/react": "catalog:react19",
     "eslint": "catalog:",

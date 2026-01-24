@@ -62,7 +62,7 @@
     "@google-cloud/local-auth": "2.1.0",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@omnii/api": "workspace:*",
-    "@omnii/validators": "workspace:*",
+    "@omnii/validators": "workspace:^",
     "@supabase/supabase-js": "^2.50.0",
     "@trpc/server": "^11.1.4",
     "axios": "^1.9.0",

@@ -1,0 +1,31 @@
+{
+  "versionGroups": [
+    {
+      "label": "React ecosystem must match exactly",
+      "packages": ["**"],
+      "dependencies": ["react", "react-dom", "react-native"],
+      "policy": "sameRange"
+    },
+    {
+      "label": "Expo must match exactly",
+      "packages": ["**"],
+      "dependencies": ["expo", "expo-*"],
+      "policy": "sameRange"
+    },
+    {
+      "label": "Use workspace protocol for internal packages",
+      "packages": ["**"],
+      "dependencies": ["@omnii/*"],
+      "dependencyTypes": ["dev", "prod"],
+      "policy": "workspace"
+    }
+  ],
+  "semverGroups": [
+    {
+      "label": "Pin exact versions for build tools",
+      "packages": ["**"],
+      "dependencies": ["turbo", "typescript"],
+      "range": ""
+    }
+  ]
+}

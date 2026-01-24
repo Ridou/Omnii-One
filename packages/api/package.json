@@ -20,7 +20,7 @@
   "dependencies": {
     "@omnii/auth": "workspace:*",
     "@omnii/db": "workspace:*",
-    "@omnii/validators": "workspace:*",
+    "@omnii/validators": "workspace:^",
     "@supabase/supabase-js": "^2.50.0",
     "@trpc/server": "catalog:",
     "superjson": "2.2.2",
