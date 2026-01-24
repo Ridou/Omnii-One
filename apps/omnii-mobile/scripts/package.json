@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "name": "omnii-asset-generator",
+  "version": "1.0.0",
+  "description": "OMNII Asset Generation Scripts",
+  "private": true
+} 

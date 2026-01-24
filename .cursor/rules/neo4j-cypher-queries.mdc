@@ -1,0 +1,497 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Neo4j Brain Memory System - Cypher Queries Reference
+
+## 🔍 **Data Verification Queries for Brain Memory System**
+
+This reference contains Cypher queries to verify that your brain memory system is successfully writing data to Neo4j and functioning correctly.
+
+---
+
+## 📊 **Quick Data Overview Queries**
+
+### **1. Latest Nodes Created (Last 24 Hours)**
+```cypher
+// See all recent nodes created in the last 24 hours
+MATCH (n)
+WHERE n.timestamp IS NOT NULL 
+  AND datetime(n.timestamp) > datetime() - duration({hours: 24})
+RETURN labels(n) as nodeType, 
+       count(n) as count,
+       max(n.timestamp) as latest_timestamp
+ORDER BY latest_timestamp DESC
+```
+
+### **2. Overall Brain System Stats**
+```cypher
+// Get comprehensive stats of the entire brain memory system
+MATCH (user:User {id: 'your-user-id-here'}) // Replace with actual user ID
+OPTIONAL MATCH (user)-[:OWNS]->(msg:ChatMessage)
+OPTIONAL MATCH (msg)-[:HAS_MEMORY]->(memory:Memory)
+OPTIONAL MATCH (msg)-[:MENTIONS]->(concept:Concept)
+OPTIONAL MATCH (msg)-[:HAS_TAG]->(tag:Tag)
+OPTIONAL MATCH (msg)-[rel:RELATED_TO]-(related:ChatMessage)
+
+RETURN 
+  count(DISTINCT msg) as total_messages,
+  count(DISTINCT memory) as total_memories,
+  count(DISTINCT concept) as total_concepts,
+  count(DISTINCT tag) as total_tags,
+  count(DISTINCT rel) as total_associations,
+  count(DISTINCT CASE WHEN msg.channel = 'sms' THEN msg END) as sms_messages,
+  count(DISTINCT CASE WHEN msg.channel = 'chat' THEN msg END) as chat_messages,
+  avg(msg.importance_score) as avg_importance,
+  max(msg.timestamp) as latest_message
+```
+
+---
+
+## 🧠 **Brain-Enhanced Node Queries**
+
+### **3. Latest ChatMessage Nodes with Brain Properties**
+```cypher
+// Check recent ChatMessage nodes with brain enhancements
+MATCH (msg:ChatMessage)
+WHERE msg.timestamp IS NOT NULL
+  AND datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.id, 
+       msg.content[0..100] + "..." as content_preview,
+       msg.channel,
+       msg.source_identifier,
+       msg.intent,
+       msg.sentiment,
+       msg.importance_score,
+       msg.timestamp,
+       msg.last_modified,
+       msg.modification_reason
+ORDER BY msg.timestamp DESC
+LIMIT 10
+```
+
+### **4. Memory Nodes and Consolidation Status**
+```cypher
+// Check Memory nodes created by brain system
+MATCH (memory:Memory)
+WHERE memory.timestamp IS NOT NULL
+  AND datetime(memory.timestamp) > datetime() - duration({hours: 24})
+RETURN memory.id,
+       memory.memory_type,
+       memory.consolidation_status,
+       memory.episode_type,
+       memory.channel,
+       memory.timestamp,
+       memory.importance_score,
+       memory.original_message_id
+ORDER BY memory.timestamp DESC
+LIMIT 10
+```
+
+### **5. Brain-Enhanced Concepts with Activation**
+```cypher
+// Check Concept nodes with brain properties and activation
+MATCH (concept:Concept)
+WHERE concept.last_mentioned IS NOT NULL
+  AND datetime(concept.last_mentioned) > datetime() - duration({hours: 24})
+RETURN concept.id,
+       concept.name,
+       concept.activation_strength,
+       concept.mention_count,
+       concept.last_mentioned,
+       concept.semantic_weight,
+       concept.user_id
+ORDER BY concept.last_mentioned DESC
+LIMIT 20
+```
+
+### **6. Brain-Enhanced Tags with Usage Tracking**
+```cypher
+// Check Tag nodes with brain properties and usage
+MATCH (tag:Tag)
+WHERE tag.last_used IS NOT NULL
+  AND datetime(tag.last_used) > datetime() - duration({hours: 24})
+RETURN tag.id,
+       tag.name,
+       tag.usage_count,
+       tag.last_used,
+       tag.channel_origin,
+       tag.category,
+       tag.user_id
+ORDER BY tag.last_used DESC
+LIMIT 20
+```
+
+---
+
+## 🔗 **Brain Memory Relationships**
+
+### **7. Brain-Specific Relationships**
+```cypher
+// Check brain-specific relationships created
+MATCH (source)-[rel]->(target)
+WHERE type(rel) IN ['HAS_MEMORY', 'MENTIONS', 'HAS_TAG', 'RELATED_TO']
+  AND (
+    (source.timestamp IS NOT NULL AND datetime(source.timestamp) > datetime() - duration({hours: 24})) OR
+    (target.timestamp IS NOT NULL AND datetime(target.timestamp) > datetime() - duration({hours: 24}))
+  )
+RETURN type(rel) as relationship_type,
+       labels(source) as source_labels,
+       labels(target) as target_labels,
+       coalesce(source.timestamp, target.timestamp) as timestamp,
+       rel.strength,
+       rel.last_activated,
+       rel.association_type,
+       rel.activation_count
+ORDER BY timestamp DESC
+LIMIT 20
+```
+
+### **8. Message-to-Memory Connections**
+```cypher
+// See ChatMessage -> Memory connections (HAS_MEMORY relationships)
+MATCH (msg:ChatMessage)-[:HAS_MEMORY]->(memory:Memory)
+WHERE datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.id,
+       msg.content[0..50] + "..." as message_preview,
+       msg.channel,
+       msg.intent,
+       msg.importance_score,
+       memory.memory_type,
+       memory.consolidation_status,
+       memory.episode_type,
+       msg.timestamp
+ORDER BY msg.timestamp DESC
+LIMIT 10
+```
+
+### **9. Message-to-Concept Connections**
+```cypher
+// See ChatMessage -> Concept connections (MENTIONS relationships)
+MATCH (msg:ChatMessage)-[:MENTIONS]->(concept:Concept)
+WHERE datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.id,
+       msg.content[0..50] + "..." as message_preview,
+       msg.channel,
+       concept.name,
+       concept.activation_strength,
+       concept.mention_count,
+       msg.timestamp
+ORDER BY msg.timestamp DESC
+LIMIT 15
+```
+
+### **10. Associative Memory Links**
+```cypher
+// Check RELATED_TO relationships (associative memory)
+MATCH (msg1:ChatMessage)-[rel:RELATED_TO]-(msg2:ChatMessage)
+WHERE datetime(msg1.timestamp) > datetime() - duration({hours: 24})
+   OR datetime(msg2.timestamp) > datetime() - duration({hours: 24})
+RETURN msg1.id as message1_id,
+       msg1.content[0..30] + "..." as message1_preview,
+       msg2.id as message2_id,
+       msg2.content[0..30] + "..." as message2_preview,
+       rel.strength,
+       rel.association_type,
+       rel.last_activated,
+       rel.activation_count
+ORDER BY rel.last_activated DESC
+LIMIT 10
+```
+
+---
+
+## ⏰ **Time-Based Working Memory Queries**
+
+### **11. 3-Week Working Memory Window**
+```cypher
+// Check 3-week working memory window data (brain's time-based memory)
+WITH datetime() as now
+MATCH (msg:ChatMessage)
+WHERE msg.timestamp IS NOT NULL
+  AND datetime(msg.timestamp) >= now - duration({days: 21})
+  AND datetime(msg.timestamp) <= now + duration({days: 7})
+
+WITH msg, now,
+     CASE 
+       WHEN datetime(msg.timestamp) < now - duration({days: 7}) THEN 'previous_week'
+       WHEN datetime(msg.timestamp) >= now - duration({days: 7}) AND datetime(msg.timestamp) < now THEN 'current_week'
+       WHEN datetime(msg.timestamp) >= now THEN 'next_week'
+       ELSE 'other'
+     END as time_category
+
+RETURN time_category,
+       count(msg) as message_count,
+       avg(msg.importance_score) as avg_importance,
+       min(msg.timestamp) as earliest,
+       max(msg.timestamp) as latest
+ORDER BY 
+  CASE time_category 
+    WHEN 'previous_week' THEN 1
+    WHEN 'current_week' THEN 2  
+    WHEN 'next_week' THEN 3
+    ELSE 4
+  END
+```
+
+### **12. Recently Modified Messages (Working Memory Recall)**
+```cypher
+// Check recently modified messages (brain pulls these back to working memory)
+MATCH (msg:ChatMessage)
+WHERE msg.last_modified IS NOT NULL
+  AND datetime(msg.last_modified) > datetime() - duration({hours: 2})
+RETURN msg.id,
+       msg.content[0..50] + "..." as content_preview,
+       msg.channel,
+       msg.timestamp as original_timestamp,
+       msg.last_modified,
+       msg.modification_reason,
+       duration.between(datetime(msg.timestamp), datetime(msg.last_modified)).hours as hours_since_creation
+ORDER BY msg.last_modified DESC
+LIMIT 10
+```
+
+---
+
+## 📱 **Channel-Specific Queries**
+
+### **13. SMS vs Chat Activity Breakdown**
+```cypher
+// See recent activity breakdown by channel (SMS vs Chat)
+MATCH (msg:ChatMessage)
+WHERE msg.timestamp IS NOT NULL
+  AND datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.channel,
+       count(msg) as message_count,
+       avg(msg.importance_score) as avg_importance,
+       avg(msg.sentiment) as avg_sentiment,
+       collect(DISTINCT msg.intent)[0..5] as sample_intents,
+       min(msg.timestamp) as earliest,
+       max(msg.timestamp) as latest
+ORDER BY message_count DESC
+```
+
+### **14. SMS Messages with Metadata**
+```cypher
+// Check SMS messages with their metadata
+MATCH (msg:ChatMessage)
+WHERE msg.channel = 'sms'
+  AND msg.timestamp IS NOT NULL
+  AND datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.id,
+       msg.content[0..50] + "..." as content_preview,
+       msg.source_identifier as phone_number,
+       msg.intent,
+       msg.sentiment,
+       msg.importance_score,
+       msg.sms_metadata,
+       msg.timestamp
+ORDER BY msg.timestamp DESC
+LIMIT 10
+```
+
+### **15. Chat Messages with Metadata**
+```cypher
+// Check chat messages with their metadata
+MATCH (msg:ChatMessage)
+WHERE msg.channel = 'chat'
+  AND msg.timestamp IS NOT NULL
+  AND datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.id,
+       msg.content[0..50] + "..." as content_preview,
+       msg.source_identifier as chat_id,
+       msg.intent,
+       msg.sentiment,
+       msg.importance_score,
+       msg.chat_metadata,
+       msg.timestamp
+ORDER BY msg.timestamp DESC
+LIMIT 10
+```
+
+---
+
+## 🔧 **Google Services Integration**
+
+### **16. Google Service Context**
+```cypher
+// Check messages with Google service context
+MATCH (msg:ChatMessage)
+WHERE msg.google_service_context IS NOT NULL
+  AND datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.id,
+       msg.content[0..50] + "..." as content_preview,
+       msg.channel,
+       msg.google_service_context,
+       msg.intent,
+       msg.timestamp
+ORDER BY msg.timestamp DESC
+LIMIT 10
+```
+
+### **17. Service Trigger Relationships**
+```cypher
+// Check TRIGGERED_SERVICE relationships
+MATCH (msg:ChatMessage)-[rel:TRIGGERED_SERVICE]->(token)
+WHERE datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.id,
+       msg.content[0..30] + "..." as message_preview,
+       msg.channel,
+       labels(token) as target_labels,
+       rel.operation,
+       rel.success,
+       rel.timestamp
+ORDER BY rel.timestamp DESC
+LIMIT 10
+```
+
+---
+
+## 🧪 **Testing and Debugging Queries**
+
+### **18. Brain Analysis Results**
+```cypher
+// See AI analysis results for recent messages
+MATCH (msg:ChatMessage)
+WHERE msg.intent IS NOT NULL
+  AND datetime(msg.timestamp) > datetime() - duration({hours: 24})
+RETURN msg.content[0..100] as content,
+       msg.intent,
+       msg.sentiment,
+       msg.importance_score,
+       msg.channel,
+       msg.timestamp
+ORDER BY msg.importance_score DESC, msg.timestamp DESC
+LIMIT 15
+```
+
+### **19. Memory Consolidation Progress**
+```cypher
+// Check memory consolidation status distribution
+MATCH (memory:Memory)
+WHERE datetime(memory.timestamp) > datetime() - duration({days: 7})
+RETURN memory.consolidation_status,
+       count(memory) as count,
+       avg(memory.importance_score) as avg_importance,
+       memory.memory_type,
+       memory.channel
+ORDER BY count DESC
+```
+
+### **20. Semantic Network Growth**
+```cypher
+// Check semantic network growth (concepts and their connections)
+MATCH (concept:Concept)
+WHERE concept.mention_count > 0
+OPTIONAL MATCH (concept)-[:RELATED_TO]-(related:Concept)
+RETURN concept.name,
+       concept.mention_count,
+       concept.activation_strength,
+       concept.last_mentioned,
+       count(related) as related_concepts_count
+ORDER BY concept.mention_count DESC
+LIMIT 20
+```
+
+---
+
+## 🎯 **User-Specific Queries**
+
+### **21. User-Specific Brain Memory Overview**
+```cypher
+// Replace 'your-user-id-here' with actual user ID
+MATCH (user:User {id: 'your-user-id-here'})
+OPTIONAL MATCH (user)-[:OWNS]->(msg:ChatMessage)
+WHERE datetime(msg.timestamp) > datetime() - duration({days: 7})
+OPTIONAL MATCH (msg)-[:HAS_MEMORY]->(memory:Memory)
+OPTIONAL MATCH (msg)-[:MENTIONS]->(concept:Concept)
+OPTIONAL MATCH (msg)-[:HAS_TAG]->(tag:Tag)
+
+RETURN 
+  user.id as user_id,
+  count(DISTINCT msg) as recent_messages,
+  count(DISTINCT memory) as recent_memories,
+  count(DISTINCT concept) as concepts_mentioned,
+  count(DISTINCT tag) as tags_used,
+  count(DISTINCT CASE WHEN msg.channel = 'sms' THEN msg END) as sms_count,
+  count(DISTINCT CASE WHEN msg.channel = 'chat' THEN msg END) as chat_count,
+  avg(msg.importance_score) as avg_importance,
+  max(msg.timestamp) as latest_activity
+```
+
+---
+
+## 🚀 **How to Use These Queries**
+
+### **Method 1: Neo4j Browser**
+1. Go to: `https://browser.neo4j.io/`
+2. Connect with your AuraDB credentials:
+   - **Connect URL**: `neo4j+s://d066c29d.databases.neo4j.io`
+   - **Username**: `neo4j`
+   - **Password**: Your AuraDB password
+3. Copy and paste any query above
+4. Click the play button to execute
+
+### **Method 2: Your API Endpoints**
+For quick checks without Cypher:
+```bash
+# Health check
+curl "https://omniimcp-production.up.railway.app/api/neo4j/health"
+
+# List recent concepts 
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts?user_id=your-user-id&limit=10"
+
+# Search concepts
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts/search?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&q=test&limit=5"
+```
+
+### **Method 3: Run Brain Integration Test**
+To see live data creation:
+```bash
+cd apps/omnii_mcp
+bun test tests/neo4j/brain-integration.test.ts
+```
+
+---
+
+## 🔍 **What to Look For (Signs of Success)**
+
+✅ **ChatMessage nodes** with:
+- `intent`, `sentiment`, `importance_score` properties
+- `channel` ('sms' or 'chat')
+- `last_modified` timestamps for working memory
+
+✅ **Memory nodes** with:
+- `memory_type` ('episodic', 'semantic', 'procedural')
+- `consolidation_status` ('fresh', 'consolidating', 'consolidated')
+- `episode_type` and `channel` properties
+
+✅ **Concept nodes** with:
+- `activation_strength` and `mention_count`
+- `last_mentioned` timestamps
+- `semantic_weight` values
+
+✅ **Tag nodes** with:
+- `usage_count` and `last_used`
+- `channel_origin` and `category`
+
+✅ **Relationships**:
+- `HAS_MEMORY` (ChatMessage → Memory)
+- `MENTIONS` (ChatMessage → Concept)
+- `HAS_TAG` (ChatMessage → Tag)
+- `RELATED_TO` (ChatMessage ↔ ChatMessage)
+
+---
+
+## 📝 **Notes**
+
+- Replace `'your-user-id-here'` with your actual user ID in user-specific queries
+- Adjust time ranges (`duration({hours: 24})`) as needed
+- Use `LIMIT` clauses to avoid overwhelming results
+- Check both recent data (last 24 hours) and longer periods (last week) for comprehensive testing
+
+**Last Updated**: January 2025
+**Compatible with**: Neo4j AuraDB, Brain Memory System v1.0
+
+curl "https://omniimcp-production.up.railway.app/api/neo4j/concepts/search?user_id=cd9bdc60-35af-4bb6-b87e-1932e96fb354&q=test&limit=5"

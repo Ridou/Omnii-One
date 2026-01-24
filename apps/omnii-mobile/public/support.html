@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support - OMNII AI Productivity Assistant</title>
+  <meta name="description" content="Get help with OMNII. Contact our support team for technical assistance, questions, and feedback.">
+  <meta name="google-site-verification" content="ts5_mpKNxYK_HPwsxsgLMcU8M2KcXOm7xI886yxq52Y" />
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="Support - OMNII AI Productivity Assistant">
+  <meta property="og:description" content="Get help with OMNII. Contact our support team for technical assistance, questions, and feedback.">
+  <meta property="og:url" content="https://omnii.net/support">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://omnii.net/icon-512.png">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Support - OMNII AI Productivity Assistant">
+  <meta name="twitter:description" content="Get help with OMNII. Contact our support team for technical assistance, questions, and feedback.">
+  <meta name="twitter:image" content="https://omnii.net/icon-512.png">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  
+  <!-- Structured Data -->
+  
+  
+  <style>
+    /* OMNII Brand Colors - Matching React App */
+    :root {
+      --primary: #007AFF;
+      --secondary: #5856D6;
+      --background: #FFFFFF;
+      --card-background: #F8F9FA;
+      --text-primary: #000000;
+      --text-secondary: #666666;
+      --border: #E0E0E0;
+      --google-blue: #4285F4;
+      --google-hover: #3367D6;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background-color: var(--background);
+      overflow-x: hidden;
+    }
+    
+    /* Hero Section - Matching Current Design */
+    .hero {
+      padding: 40px 24px 48px;
+      text-align: center;
+      background: var(--background);
+      min-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .logo-container {
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .logo-wrapper {
+      margin-bottom: 12px;
+      animation: gentle-bounce 3s ease-in-out infinite;
+    }
+    
+    .logo-svg {
+      width: 80px;
+      height: 80px;
+      display: block;
+    }
+    
+    .brand-name {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--secondary);
+      letter-spacing: 3px;
+      margin: 0;
+    }
+    
+    .text-container {
+      max-width: 500px;
+      margin: 20px 0 32px;
+    }
+    
+    .main-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    
+    .subtitle {
+      font-size: 18px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-bottom: 0;
+    }
+    
+    .cta-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    /* Google Sign-In Button */
+    .google-signin-button {
+      background: white;
+      color: var(--text-primary);
+      border: 1px solid #dadce0;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      min-width: 280px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .google-signin-button:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transform: translateY(-1px);
+    }
+    
+    .google-signin-button:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .google-icon {
+      flex-shrink: 0;
+    }
+    
+    .primary-button {
+      background: var(--primary);
+      color: white;
+      padding: 16px 32px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 18px;
+      display: inline-block;
+      min-width: 160px;
+      text-align: center;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .primary-button:hover {
+      background: #0056CC;
+      transform: translateY(-1px);
+    }
+    
+    .secondary-button {
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 16px;
+      display: inline-block;
+      min-width: 160px;
+      text-align: center;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .secondary-button:hover {
+      background: #F5F5F7;
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+    
+    /* Features Section */
+    .features-section {
+      background: var(--card-background);
+      padding: 64px 24px;
+      text-align: center;
+    }
+    
+    .features-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+    
+    .features-subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+    }
+    
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .feature-card {
+      background: var(--background);
+      padding: 24px;
+      border-radius: 16px;
+      text-align: center;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .feature-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    .feature-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+    
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    
+    /* OAuth Demo Section */
+    .oauth-demo-section {
+      background: var(--background);
+      padding: 64px 24px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+    
+    .demo-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+    
+    .demo-subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .demo-notice {
+      background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(88, 86, 214, 0.1) 100%);
+      border: 1px solid rgba(0, 122, 255, 0.2);
+      border-radius: 16px;
+      padding: 24px;
+      margin: 32px auto;
+      max-width: 600px;
+      text-align: left;
+    }
+    
+    .demo-notice p {
+      margin: 0 0 16px 0;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    
+    .demo-notice ul {
+      margin: 0;
+      padding-left: 20px;
+      list-style: none;
+    }
+    
+    .demo-notice li {
+      margin: 8px 0;
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .demo-card {
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+      padding: 24px;
+      border-radius: 16px;
+      text-align: center;
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+      cursor: default;
+    }
+    
+    .demo-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    
+    .demo-icon {
+      font-size: 36px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    
+    .demo-service {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    
+    .demo-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    
+    /* Stats Section */
+    .stats-section {
+      background: #F0F2F5;
+      padding: 64px 24px;
+      text-align: center;
+    }
+    
+    .stats-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 48px;
+      font-style: italic;
+    }
+    
+    .stats-container {
+      display: flex;
+      gap: 48px;
+      justify-content: center;
+      margin-bottom: 48px;
+      flex-wrap: wrap;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .final-cta-button {
+      background: var(--primary);
+      color: white;
+      padding: 16px 32px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 18px;
+      display: inline-block;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .final-cta-button:hover {
+      background: #0056CC;
+      transform: translateY(-1px);
+    }
+    
+    /* Footer */
+    .footer {
+      background: #F5F5F7;
+      padding: 64px 24px;
+      text-align: center;
+    }
+    
+    .footer-content {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .footer-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-bottom: 24px;
+    }
+    
+    .footer-cta {
+      margin-bottom: 32px;
+    }
+    
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    
+    .footer-link {
+      color: var(--text-secondary);
+      text-decoration: underline;
+      font-size: 14px;
+      transition: color 0.2s ease;
+    }
+    
+    .footer-link:hover {
+      color: var(--primary);
+    }
+    
+    .copyright-text {
+      font-size: 12px;
+      color: #999999;
+    }
+    
+    /* Content Pages Styles */
+    .page-header {
+      padding: 40px 24px 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .back-button {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 16px;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+    
+    .back-button:hover {
+      text-decoration: underline;
+    }
+    
+    .page-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      margin: 0;
+    }
+    
+    .content-section {
+      padding: 0 24px 64px;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    
+    .meta-info {
+      background: rgba(0, 122, 255, 0.1);
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary);
+      margin: 24px 0;
+    }
+    
+    .intro {
+      font-size: 18px;
+      color: var(--text-secondary);
+      margin: 24px 0;
+    }
+    
+    .content-section h2 {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 32px 0 16px;
+    }
+    
+    .content-section h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 24px 0 12px;
+    }
+    
+    .content-section p {
+      margin: 16px 0;
+      color: var(--text-primary);
+    }
+    
+    .content-section ul {
+      margin: 16px 0;
+      padding-left: 24px;
+    }
+    
+    .content-section li {
+      margin: 8px 0;
+      color: var(--text-primary);
+    }
+    
+    .content-section a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .content-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .footer-nav {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    .footer-nav a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .footer-nav a:hover {
+      text-decoration: underline;
+    }
+    
+    /* Loading and Success States */
+    .signin-loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    
+    .signin-loading::after {
+      content: '';
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 8px;
+    }
+    
+    /* Animations */
+    @keyframes gentle-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .main-title {
+        font-size: 28px;
+      }
+      
+      .subtitle {
+        font-size: 16px;
+      }
+      
+      .cta-container {
+        gap: 12px;
+      }
+      
+      .google-signin-button,
+      .primary-button,
+      .secondary-button {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .stats-container {
+        flex-direction: column;
+        gap: 24px;
+      }
+      
+      .footer-title {
+        font-size: 28px;
+      }
+      
+      .footer-links {
+        flex-direction: column;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    
+      <div class="page-header">
+        <a href="/" class="back-button">← Back to Home</a>
+        <h1>OMNII Support</h1>
+      </div>
+      
+      <div class="content-section">
+        <h2>We're here to help</h2>
+        
+        <p>Whether you need technical support or have questions about OMNII, our team is ready to assist you.</p>
+        
+        <h2>Contact Options</h2>
+        <ul>
+          <li><strong>Support Email:</strong> <a href="mailto:support@omnii.net">support@omnii.net</a></li>
+          <li><strong>General Contact:</strong> <a href="mailto:contact@omnii.net">contact@omnii.net</a></li>
+        </ul>
+        
+        <h2>Response Times</h2>
+        <p>We typically respond to support requests within 24 hours during business days.</p>
+        
+        <div class="footer-nav">
+          <a href="/">← Back to Home</a> | <a href="/privacy-policy">Privacy Policy</a>
+        </div>
+      </div>
+    
+  </main>
+  
+  <!-- React App Hydration - Only redirect to interactive version after user interaction -->
+  <script>
+    // Google OAuth Configuration
+    const GOOGLE_CLIENT_ID = '31768914670-v6qqf961ersh1m2ahtlekff552ovis66.apps.googleusercontent.com';
+    const SUPABASE_URL = 'https://auth.omnii.net';
+    
+    // Enhanced interaction detection for seamless transition to React app
+    let userInteracted = false;
+    
+    function detectInteraction() {
+      userInteracted = true;
+      document.removeEventListener('click', detectInteraction);
+      document.removeEventListener('scroll', detectInteraction);
+      document.removeEventListener('keydown', detectInteraction);
+    }
+    
+    document.addEventListener('click', detectInteraction);
+    document.addEventListener('scroll', detectInteraction);
+    document.addEventListener('keydown', detectInteraction);
+    
+    // Google OAuth Sign-In Handler
+    function handleGoogleSignIn() {
+      const buttons = document.querySelectorAll('#google-signin-btn, #final-cta-signin, #footer-signin');
+      buttons.forEach(button => {
+        if (button) {
+          button.classList.add('signin-loading');
+          button.disabled = true;
+          // Update button text to show what's happening
+          const originalText = button.innerHTML;
+          button.innerHTML = originalText.replace('Continue with Google', 'Connecting to Google...').replace('Get Started →', 'Starting...').replace('Start Your Evolution →', 'Connecting...');
+        }
+      });
+      
+      // Build OAuth URL for Supabase - let React app handle the final redirect
+      const redirectUri = window.location.origin + '/auth/callback';
+      const scopes = [
+        'openid',
+        'profile',
+        'email',
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://mail.google.com/',
+        'https://www.googleapis.com/auth/gmail.compose',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/gmail.labels',
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/calendar.events',
+        'https://www.googleapis.com/auth/contacts',
+        'https://www.googleapis.com/auth/contacts.readonly',
+        'https://www.googleapis.com/auth/tasks',
+        'https://www.googleapis.com/auth/tasks.readonly'
+      ].join(' ');
+      
+      // Use Supabase OAuth endpoint - simplified redirect
+      const supabaseOAuthUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}&scopes=${encodeURIComponent(scopes)}&access_type=offline&prompt=consent`;
+      
+      console.log('🚀 Starting Google OAuth flow...');
+      console.log('📋 Requested scopes:', scopes);
+      console.log('🔗 Redirect URI:', redirectUri);
+      console.log('🏠 React app will handle routing to approvals page');
+      
+      // Show user feedback
+      showAuthProgress('Redirecting to Google for authentication...');
+      
+      // Small delay to show feedback, then redirect
+    setTimeout(() => {
+        window.location.href = supabaseOAuthUrl;
+      }, 500);
+    }
+    
+    // Show authentication progress to user
+    function showAuthProgress(message) {
+      // Create or update progress indicator
+      let progressDiv = document.getElementById('auth-progress');
+      if (!progressDiv) {
+        progressDiv = document.createElement('div');
+        progressDiv.id = 'auth-progress';
+        progressDiv.style.cssText = 
+          'position: fixed;' +
+          'top: 20px;' +
+          'right: 20px;' +
+          'background: linear-gradient(135deg, #007AFF, #5856D6);' +
+          'color: white;' +
+          'padding: 16px 24px;' +
+          'border-radius: 12px;' +
+          'box-shadow: 0 8px 24px rgba(0,122,255,0.3);' +
+          'z-index: 10000;' +
+          'font-family: -apple-system, BlinkMacSystemFont, sans-serif;' +
+          'font-size: 14px;' +
+          'font-weight: 500;' +
+          'transform: translateX(400px);' +
+          'transition: transform 0.3s ease;';
+        document.body.appendChild(progressDiv);
+      }
+      
+      progressDiv.innerHTML = 
+        '<div style="display: flex; align-items: center; gap: 12px;">' +
+          '<div style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>' +
+          '<span>' + message + '</span>' +
+        '</div>';
+      
+      // Slide in
+      setTimeout(() => {
+        progressDiv.style.transform = 'translateX(0)';
+      }, 100);
+      
+      // Auto-hide after delay
+      setTimeout(() => {
+        if (progressDiv) {
+          progressDiv.style.transform = 'translateX(400px)';
+          setTimeout(() => {
+            if (progressDiv && progressDiv.parentNode) {
+              progressDiv.parentNode.removeChild(progressDiv);
+            }
+          }, 300);
+        }
+      }, 4000);
+    }
+    
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add click handlers to all sign-in buttons
+      const googleSignInBtn = document.getElementById('google-signin-btn');
+      const finalCtaBtn = document.getElementById('final-cta-signin');
+      const footerSignInBtn = document.getElementById('footer-signin');
+      
+      if (googleSignInBtn) {
+        googleSignInBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          console.log('🔵 Google Sign-In button clicked');
+          handleGoogleSignIn();
+        });
+      }
+      
+      if (finalCtaBtn) {
+        finalCtaBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          console.log('🔵 Final CTA button clicked');
+          handleGoogleSignIn();
+        });
+      }
+      
+      if (footerSignInBtn) {
+        footerSignInBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          console.log('🔵 Footer sign-in button clicked');
+          handleGoogleSignIn();
+        });
+      }
+      
+      // Check for OAuth callback and handle appropriately
+      const urlParams = new URLSearchParams(window.location.search);
+      const authCode = urlParams.get('code');
+      const authError = urlParams.get('error');
+      const accessToken = urlParams.get('access_token') || window.location.hash.match(/access_token=([^&]*)/)?.[1];
+      
+      if (authCode || accessToken) {
+        console.log('✅ OAuth callback detected - redirecting to React app...');
+        showAuthProgress('Authentication successful! Loading your dashboard...');
+        
+        // Redirect to React app immediately - let it handle the tokens and routing
+        setTimeout(() => {
+          window.location.href = '/(tabs)/approvals' + window.location.search + window.location.hash;
+        }, 1000);
+        
+      } else if (authError) {
+        console.log('❌ OAuth error detected:', authError);
+        showAuthError('Authentication failed. Please try again.');
+        
+        // Reset button states
+        const buttons = document.querySelectorAll('#google-signin-btn, #final-cta-signin, #footer-signin');
+        buttons.forEach(button => {
+          if (button) {
+            button.classList.remove('signin-loading');
+            button.disabled = false;
+          }
+        });
+      }
+      
+      // Handle navigation links to maintain static experience for crawlers
+      const links = document.querySelectorAll('a[href^="/"]');
+      links.forEach(link => {
+        if (!link.href.includes('auth') && !link.href.includes('tabs')) {
+          // Keep static navigation for content pages
+          link.addEventListener('click', function(e) {
+            // Let normal browser navigation handle static pages
+          });
+        }
+      });
+      
+      // Demo interactions with enhanced feedback
+      const demoCards = document.querySelectorAll('.demo-card');
+      demoCards.forEach(card => {
+        card.addEventListener('click', function() {
+          const service = this.querySelector('.demo-service').textContent;
+          console.log('📧 Demo: ' + service + ' integration clicked');
+          
+          // Show integration explanation
+          showServiceDemo(service);
+          
+          // Show a brief highlight effect
+          this.style.transform = 'translateY(-8px)';
+          this.style.boxShadow = '0 12px 32px rgba(0,122,255,0.2)';
+          
+          setTimeout(() => {
+            this.style.transform = 'translateY(-4px)';
+            this.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)';
+          }, 200);
+        });
+      });
+    });
+    
+    // Show authentication error to user
+    function showAuthError(message) {
+      let errorDiv = document.getElementById('auth-error');
+      if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'auth-error';
+        errorDiv.style.cssText = 
+          'position: fixed;' +
+          'top: 20px;' +
+          'right: 20px;' +
+          'background: linear-gradient(135deg, #FF3B30, #FF9500);' +
+          'color: white;' +
+          'padding: 16px 24px;' +
+          'border-radius: 12px;' +
+          'box-shadow: 0 8px 24px rgba(255,59,48,0.3);' +
+          'z-index: 10000;' +
+          'font-family: -apple-system, BlinkMacSystemFont, sans-serif;' +
+          'font-size: 14px;' +
+          'font-weight: 500;' +
+          'transform: translateX(400px);' +
+          'transition: transform 0.3s ease;';
+        document.body.appendChild(errorDiv);
+      }
+      
+      errorDiv.innerHTML = 
+        '<div style="display: flex; align-items: center; gap: 12px;">' +
+          '<div style="font-size: 16px;">⚠️</div>' +
+          '<span>' + message + '</span>' +
+        '</div>';
+      
+      // Slide in
+      setTimeout(() => {
+        errorDiv.style.transform = 'translateX(0)';
+      }, 100);
+      
+      // Auto-hide after delay
+      setTimeout(() => {
+        if (errorDiv) {
+          errorDiv.style.transform = 'translateX(400px)';
+          setTimeout(() => {
+            if (errorDiv && errorDiv.parentNode) {
+              errorDiv.parentNode.removeChild(errorDiv);
+            }
+          }, 300);
+        }
+      }, 6000);
+    }
+    
+    // Show service integration demo
+    function showServiceDemo(serviceName) {
+      const messages = {
+        'Gmail': 'After authentication, OMNII will access your Gmail to provide AI-powered email management, smart replies, and inbox organization.',
+        'Calendar': 'OMNII will integrate with Google Calendar to optimize your schedule, suggest meeting times, and provide intelligent calendar management.',
+        'Tasks': 'Connect Google Tasks with OMNII for unified task management across all your productivity tools and platforms.',
+        'Contacts': 'OMNII will access Google Contacts to provide smart contact management and relationship insights.'
+      };
+      
+      const message = messages[serviceName] || 'This service integration will be available after Google OAuth authentication.';
+      
+      let demoDiv = document.getElementById('service-demo');
+      if (!demoDiv) {
+        demoDiv = document.createElement('div');
+        demoDiv.id = 'service-demo';
+        demoDiv.style.cssText = 
+          'position: fixed;' +
+          'top: 50%;' +
+          'left: 50%;' +
+          'transform: translate(-50%, -50%) scale(0.8);' +
+          'background: white;' +
+          'padding: 24px;' +
+          'border-radius: 16px;' +
+          'box-shadow: 0 20px 40px rgba(0,0,0,0.15);' +
+          'z-index: 10001;' +
+          'font-family: -apple-system, BlinkMacSystemFont, sans-serif;' +
+          'max-width: 400px;' +
+          'text-align: center;' +
+          'opacity: 0;' +
+          'transition: all 0.3s ease;';
+        document.body.appendChild(demoDiv);
+        
+        // Add backdrop
+        const backdrop = document.createElement('div');
+        backdrop.id = 'service-demo-backdrop';
+        backdrop.style.cssText = 
+          'position: fixed;' +
+          'top: 0;' +
+          'left: 0;' +
+          'width: 100%;' +
+          'height: 100%;' +
+          'background: rgba(0,0,0,0.5);' +
+          'z-index: 10000;' +
+          'opacity: 0;' +
+          'transition: opacity 0.3s ease;';
+        document.body.appendChild(backdrop);
+        
+        backdrop.addEventListener('click', () => {
+          closeDemoModal();
+        });
+      }
+      
+      demoDiv.innerHTML = 
+        '<h3 style="color: #007AFF; margin-bottom: 16px; font-size: 18px; font-weight: 600;">' + serviceName + ' Integration</h3>' +
+        '<p style="color: #666; line-height: 1.5; margin-bottom: 20px;">' + message + '</p>' +
+        '<button onclick="closeDemoModal()" style="background: #007AFF; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 500; cursor: pointer;">Got it</button>';
+      
+      // Show modal
+      setTimeout(() => {
+        const backdrop = document.getElementById('service-demo-backdrop');
+        if (backdrop) backdrop.style.opacity = '1';
+        demoDiv.style.opacity = '1';
+        demoDiv.style.transform = 'translate(-50%, -50%) scale(1)';
+      }, 50);
+    }
+    
+    // Close demo modal
+    function closeDemoModal() {
+      const demoDiv = document.getElementById('service-demo');
+      const backdrop = document.getElementById('service-demo-backdrop');
+      
+      if (demoDiv) {
+        demoDiv.style.opacity = '0';
+        demoDiv.style.transform = 'translate(-50%, -50%) scale(0.8)';
+      }
+      if (backdrop) {
+        backdrop.style.opacity = '0';
+      }
+      
+      setTimeout(() => {
+        if (demoDiv && demoDiv.parentNode) demoDiv.parentNode.removeChild(demoDiv);
+        if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+      }, 300);
+    }
+    
+    // Make closeDemoModal globally available
+    window.closeDemoModal = closeDemoModal;
+    
+    // Performance optimization: Show helpful messaging to users
+    setTimeout(() => {
+      if (userInteracted && window.location.pathname === '/') {
+        console.log('ℹ️ User has interacted - OAuth functionality available');
+        console.log('💡 Click "Continue with Google" to experience the full OMNII dashboard');
+        console.log('🏠 After authentication, you will be redirected to: /(tabs)/approvals');
+      }
+    }, 3000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# MCP Communication Protocol
+
+## Overview
+
+The Model Context Protocol (MCP) uses a dual-channel communication approach:
+
+1. **Server → Client**: Server-Sent Events (SSE) via GET request
+2. **Client → Server**: JSON-RPC via POST request
+
+## Protocol Diagram
+
+```
+┌────────┐                                   ┌────────┐
+│        │                                   │        │
+│        │   1. GET /sse (Establish SSE)    │        │
+│        │ ──────────────────────────────► │        │
+│        │                                   │        │
+│        │   2. SSE Events (Stream)          │        │
+│        │ ◄─────────────────────────────  │        │
+│ MCP    │                                   │ MCP    │
+│ Client │   3. POST /messages (JSON-RPC)    │ Server │
+│        │ ──────────────────────────────► │        │
+│        │                                   │        │
+│        │   4. JSON-RPC Response            │        │
+│        │ ◄─────────────────────────────  │        │
+│        │                                   │        │
+└────────┘                                   └────────┘
+```
+
+## Communication Steps
+
+1. **Client establishes an SSE connection**:
+   - HTTP GET request to `/sse`
+   - Connection remains open for server events
+   - Headers: `Accept: text/event-stream`, `Cache-Control: no-cache`
+
+2. **Server sends events to the client**:
+   - Events follow SSE format: `data: message\n\n`
+   - Connection remains open until client or server closes it
+   - Server can send notifications, updates, etc.
+
+3. **Client sends JSON-RPC requests**:
+   - HTTP POST request to `/messages`
+   - Contains JSON-RPC payload for tool calls
+   - Example:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "method": "mcp.call_tool",
+       "params": {
+         "name": "toolName",
+         "arguments": { ... }
+       },
+       "id": "request-123"
+     }
+     ```
+
+4. **Server responds to the POST request**:
+   - JSON-RPC response with results or error
+   - Example:
+     ```json
+     {
+       "jsonrpc": "2.0",
+       "result": {
+         "content": [
+           {
+             "type": "text",
+             "text": "..."
+           }
+         ]
+       },
+       "id": "request-123"
+     }
+     ```
+
+## Important Notes
+
+- The SSE connection and JSON-RPC requests operate simultaneously
+- The client must maintain the SSE connection while sending POST requests
+- The server associates POST requests with the active SSE connection
+- Closing the SSE connection should terminate the session
+
+## Testing with Curl
+
+You can't effectively test the full protocol with curl alone because:
+
+1. You need to maintain an SSE connection while
+2. Simultaneously sending POST requests from another process
+
+Instead, use the provided client examples:
+- `sdk-client.js` - Uses the MCP SDK
+- `mcp-client-example.js` - Manual implementation
+
+Or for individual endpoint testing:
+- `curl-test.sh` - Tests each endpoint separately

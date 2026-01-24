@@ -1,0 +1,22 @@
+[test]
+# Test timeout in milliseconds
+timeout = 30000
+
+# Test environment
+env = "test"
+
+# Coverage settings
+coverage = true
+
+# Test file patterns
+testNamePattern = ".*\\.(test|spec)\\.(ts|tsx|js|jsx)$"
+
+# Setup files
+preload = ["./tests/setup/global.ts"]
+
+# Mock React Native modules
+mock = [
+  "react-native",
+  "expo-apple-authentication", 
+  "@react-native-async-storage/async-storage"
+] 

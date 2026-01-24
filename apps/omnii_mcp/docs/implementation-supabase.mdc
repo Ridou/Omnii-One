@@ -1,0 +1,69 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Backend Implementation Plan for Composio Integration
+1. Project Setup & Dependencies
+Apply to access-token...
+Run
+nodemon
+2. Environment Configuration
+Apply to .env
+development
+3. Core Types & Interfaces
+Apply
+}
+4. Supabase Service Layer
+Apply
+}
+5. Google Token Refresh Service
+Apply
+}
+6. Composio Integration Service
+Apply
+}
+7. Main OAuth Manager Service
+Apply
+}
+8. Express API Routes
+Apply
+;
+9. Main Server Setup
+Apply
+;
+10. Usage Examples
+Apply
+;
+11. Package.json Scripts
+Apply to package.json
+}
+API Endpoints Summary
+🔐 Token Management
+GET /api/oauth/tokens/:userId - Get user's token status
+POST /api/oauth/tokens/:userId/refresh - Force token refresh
+📧 Gmail Integration
+POST /api/oauth/gmail/:userId/send_email - Send emails
+POST /api/oauth/gmail/:userId/list_messages - List messages
+POST /api/oauth/gmail/:userId/get_message - Get specific message
+📅 Calendar Integration
+POST /api/oauth/calendar/:userId/create_event - Create events
+POST /api/oauth/calendar/:userId/list_events - List events
+POST /api/oauth/calendar/:userId/update_event - Update events
+✅ Tasks Integration
+POST /api/oauth/tasks/:userId/create_task - Create tasks
+POST /api/oauth/tasks/:userId/list_tasks - List tasks
+POST /api/oauth/tasks/:userId/complete_task - Complete tasks
+👥 Contacts Integration
+POST /api/oauth/contacts/:userId/list_contacts - List contacts
+POST /api/oauth/contacts/:userId/create_contact - Create contacts
+POST /api/oauth/contacts/:userId/update_contact - Update contacts
+Key Features
+✅ Automatic Token Refresh - Handles expired tokens seamlessly
+✅ Error Handling - Comprehensive error handling and logging
+✅ Type Safety - Full TypeScript implementation
+✅ Composio Integration - Ready for all Google services
+✅ Scalable Architecture - Service-based design pattern
+✅ Security - Service role authentication with Supabase
+✅ Monitoring - Detailed logging for debugging
+This backend implementation provides a complete, production-ready solution for integrating with Composio using your stored OAuth tokens! 🚀

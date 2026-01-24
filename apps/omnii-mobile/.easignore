@@ -1,0 +1,19 @@
+# Ignore workspace configuration files
+../../pnpm-workspace.yaml
+../../pnpm-lock.yaml
+../../package.json
+../../turbo.json
+../../packages/
+../../tooling/
+../../.github/
+../../patches/
+
+# Ignore other apps
+../nextjs/
+../omnii_mcp/
+
+# Only include this specific app
+!package.json
+!package-lock.json
+!eas.json
+!app.config.js 

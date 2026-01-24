@@ -1,0 +1,38 @@
+{
+  "name": "@omnii/api",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "license": "PROPRIETARY",
+  "scripts": {
+    "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "dev": "tsc",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@omnii/auth": "workspace:*",
+    "@omnii/db": "workspace:*",
+    "@omnii/validators": "workspace:*",
+    "@supabase/supabase-js": "^2.50.0",
+    "@trpc/server": "catalog:",
+    "superjson": "2.2.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@omnii/eslint-config": "workspace:*",
+    "@omnii/prettier-config": "workspace:*",
+    "@omnii/tsconfig": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:"
+  },
+  "prettier": "@omnii/prettier-config"
+}

@@ -1,0 +1,28 @@
+{
+    "mcpServers": {
+      "filesystem": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+      },
+      "ClaudeTalkToFigma": {
+        "command": "bunx",
+        "args": ["claude-talk-to-figma-mcp@latest"],
+        "env": {
+          "FIGMA_API_TOKEN": "1p43ttvCvQ1eDfORRfKNKO",
+          "FIGMA_FILE_ID": "BJ0kxPuiEQQz-z7mfGy1lOD_kk1Q3WyfQN7Jjn_x"
+        }
+      },
+      "figma-official": {
+        "command": "http",
+        "args": ["http://127.0.0.1:3845/mcp"],
+        "env": {
+          "FIGMA_API_TOKEN": "1p43ttvCvQ1eDfORRfKNKO",
+          "FIGMA_FILE_ID": "BJ0kxPuiEQQz-z7mfGy1lOD_kk1Q3WyfQN7Jjn_x"
+        }
+      },
+      "puppeteer": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+      }
+    }
+  }

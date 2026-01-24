@@ -1,0 +1,270 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Mascot Health Bar Implementation Plan
+
+## Overview
+The health bar system will provide visual feedback about the mascot's wellbeing based on user activity patterns. The health degrades over time when inactive and recovers through task completion, creating motivation for user engagement.
+
+## Core Requirements
+- Green health bar that degrades over time when user is inactive
+- Health continues to degrade until user completes tasks
+- Different mascot animations showing degradation states
+- Motivation system to drive user activity
+
+## Technical Architecture
+
+### 1. Health System Context
+**File**: `apps/omnii-mobile/src/context/HealthContext.tsx`
+
+```typescript
+interface HealthState {
+  currentHealth: number; // 0-100
+  maxHealth: number; // Always 100
+  healthDecayRate: number; // Health lost per hour of inactivity
+  lastActivity: Date; // Last meaningful user activity
+  lastCalculation: Date; // Last health calculation timestamp
+  healthStatus: 'excellent' | 'good' | 'declining' | 'poor' | 'critical';
+  isRecovering: boolean; // True when user is actively doing tasks
+}
+
+interface HealthActions {
+  updateHealth: () => void;
+  recordActivity: (activityType: string) => void;
+  recoverHealth: (amount: number) => void;
+  getHealthDecayRate: () => number;
+  getTimeUntilNextDecay: () => number;
+}
+```
+
+### 2. Health Calculation Logic
+**Integration**: Extend existing XP system to track meaningful activities
+
+#### Health Decay Rules:
+- **Excellent (90-100)**: No decay for first 10 hours, then 2 points/hour
+- **Good (70-89)**: 3 points/hour decay
+- **Declining (50-69)**: 4 points/hour decay  
+- **Poor (30-49)**: 5 points/hour decay
+- **Critical (0-29)**: 6 points/hour decay (accelerated)
+
+#### Health Recovery Activities:
+- Complete approval: +15 health
+- Chat interaction: +5 health
+- Achievement unlock: +20 health
+- Profile update: +10 health
+- Analytics review: +8 health
+- Daily login streak: +12 health
+
+### 3. Mascot Health Animations
+**Integration**: Extend existing `useMascotAssets.ts` hook
+
+#### New Animation States:
+```typescript
+interface HealthAnimations {
+  excellent: {
+    idle: 'vibrant-breathing' | 'happy-idle' | 'energetic-movement';
+    interaction: 'enthusiastic-response' | 'eager-attention';
+  };
+  good: {
+    idle: 'normal-breathing' | 'content-idle';
+    interaction: 'positive-response' | 'attentive';
+  };
+  declining: {
+    idle: 'slower-breathing' | 'concerned-look' | 'slight-droop';
+    interaction: 'hesitant-response' | 'worried-glance';
+  };
+  poor: {
+    idle: 'weak-breathing' | 'sad-droop' | 'low-energy';
+    interaction: 'tired-response' | 'pleading-look';
+  };
+  critical: {
+    idle: 'barely-breathing' | 'wilting' | 'desperate-state';
+    interaction: 'weak-plea' | 'fading-attention';
+  };
+}
+```
+
+#### Animation Mapping by Mascot Stage:
+- **Seed**: Brightness/saturation changes, leaf wilting
+- **Flower**: Petal drooping, color fading, reduced bloom
+- **Tree**: Leaf browning, branch drooping, reduced foliage
+
+### 4. Health Bar UI Component
+**File**: `apps/omnii-mobile/src/components/common/HealthBar.tsx`
+
+```typescript
+interface HealthBarProps {
+  health: number;
+  maxHealth: number;
+  showPercentage?: boolean;
+  size?: 'small' | 'medium' | 'large';
+  animated?: boolean;
+  showTooltip?: boolean;
+}
+
+// Visual States:
+// 90-100%: Bright green, pulsing glow
+// 70-89%: Green
+// 50-69%: Yellow-green, subtle warning
+// 30-49%: Orange, mild pulsing warning
+// 0-29%: Red, urgent pulsing animation
+```
+
+### 5. Mascot Health Display Component
+**File**: `apps/omnii-mobile/src/components/common/MascotHealthDisplay.tsx`
+
+Combines mascot animation with health bar, includes:
+- Current mascot stage animation
+- Health bar overlay
+- Health status text
+- Time until next decay warning
+- Recovery suggestions
+
+### 6. Database Schema Extensions
+**Integration**: Extend existing user tables
+
+```sql
+-- Add to existing user_profiles table
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS health_data JSONB DEFAULT '{
+  "current_health": 100,
+  "last_activity": null,
+  "last_calculation": null,
+  "total_recovery": 0,
+  "decay_paused_until": null
+}';
+
+-- New health activity log table
+CREATE TABLE IF NOT EXISTS health_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  activity_type VARCHAR(50) NOT NULL,
+  health_change INTEGER NOT NULL,
+  recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  context JSONB DEFAULT '{}'
+);
+```
+
+### 7. Background Health Processing
+**File**: `apps/omnii-mobile/src/services/health/HealthBackgroundService.ts`
+
+#### Features:
+- Calculate health decay when app opens
+- Schedule periodic health updates
+- Handle offline/online state transitions
+- Batch health updates for performance
+
+#### Integration Points:
+- App state change listeners
+- XP context activity recording
+- Push notification triggers for critical health
+
+### 8. Health-Based Features
+
+#### Motivational Notifications:
+- Health drops to 50%: "Your mascot is feeling tired! Complete a task to boost their energy."
+- Health drops to 25%: "Your mascot needs your help! They're counting on you."
+- Health critical: "Emergency! Your mascot is in critical condition!"
+
+#### Recovery Bonuses:
+- Health recovery streaks unlock XP multipliers
+- Full health recovery (0→100) grants achievement
+- Maintaining excellent health (90%+) for 7 days grants special badge
+
+#### Mascot Dialogue Integration:
+- Health-aware chat responses
+- Mascot mentions their health state
+- Encouragement based on health trends
+
+### 9. Settings & Customization
+**Integration**: Add to existing settings/profile system
+
+#### User Controls:
+- Health decay rate preference (casual/normal/hardcore)
+- Health notifications on/off
+- Mascot health visibility toggle
+- Recovery activity preferences
+
+#### Accessibility:
+- Color-blind friendly health indicators
+- Alternative text descriptions for animations
+- Reduced motion options for health bar
+
+### 10. Analytics & Insights
+**Integration**: Extend existing analytics system
+
+#### Health Metrics:
+- Average daily health
+- Health recovery patterns
+- Activity correlation with health
+- Health impact on user retention
+
+### 11. Implementation Phases
+
+#### Phase 1: Core System (Week 1-2)
+- Health context and calculation logic
+- Basic health bar component
+- Database schema updates
+- Health decay/recovery mechanics
+
+#### Phase 2: Mascot Integration (Week 3)
+- Extend mascot assets with health states
+- Health-based animation system
+- Mascot health display component
+- Integration with existing mascot system
+
+#### Phase 3: Motivational Features (Week 4)
+- Health-based notifications
+- Recovery bonuses and achievements
+- Settings and customization options
+- Chat integration for health awareness
+
+#### Phase 4: Polish & Analytics (Week 5)
+- Background processing optimization
+- Analytics integration
+- Accessibility improvements
+- Performance testing and optimization
+
+## Integration Points with Existing Systems
+
+### XP System Integration:
+- Record health-affecting activities in XP context
+- Health bonuses for level-ups
+- XP multipliers based on health status
+
+### Mascot System Integration:
+- Extend existing `useMascotAssets` with health states
+- Leverage existing animation infrastructure
+- Maintain consistency with current mascot progression
+
+### Notification System:
+- Use existing push notification setup
+- Health alerts follow app notification preferences
+- Integrate with existing onboarding nudge system
+
+### Analytics Integration:
+- Health metrics in existing analytics dashboard
+- A/B testing for health decay rates
+- User behavior correlation analysis
+
+## Success Metrics
+- Increased daily active users (health motivation effect)
+- Higher task completion rates
+- Improved user retention at 7-day and 30-day marks
+- Reduced time between user sessions
+- Positive user feedback on mascot engagement
+
+## Technical Considerations
+- Performance: Health calculations should be lightweight
+- Battery: Minimize background processing impact
+- Storage: Efficient health data storage and sync
+- Offline: Graceful handling of offline health decay
+- Testing: Comprehensive unit tests for health logic
+
+## Future Enhancements
+- Social features: Compare mascot health with friends
+- Seasonal events: Special health challenges
+- Mascot personalities: Different health responses per mascot type
+- Advanced analytics: Predictive health modeling
+- Gamification: Health-based leaderboards and competitions

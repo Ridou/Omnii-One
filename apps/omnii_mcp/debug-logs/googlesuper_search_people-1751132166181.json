@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-06-28T17:36:06.181Z",
+  "userId": "cd9bdc60-35af-4bb6-b87e-1932e96fb354",
+  "actionName": "GOOGLESUPER_SEARCH_PEOPLE",
+  "inputParams": {},
+  "response": {
+    "data": {
+      "response_data": {
+        "results": [
+          {
+            "person": {
+              "emailAddresses": [
+                {
+                  "metadata": {
+                    "primary": true,
+                    "source": {
+                      "id": "67bde8e60ac06464",
+                      "type": "OTHER_CONTACT"
+                    },
+                    "sourcePrimary": true
+                  },
+                  "value": "santino62+n8n@gmail.com"
+                }
+              ],
+              "etag": "%EgkBAgkLLjc9Pj8aAQIiDDNDd01DS3k2R0pVPQ==",
+              "names": [
+                {
+                  "displayName": "Richard Santin",
+                  "displayNameLastFirst": "Santin, Richard",
+                  "familyName": "Santin",
+                  "givenName": "Richard",
+                  "metadata": {
+                    "primary": true,
+                    "source": {
+                      "id": "67bde8e60ac06464",
+                      "type": "OTHER_CONTACT"
+                    },
+                    "sourcePrimary": true
+                  },
+                  "unstructuredName": "Richard Santin"
+                }
+              ],
+              "resourceName": "otherContacts/c7475387031225394276"
+            }
+          }
+        ]
+      }
+    },
+    "error": null,
+    "successfull": true,
+    "successful": true,
+    "logId": "log_ArK-6FPTYifd"
+  },
+  "success": true,
+  "formattedTimestamp": "6/28/2025, 6:36:06 PM"
+}

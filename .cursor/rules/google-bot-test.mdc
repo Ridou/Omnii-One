@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+echo "🔍 OMNII Google Bot Check" && echo "Homepage:" && curl -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" -I https://omnii.net 2>/dev/null | head -1 && echo "Privacy:" && curl -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" -I https://omnii.net/privacy-policy 2>/dev/null | head -1 && echo "Terms:" && curl -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" -I https://omnii.net/terms-of-service 2>/dev/null | head -1 && echo "DNS TXT:" && dig TXT omnii.net +short && echo "HTML Meta:" && curl -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" -s https://omnii.net 2>/dev/null | grep -i "google-site-verification"

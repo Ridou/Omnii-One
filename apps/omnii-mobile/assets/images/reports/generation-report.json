@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-06-05T09:47:29.378Z",
+  "version": "1.0.0",
+  "source": "../src/assets/images/public/logos/omniiLogoPNG.png",
+  "duration": "2.53s",
+  "totalAssets": 31,
+  "platforms": {
+    "ios": {
+      "enabled": true,
+      "appIcons": 15,
+      "launchScreens": 11,
+      "screenshots": 5,
+      "total": 31
+    },
+    "android": {
+      "enabled": false,
+      "standardIcons": 0,
+      "adaptiveIcons": 0,
+      "total": 0
+    },
+    "web": {
+      "enabled": false,
+      "favicons": 0,
+      "socialMedia": 0,
+      "special": 0,
+      "total": 0
+    }
+  },
+  "recommendations": [
+    "📱 Update app.config.js to use the generated iOS icons",
+    "🍎 Upload app icons to App Store Connect",
+    "📸 Replace screenshot templates with actual app screenshots",
+    "✅ Test all generated assets on target devices",
+    "🔍 Validate assets using platform-specific tools"
+  ]
+}

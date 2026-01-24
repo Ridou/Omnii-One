@@ -1,1 +1,206 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# ===== PLANNING INTELLIGENCE =====
 .planning/intel/
+
+# ===== DEPENDENCIES =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.pnp/
+.pnp.js
+.yarn/
+.yarnrc.yml
+
+# ===== PACKAGE MANAGERS =====
+package-lock.json
+yarn.lock
+.npmrc.local
+
+# ===== BUILD OUTPUTS =====
+build/
+dist/
+out/
+coverage/
+.next/
+.nitro/
+.output/
+
+# ===== EXPO & REACT NATIVE =====
+.expo/
+.expo-shared/
+expo-env.d.ts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+dist-spa/
+dist-static/
+
+# iOS
+ios/build/
+ios/Pods/
+ios/*.xcworkspace
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/Podfile.lock
+
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+*.keystore
+*.jks
+
+# ===== METRO & CACHE =====
+.cache/
+.metro-cache/
+.haste_cache/
+*.hprof
+.flipper/
+
+# ===== DEVELOPMENT TOOLS =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== LOGS =====
+logs/
+*.log
+lerna-debug.log*
+.turbo/
+
+# ===== ENVIRONMENT & SECRETS =====
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+*.pem
+*.p12
+*.key
+*.mobileprovision
+
+# ===== PLATFORM SPECIFIC =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.tmp
+*.temp
+
+# ===== TYPESCRIPT =====
+*.tsbuildinfo
+.tscache/
+
+# ===== TESTING =====
+coverage/
+.nyc_output/
+junit.xml
+.jest-cache/
+
+# ===== VERCEL =====
+.vercel/
+
+# ===== SENTRY =====
+.sentryclirc
+
+# ===== TEMPORARY FILES =====
+tmp/
+temp/
+*.pid
+*.seed
+*.pid.lock
+
+# ===== RUNTIME DATA =====
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ===== OPTIONAL DIRECTORIES =====
+.sass-cache/
+.connect.lock
+.typings/
+
+# ===== LINTING =====
+.eslintcache
+
+# ===== STORYBOOK =====
+.storybook-static/
+
+# ===== WEBPACK =====
+.webpack/
+
+# ===== PARCEL =====
+.parcel-cache/
+
+# ===== ROLLUP =====
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# ===== MICROBUNDLE =====
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# ===== OPTIONAL ESLINT CACHE =====
+.eslintcache
+
+# ===== OPTIONAL STYLELINT CACHE =====
+.stylelintcache
+
+# ===== FIREBASE =====
+.firebase/
+.firebaserc
+
+# ===== SUPABASE =====
+supabase/.temp/
+supabase/.git/
+
+# ===== CUSTOM APP CACHES =====
+*.tgz
+*.tar.gz
+.cache/
+.nyc_output/
+.vuepress/dist/
+.serverless/
+.dynamodb/
+
+# ===== PATCH FILES =====
+*.orig
+*.rej
+
+# ===== BACKUP FILES =====
+*~
+.#*
+\#*#
+.*.swp
+.*.swo
+
+# ===== PROFILING =====
+*.cpu.prof
+*.heap.prof
+*.heapsnapshot
+.vercel
+
+# Prevent accidental JS builds in TypeScript packages
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map

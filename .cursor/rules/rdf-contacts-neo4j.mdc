@@ -1,0 +1,623 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# RDF Contact Resolution with Neo4j Brain Memory Integration
+
+## Overview
+Enhance the RDF-driven contact resolution system by leveraging your existing Neo4j brain memory infrastructure to provide temporal context, communication patterns, and confidence boosting for more accurate contact resolution and personalized communication generation.
+
+## Neo4j Brain Memory Context Integration
+
+### Leveraging Existing Brain Memory Infrastructure
+Your Neo4j system already provides:
+- **ChatMessage nodes** with temporal tracking, sentiment, importance scores
+- **Memory nodes** with consolidation status and episodic connections  
+- **Concept nodes** with activation strength and mention tracking
+- **BrainMemoryContext** with working/episodic/semantic memory layers
+- **Temporal relationship tracking** across communication patterns
+
+### Enhanced Contact Context Structure
+```typescript
+interface EnhancedContactContext {
+  temporal_context: {
+    past_week: CommunicationPattern[];
+    current_week: CommunicationPattern[];
+    future_week: ScheduledInteraction[];
+  };
+  communication_patterns: {
+    preferred_channels: ChannelPreference[];
+    interaction_frequency: number;
+    response_patterns: ResponseStyle;
+    relationship_indicators: RelationshipContext;
+  };
+  brain_memory_insights: {
+    recent_mentions: ConceptActivation[];
+    semantic_associations: ConceptRelationship[];
+    episodic_connections: MemoryThread[];
+    consolidation_status: MemoryConsolidation;
+  };
+}
+```
+
+## Implementation Components
+
+### 1. Temporal Communication Analysis
+**Purpose**: Extract past week, current week, and future week communication patterns to boost contact resolution confidence.
+
+```typescript
+export class BrainMemoryContactEnhancer {
+  constructor(private neo4jDriver: Driver) {}
+
+  async getTemporalContactContext(
+    userId: string, 
+    contactName: string
+  ): Promise<TemporalContactContext> {
+    const session = this.neo4jDriver.session();
+    
+    try {
+      // Query past week communication patterns
+      const pastWeekResult = await session.run(`
+        MATCH (user:User {id: $userId})-[:OWNS]->(msg:ChatMessage)
+        WHERE msg.timestamp > datetime() - duration({days: 7})
+        AND msg.timestamp < datetime() - duration({days: 0})
+        AND (
+          toLower(msg.content) CONTAINS toLower($contactName)
+          OR EXISTS {
+            MATCH (msg)-[:MENTIONS]->(concept:Concept)
+            WHERE toLower(concept.name) CONTAINS toLower($contactName)
+          }
+        )
+        
+        OPTIONAL MATCH (msg)-[:HAS_MEMORY]->(memory:Memory)
+        OPTIONAL MATCH (msg)-[:MENTIONS]->(concept:Concept)
+        
+        RETURN msg.content,
+               msg.channel,
+               msg.source_identifier,
+               msg.timestamp,
+               msg.intent,
+               msg.sentiment,
+               msg.importance_score,
+               memory.consolidation_status,
+               collect(concept.name) as mentioned_concepts
+        ORDER BY msg.timestamp DESC
+        LIMIT 20
+      `, { userId, contactName });
+
+      // Query current week activity
+      const currentWeekResult = await session.run(`
+        MATCH (user:User {id: $userId})-[:OWNS]->(msg:ChatMessage)
+        WHERE msg.timestamp > datetime() - duration({days: 7})
+        AND (
+          toLower(msg.content) CONTAINS toLower($contactName)
+          OR EXISTS {
+            MATCH (msg)-[:MENTIONS]->(concept:Concept)
+            WHERE toLower(concept.name) CONTAINS toLower($contactName)
+          }
+        )
+        
+        WITH msg, count(*) as interaction_frequency
+        ORDER BY msg.timestamp DESC
+        
+        RETURN msg.content,
+               msg.channel,
+               msg.timestamp,
+               msg.intent,
+               msg.sentiment,
+               interaction_frequency
+        LIMIT 10
+      `, { userId, contactName });
+
+      // Query future scheduled interactions (from calendar concepts)
+      const futureWeekResult = await session.run(`
+        MATCH (user:User {id: $userId})-[:OWNS]->(msg:ChatMessage)-[:MENTIONS]->(concept:Concept)
+        WHERE concept.name CONTAINS "calendar"
+        AND toLower(msg.content) CONTAINS toLower($contactName)
+        AND msg.timestamp > datetime() - duration({days: 1})
+        
+        OPTIONAL MATCH (concept)-[:RELATED_TO]->(timeConcept:Concept)
+        WHERE timeConcept.name CONTAINS "meeting" OR timeConcept.name CONTAINS "call"
+        
+        RETURN msg.content,
+               msg.timestamp,
+               concept.name,
+               concept.activation_strength,
+               collect(timeConcept.name) as time_concepts
+        ORDER BY msg.timestamp DESC
+        LIMIT 5
+      `, { userId, contactName });
+
+      return this.processTemporalResults(pastWeekResult, currentWeekResult, futureWeekResult);
+      
+    } finally {
+      await session.close();
+    }
+  }
+
+  private processTemporalResults(
+    pastWeekResult: any,
+    currentWeekResult: any, 
+    futureWeekResult: any
+  ): TemporalContactContext {
+    
+    const pastWeek = pastWeekResult.records.map(record => ({
+      content: record.get('msg.content'),
+      channel: record.get('msg.channel'),
+      timestamp: record.get('msg.timestamp'),
+      intent: record.get('msg.intent'),
+      sentiment: record.get('msg.sentiment'),
+      importance: record.get('msg.importance_score'),
+      mentioned_concepts: record.get('mentioned_concepts')
+    }));
+
+    const currentWeek = currentWeekResult.records.map(record => ({
+      content: record.get('msg.content'),
+      channel: record.get('msg.channel'),
+      timestamp: record.get('msg.timestamp'),
+      intent: record.get('msg.intent'),
+      sentiment: record.get('msg.sentiment'),
+      frequency: record.get('interaction_frequency')
+    }));
+
+    const futureWeek = futureWeekResult.records.map(record => ({
+      content: record.get('msg.content'),
+      timestamp: record.get('msg.timestamp'),
+      concept_name: record.get('concept.name'),
+      activation_strength: record.get('concept.activation_strength'),
+      time_concepts: record.get('time_concepts')
+    }));
+
+    return {
+      past_week: {
+        interactions: pastWeek,
+        interaction_count: pastWeek.length,
+        average_sentiment: this.calculateAverageSentiment(pastWeek),
+        primary_channels: this.extractPrimaryChannels(pastWeek),
+        topics: this.extractTopics(pastWeek)
+      },
+      current_week: {
+        interactions: currentWeek,
+        active_conversations: currentWeek.length,
+        frequency_trend: this.calculateFrequencyTrend(currentWeek),
+        recent_intent: currentWeek[0]?.intent
+      },
+      future_week: {
+        scheduled_interactions: futureWeek,
+        upcoming_events: this.extractUpcomingEvents(futureWeek)
+      }
+    };
+  }
+}
+```
+
+### 2. Communication Pattern Analysis
+**Purpose**: Understand preferred communication channels, relationship context, and interaction styles.
+
+```typescript
+async getCommunicationPatterns(
+  userId: string, 
+  contactName: string
+): Promise<CommunicationPatterns> {
+  const session = this.neo4jDriver.session();
+  
+  try {
+    // Analyze preferred communication channels and patterns
+    const patternsResult = await session.run(`
+      MATCH (user:User {id: $userId})-[:OWNS]->(msg:ChatMessage)
+      WHERE toLower(msg.content) CONTAINS toLower($contactName)
+      AND msg.timestamp > datetime() - duration({days: 30}) // Last 30 days
+      
+      WITH msg,
+           CASE 
+             WHEN msg.channel = 'email' THEN 'email'
+             WHEN msg.channel = 'sms' THEN 'text' 
+             WHEN msg.channel = 'chat' THEN 'chat'
+             ELSE 'other'
+           END as normalized_channel
+      
+      RETURN normalized_channel,
+             count(*) as usage_count,
+             avg(msg.importance_score) as avg_importance,
+             collect(DISTINCT msg.intent) as intents,
+             avg(
+               CASE msg.sentiment
+                 WHEN 'positive' THEN 1.0
+                 WHEN 'neutral' THEN 0.5
+                 WHEN 'negative' THEN 0.0
+                 ELSE 0.5
+               END
+             ) as avg_sentiment,
+             max(msg.timestamp) as last_interaction,
+             min(msg.timestamp) as first_interaction
+      ORDER BY usage_count DESC
+    `, { userId, contactName });
+
+    // Analyze relationship indicators through concept co-occurrence
+    const relationshipResult = await session.run(`
+      MATCH (user:User {id: $userId})-[:OWNS]->(msg:ChatMessage)
+      WHERE toLower(msg.content) CONTAINS toLower($contactName)
+      
+      // Find concepts that frequently appear with this contact
+      OPTIONAL MATCH (msg)-[:MENTIONS]->(concept:Concept)
+      WHERE concept.activation_strength > 0.5
+      
+      WITH concept,
+           count(DISTINCT msg) as co_occurrence_count,
+           avg(concept.activation_strength) as avg_activation,
+           collect(DISTINCT msg.intent) as contexts
+      WHERE co_occurrence_count >= 2
+      
+      RETURN concept.name,
+             co_occurrence_count,
+             avg_activation,
+             contexts,
+             CASE 
+               WHEN concept.name IN ['work', 'business', 'meeting', 'project'] THEN 'professional'
+               WHEN concept.name IN ['family', 'personal', 'friend'] THEN 'personal' 
+               WHEN concept.name IN ['urgent', 'asap', 'important'] THEN 'urgent'
+               ELSE 'neutral'
+             END as relationship_indicator
+      ORDER BY co_occurrence_count DESC
+      LIMIT 10
+    `, { userId, contactName });
+
+    return this.processCommunicationPatterns(patternsResult, relationshipResult);
+    
+  } finally {
+    await session.close();
+  }
+}
+```
+
+### 3. Contact Confidence Boosting Algorithm
+**Purpose**: Use temporal and communication context to boost contact resolution confidence.
+
+```typescript
+export class ContactConfidenceBooster {
+  calculateEnhancedConfidence(
+    baseConfidence: number,
+    temporalContext: TemporalContactContext,
+    communicationPatterns: CommunicationPatterns,
+    brainMemoryContext: BrainMemoryContext
+  ): EnhancedConfidenceResult {
+    
+    let enhancedConfidence = baseConfidence;
+    const boostFactors: ConfidenceBoost[] = [];
+    
+    // 1. Recent Communication Boost (Past Week)
+    if (temporalContext.past_week.interaction_count > 0) {
+      const recentBoost = Math.min(temporalContext.past_week.interaction_count * 0.1, 0.3);
+      enhancedConfidence += recentBoost;
+      boostFactors.push({
+        type: 'recent_communication',
+        boost: recentBoost,
+        reasoning: `Recent interactions: ${temporalContext.past_week.interaction_count} in past week`
+      });
+    }
+    
+    // 2. Current Week Activity Boost
+    if (temporalContext.current_week.active_conversations > 0) {
+      const currentBoost = Math.min(temporalContext.current_week.active_conversations * 0.15, 0.25);
+      enhancedConfidence += currentBoost;
+      boostFactors.push({
+        type: 'current_activity',
+        boost: currentBoost, 
+        reasoning: `Active conversations this week: ${temporalContext.current_week.active_conversations}`
+      });
+    }
+    
+    // 3. Communication Channel Alignment Boost
+    const preferredChannel = communicationPatterns.preferred_channels[0];
+    if (preferredChannel && this.channelAlignmentScore(preferredChannel, brainMemoryContext) > 0.7) {
+      const channelBoost = 0.2;
+      enhancedConfidence += channelBoost;
+      boostFactors.push({
+        type: 'channel_alignment',
+        boost: channelBoost,
+        reasoning: `Communication typically via ${preferredChannel.channel}`
+      });
+    }
+    
+    // 4. Relationship Context Boost
+    if (communicationPatterns.relationship_indicators.context_match > 0.8) {
+      const relationshipBoost = 0.25;
+      enhancedConfidence += relationshipBoost;
+      boostFactors.push({
+        type: 'relationship_context',
+        boost: relationshipBoost,
+        reasoning: `Strong relationship context match: ${communicationPatterns.relationship_indicators.primary_context}`
+      });
+    }
+    
+    // 5. Semantic Memory Activation Boost
+    const semanticBoost = this.calculateSemanticBoost(brainMemoryContext.semantic_memory);
+    if (semanticBoost > 0) {
+      enhancedConfidence += semanticBoost;
+      boostFactors.push({
+        type: 'semantic_activation',
+        boost: semanticBoost,
+        reasoning: `Strong semantic associations in memory`
+      });
+    }
+    
+    // 6. Future Context Boost (scheduled interactions)
+    if (temporalContext.future_week.scheduled_interactions.length > 0) {
+      const futureBoost = 0.15;
+      enhancedConfidence += futureBoost;
+      boostFactors.push({
+        type: 'future_context',
+        boost: futureBoost,
+        reasoning: `Upcoming interactions scheduled`
+      });
+    }
+    
+    // Cap at 0.95 (leave room for uncertainty)
+    enhancedConfidence = Math.min(enhancedConfidence, 0.95);
+    
+    return {
+      original_confidence: baseConfidence,
+      enhanced_confidence: enhancedConfidence,
+      total_boost: enhancedConfidence - baseConfidence,
+      boost_factors: boostFactors,
+      confidence_explanation: this.generateConfidenceExplanation(boostFactors)
+    };
+  }
+
+  private calculateSemanticBoost(semanticMemory: any): number {
+    const activatedConcepts = semanticMemory.activated_concepts || [];
+    const strongActivations = activatedConcepts.filter(c => c.activation_strength > 0.7);
+    return Math.min(strongActivations.length * 0.05, 0.15);
+  }
+
+  private channelAlignmentScore(preferredChannel: any, brainMemoryContext: any): number {
+    // Check if current action aligns with preferred communication channel
+    const recentChannels = brainMemoryContext.working_memory.recent_messages
+      .map(msg => msg.channel)
+      .slice(0, 5);
+    
+    const channelMatchCount = recentChannels.filter(ch => ch === preferredChannel.channel).length;
+    return channelMatchCount / recentChannels.length;
+  }
+
+  private generateConfidenceExplanation(boostFactors: ConfidenceBoost[]): string {
+    return boostFactors
+      .filter(bf => bf.boost > 0.05) // Only significant boosts
+      .map(bf => bf.reasoning)
+      .join('; ');
+  }
+}
+```
+
+### 4. Communication Style Analysis for Personalization
+**Purpose**: Analyze historical communication patterns to generate personalized emails/texts.
+
+```typescript
+async analyzePersonalizedCommunicationStyle(
+  userId: string,
+  contactName: string,
+  brainMemoryContext: BrainMemoryContext
+): Promise<PersonalizedCommunicationStyle> {
+  
+  const session = this.neo4jDriver.session();
+  
+  try {
+    const styleResult = await session.run(`
+      MATCH (user:User {id: $userId})-[:OWNS]->(msg:ChatMessage)
+      WHERE toLower(msg.content) CONTAINS toLower($contactName)
+      AND msg.timestamp > datetime() - duration({days: 60})
+      
+      WITH msg,
+           // Analyze formality indicators
+           CASE 
+             WHEN msg.content CONTAINS 'Hi ' OR msg.content CONTAINS 'Hey ' THEN 'casual'
+             WHEN msg.content CONTAINS 'Dear ' OR msg.content CONTAINS 'Hello ' THEN 'formal'
+             ELSE 'neutral'
+           END as greeting_style,
+           
+           // Analyze message length patterns
+           size(split(msg.content, ' ')) as word_count,
+           msg.sentiment as message_sentiment
+      
+      RETURN greeting_style,
+             avg(word_count) as avg_message_length,
+             collect(DISTINCT message_sentiment) as sentiment_patterns,
+             count(*) as total_messages,
+             avg(hour(msg.timestamp)) as preferred_time,
+             collect(DISTINCT dayOfWeek(msg.timestamp)) as communication_days
+      
+      ORDER BY total_messages DESC
+      LIMIT 1
+    `, { userId, contactName });
+
+    const communicationStyle = this.processCommunicationStyle(styleResult);
+    
+    return {
+      formality_level: communicationStyle.formality,
+      preferred_greeting: communicationStyle.greeting,
+      typical_message_length: communicationStyle.length_preference,
+      tone_indicators: communicationStyle.tone,
+      timing_preferences: communicationStyle.timing,
+      personalization_suggestions: this.generatePersonalizationSuggestions(communicationStyle, brainMemoryContext)
+    };
+    
+  } finally {
+    await session.close();
+  }
+}
+```
+
+## Enhanced ActionPlanner Integration
+
+### ActionPlanner with Brain Memory Context
+```typescript
+// In ActionPlanner.ts - Enhanced with Brain Memory
+async createPlan(message: string, entities?: CachedEntity[], userUUID?: string): Promise<ActionPlan> {
+  // Step 1: Get brain memory context for this user/conversation
+  const brainMemoryContext = await this.brainMemoryService.getBrainMemoryContext(
+    userUUID, 
+    'chat', // or appropriate channel
+    message
+  );
+  
+  // Step 2: Create initial plan (determines action type)
+  const initialPlan = await this.createPlanWithLLM(message, entities);
+  
+  // Step 3: Extract entities (including PERSON entities)
+  const extractedEntities = await this.entityManager.resolveEntities(message, context, userUUID);
+  
+  // Step 4: Enhanced RDF contact resolution with brain memory context
+  const resolvedEntities = await this.resolveEntitiesWithBrainMemory(
+    extractedEntities, 
+    message, 
+    userUUID,
+    brainMemoryContext // NEW: Pass brain memory context
+  );
+  
+  // Step 5: Patch action steps with resolved contacts + personalized communication
+  const updatedSteps = await this.patchEntityPlaceholdersWithPersonalization(
+    initialPlan.steps, 
+    resolvedEntities,
+    brainMemoryContext
+  );
+  
+  return { ...initialPlan, steps: updatedSteps };
+}
+
+// Enhanced entity resolution with brain memory
+private async resolveEntitiesWithBrainMemory(
+  entities: CachedEntity[], 
+  originalMessage: string, 
+  userUUID: string,
+  brainMemoryContext: BrainMemoryContext
+): Promise<CachedEntity[]> {
+  
+  const resolvedEntities: CachedEntity[] = [];
+  
+  for (const entity of entities) {
+    if (entity.type === EntityType.PERSON) {
+      // Get temporal and communication context from Neo4j
+      const temporalContext = await this.brainMemoryContactEnhancer.getTemporalContactContext(userUUID, entity.value);
+      const communicationPatterns = await this.brainMemoryContactEnhancer.getCommunicationPatterns(userUUID, entity.value);
+      
+      // Enhanced RDF resolution with brain memory context
+      const rdfResult = await this.smartContactResolver.resolveContactWithBrainMemory(
+        entity.value,
+        originalMessage,
+        userUUID,
+        brainMemoryContext,
+        temporalContext,
+        communicationPatterns
+      );
+      
+      // Apply confidence boosting based on brain memory evidence
+      const enhancedConfidence = this.contactConfidenceBooster.calculateEnhancedConfidence(
+        rdfResult.confidence,
+        temporalContext,
+        communicationPatterns,
+        brainMemoryContext
+      );
+      
+      if (enhancedConfidence.enhanced_confidence >= 0.8) {
+        // High confidence with brain memory boost - use automatically
+        resolvedEntities.push(this.createResolvedEntity(entity, rdfResult.contact, enhancedConfidence));
+      } else if (rdfResult.alternatives && rdfResult.alternatives.length > 0) {
+        // Create smart intervention with brain memory context
+        resolvedEntities.push(this.createBrainMemoryEnhancedIntervention(entity, rdfResult.alternatives, temporalContext));
+      }
+    } else {
+      // Non-person entities pass through unchanged
+      resolvedEntities.push(entity);
+    }
+  }
+  
+  return resolvedEntities;
+}
+```
+
+### Brain Memory-Enhanced Interventions
+```typescript
+private createBrainMemoryEnhancedIntervention(
+  entity: CachedEntity, 
+  alternatives: ContactAlternative[],
+  temporalContext: TemporalContactContext
+): CachedEntity {
+  
+  const interventionMessage = `
+I found ${alternatives.length} possible matches for "${entity.value}":
+
+${alternatives.map((alt, i) => {
+  const recentInteraction = temporalContext.past_week.interactions.find(interaction => 
+    interaction.content.toLowerCase().includes(alt.name.toLowerCase())
+  );
+  
+  const recentContext = recentInteraction 
+    ? ` (last contacted ${this.formatTimeAgo(recentInteraction.timestamp)} about ${this.extractTopic(recentInteraction.content)})`
+    : '';
+    
+  return `${i+1}. ${alt.name} (${alt.email})${recentContext} - ${alt.reasoning}`;
+}).join('\n')}
+
+Based on your recent communication patterns and message context, I think you meant #1. 
+Reply with a number to confirm, or provide the exact email/phone.
+  `;
+  
+  return {
+    ...entity,
+    type: EntityType.UNKNOWN,
+    smartSuggestions: alternatives,
+    interventionMessage,
+    brainMemoryContext: temporalContext
+  };
+}
+```
+
+## Example Scenarios with Brain Memory Context
+
+### Scenario 1: Recent Communication Boost
+```
+User: "Send Eden an email about the quarterly report"
+
+Brain Memory Context:
+- Past week: 3 interactions with Eden about work topics
+- Current week: 1 ongoing conversation thread  
+- Communication pattern: Primarily email for work, casual tone
+- Semantic memory: Strong activation for "work", "reports", "Eden"
+
+Result: 
+- Base confidence: 0.6 (Eden Chan vs Eden Martinez)
+- Brain memory boost: +0.25 (recent work interactions)
+- Enhanced confidence: 0.85 → Auto-resolve to Eden Chen (work email)
+- Personalized email: Uses casual greeting "Hi Eden" based on historical pattern
+```
+
+### Scenario 2: Channel Preference Alignment
+```
+User: "Text Eden about dinner tonight"
+
+Brain Memory Context:
+- Past week: 2 text conversations with Eden about personal topics
+- Communication pattern: Texts for personal, emails for work
+- Recent sentiment: Positive, casual
+- Last interaction: Yesterday about weekend plans
+
+Result:
+- Base confidence: 0.7
+- Channel alignment boost: +0.2 (text aligns with personal context)
+- Recent interaction boost: +0.15 
+- Enhanced confidence: 0.85 → Auto-resolve to Eden Martinez (personal contact)
+- Personalized text: Uses casual tone matching recent conversations
+```
+
+## Benefits of Neo4j Brain Memory Integration
+
+1. **Temporal Context Awareness**: Recent communication patterns significantly boost resolution confidence
+2. **Communication Style Matching**: Generated messages match historical communication patterns with each contact
+3. **Channel Preference Intelligence**: System understands work vs personal communication preferences
+4. **Relationship Context Understanding**: Semantic memory provides relationship indicators (professional, personal, family)
+5. **Smart Interventions**: When uncertain, provide context from recent interactions to help user choose
+6. **Learning Integration**: User corrections are stored in the brain memory system for future improvement
+7. **Confidence Transparency**: Users understand why the system is confident about contact resolution
+
+This integration transforms contact resolution from basic name matching to a comprehensive understanding of communication relationships and patterns.

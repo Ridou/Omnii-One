@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+ refer to existing zod schema in [unified-response.validation.ts](mdc:omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/src/types/unified-response.validation.ts)[unified-response.types.ts](mdc:omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/omnii_mcp/src/types/unified-response.types.ts) and update accordingly. if the schema doesnt' exist build off of it. 
+ 

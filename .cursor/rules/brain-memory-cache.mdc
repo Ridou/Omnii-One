@@ -1,0 +1,706 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Brain Memory Cache Extension - Detailed Implementation Plan
+
+## 🎯 **Current State Analysis (70% Complete)**
+
+### ✅ **Already Implemented**
+- **Brain Cache Hooks**: `useCachedTasks`, `useCachedContacts`, `useCachedCalendar`, `useCachedEmail`
+- **3-Week Cache Strategy**: Volatility-based expiration (emails 5min, tasks 30min, calendar 2hr, contacts 24hr)
+- **Database Schema**: Extended `brain_memory_cache` table for all Google data types
+- **Mobile Integration**: Chat and Tasks screens partially using cached hooks
+- **Infrastructure**: `useBrainMemoryCache` with delta sync coordinator
+
+### ❌ **Missing Implementation (30% Remaining)**
+- **tRPC Cache-First Strategy**: Routers still make direct Google API calls
+- **Complete Mobile Integration**: Some components still use direct tRPC
+- **Performance Monitoring**: No cache analytics dashboard
+- **Optimization**: No cache warming or usage pattern analysis
+
+## 📊 **Detailed Implementation Plan**
+
+### **Phase 1: tRPC Router Cache Integration (Week 1)**
+
+#### **1.1 Update Tasks Router (`packages/api/src/router/tasks.ts`)**
+
+**Current State:**
+```typescript
+// Current: Direct Google Tasks API calls
+const result = await tasksService.fetchCompleteTaskOverview(userId);
+```
+
+**Target Implementation:**
+```typescript
+// New: Cache-first with fallback to Google API
+import { BrainCacheService } from '../services/brain-cache.service';
+
+class TasksService {
+  private brainCache = new BrainCacheService();
+
+  async fetchCompleteTaskOverview(userId: string): Promise<CompleteTaskOverview> {
+    // Step 1: Check brain cache first
+    const cachedData = await this.brainCache.getCachedData(userId, 'google_tasks');
+    
+    if (cachedData && !this.brainCache.isExpired(cachedData)) {
+      console.log('[TasksService] 🎯 Cache HIT - returning cached tasks');
+      return this.formatCachedTasksData(cachedData);
+    }
+
+    // Step 2: Cache miss - fetch from Google API
+    console.log('[TasksService] 📭 Cache MISS - fetching from Google Tasks API');
+    const freshData = await this.fetchFromGoogleAPI(userId);
+    
+    // Step 3: Store in cache for future requests
+    await this.brainCache.setCachedData(userId, 'google_tasks', {
+      taskLists: freshData.taskLists,
+      totalTasks: freshData.totalTasks,
+      // ... other fields
+    });
+
+    return freshData;
+  }
+}
+```
+
+**Files to Modify:**
+- `packages/api/src/router/tasks.ts` - Add cache-first strategy
+- `packages/api/src/services/brain-cache.service.ts` - Create cache service
+- `packages/api/src/router/tasks.test.ts` - Add cache testing
+
+#### **1.2 Update Contacts Router (`packages/api/src/router/contacts.ts`)**
+
+**Current Implementation:**
+```typescript
+// Current: Direct Google Contacts API
+const result = await contactsService.listContacts(userId, 1000);
+```
+
+**Target Implementation:**
+```typescript
+export const contactsRouter = {
+  listContacts: publicProcedure
+    .query(async ({ ctx }): Promise<GoogleContactsResponse<ContactsListResponse>> => {
+      const userId = extractUserId(ctx);
+      
+      // 🧠 Cache-first strategy
+      const cacheService = new BrainCacheService();
+      
+      // Check cache first (24hr cache for contacts)
+      const cachedContacts = await cacheService.getCachedData(userId, 'google_contacts');
+      
+      if (cachedContacts && !cacheService.isExpired(cachedContacts)) {
+        return {
+          success: true,
+          data: {
+            contacts: cachedContacts.contacts,
+            totalCount: cachedContacts.totalCount
+          },
+          message: `Found ${cachedContacts.totalCount} contacts (cached)`
+        };
+      }
+
+      // Cache miss - fetch from Google API
+      try {
+        const result = await contactsService.listContacts(userId, 1000);
+        
+        // Store in cache
+        await cacheService.setCachedData(userId, 'google_contacts', {
+          contacts: result.contacts,
+          totalCount: result.totalCount,
+          lastSynced: new Date().toISOString()
+        });
+
+        return {
+          success: true,
+          data: result,
+          message: `Found ${result.totalCount} contacts (fresh)`
+        };
+      } catch (error) {
+        // Fallback to stale cache if available
+        if (cachedContacts) {
+          return {
+            success: true,
+            data: {
+              contacts: cachedContacts.contacts,
+              totalCount: cachedContacts.totalCount
+            },
+            message: `Found ${cachedContacts.totalCount} contacts (stale cache)`
+          };
+        }
+        throw error;
+      }
+    })
+};
+```
+
+#### **1.3 Update Calendar Router (`packages/api/src/router/calendar.ts`)**
+
+**Target Implementation:**
+```typescript
+export const calendarRouter = {
+  getEvents: publicProcedure
+    .query(async ({ ctx }) => {
+      const userId = extractUserId(ctx);
+      
+      // 🧠 Cache-first strategy (2hr cache for calendar)
+      const cacheService = new BrainCacheService();
+      
+      const cachedEvents = await cacheService.getCachedData(userId, 'google_calendar');
+      
+      if (cachedEvents && !cacheService.isExpired(cachedEvents)) {
+        return {
+          success: true,
+          data: {
+            events: cachedEvents.events,
+            totalCount: cachedEvents.totalCount
+          },
+          message: `Found ${cachedEvents.totalCount} events (cached)`
+        };
+      }
+
+      // Cache miss - fetch fresh data
+      const result = await calendarService.fetchCalendarEvents(userId, {
+        maxResults: 1000,
+        timeMin: new Date().toISOString(),
+        timeMax: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+
+      // Store in cache
+      await cacheService.setCachedData(userId, 'google_calendar', {
+        events: result.events,
+        totalCount: result.events.length,
+        lastSynced: new Date().toISOString()
+      });
+
+      return {
+        success: true,
+        data: result,
+        message: `Found ${result.events.length} events (fresh)`
+      };
+    })
+};
+```
+
+#### **1.4 Update Email Router (`packages/api/src/router/email.ts`)**
+
+**Target Implementation:**
+```typescript
+export const emailRouter = {
+  listEmails: publicProcedure
+    .query(async ({ ctx }): Promise<GmailResponse<EmailsListResponse>> => {
+      const userId = extractUserId(ctx);
+      
+      // 🧠 Cache-first strategy (5min cache for emails - high volatility)
+      const cacheService = new BrainCacheService();
+      
+      const cachedEmails = await cacheService.getCachedData(userId, 'google_emails');
+      
+      if (cachedEmails && !cacheService.isExpired(cachedEmails)) {
+        return {
+          success: true,
+          data: {
+            emails: cachedEmails.emails,
+            totalCount: cachedEmails.totalCount
+          },
+          message: `Found ${cachedEmails.totalCount} emails (cached)`
+        };
+      }
+
+      // Cache miss - fetch fresh emails
+      try {
+        const result = await emailService.listEmails(userId, {
+          maxResults: 500,
+          query: "newer_than:7d",
+          includeSpamTrash: false,
+        });
+
+        // Store in cache (short 5min expiration)
+        await cacheService.setCachedData(userId, 'google_emails', {
+          emails: result.emails,
+          totalCount: result.emails.length,
+          lastSynced: new Date().toISOString()
+        });
+
+        return {
+          success: true,
+          data: result,
+          message: `Found ${result.emails.length} emails (fresh)`
+        };
+      } catch (error) {
+        // Enhanced 429 handling with stale cache fallback
+        if (error.message?.includes('429') && cachedEmails) {
+          return {
+            success: true,
+            data: {
+              emails: cachedEmails.emails,
+              totalCount: cachedEmails.totalCount
+            },
+            message: `Found ${cachedEmails.totalCount} emails (rate limited - using cache)`
+          };
+        }
+        throw error;
+      }
+    })
+};
+```
+
+### **Phase 2: Create Brain Cache Service (Week 1)**
+
+#### **2.1 Brain Cache Service (`packages/api/src/services/brain-cache.service.ts`)**
+
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+interface CacheData {
+  user_id: string;
+  data_type: 'google_tasks' | 'google_calendar' | 'google_contacts' | 'google_emails';
+  memory_period: string;
+  cache_data: any;
+  expires_at: string;
+  last_synced_at: string;
+}
+
+export class BrainCacheService {
+  private supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  async getCachedData(userId: string, dataType: string): Promise<any | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('brain_memory_cache')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('data_type', dataType)
+        .single();
+
+      if (error || !data) return null;
+
+      return {
+        ...data.cache_data,
+        _metadata: {
+          lastSynced: data.last_synced_at,
+          expiresAt: data.expires_at
+        }
+      };
+    } catch (error) {
+      console.error('[BrainCache] Error getting cached data:', error);
+      return null;
+    }
+  }
+
+  async setCachedData(userId: string, dataType: string, cacheData: any): Promise<boolean> {
+    try {
+      const expirationMs = this.getExpirationMs(dataType);
+      const expiresAt = new Date(Date.now() + expirationMs).toISOString();
+
+      const { error } = await this.supabase
+        .from('brain_memory_cache')
+        .upsert({
+          user_id: userId,
+          data_type: dataType,
+          memory_period: dataType, // Use data_type as period for Google APIs
+          cache_data: cacheData,
+          expires_at: expiresAt,
+          last_synced_at: new Date().toISOString(),
+          cache_version: 1
+        }, { 
+          onConflict: 'user_id,data_type,memory_period' 
+        });
+
+      if (error) {
+        console.error('[BrainCache] Error setting cached data:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[BrainCache] Error in setCachedData:', error);
+      return false;
+    }
+  }
+
+  isExpired(cachedData: any): boolean {
+    if (!cachedData._metadata?.expiresAt) return true;
+    return new Date(cachedData._metadata.expiresAt) < new Date();
+  }
+
+  private getExpirationMs(dataType: string): number {
+    const expirations = {
+      'google_emails': 5 * 60 * 1000,        // 5 minutes
+      'google_tasks': 30 * 60 * 1000,        // 30 minutes  
+      'google_calendar': 2 * 60 * 60 * 1000, // 2 hours
+      'google_contacts': 24 * 60 * 60 * 1000 // 24 hours
+    };
+    
+    return expirations[dataType as keyof typeof expirations] || 60 * 60 * 1000; // 1 hour default
+  }
+}
+```
+
+### **Phase 3: Mobile Component Integration (Week 2)**
+
+#### **3.1 Update Chat Memory Component (`apps/omnii-mobile/src/components/chat/MemoryContent.tsx`)**
+
+**Current State:** Partially using cached hooks
+**Target:** Full integration with all cached hooks
+
+```typescript
+export const MemoryContent: React.FC<MemoryContentProps> = ({
+  // Remove direct data props - get from cached hooks instead
+}) => {
+  // ✅ Use all cached hooks instead of passing data as props
+  const tasksData = useCachedTasks();
+  const calendarData = useCachedCalendar();
+  const contactsData = useCachedContacts();
+  const emailData = useCachedEmail();
+  const conceptsData = useCachedNeo4j();
+
+  return (
+    <View>
+      <MemorySummaryCard
+        icon="📋"
+        title="Task Performance"
+        items={[
+          `${tasksData.totalCompleted} completed today`,
+          `${tasksData.totalPending} pending tasks`,
+          `${Math.round((tasksData.totalCompleted / tasksData.totalTasks) * 100)}% completion rate`,
+          tasksData.isCacheValid 
+            ? `⚡ Cached (${tasksData.cacheStats?.avg_response_time_ms}ms)` 
+            : '🔄 Loading...'
+        ]}
+        color="purple"
+        data={tasksData}
+        onExpand={() => onTaskAction('view_all')}
+        expandedContent={<TaskMemoryDetails data={tasksData} onTaskClick={setSelectedTask} />}
+      />
+
+      <MemorySummaryCard
+        icon="📧"
+        title="Email Insights"
+        items={[
+          `${emailData.totalEmails} emails processed`,
+          `${emailData.emails.filter(e => !e.read).length} unread`,
+          emailData.isCacheValid 
+            ? `⚡ Cached (${emailData.cacheStats?.avg_response_time_ms}ms)`
+            : emailData.hasError
+            ? '⚠️ Rate limited - using cache'
+            : '🔄 Loading...',
+          `📊 ${emailData.cacheStats?.cache_hits || 0} cache hits`
+        ]}
+        color="blue"
+        data={emailData}
+        onExpand={() => onEmailAction?.('view_all')}
+        expandedContent={<EmailMemoryDetails data={emailData} onEmailClick={setSelectedEmail} />}
+      />
+
+      {/* Calendar and Contacts cards with similar pattern */}
+    </View>
+  );
+};
+```
+
+#### **3.2 Update Remaining Mobile Components**
+
+**Files to Update:**
+- `apps/omnii-mobile/src/app/(tabs)/analytics.tsx` - Use cached hooks for data
+- `apps/omnii-mobile/src/components/ContactsMemoryCard.tsx` - Already using `useCachedContacts` ✅
+- `apps/omnii-mobile/src/components/TasksMemoryCard.tsx` - Already using `useCachedTasks` ✅
+- `apps/omnii-mobile/src/components/CalendarMemoryCard.tsx` - Create using `useCachedCalendar`
+- `apps/omnii-mobile/src/components/EmailMemoryCard.tsx` - Create using `useCachedEmail`
+
+#### **3.3 Create Missing Memory Cards**
+
+**CalendarMemoryCard.tsx:**
+```typescript
+export const CalendarMemoryCard: React.FC<CalendarMemoryCardProps> = ({
+  onCalendarAction
+}) => {
+  const { 
+    events, 
+    isLoading, 
+    hasError, 
+    totalEvents,
+    getTodayEvents,
+    getUpcomingEvents,
+    isCacheValid,
+    cacheStats
+  } = useCachedCalendar();
+
+  const todayEvents = getTodayEvents();
+  const upcomingEvents = getUpcomingEvents(7);
+
+  return (
+    <View className="rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-green-500">
+      <View className="flex-row items-center mb-3">
+        <Text className="text-xl">📅</Text>
+        <Text className="text-lg font-bold ml-3">Calendar</Text>
+      </View>
+      
+      {hasError ? (
+        <Text className="text-sm text-gray-600">Google authentication required</Text>
+      ) : (
+        <View>
+          <Text className="text-sm text-gray-900">{todayEvents.length} events today</Text>
+          <Text className="text-sm text-gray-900">{upcomingEvents.length} upcoming this week</Text>
+          <Text className="text-sm text-gray-900">
+            {isCacheValid 
+              ? `⚡ Cached (${cacheStats?.avg_response_time_ms}ms)` 
+              : '🔄 Loading...'}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+```
+
+**EmailMemoryCard.tsx:**
+```typescript
+export const EmailMemoryCard: React.FC<EmailMemoryCardProps> = ({
+  onEmailAction
+}) => {
+  const { 
+    emails, 
+    isLoading, 
+    hasError, 
+    errorMessage,
+    totalEmails,
+    isCacheValid,
+    cacheStats
+  } = useCachedEmail();
+
+  const unreadEmails = emails.filter(email => !email.read);
+  const recentEmails = emails.slice(0, 5);
+
+  return (
+    <View className="rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-blue-500">
+      <View className="flex-row items-center mb-3">
+        <Text className="text-xl">📧</Text>
+        <Text className="text-lg font-bold ml-3">Email</Text>
+      </View>
+      
+      {hasError ? (
+        <View>
+          <Text className="text-sm text-amber-600">⚠️ {errorMessage}</Text>
+          {isCacheValid && (
+            <Text className="text-sm text-gray-600">Showing cached emails</Text>
+          )}
+        </View>
+      ) : (
+        <View>
+          <Text className="text-sm text-gray-900">{unreadEmails.length} unread emails</Text>
+          <Text className="text-sm text-gray-900">{totalEmails} total emails</Text>
+          <Text className="text-sm text-gray-900">
+            {isCacheValid 
+              ? `⚡ Cached (${cacheStats?.avg_response_time_ms}ms)` 
+              : '🔄 Loading...'}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+```
+
+### **Phase 4: Performance Monitoring & Analytics (Week 2)**
+
+#### **4.1 Cache Performance Dashboard Component**
+
+```typescript
+// apps/omnii-mobile/src/components/analytics/CachePerformanceCard.tsx
+export const CachePerformanceCard: React.FC = () => {
+  const tasksMetrics = useTasksCacheMetrics();
+  const contactsMetrics = useContactsCacheMetrics();
+  const calendarMetrics = useCalendarCacheMetrics();
+  const emailMetrics = useEmailCacheMetrics();
+
+  const overallMetrics = {
+    totalCacheHits: tasksMetrics.cacheStats.cache_hits + contactsMetrics.cacheStats.cache_hits + 
+                   calendarMetrics.cacheStats.cache_hits + emailMetrics.cacheStats.cache_hits,
+    totalCacheMisses: tasksMetrics.cacheStats.cache_misses + contactsMetrics.cacheStats.cache_misses + 
+                     calendarMetrics.cacheStats.cache_misses + emailMetrics.cacheStats.cache_misses,
+    avgResponseTime: Math.round(
+      (tasksMetrics.averageResponseTime + contactsMetrics.averageResponseTime + 
+       calendarMetrics.averageResponseTime + emailMetrics.averageResponseTime) / 4
+    )
+  };
+
+  const hitRatio = overallMetrics.totalCacheHits + overallMetrics.totalCacheMisses > 0 
+    ? Math.round((overallMetrics.totalCacheHits / 
+        (overallMetrics.totalCacheHits + overallMetrics.totalCacheMisses)) * 100)
+    : 0;
+
+  return (
+    <View className="bg-white rounded-2xl p-6 border border-gray-200">
+      <Text className="text-lg font-bold mb-4">🧠 Brain Cache Performance</Text>
+      
+      <View className="space-y-4">
+        <MetricRow 
+          label="Cache Hit Ratio" 
+          value={`${hitRatio}%`}
+          status={hitRatio > 80 ? 'excellent' : hitRatio > 60 ? 'good' : 'needs-improvement'}
+        />
+        
+        <MetricRow 
+          label="Avg Response Time" 
+          value={`${overallMetrics.avgResponseTime}ms`}
+          status={overallMetrics.avgResponseTime < 100 ? 'excellent' : 
+                 overallMetrics.avgResponseTime < 500 ? 'good' : 'needs-improvement'}
+        />
+        
+        <MetricRow 
+          label="API Calls Saved" 
+          value={`${overallMetrics.totalCacheHits}`}
+          status="excellent"
+        />
+        
+        <View className="pt-4 border-t border-gray-100">
+          <Text className="text-sm font-medium mb-2">Service Breakdown:</Text>
+          <ServiceMetricRow service="📧 Email" hitRatio={emailMetrics.hitRatio} />
+          <ServiceMetricRow service="📋 Tasks" hitRatio={tasksMetrics.hitRatio} />
+          <ServiceMetricRow service="📅 Calendar" hitRatio={calendarMetrics.hitRatio} />
+          <ServiceMetricRow service="👥 Contacts" hitRatio={contactsMetrics.hitRatio} />
+        </View>
+      </View>
+    </View>
+  );
+};
+```
+
+#### **4.2 Integration with Analytics Screen**
+
+```typescript
+// apps/omnii-mobile/src/app/(tabs)/analytics.tsx - Add to dashboard tab
+const renderDashboardContent = () => (
+  <ScrollView className="flex-1 p-4">
+    <CachePerformanceCard />
+    
+    <View className="mt-4">
+      <Text className="text-lg font-bold mb-4">📊 Data Sources</Text>
+      <DataSourceStatusCard service="Google Tasks" />
+      <DataSourceStatusCard service="Google Calendar" />  
+      <DataSourceStatusCard service="Google Contacts" />
+      <DataSourceStatusCard service="Gmail" />
+    </View>
+    
+    {/* Existing analytics cards */}
+  </ScrollView>
+);
+```
+
+### **Phase 5: Testing & Optimization (Week 2)**
+
+#### **5.1 Cache Performance Tests**
+
+```typescript
+// apps/omnii-mobile/tests/brain-memory/cache-performance.test.ts
+describe('Brain Cache Performance', () => {
+  test('should achieve >90% cache hit ratio after warmup', async () => {
+    const tasksHook = renderHook(() => useCachedTasks());
+    
+    // First call (cache miss)
+    await waitFor(() => expect(tasksHook.result.current.isLoading).toBe(false));
+    
+    // Second call (should be cache hit)
+    tasksHook.result.current.refetch();
+    await waitFor(() => expect(tasksHook.result.current.isLoading).toBe(false));
+    
+    // Check cache hit ratio
+    expect(tasksHook.result.current.cacheStats.cache_hits).toBeGreaterThan(0);
+  });
+
+  test('should respond in <100ms for cached data', async () => {
+    const startTime = Date.now();
+    const tasksHook = renderHook(() => useCachedTasks());
+    
+    await waitFor(() => expect(tasksHook.result.current.isLoading).toBe(false));
+    const responseTime = Date.now() - startTime;
+    
+    expect(responseTime).toBeLessThan(100);
+  });
+});
+```
+
+#### **5.2 Integration Tests**
+
+```typescript
+// tests/integration/cache-tRPC-integration.test.ts
+describe('tRPC Cache Integration', () => {
+  test('tRPC tasks router should use cache', async () => {
+    const response = await caller.tasks.getCompleteOverview();
+    
+    expect(response.success).toBe(true);
+    expect(response.message).toContain('cached');
+  });
+
+  test('should fallback to API on cache miss', async () => {
+    // Clear cache
+    await clearCache('google_tasks');
+    
+    const response = await caller.tasks.getCompleteOverview();
+    
+    expect(response.success).toBe(true);
+    expect(response.message).toContain('fresh');
+  });
+});
+```
+
+## 🎯 **Success Metrics & Validation**
+
+### **Technical Metrics:**
+- **Cache Hit Ratio**: >90% for all services after 24hr warmup
+- **Response Time**: <100ms for cached responses, <2s for cache misses  
+- **API Call Reduction**: >90% reduction in Google API calls
+- **Error Rate**: <1% for cache operations
+
+### **User Experience Metrics:**
+- **App Load Time**: 50% faster initial load with warm cache
+- **Data Freshness**: No stale data older than cache expiration limits
+- **Offline Graceful Degradation**: App functional with cached data when offline
+
+### **Performance Monitoring:**
+- **Real-time Dashboards**: Cache performance visible in analytics tab
+- **Alerts**: Notifications when cache hit ratio drops below 80%
+- **Usage Analytics**: Track which services benefit most from caching
+
+## 🚀 **Implementation Timeline**
+
+### **Week 1: Backend Cache Integration**
+- **Days 1-2**: Create `BrainCacheService` and update tRPC routers
+- **Days 3-4**: Test tRPC cache integration and fix issues
+- **Day 5**: Performance testing and optimization
+
+### **Week 2: Frontend Integration & Monitoring**  
+- **Days 1-2**: Update remaining mobile components to use cached hooks
+- **Days 3-4**: Create cache performance dashboard and analytics
+- **Day 5**: Integration testing and final optimization
+
+### **Expected Results:**
+- **90%+ API call reduction** across all Google services
+- **Sub-100ms response times** for cached data
+- **Seamless user experience** with invisible performance improvements
+- **Production-ready caching system** with monitoring and alerting
+
+## 🔧 **Risk Mitigation**
+
+### **Cache Invalidation Strategy:**
+- **Automatic Expiration**: Based on data volatility (5min-24hr)
+- **Manual Invalidation**: User-triggered refresh buttons
+- **Smart Invalidation**: Clear cache on data mutations
+
+### **Fallback Mechanisms:**
+- **Stale Cache Fallback**: Use expired cache if API fails
+- **Graceful Degradation**: Show cached data with timestamps
+- **Rate Limit Handling**: Enhanced 429 error handling for Gmail
+
+### **Data Consistency:**
+- **Timestamp Tracking**: All cached data includes last_synced_at
+- **Version Control**: Cache version field for schema migrations
+- **Conflict Resolution**: Last-write-wins for concurrent updates
+
+This implementation plan provides a clear roadmap to complete the brain memory cache extension, transforming the app from a slow, API-dependent experience to a lightning-fast, cache-optimized productivity platform with 90%+ API call reduction and sub-100ms response times.

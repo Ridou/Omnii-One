@@ -1,0 +1,9 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+rdflib==7.0.0
+owlrl==6.0.2
+pydantic>=2.8.0
+redis==5.0.1
+python-dotenv==1.0.0
+sparqlwrapper==2.0.0
+networkx==3.2.1

@@ -1,0 +1,86 @@
+{
+  "cli": {
+    "version": ">= 5.9.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "NODE_ENV": "development",
+        "ENVIRONMENT": "development",
+        "API_URL": "https://dev-api.omnii.net",
+        "SENTRY_DSN": "https://placeholder-sentry-dsn.ingest.sentry.io/placeholder",
+        "ANALYTICS_ENABLED": "false",
+        "DEBUG_MODE": "true",
+        "PERFORMANCE_MONITORING": "false"
+      },
+      "ios": {
+        "resourceClass": "m-medium",
+        "buildConfiguration": "Debug",
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "NODE_ENV": "staging",
+        "ENVIRONMENT": "staging",
+        "API_URL": "https://staging-api.omnii.net",
+        "SENTRY_DSN": "$SENTRY_DSN",
+        "ANALYTICS_ENABLED": "true",
+        "DEBUG_MODE": "false",
+        "PERFORMANCE_MONITORING": "true"
+      },
+      "ios": {
+        "resourceClass": "m-medium",
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "env": {
+        "NODE_ENV": "production",
+        "ENVIRONMENT": "production",
+        "API_URL": "https://api.omnii.net",
+        "SENTRY_DSN": "$SENTRY_DSN",
+        "ANALYTICS_ENABLED": "true",
+        "ENABLE_CRASH_REPORTING": "true",
+        "PERFORMANCE_MONITORING": "true",
+        "DEBUG_MODE": "false",
+        "ENABLE_LOGGING": "false"
+      },
+      "ios": {
+        "resourceClass": "m-medium",
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      }
+    },
+    "production-simulator": {
+      "extends": "production",
+      "ios": {
+        "simulator": true,
+        "resourceClass": "m-medium"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6746954860"
+      }
+    }
+  }
+} 

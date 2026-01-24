@@ -1,0 +1,981 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Chat Concepts Integration Implementation Plan
+
+## Overview
+Create an intelligent AI assistant that integrates cached memory data (emails, tasks, calendar, contacts, Neo4j concepts) to provide contextual, conversational interactions. Following modern AI UX patterns and ChatGPT/Claude paradigms, the system will use sophisticated system prompts, proactive suggestions, and seamless automation to create a "what you see is what you get" experience.
+
+## Current Architecture Analysis
+
+### Existing Systems ✅
+- **Chat UI**: Complete chat components in `apps/omnii-mobile/src/components/chat/`
+- **Memory Cache**: Brain-inspired 3-week cache system with <100ms response times
+- **WebSocket Handler**: Real-time message processing through action planner
+- **RDF Semantic Analysis**: Python service for intent analysis and concept extraction
+- **Action Planning**: Automatic task/action creation and execution
+- **Unified Response**: Type-safe response system with rich UI components
+
+### Memory Data Available 📊
+- **Emails**: 348 real emails (subjects, snippets, attachments)
+- **Tasks**: 38 tasks across 5 lists with due dates, completion status
+- **Calendar**: Events with temporal analysis and free time detection
+- **Contacts**: Contact search with intelligent name variations
+- **Neo4j Concepts**: 50 brain concepts with semantic relationships
+
+## Modern AI UX Patterns Integration
+
+### AI Design Patterns from Shape of AI 🎨
+Following [shapeof.ai](mdc:https:/shapeof.ai) patterns for superior user experience:
+
+- **🧭 Wayfinders**: Interactive hints showing users how to interact with their data
+- **🔄 Follow-ups**: Smart clarifying questions when user intent is ambiguous
+- **👆 Nudges**: Proactive suggestions based on context ("You have 3 overdue tasks...")
+- **✨ Suggestions**: Combat blank canvas with contextual prompt suggestions
+- **📝 Templates**: Pre-built templates for common actions (meeting scheduling, task creation)
+- **🤖 Auto Fill**: Extend user prompts with context from cached data
+- **⚡ Inline Actions**: Contextual interaction with data elements
+- **🎭 Remix/Blend**: Combine user requests with relevant cached context
+- **📋 Summary**: Distill complex data into digestible insights
+- **🔗 Synthesis**: Reorganize scattered information into actionable structure
+- **🎯 Personal Voice**: Match user's communication style from historical data
+- **📚 References**: Smart citation of data sources used in responses
+- **👣 Footprints**: Show AI's reasoning path from prompt to action
+- **🎲 Variations**: Multiple response options for user choice
+- **🧠 Memory**: Contextual awareness of user preferences and patterns
+- **🏷️ Disclosure**: Clear marking of AI-generated vs user content
+
+### Enhanced System Prompts 🎯
+
+#### Primary System Prompt Architecture
+```typescript
+const OMNII_SYSTEM_PROMPT = `
+You are Omnii, an intelligent personal assistant with access to comprehensive user data.
+
+CONTEXT AWARENESS:
+- You have access to 348 real emails, 38 tasks, calendar events, contacts, and 50 brain concepts
+- Always consider temporal relevance (what's due today, recent communications)
+- Prioritize actionable insights over raw data dumps
+
+COMMUNICATION STYLE:
+- Be conversational but precise, like ChatGPT/Claude
+- Use contextual understanding to anticipate needs
+- Offer specific, actionable suggestions
+- Ask clarifying questions when intent is ambiguous
+
+AUTOMATION CAPABILITIES:
+- Proactively suggest task creation from conversations
+- Detect scheduling opportunities from email context
+- Surface relevant contacts for current discussion
+- Connect related concepts from user's knowledge graph
+
+RESPONSE STRUCTURE:
+1. Direct answer to user query
+2. Relevant context from cached data (if applicable)
+3. Suggested actions or next steps
+4. Follow-up questions to deepen assistance
+
+INTERACTION PRINCIPLES:
+- What You See Is What You Get (WYSIWYG)
+- Progressive disclosure of complexity
+- Contextual action suggestions
+- Transparent reasoning when requested
+`;
+```
+
+#### Context-Specific Prompts
+```typescript
+const EMAIL_CONTEXT_PROMPT = `
+RECENT EMAIL CONTEXT:
+{emailSummary}
+
+Use this context to:
+- Reference specific conversations
+- Suggest replies or follow-ups
+- Identify action items mentioned in emails
+- Connect email content to current user request
+`;
+
+const TASK_CONTEXT_PROMPT = `
+CURRENT TASK STATUS:
+{taskSummary}
+
+Leverage this to:
+- Prioritize overdue items
+- Suggest task dependencies
+- Identify scheduling conflicts
+- Recommend task creation from conversation
+`;
+```
+
+### Intelligent Automation Suggestions 🤖
+
+#### Smart Action Detection
+```typescript
+interface AutomationSuggestion {
+  type: 'task_creation' | 'meeting_scheduling' | 'email_reply' | 'reminder_setting';
+  confidence: number;
+  reasoning: string;
+  preview: string;
+  contextUsed: string[];
+  userConfirmationRequired: boolean;
+}
+```
+
+#### Proactive Pattern Recognition
+- **Meeting Patterns**: "You typically meet with John on Fridays" + suggest recurring meeting
+- **Task Patterns**: "You always create a follow-up task after client calls" + auto-suggest
+- **Email Patterns**: "Sarah usually needs a reply within 2 hours" + priority notification
+- **Calendar Patterns**: "You block focus time on Tuesday mornings" + protect schedule
+
+## Implementation Plan
+
+### Phase 1: Intelligent Context Selection System
+
+#### 1.1 Context Relevance Engine
+**Location**: `apps/omnii_mcp/src/services/context/context-relevance-engine.ts`
+
+```typescript
+interface ContextRelevanceEngine {
+  // Analyze user message and determine what cached data is relevant
+  analyzeRelevantContext(message: string, rdfInsights: any): Promise<{
+    emailContext: { relevant: EmailData[], confidence: number },
+    taskContext: { relevant: TaskData[], confidence: number },
+    calendarContext: { relevant: CalendarEvent[], confidence: number },
+    contactContext: { relevant: ContactData[], confidence: number },
+    conceptContext: { relevant: CachedConcept[], confidence: number }
+  }>;
+  
+  // Smart filtering based on semantic similarity
+  filterBySemanticRelevance(data: any[], query: string, threshold: number): any[];
+  
+  // Temporal relevance (recent emails, upcoming tasks, etc.)
+  filterByTemporalRelevance(data: any[], timeWindow: string): any[];
+}
+```
+
+**Features**:
+- Semantic similarity matching using RDF insights
+- Temporal relevance filtering (recent emails, upcoming events)
+- Confidence scoring for each data type
+- Smart context window management (avoid overloading AI)
+
+#### 1.2 Context Summarization Service
+**Location**: `apps/omnii_mcp/src/services/context/context-summarizer.ts`
+
+```typescript
+interface ContextSummarizer {
+  // Create concise summaries for AI context
+  summarizeEmailContext(emails: EmailData[]): string;
+  summarizeTaskContext(tasks: TaskData[]): string;
+  summarizeCalendarContext(events: CalendarEvent[]): string;
+  summarizeConceptContext(concepts: CachedConcept[]): string;
+  
+  // Smart truncation to fit context windows
+  createContextPrompt(relevantContext: RelevantContext, maxTokens: number): string;
+}
+```
+
+### Phase 2: Enhanced WebSocket Handler
+
+#### 2.1 Context-Aware Message Processing
+**Location**: `apps/omnii_mcp/src/services/core/websocket-handler.service.ts` (Enhancement)
+
+**Current Flow**:
+```
+User Message → RDF Analysis → Entity Resolution → Action Planning → Response
+```
+
+**Enhanced Flow**:
+```
+User Message → RDF Analysis → Context Selection → AI Enrichment → Action Planning → Response with Context Display
+```
+
+**Implementation**:
+```typescript
+// Add to existing handleWithActionPlanner method
+async handleWithActionPlanner(message: string, userId: string) {
+  // Existing RDF analysis...
+  const rdfInsights = await this.rdfService.processHumanInputToOmniiMCP(message);
+  
+  // NEW: Intelligent context selection
+  const relevantContext = await this.contextEngine.analyzeRelevantContext(message, rdfInsights);
+  
+  // NEW: Create AI context prompt
+  const contextPrompt = this.contextSummarizer.createContextPrompt(relevantContext, 8000);
+  
+  // Enhanced action planning with context
+  const plan = await this.actionPlanner.createPlanWithContext(
+    message,
+    contextPrompt,
+    relevantContext,
+    context
+  );
+  
+  // Execute and return with context display
+  const result = await this.actionPlanner.executePlan(plan, context);
+  
+  // NEW: Enhance response with context information
+  return this.enhanceResponseWithContext(result, relevantContext);
+}
+```
+
+#### 2.2 AI UX Components with NativeWind V4
+
+##### Context Display Component (Claude-style "Thinking")
+**Location**: `apps/omnii-mobile/src/components/chat/ContextDisplay.tsx`
+
+```typescript
+interface ContextDisplayProps {
+  relevantEmails?: EmailData[];
+  relevantTasks?: TaskData[];
+  relevantEvents?: CalendarEvent[];
+  relevantConcepts?: CachedConcept[];
+  searchQuery: string;
+  reasoning: string[];
+  confidence: number;
+  onContextItemClick: (item: any, type: string) => void;
+  onExpandThinking: () => void;
+}
+
+// NativeWind V4 Implementation
+export const ContextDisplay: React.FC<ContextDisplayProps> = ({ 
+  relevantEmails, relevantTasks, reasoning, confidence, onExpandThinking 
+}) => {
+  const [showThinking, setShowThinking] = useState(false);
+  
+  return (
+    <View className="mt-3 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+      {/* Thinking Header - Claude-style */}
+      <TouchableOpacity 
+        onPress={() => setShowThinking(!showThinking)}
+        className="flex-row items-center justify-between p-4 bg-gray-50 dark:bg-gray-800"
+      >
+        <View className="flex-row items-center space-x-2">
+          <View className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+          <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            Used {(relevantEmails?.length || 0) + (relevantTasks?.length || 0)} sources
+          </Text>
+          <View className="px-2 py-1 bg-green-100 dark:bg-green-900 rounded-md">
+            <Text className="text-xs text-green-800 dark:text-green-200">
+              {Math.round(confidence * 100)}% confident
+            </Text>
+          </View>
+        </View>
+        <ChevronDownIcon 
+          className={`w-4 h-4 text-gray-500 transition-transform ${showThinking ? 'rotate-180' : ''}`} 
+        />
+      </TouchableOpacity>
+      
+      {/* Expandable Thinking Process */}
+      <Animated.View className={`${showThinking ? 'block' : 'hidden'}`}>
+        <View className="p-4 space-y-3">
+          {reasoning.map((step, index) => (
+            <View key={index} className="flex-row space-x-3">
+              <View className="w-5 h-5 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mt-0.5">
+                <Text className="text-xs text-blue-600 dark:text-blue-300">{index + 1}</Text>
+              </View>
+              <Text className="text-sm text-gray-700 dark:text-gray-300 flex-1">{step}</Text>
+            </View>
+          ))}
+        </View>
+        
+        {/* Context Sources Grid */}
+        <View className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">
+            SOURCES USED
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {relevantEmails?.map((email, index) => (
+              <TouchableOpacity 
+                key={index}
+                className="px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
+                onPress={() => onContextItemClick(email, 'email')}
+              >
+                <Text className="text-xs text-red-700 dark:text-red-300" numberOfLines={1}>
+                  📧 {email.subject?.substring(0, 30)}...
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {relevantTasks?.map((task, index) => (
+              <TouchableOpacity 
+                key={index}
+                className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                onPress={() => onContextItemClick(task, 'task')}
+              >
+                <Text className="text-xs text-blue-700 dark:text-blue-300" numberOfLines={1}>
+                  ✓ {task.title?.substring(0, 30)}...
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
+```
+
+##### Smart Suggestions Widget (ChatGPT-style)
+**Location**: `apps/omnii-mobile/src/components/chat/SmartSuggestions.tsx`
+
+```typescript
+interface SmartSuggestionsProps {
+  suggestions: AutomationSuggestion[];
+  onSuggestionSelect: (suggestion: AutomationSuggestion) => void;
+  onDismiss: (id: string) => void;
+}
+
+export const SmartSuggestions: React.FC<SmartSuggestionsProps> = ({
+  suggestions, onSuggestionSelect, onDismiss
+}) => {
+  if (suggestions.length === 0) return null;
+  
+  return (
+    <View className="mt-4 space-y-2">
+      <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 px-4">
+        💡 SUGGESTED ACTIONS
+      </Text>
+      {suggestions.map((suggestion, index) => (
+        <TouchableOpacity
+          key={index}
+          onPress={() => onSuggestionSelect(suggestion)}
+          className="mx-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl border border-purple-200 dark:border-purple-800"
+        >
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+                {suggestion.preview}
+              </Text>
+              <Text className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                {suggestion.reasoning}
+              </Text>
+              <View className="flex-row items-center space-x-2">
+                <View className="px-2 py-1 bg-purple-100 dark:bg-purple-900 rounded-md">
+                  <Text className="text-xs text-purple-700 dark:text-purple-300">
+                    {Math.round(suggestion.confidence * 100)}% match
+                  </Text>
+                </View>
+                <Text className="text-xs text-gray-500 dark:text-gray-400">
+                  Based on {suggestion.contextUsed.join(', ')}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              onPress={() => onDismiss(suggestion.preview)}
+              className="ml-2 p-1"
+            >
+              <XMarkIcon className="w-4 h-4 text-gray-400" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
+```
+
+##### Wayfinder Component (Interactive Hints)
+**Location**: `apps/omnii-mobile/src/components/chat/WayfinderHints.tsx`
+
+```typescript
+export const WayfinderHints: React.FC = () => {
+  const [currentHint, setCurrentHint] = useState(0);
+  
+  const hints = [
+    "💬 Try asking about your overdue tasks",
+    "📅 Ask me to schedule time with recent email contacts", 
+    "🔍 Search your emails by saying 'Find emails about [topic]'",
+    "✅ Create tasks by saying 'Remind me to [action]'"
+  ];
+  
+  return (
+    <View className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-400 dark:border-amber-600">
+      <Text className="text-sm text-amber-800 dark:text-amber-200">
+        {hints[currentHint]}
+      </Text>
+    </View>
+  );
+};
+```
+
+### Phase 3: Enhanced Action Planning with Context
+
+#### 3.1 Context-Aware Action Planner
+**Location**: `apps/omnii_mcp/src/services/core/action-planner.ts` (Enhancement)
+
+```typescript
+// Add new method to existing ActionPlanner class
+async createPlanWithContext(
+  message: string,
+  contextPrompt: string,
+  relevantContext: RelevantContext,
+  executionContext: ExecutionContext
+): Promise<ActionPlan> {
+  
+  // Use RDF + Context for smarter action detection
+  const enhancedRDFInsights = await this.enhanceRDFWithContext(
+    executionContext.rdfInsights,
+    relevantContext
+  );
+  
+  // Context-aware entity resolution
+  const contextualEntities = await this.resolveEntitiesWithContext(
+    message,
+    relevantContext.contactContext.relevant
+  );
+  
+  // Create plan with context awareness
+  const plan = await this.generateContextualPlan(
+    message,
+    contextPrompt,
+    enhancedRDFInsights,
+    contextualEntities
+  );
+  
+  return plan;
+}
+```
+
+#### 3.2 Smart Task/Action Creation
+**Enhancement to existing step executors**
+
+**Features**:
+- Auto-detect when user wants to create tasks from conversation
+- Smart due date inference from calendar context
+- Contact resolution from recent email context
+- Meeting scheduling based on free time analysis
+
+**Example Context Usage**:
+```typescript
+// User: "Schedule a meeting with John about the project proposal"
+// Context: Recent emails with John about project, calendar showing free slots
+// Action: Create calendar event with John's email, smart time suggestion
+```
+
+### Phase 4: Advanced AI UX & WYSIWYG Interface
+
+#### 4.1 Complete ChatGPT/Claude Experience
+**Location**: `apps/omnii-mobile/src/components/chat/` (Comprehensive Enhancement)
+
+##### Enhanced Message Flow with NativeWind V4
+```typescript
+// Enhanced ChatMessage with AI UX patterns
+export const AIEnhancedChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
+  return (
+    <View className="space-y-3">
+      {/* Main Message */}
+      <View className={cn(
+        "max-w-[85%] p-4 rounded-2xl",
+        message.sender === 'ai' 
+          ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mr-auto" 
+          : "bg-blue-500 text-white ml-auto"
+      )}>
+        <Text className={cn(
+          "text-base leading-relaxed",
+          message.sender === 'ai' ? "text-gray-900 dark:text-gray-100" : "text-white"
+        )}>
+          {message.content}
+        </Text>
+      </View>
+      
+      {/* Context Display (if AI message) */}
+      {message.sender === 'ai' && message.contextUsed && (
+        <ContextDisplay 
+          relevantEmails={message.contextUsed.emails}
+          relevantTasks={message.contextUsed.tasks}
+          reasoning={message.reasoning || []}
+          confidence={message.confidence || 0}
+          onContextItemClick={handleContextClick}
+          onExpandThinking={() => {}}
+        />
+      )}
+      
+      {/* Smart Suggestions */}
+      {message.sender === 'ai' && message.suggestions && (
+        <SmartSuggestions
+          suggestions={message.suggestions}
+          onSuggestionSelect={handleSuggestionSelect}
+          onDismiss={handleDismissSuggestion}
+        />
+      )}
+      
+      {/* Action Cards (WYSIWYG) */}
+      {message.actions && (
+        <ActionCardsGrid actions={message.actions} />
+      )}
+    </View>
+  );
+};
+```
+
+##### Intelligent Input Enhancement
+```typescript
+export const AIEnhancedChatInput: React.FC<ChatInputProps> = ({ 
+  messageInput, setMessageInput, onSend 
+}) => {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  
+  // Auto-complete based on cached data
+  useEffect(() => {
+    if (messageInput.length > 3) {
+      generateContextualSuggestions(messageInput).then(setSuggestions);
+    }
+  }, [messageInput]);
+  
+  return (
+    <View className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      {/* Wayfinder Hints */}
+      {messageInput.length === 0 && <WayfinderHints />}
+      
+      {/* Auto-suggestions */}
+      {suggestions.length > 0 && (
+        <ScrollView 
+          horizontal 
+          className="px-4 py-2 border-b border-gray-100 dark:border-gray-800"
+        >
+          {suggestions.map((suggestion, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => setMessageInput(suggestion)}
+              className="mr-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-full"
+            >
+              <Text className="text-sm text-gray-700 dark:text-gray-300">
+                {suggestion}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+      
+      {/* Enhanced Input */}
+      <View className="flex-row items-end px-4 py-3 space-x-3">
+        <View className="flex-1">
+          <TextInput
+            value={messageInput}
+            onChangeText={setMessageInput}
+            placeholder="Ask about your tasks, emails, or schedule..."
+            className="min-h-[40px] max-h-[120px] px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-900 dark:text-gray-100"
+            multiline
+          />
+        </View>
+        <TouchableOpacity
+          onPress={onSend}
+          className="w-10 h-10 bg-blue-500 rounded-full items-center justify-center"
+        >
+          <SendIcon className="w-5 h-5 text-white" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+```
+
+#### 4.2 WYSIWYG Action Cards
+**Location**: `apps/omnii-mobile/src/components/chat/ActionCards.tsx`
+
+```typescript
+// Inline, editable action cards that show exactly what will be created
+export const ActionCardsGrid: React.FC<{ actions: ActionPreview[] }> = ({ actions }) => {
+  return (
+    <View className="mt-3 space-y-2">
+      {actions.map((action, index) => (
+        <View 
+          key={index}
+          className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800"
+        >
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center space-x-2">
+              <View className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg items-center justify-center">
+                <Text className="text-lg">{getActionIcon(action.type)}</Text>
+              </View>
+              <Text className="text-sm font-medium text-green-900 dark:text-green-100">
+                {action.title}
+              </Text>
+            </View>
+            <View className="px-2 py-1 bg-green-100 dark:bg-green-900 rounded-md">
+              <Text className="text-xs text-green-800 dark:text-green-200">Preview</Text>
+            </View>
+          </View>
+          
+          {/* Editable Fields - WYSIWYG */}
+          <View className="space-y-3">
+            {action.type === 'task' && (
+              <>
+                <TextInput
+                  value={action.preview.title}
+                  onChange={(title) => updateActionPreview(index, { title })}
+                  className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                  placeholder="Task title..."
+                />
+                <DatePicker
+                  value={action.preview.dueDate}
+                  onChange={(dueDate) => updateActionPreview(index, { dueDate })}
+                  className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                />
+              </>
+            )}
+          </View>
+          
+          {/* Action Buttons */}
+          <View className="flex-row space-x-2 mt-4">
+            <TouchableOpacity
+              onPress={() => executeAction(action)}
+              className="flex-1 py-3 bg-green-500 rounded-lg items-center"
+            >
+              <Text className="text-white font-medium">Create {action.type}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => dismissAction(index)}
+              className="px-4 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg"
+            >
+              <Text className="text-gray-700 dark:text-gray-300">Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+```
+
+#### 4.3 AI Workflow Templates
+**Location**: `apps/omnii-mobile/src/components/chat/WorkflowTemplates.tsx`
+
+```typescript
+// Pre-built templates for common AI workflows
+export const WorkflowTemplates: React.FC = () => {
+  const templates = [
+    {
+      title: "📧 Email Triage",
+      description: "Review unread emails and create tasks",
+      prompt: "Review my unread emails and suggest which ones need follow-up tasks",
+      icon: "📧"
+    },
+    {
+      title: "📅 Schedule Optimization", 
+      description: "Find free time and suggest meetings",
+      prompt: "Look at my calendar and suggest optimal times for a 1-hour meeting this week",
+      icon: "📅"
+    },
+    {
+      title: "✅ Task Planning",
+      description: "Organize tasks by priority and deadline",
+      prompt: "Show me my overdue tasks and help me prioritize what to work on today",
+      icon: "✅"
+    }
+  ];
+  
+  return (
+    <View className="p-4 space-y-3">
+      <Text className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">
+        💫 Quick Actions
+      </Text>
+      {templates.map((template, index) => (
+        <TouchableOpacity
+          key={index}
+          className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"
+          onPress={() => handleTemplateSelect(template.prompt)}
+        >
+          <View className="flex-row items-center space-x-3">
+            <Text className="text-2xl">{template.icon}</Text>
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {template.title}
+              </Text>
+              <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                {template.description}
+              </Text>
+            </View>
+            <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
+```
+
+### Phase 5: Advanced Features
+
+#### 5.1 Conversation Memory
+**Location**: `apps/omnii_mcp/src/services/context/conversation-memory.ts`
+
+```typescript
+interface ConversationMemory {
+  // Remember context from earlier in conversation
+  addConversationContext(message: string, context: RelevantContext): void;
+  
+  // Retrieve relevant conversation history
+  getRelevantConversationHistory(currentMessage: string): ConversationContext[];
+  
+  // Smart context evolution over conversation
+  evolveContextUnderstanding(newMessage: string): void;
+}
+```
+
+#### 5.2 Proactive Suggestions
+**Location**: `apps/omnii_mcp/src/services/context/proactive-suggestions.ts`
+
+```typescript
+interface ProactiveSuggestions {
+  // Based on context patterns, suggest actions
+  generateSuggestions(context: RelevantContext): Suggestion[];
+  
+  // "You have 3 overdue tasks and a meeting in 30 minutes"
+  // "John sent you an email yesterday, want to reply?"
+  generateContextualNotifications(userId: string): Notification[];
+}
+```
+
+## Implementation Priority
+
+### Sprint 1: AI Foundation & System Prompts (1-2 weeks)
+1. **Enhanced System Prompts**: Implement ChatGPT/Claude-style conversational AI
+2. **Context Relevance Engine**: Smart data filtering with RDF integration
+3. **Basic Context Display**: Claude-style "thinking" component with NativeWind V4
+4. **WebSocket Handler Enhancement**: Integration with improved prompt system
+
+### Sprint 2: WYSIWYG & Smart Actions (1-2 weeks)
+1. **Action Cards Grid**: Inline, editable preview cards for all actions
+2. **Smart Suggestions Widget**: Proactive automation suggestions
+3. **Wayfinder Hints**: Interactive guidance system
+4. **Enhanced Action Planning**: Context-aware task/event creation
+
+### Sprint 3: Advanced AI UX Patterns (1-2 weeks)
+1. **Workflow Templates**: Pre-built AI interaction patterns
+2. **Auto-suggestion System**: Contextual input completion
+3. **Footprints & Citations**: Transparent AI reasoning display
+4. **Variation System**: Multiple response options for user choice
+
+### Sprint 4: Automation & Intelligence (1-2 weeks)
+1. **Pattern Recognition**: Automated workflow suggestions
+2. **Conversation Memory**: Multi-turn context awareness
+3. **Personal Voice Matching**: User communication style adaptation
+4. **Performance Optimization**: <200ms context selection, <2s responses
+
+### Sprint 5: Production Polish (1 week)
+1. **Comprehensive Testing**: AI interaction patterns and edge cases
+2. **Mobile Responsiveness**: Perfect NativeWind V4 styling
+3. **Error Handling**: Graceful degradation when AI/context unavailable
+4. **Analytics**: Track AI interaction success metrics
+
+## AI Automation Patterns 🤖
+
+### Workflow Automation Framework
+```typescript
+interface WorkflowPattern {
+  trigger: 'user_message' | 'context_change' | 'temporal_event';
+  conditions: ContextCondition[];
+  actions: AutomationAction[];
+  confidence_threshold: number;
+  user_confirmation_required: boolean;
+}
+
+// Example patterns following shapeof.ai principles
+const EMAIL_TRIAGE_PATTERN: WorkflowPattern = {
+  trigger: 'user_message',
+  conditions: [
+    { type: 'message_contains', value: ['email', 'inbox', 'unread'] },
+    { type: 'unread_count', operator: '>', value: 5 }
+  ],
+  actions: [
+    { type: 'analyze_emails', priority: 'high' },
+    { type: 'suggest_tasks', source: 'email_content' },
+    { type: 'prioritize_responses', criteria: 'urgency' }
+  ],
+  confidence_threshold: 0.8,
+  user_confirmation_required: false
+};
+```
+
+### Proactive Intelligence
+```typescript
+// Nudges - Alert users to actions they can take
+const PROACTIVE_NUDGES = [
+  {
+    condition: 'overdue_tasks > 3',
+    message: "⚠️ You have 3 overdue tasks. Would you like me to help reschedule them?",
+    actions: ['reschedule_tasks', 'mark_complete', 'delegate']
+  },
+  {
+    condition: 'unread_emails_from_important_contacts > 0',
+    message: "📧 Sarah sent you an email 2 hours ago. She usually needs quick responses.",
+    actions: ['draft_reply', 'schedule_call', 'mark_for_later']
+  },
+  {
+    condition: 'calendar_gap_before_meeting > 15min',
+    message: "🎯 You have 15 minutes before your next meeting. Perfect time to review notes!",
+    actions: ['open_meeting_docs', 'review_agenda', 'send_reminder']
+  }
+];
+```
+
+### Smart Context Injection
+```typescript
+// Auto Fill - Extend prompts with multiple inputs
+const CONTEXT_INJECTION_STRATEGIES = {
+  email_context: {
+    when: 'user_mentions_person',
+    inject: 'recent_email_thread + communication_frequency + last_interaction',
+    format: 'summary'
+  },
+  task_context: {
+    when: 'user_asks_about_workload',
+    inject: 'overdue_tasks + today_tasks + week_priorities',
+    format: 'structured_list'
+  },
+  calendar_context: {
+    when: 'user_wants_to_schedule',
+    inject: 'free_slots + conflict_analysis + travel_time',
+    format: 'time_blocks'
+  }
+};
+```
+
+## Technical Integration Points
+
+### 5.1 Cache Integration
+- Use existing `useBrainMemoryCache` hooks for fast data access
+- Implement cache-first strategy for context selection
+- Add context relevance scoring to cache metadata
+
+### 5.2 RDF Integration
+- Enhance existing `rdf-client.ts` with context analysis capabilities
+- Add context-aware concept extraction
+- Improve semantic similarity matching
+
+### 5.3 Unified Response Enhancement
+- Extend `UnifiedToolResponse` schema to include context metadata
+- Add context display components to existing message types
+- Maintain backward compatibility with existing chat components
+
+### 5.4 Mobile App Integration
+- Enhance existing chat screens with context display
+- Add context search to existing search functionality
+- Integrate with existing theme system and responsive design
+
+## Success Metrics
+
+### AI Interaction Quality 🎯
+- **Response Relevance**: 90%+ of responses use relevant cached context
+- **Context Accuracy**: 95%+ accuracy in source citation and reasoning display
+- **Automation Acceptance**: 85%+ of suggested actions accepted by users
+- **Conversation Flow**: <2 follow-up questions needed to complete user intent
+- **Personal Voice Match**: 80%+ user satisfaction with communication style adaptation
+
+### Technical Performance ⚡
+- **Response Speed**: <200ms context selection, <2s total response (ChatGPT-level)
+- **Cache Hit Rate**: 95%+ for context data (brain memory efficiency)
+- **Context Selection Time**: <100ms average (real-time feel)
+- **Memory Usage**: <10% increase in mobile app memory footprint
+- **Error Rate**: <1% failures in AI reasoning chain
+
+### Modern UX Patterns Adoption 📱
+- **Wayfinder Usage**: 60%+ of new users engage with interactive hints
+- **Template Usage**: 40%+ of conversations start with workflow templates
+- **Action Card Interaction**: 75%+ of suggested actions reviewed via WYSIWYG cards
+- **Context Expansion**: 30%+ of users expand "thinking" sections
+- **Suggestion Acceptance**: 70%+ of auto-complete suggestions used
+
+### Feature Impact 🚀
+- **Context-Driven Conversations**: 80%+ of conversations benefit from cached data
+- **Automation Efficiency**: 60%+ reduction in manual task/event creation
+- **Proactive Value**: 50%+ of users engage with nudges and proactive suggestions
+- **Workflow Completion**: 90%+ of template-initiated workflows completed successfully
+- **User Retention**: 25%+ increase in daily chat usage due to AI capabilities
+
+### WYSIWYG Effectiveness ✨
+- **Preview Accuracy**: 95%+ of action previews match final created items
+- **Edit Rate**: <15% of action cards require user editing before execution
+- **Visual Clarity**: 90%+ user satisfaction with "what you see is what you get" experience
+- **Confidence Display**: Users correctly interpret confidence scores 85%+ of the time
+
+## Risk Mitigation
+
+### 5.1 Performance Risks
+- **Context Overload**: Implement smart context window management
+- **Cache Memory**: Use LRU eviction for context cache
+- **Network Usage**: Efficient context data serialization
+
+### 5.2 Privacy Risks
+- **Data Exposure**: Strict user_id filtering for all context data
+- **Cross-User Contamination**: Isolated context per user session
+- **Sensitive Information**: Smart filtering of sensitive content
+
+### 5.3 User Experience Risks
+- **Information Overload**: Collapsible context sections
+- **False Relevance**: Confidence thresholds for context display
+- **Response Latency**: Async context loading with immediate response start
+
+## Architecture Decisions
+
+### 5.1 Context Storage
+- **In-Memory**: Session-based context cache for active conversations
+- **Persistent**: Conversation memory in existing Neo4j brain system
+- **Hybrid**: Cache for speed, database for persistence
+
+### 5.2 AI Integration
+- **Context Injection**: Enhanced prompts with relevant data summaries
+- **Streaming**: Real-time context building during response generation
+- **Fallback**: Graceful degradation when context unavailable
+
+### 5.3 Mobile Performance
+- **Lazy Loading**: Context loaded on demand
+- **Progressive Enhancement**: Basic chat works without context
+- **Caching Strategy**: Aggressive caching of context summaries
+
+## Dependencies
+
+### 5.1 External
+- Existing brain memory cache system ✅
+- RDF Python service on Railway ✅
+- Neo4j AuraDB for concepts ✅
+- Mobile app chat infrastructure ✅
+
+### 5.2 Internal
+- Context relevance algorithms (new)
+- Enhanced action planning logic (enhancement)
+- Context display components (new)
+- Conversation memory system (new)
+
+## The Omnii AI Experience 🌟
+
+This implementation creates a **next-generation AI assistant** that combines the conversational excellence of ChatGPT/Claude with deep personal context awareness. By following modern AI UX patterns from shapeof.ai, we create an experience that is:
+
+### 🎯 **Intelligently Contextual**
+- Every response is informed by your 348 emails, 38 tasks, calendar, and 50 brain concepts
+- Smart context selection ensures relevance without information overload
+- Claude-style "thinking" sections show exactly what data was considered
+
+### ⚡ **Effortlessly Interactive**
+- WYSIWYG action cards let you see and edit exactly what will be created
+- Wayfinder hints guide new users to discover powerful capabilities
+- Auto-suggestions complete thoughts based on your historical patterns
+
+### 🤖 **Proactively Helpful**
+- Nudges alert you to overdue tasks and important emails requiring attention
+- Workflow templates automate common patterns (email triage, schedule optimization)
+- Pattern recognition suggests automation based on your behavior
+
+### 📱 **Beautifully Designed**
+- NativeWind V4 ensures pixel-perfect, responsive design across all devices
+- Gradient backgrounds and smooth animations create delightful interactions
+- Dark mode support with carefully crafted color schemes
+
+### 🧠 **Transparently Intelligent**
+- Footprints show the AI's reasoning path from your question to the answer
+- Confidence scores help you understand how certain the AI is about suggestions
+- Citations link back to the exact emails, tasks, or events that informed each response
+
+### 🔄 **Continuously Learning**
+- Personal voice matching adapts responses to your communication style
+- Conversation memory builds context across multiple interactions
+- Brain memory integration creates a persistent understanding of your preferences
+
+This isn't just a chat interface—it's a **personalized AI companion** that understands your work patterns, communication style, and productivity needs. By leveraging cached memory data and modern AI UX patterns, we create an experience that feels magical while remaining completely transparent and user-controlled.
+
+**The result**: An AI assistant that knows you well enough to be genuinely helpful, smart enough to anticipate your needs, and designed beautifully enough to be a joy to use every day.

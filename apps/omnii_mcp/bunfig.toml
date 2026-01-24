@@ -1,0 +1,17 @@
+[test]
+# Test configuration
+coverage = true
+timeout = 10000
+preload = ["./tests/setup.ts"]
+
+# Test file patterns
+include = ["tests/**/*.test.ts", "tests/**/*.spec.ts"]
+exclude = ["node_modules", "dist"]
+
+# Configure bun test settings
+# Retry failed tests 2 times
+retries = 2
+
+# ESM compatibility
+jsx = "automatic"
+logLevel = "info"
