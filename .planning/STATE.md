@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 0 of 7 (Monorepo Consolidation Preparation)
-Plan: 2 of 5 (Plan 00-02 complete)
+Plan: 3 of 5 (Plan 00-03 complete)
 Status: In progress
-Last activity: 2026-01-24 - Completed 00-02-PLAN.md (Divergence Analysis & Merge Strategy)
+Last activity: 2026-01-24 - Completed 00-03-PLAN.md (MCP Feature Merge)
 
-Progress: [██░░░░░░░░] 40% (2/5 plans in phase 0)
+Progress: [███░░░░░░░] 60% (3/5 plans in phase 0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 6min
-- Total execution time: 12min
+- Total plans completed: 3
+- Average duration: 5min
+- Total execution time: 16min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 0 | 2/5 | 12min | 6min |
+| Phase 0 | 3/5 | 16min | 5min |
 
 **Recent Trend:**
-- Last plan: 00-02 (6min)
-- Previous: 00-01 (6min)
-- Trend: Consistent 6min/plan
+- Last plan: 00-03 (4min)
+- Previous: 00-02 (6min)
+- Trend: Improving velocity (6→6→4min)
 
 *Updated after each plan completion*
 
@@ -55,6 +55,11 @@ Recent decisions affecting current work:
 - Environment namespacing: MCP_* for MCP-specific vars, keep EXPO_PUBLIC_* as-is
 - Standalone repo archival: Tag v1.0.0-pre-monorepo, update README, preserve git history
 
+**From Phase 0 Plan 03 (00-03):**
+- Skip git merge of standalone omnii-mcp: No unique features, 7-8 months stale, would introduce 24 package conflicts with zero benefit
+- Workspace MCP is canonical: 28+ unique features (RDF, n8n, brain monitoring), 107% more code, modular architecture vs flat
+- Standalone archival strategy: No code porting needed - all 24 standalone files superseded by better workspace implementations
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -68,8 +73,9 @@ None yet.
 **Phase 0 critical decisions:**
 - ~~Monorepo tool selection (Turborepo vs. Nx)~~ - RESOLVED: Using Turborepo from omnii (already working)
 - ~~Codebase "source of truth" per domain~~ - RESOLVED: Monorepo for all domains (see Plan 00-02 decisions)
+- ~~MCP merge strategy~~ - RESOLVED: Skip merge, workspace is canonical (see Plan 00-03 decisions)
 - Python RDF service lacks package.json (sherif warning - not blocking, but should be addressed)
-- Runtime validation needed: omnii-mcp and omnii-mobile apps only build-graph tested, not runtime tested
+- Runtime validation needed: omnii-mcp app startup tested (✅ initializes), full runtime needs env vars
 
 **Phase 1 critical decisions:**
 - Neo4j-Bun compatibility mitigation strategy - HTTP proxy vs. alternative database (research flag)
@@ -87,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-24 21:50:22Z
-Stopped at: Completed 00-02-PLAN.md (Divergence Analysis & Merge Strategy) - 2 tasks committed, SUMMARY created
+Last session: 2026-01-24 21:57:51Z
+Stopped at: Completed 00-03-PLAN.md (MCP Feature Merge) - 2 tasks committed, SUMMARY created
 Resume file: None
