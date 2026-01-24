@@ -37,10 +37,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 4. Environment variable reconciliation plan addresses namespace conflicts
 5. First codebase successfully migrated with validated tooling
 
-**Plans**: TBD
+**Plans:** 5 plans in 4 waves
 
 Plans:
-- [ ] 00-01: TBD (to be planned)
+- [ ] 00-01-PLAN.md — Bootstrap monorepo from omnii with git history preservation
+- [ ] 00-02-PLAN.md — Deep divergence analysis and merge strategy documentation
+- [ ] 00-03-PLAN.md — Merge unique features from standalone omnii-mcp
+- [ ] 00-04-PLAN.md — Environment variable reconciliation and turbo.json updates
+- [ ] 00-05-PLAN.md — Validate Turborepo tooling and configure Syncpack
 
 ---
 
@@ -209,7 +213,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Monorepo Consolidation Preparation | 0/0 | Not started | - |
+| 0. Monorepo Consolidation Preparation | 0/5 | Planned | - |
 | 1. Foundation Infrastructure | 0/0 | Not started | - |
 | 2. Graph Core & MCP Server | 0/0 | Not started | - |
 | 3. GraphRAG & Advanced MCP | 0/0 | Not started | - |
