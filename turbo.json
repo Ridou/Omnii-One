@@ -7,7 +7,16 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".cache/tsbuildinfo.json", "dist/**"]
+      "outputs": [".cache/tsbuildinfo.json", "dist/**", ".expo/**"],
+      "env": [
+        "OMNII_NEO4J_URI",
+        "OMNII_NEO4J_USER",
+        "OMNII_NEO4J_PASSWORD",
+        "OMNII_REDIS_URL",
+        "MCP_*",
+        "N8N_*",
+        "EXPO_PUBLIC_*"
+      ]
     },
     "dev": {
       "dependsOn": ["^dev"],
@@ -46,16 +55,24 @@
     }
   },
   "globalEnv": [
-    "POSTGRES_URL",
-    "AUTH_DISCORD_ID",
-    "AUTH_DISCORD_SECRET",
-    "AUTH_REDIRECT_PROXY_URL",
-    "AUTH_SECRET",
-    "PORT"
+    "CI",
+    "NODE_ENV",
+    "OMNII_POSTGRES_URL",
+    "OMNII_SUPABASE_URL",
+    "OMNII_SUPABASE_ANON_KEY",
+    "OMNII_NEO4J_URI",
+    "OMNII_OPENAI_API_KEY",
+    "OMNII_COMPOSIO_API_KEY",
+    "OMNII_AUTH_SECRET",
+    "OMNII_AUTH_DISCORD_ID",
+    "OMNII_AUTH_DISCORD_SECRET"
+  ],
+  "globalDependencies": [
+    "**/.env",
+    "**/.env.local",
+    "**/.env.example"
   ],
   "globalPassThroughEnv": [
-    "NODE_ENV",
-    "CI",
     "VERCEL",
     "VERCEL_ENV",
     "VERCEL_URL",
