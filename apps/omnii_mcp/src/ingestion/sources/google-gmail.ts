@@ -22,6 +22,7 @@ import {
   type ContactNode,
 } from "../../graph/schema/nodes";
 import type { Neo4jHTTPClient } from "../../services/neo4j/http-client";
+import { discoverRelationships } from "../../services/graphrag/relationship-discovery";
 
 const SYNC_SOURCE: SyncSource = "google_gmail";
 
@@ -31,6 +32,8 @@ export interface GmailSyncResult {
   messagesCreated: number;
   messagesSkipped: number;
   contactsCreated: number;
+  entitiesExtracted: number;
+  relationshipsCreated: number;
   errors: string[];
   latestHistoryId?: string;
 }
@@ -39,10 +42,19 @@ export class GmailIngestionService {
   private composio = getComposioClient();
   private syncStateService = getSyncStateService();
 
+  /**
+   * Sync Gmail messages for a user
+   *
+   * @param userId - User ID for Composio entity and Neo4j client lookup
+   * @param client - Neo4j HTTP client for the user's database
+   * @param forceFullSync - Force full sync ignoring history ID
+   * @param extractEntities - Whether to extract entities from email content (default: true)
+   */
   async syncMessages(
     userId: string,
     client: Neo4jHTTPClient,
-    forceFullSync: boolean = false
+    forceFullSync: boolean = false,
+    extractEntities: boolean = true
   ): Promise<GmailSyncResult> {
     const result: GmailSyncResult = {
       success: false,
@@ -50,6 +62,8 @@ export class GmailIngestionService {
       messagesCreated: 0,
       messagesSkipped: 0,
       contactsCreated: 0,
+      entitiesExtracted: 0,
+      relationshipsCreated: 0,
       errors: [],
     };
 
@@ -71,7 +85,7 @@ export class GmailIngestionService {
         // Handle 404 - historyId expired (>1 week old)
         if (!messages.length && !latestHistoryId) {
           await this.syncStateService.clearSyncToken(userId, SYNC_SOURCE);
-          return this.syncMessages(userId, client, true);
+          return this.syncMessages(userId, client, true, extractEntities);
         }
       } else {
         // Full sync - get recent messages (last 90 days)
@@ -96,6 +110,47 @@ export class GmailIngestionService {
           result.messagesCreated++;
           const contacts = await this.extractEmailContacts(userId, client, message);
           result.contactsCreated += contacts;
+
+          // Extract entities from email (subject + snippet)
+          if (extractEntities) {
+            const subject =
+              message.payload?.headers?.find(
+                (h) => h.name.toLowerCase() === "subject"
+              )?.value || "";
+
+            const textToAnalyze = [subject, message.snippet]
+              .filter(Boolean)
+              .join(". ");
+
+            // Only analyze if there's meaningful content (>20 chars)
+            if (textToAnalyze.length > 20) {
+              try {
+                const extractionResult = await discoverRelationships(
+                  client,
+                  userId,
+                  textToAnalyze,
+                  {
+                    sourceContext: `gmail_message:${message.id}`,
+                  }
+                );
+
+                if (
+                  extractionResult.nodesCreated > 0 ||
+                  extractionResult.relationshipsCreated > 0
+                ) {
+                  result.entitiesExtracted +=
+                    extractionResult.nodesCreated + extractionResult.nodesLinked;
+                  result.relationshipsCreated +=
+                    extractionResult.relationshipsCreated;
+                }
+              } catch (extractError) {
+                console.warn(
+                  `Entity extraction failed for email ${message.id}:`,
+                  extractError
+                );
+              }
+            }
+          }
         }
       }
 
@@ -110,7 +165,7 @@ export class GmailIngestionService {
       // Handle 404 - historyId outside available range
       if (this.is404Error(error)) {
         await this.syncStateService.clearSyncToken(userId, SYNC_SOURCE);
-        return this.syncMessages(userId, client, true);
+        return this.syncMessages(userId, client, true, extractEntities);
       }
 
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -326,10 +381,24 @@ export function getGmailIngestionService(): GmailIngestionService {
   return _gmailService;
 }
 
+/**
+ * Convenience function for one-off Gmail sync
+ *
+ * @param userId - User ID for Composio entity and Neo4j client lookup
+ * @param client - Neo4j HTTP client for the user's database
+ * @param forceFullSync - Force full sync ignoring history ID
+ * @param extractEntities - Whether to extract entities from email content (default: true)
+ */
 export async function ingestGmail(
   userId: string,
   client: Neo4jHTTPClient,
-  forceFullSync: boolean = false
+  forceFullSync: boolean = false,
+  extractEntities: boolean = true
 ): Promise<GmailSyncResult> {
-  return getGmailIngestionService().syncMessages(userId, client, forceFullSync);
+  return getGmailIngestionService().syncMessages(
+    userId,
+    client,
+    forceFullSync,
+    extractEntities
+  );
 }

@@ -19,6 +19,7 @@ import {
 import { createNode } from "../../graph/operations/crud";
 import { NodeLabel, type EntityNode } from "../../graph/schema/nodes";
 import type { Neo4jHTTPClient } from "../../services/neo4j/http-client";
+import { discoverRelationships } from "../../services/graphrag/relationship-discovery";
 
 const SYNC_SOURCE: SyncSource = "google_tasks";
 
@@ -27,6 +28,8 @@ export interface TasksSyncResult {
   tasksProcessed: number;
   tasksCreated: number;
   tasksSkipped: number;
+  entitiesExtracted: number;
+  relationshipsCreated: number;
   errors: string[];
   nextUpdatedMin?: string;
 }
@@ -35,16 +38,27 @@ export class TasksIngestionService {
   private composio = getComposioClient();
   private syncStateService = getSyncStateService();
 
+  /**
+   * Sync Google Tasks for a user
+   *
+   * @param userId - User ID for Composio entity and Neo4j client lookup
+   * @param client - Neo4j HTTP client for the user's database
+   * @param forceFullSync - Force full sync ignoring updatedMin
+   * @param extractEntities - Whether to extract entities from task content (default: true)
+   */
   async syncTasks(
     userId: string,
     client: Neo4jHTTPClient,
-    forceFullSync: boolean = false
+    forceFullSync: boolean = false,
+    extractEntities: boolean = true
   ): Promise<TasksSyncResult> {
     const result: TasksSyncResult = {
       success: false,
       tasksProcessed: 0,
       tasksCreated: 0,
       tasksSkipped: 0,
+      entitiesExtracted: 0,
+      relationshipsCreated: 0,
       errors: [],
     };
 
@@ -90,7 +104,48 @@ export class TasksIngestionService {
           }
 
           const created = await this.upsertTaskNode(userId, client, task, listValidation.data.title);
-          if (created) result.tasksCreated++;
+          if (created) {
+            result.tasksCreated++;
+
+            // Extract entities from task (title + notes)
+            if (extractEntities && (task.title || task.notes)) {
+              const textToAnalyze = [task.title, task.notes]
+                .filter(Boolean)
+                .join(". ");
+
+              // Only analyze if there's meaningful content (>10 chars)
+              if (textToAnalyze.length > 10) {
+                try {
+                  const extractionResult = await discoverRelationships(
+                    client,
+                    userId,
+                    textToAnalyze,
+                    {
+                      sourceContext: `google_task:${task.id}`,
+                    }
+                  );
+
+                  if (
+                    extractionResult.nodesCreated > 0 ||
+                    extractionResult.relationshipsCreated > 0
+                  ) {
+                    result.entitiesExtracted +=
+                      extractionResult.nodesCreated + extractionResult.nodesLinked;
+                    result.relationshipsCreated +=
+                      extractionResult.relationshipsCreated;
+                    console.log(
+                      `Extracted ${extractionResult.entities.length} entities from task "${task.title}"`
+                    );
+                  }
+                } catch (extractError) {
+                  console.warn(
+                    `Entity extraction failed for task ${task.id}:`,
+                    extractError
+                  );
+                }
+              }
+            }
+          }
         }
       }
 
@@ -212,10 +267,24 @@ export function getTasksIngestionService(): TasksIngestionService {
   return _tasksService;
 }
 
+/**
+ * Convenience function for one-off Tasks sync
+ *
+ * @param userId - User ID for Composio entity and Neo4j client lookup
+ * @param client - Neo4j HTTP client for the user's database
+ * @param forceFullSync - Force full sync ignoring updatedMin
+ * @param extractEntities - Whether to extract entities from task content (default: true)
+ */
 export async function ingestTasks(
   userId: string,
   client: Neo4jHTTPClient,
-  forceFullSync: boolean = false
+  forceFullSync: boolean = false,
+  extractEntities: boolean = true
 ): Promise<TasksSyncResult> {
-  return getTasksIngestionService().syncTasks(userId, client, forceFullSync);
+  return getTasksIngestionService().syncTasks(
+    userId,
+    client,
+    forceFullSync,
+    extractEntities
+  );
 }
