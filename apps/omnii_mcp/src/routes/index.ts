@@ -9,6 +9,7 @@ import chatHttpRoutes from './chat-http';
 import n8nWebhookRoutes from './n8n-webhooks';
 import chatDirectN8nRoutes from './chat-direct-n8n';
 import authRoutes from './auth';
+import { authWebhooks } from './webhooks/auth';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
 
@@ -67,6 +68,7 @@ export default (app: Elysia) => {
   
   // Register other routes
   api.use(authRoutes);
+  api.use(authWebhooks);
   api.use(neo4jRoutes);
   api.use(neo4jDirectRoutes);
   api.use(smsRoutes);
