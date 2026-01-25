@@ -7,3 +7,4 @@
 
 export * from './dual-channel';
 export * from './local-search';
+export * from './temporal-context';
