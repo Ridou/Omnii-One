@@ -16,12 +16,14 @@
     "baseUrl": ".",
     "paths": {
       "@omnii/api": ["../../packages/api/src"],
+      "@omnii/auth": ["../../packages/auth/src"],
       "@omnii/validators": ["../../packages/validators/src"]
     }
   },
   "include": [
     "src/**/*",
     "../../packages/api/src/**/*",
+    "../../packages/auth/src/**/*",
     "../../packages/validators/src/**/*"
   ],
   "exclude": ["node_modules", "**/*.test.ts"]
