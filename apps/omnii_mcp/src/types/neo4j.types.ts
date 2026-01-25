@@ -27,3 +27,33 @@ export interface Neo4jHTTPError {
   code: string;
   message: string;
 }
+
+// Neo4j Aura API types
+export interface AuraInstanceRequest {
+  name: string;
+  version: '5';
+  region: string;
+  memory: string;
+  type: 'free-db' | 'professional-db' | 'enterprise-db';
+  tenant_id: string;
+  cloud_provider: 'gcp' | 'aws' | 'azure';
+}
+
+export interface AuraInstanceResponse {
+  data: {
+    id: string;
+    name: string;
+    status: 'creating' | 'running' | 'stopped' | 'deleting';
+    connection_url: string;  // neo4j+s://xxx
+    username: string;
+    password: string;
+    tenant_id: string;
+  };
+}
+
+export interface AuraInstanceStatus {
+  data: {
+    id: string;
+    status: 'creating' | 'running' | 'stopped' | 'deleting';
+  };
+}
