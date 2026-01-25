@@ -12,11 +12,11 @@ This roadmap consolidates three divergent codebases (omnii monorepo, omnii-mobil
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 0: Monorepo Consolidation Preparation** - Establish tooling and merge strategy before consolidation ✓
-- [x] **Phase 1: Foundation Infrastructure** - Authentication, Neo4j multi-tenancy, compatibility resolution ✓
-- [x] **Phase 2: Graph Core & MCP Server** - Graph schema, basic CRUD, MCP protocol implementation ✓
-- [x] **Phase 3: GraphRAG & Advanced MCP** - Dual-channel retrieval, domain-aware tools, multi-AI support ✓
-- [ ] **Phase 4: Data Ingestion Pipeline** - Google services integration with quality gates
+- [x] **Phase 0: Monorepo Consolidation Preparation** - Establish tooling and merge strategy before consolidation
+- [x] **Phase 1: Foundation Infrastructure** - Authentication, Neo4j multi-tenancy, compatibility resolution
+- [x] **Phase 2: Graph Core & MCP Server** - Graph schema, basic CRUD, MCP protocol implementation
+- [x] **Phase 3: GraphRAG & Advanced MCP** - Dual-channel retrieval, domain-aware tools, multi-AI support
+- [x] **Phase 4: Data Ingestion Pipeline** - Google services integration with quality gates
 - [ ] **Phase 5: Mobile Client & Offline Sync** - React Native app with local-first architecture
 - [ ] **Phase 6: Orchestration & Automation** - n8n workflows, AI-triggered execution
 - [ ] **Phase 7: Production Hardening** - Monitoring, audit logging, advanced mobile features
@@ -148,14 +148,14 @@ Plans:
 **Plans:** 8 plans in 6 waves
 
 Plans:
-- [ ] 04-01-PLAN.md — Infrastructure: Composio client, BullMQ queue, dependencies
-- [ ] 04-02-PLAN.md — Quality gates: Zod validation schemas for all Google services
-- [ ] 04-03-PLAN.md — Sync state: Supabase table and persistence service
-- [ ] 04-04-PLAN.md — OAuth routes: Google account connection via Composio
-- [ ] 04-05-PLAN.md — Calendar ingestion: Events to graph with incremental sync
-- [ ] 04-06-PLAN.md — Background jobs: BullMQ scheduler and workers
-- [ ] 04-07-PLAN.md — Additional sources: Tasks, Gmail, Contacts ingestion
-- [ ] 04-08-PLAN.md — Entity extraction wiring and end-to-end verification
+- [x] 04-01-PLAN.md — Infrastructure: Composio client, BullMQ queue, dependencies
+- [x] 04-02-PLAN.md — Quality gates: Zod validation schemas for all Google services
+- [x] 04-03-PLAN.md — Sync state: Supabase table and persistence service
+- [x] 04-04-PLAN.md — OAuth routes: Google account connection via Composio
+- [x] 04-05-PLAN.md — Calendar ingestion: Events to graph with incremental sync
+- [x] 04-06-PLAN.md — Background jobs: BullMQ scheduler and workers
+- [x] 04-07-PLAN.md — Additional sources: Tasks, Gmail, Contacts ingestion
+- [x] 04-08-PLAN.md — Entity extraction wiring and end-to-end verification
 
 ---
 
@@ -170,16 +170,23 @@ Plans:
 1. React Native/Expo app runs on iOS and Android with Expo Router navigation
 2. User can authenticate from mobile app using Supabase auth flow
 3. User can connect Google services from mobile app via OAuth connection management
-4. Local-first data layer stores graph content offline using Realm or proven sync engine
+4. Local-first data layer stores graph content offline using PowerSync sync engine
 5. Mobile app syncs with backend when online, with conflict resolution that preserves user edits
 6. Unified data view shows graph content (entities, relationships, timeline) in fun, engaging UI
 7. Connection status indicators show sync state (online/offline/syncing) clearly
 8. Third codebase consolidated into monorepo (consolidation complete)
 
-**Plans**: TBD
+**Plans:** 8 plans in 5 waves
 
 Plans:
-- [ ] 05-01: TBD (to be planned)
+- [ ] 05-01-PLAN.md — Supabase sync tables and PowerSync HTTP endpoint
+- [ ] 05-02-PLAN.md — PowerSync installation and schema definition
+- [ ] 05-03-PLAN.md — PowerSync provider and backend connector
+- [ ] 05-04-PLAN.md — Connection status UI components
+- [ ] 05-05-PLAN.md — Graph data views (EntityList, EventTimeline)
+- [ ] 05-06-PLAN.md — MCP backend integration from mobile
+- [ ] 05-07-PLAN.md — Google OAuth connection management from mobile
+- [ ] 05-08-PLAN.md — End-to-end verification checkpoint
 
 ---
 
@@ -235,15 +242,15 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 0. Monorepo Consolidation Preparation | 5/5 | ✓ Complete | 2026-01-24 |
-| 1. Foundation Infrastructure | 5/5 | ✓ Complete | 2026-01-25 |
-| 2. Graph Core & MCP Server | 7/7 | ✓ Complete | 2026-01-25 |
-| 3. GraphRAG & Advanced MCP | 6/6 | ✓ Complete | 2026-01-25 |
-| 4. Data Ingestion Pipeline | 0/8 | Planned | - |
-| 5. Mobile Client & Offline Sync | 0/0 | Not started | - |
+| 0. Monorepo Consolidation Preparation | 5/5 | Complete | 2026-01-24 |
+| 1. Foundation Infrastructure | 5/5 | Complete | 2026-01-25 |
+| 2. Graph Core & MCP Server | 7/7 | Complete | 2026-01-25 |
+| 3. GraphRAG & Advanced MCP | 6/6 | Complete | 2026-01-25 |
+| 4. Data Ingestion Pipeline | 8/8 | Complete | 2026-01-25 |
+| 5. Mobile Client & Offline Sync | 0/8 | Planned | - |
 | 6. Orchestration & Automation | 0/0 | Not started | - |
 | 7. Production Hardening | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-25 — Phase 4 planned (8 plans in 6 waves)*
+*Last updated: 2026-01-25 — Phase 5 planned (8 plans in 5 waves)*
