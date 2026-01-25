@@ -32,7 +32,16 @@ const ErrorResponse = t.Object({
 
 // Initialize services (reuse existing logic)
 const enhancedHandler = new EnhancedWebSocketHandler();
-const brainManager = new BrainConversationManager();
+// Note: BrainConversationManager requires TCP driver (deprecated)
+// Legacy chat routes will not function until migrated to HTTP client
+let brainManager: BrainConversationManager | null = null;
+try {
+  // BrainConversationManager is deprecated - requires TCP driver which is broken with Bun
+  // Skip initialization for now - chat routes will return 503
+  console.log('⚠️  BrainConversationManager skipped (requires deprecated TCP driver)');
+} catch (e) {
+  console.log('⚠️  BrainConversationManager initialization skipped:', e);
+}
 
 // Store for Server-Sent Events connections
 const sseConnections = new Map<string, ReadableStreamDefaultController>();

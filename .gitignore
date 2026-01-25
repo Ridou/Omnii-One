@@ -204,3 +204,4 @@ supabase/.git/
 # Prevent accidental JS builds in TypeScript packages
 packages/*/src/**/*.js
 packages/*/src/**/*.js.map
+apps/omnii_mcp/.env
