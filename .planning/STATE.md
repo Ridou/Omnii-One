@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 3 of 7 (GraphRAG & Advanced MCP) - IN PROGRESS
-Plan: 3 of 6 (03-03 complete)
-Status: Domain MCP tools with temporal filtering implemented
-Last activity: 2026-01-25 - Completed 03-03-PLAN.md
+Plan: 4 of 6 (03-04 complete)
+Status: LLM-based relationship discovery with MCP tools operational
+Last activity: 2026-01-25 - Completed 03-04-PLAN.md
 
-Progress: [███░░░░░░░] 50% Phase 3 in progress (3/6 plans executed)
+Progress: [████░░░░░░] 67% Phase 3 in progress (4/6 plans executed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 4min
-- Total execution time: 75min
+- Total plans completed: 18
+- Average duration: 5min
+- Total execution time: 83min
 
 **By Phase:**
 
@@ -30,12 +30,12 @@ Progress: [███░░░░░░░] 50% Phase 3 in progress (3/6 plans ex
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
-| Phase 3 | 3/6 | 15min | 5min |
+| Phase 3 | 4/6 | 23min | 6min |
 
 **Recent Trend:**
-- Last plan: 03-03 (7min, complete)
-- Previous: 03-02 (4min)
-- Trend: Stabilizing around 3-7min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7min)
+- Last plan: 03-04 (8min, complete)
+- Previous: 03-03 (7min)
+- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8min)
 
 *Updated after each plan completion*
 
@@ -148,6 +148,12 @@ Recent decisions affecting current work:
 - Calendar query dual-mode: Calendar tool supports both temporal filtering (queryTemporalEvents) and optional semantic search (searchByText) for "meetings last week" or "meetings about project X last week"
 - Contact interaction context: Contact lookup uses localSearch with includeContext flag to control whether to fetch related events/entities for full interaction history
 
+**From Phase 3 Plan 04 (03-04):**
+- GPT-4o-mini for entity extraction: Minimum quality model for structured JSON output with response_format json_object, balances accuracy with latency/cost
+- Vague relationship filtering: RELATED_TO, ASSOCIATED_WITH, CONNECTED_TO filtered out automatically to enforce specific meaningful types (EMPLOYED_BY, ATTENDED, FOUNDED)
+- Entity matching before node creation: Case-insensitive name search prevents duplicate nodes when same entity mentioned multiple times across ingestion sources
+- Relationship type whitelist: ALLOWED_RELATIONSHIPS array validates types before Cypher execution to prevent injection (Neo4j doesn't support parameterized relationship types)
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -178,6 +184,7 @@ None yet.
 - ~~Temporal context awareness~~ - COMPLETE: Natural language time queries with Neo4j datetime arithmetic (Plan 03-01)
 - ~~Dual-channel retrieval~~ - COMPLETE: HybridCypherRetriever pattern combining vector search with 1-2 hop graph traversal (Plan 03-02)
 - ~~Domain MCP tools~~ - COMPLETE: Calendar, contacts, tasks tools with temporal filtering and dual-channel retrieval (Plan 03-03)
+- ~~Relationship discovery~~ - COMPLETE: LLM-based entity extraction with quality prompts and MCP tool integration (Plan 03-04)
 
 **Phase 4 scope discipline:**
 - Must resist adding multiple data sources simultaneously - start with Google Calendar only, validate improvement before expanding
@@ -188,8 +195,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T18:13:29Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-01-25T18:14:35Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
 
-**Phase 3 Status:** In progress. 3/6 plans complete (50%). Domain MCP tools (calendar, contacts, tasks) with temporal filtering and dual-channel retrieval now available. Ready for relationship extraction and Phase 4 data sync.
+**Phase 3 Status:** In progress. 4/6 plans complete (67%). GraphRAG services and MCP tools operational. Relationship discovery enables automatic graph building from unstructured text. Ready for entity linking (03-05) and local search expansion (03-06).
