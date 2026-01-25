@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 4 of 7 (Data Ingestion Pipeline)
-Plan: 6 of 8 (Background job scheduling complete)
-Status: In progress - Background sync infrastructure complete
-Last activity: 2026-01-25 - Completed 04-06-PLAN.md
+Plan: 7 of 8 (Tasks, Gmail, Contacts ingestion complete)
+Status: In progress - All 4 Google services have ingestion services
+Last activity: 2026-01-25 - Completed 04-07-PLAN.md
 
-Progress: [████████░░] 65% Overall (26/40 plans complete)
+Progress: [████████░░] 68% Overall (27/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
+- Total plans completed: 27
 - Average duration: 4min
-- Total execution time: 115min
+- Total execution time: 120min
 
 **By Phase:**
 
@@ -31,12 +31,12 @@ Progress: [████████░░] 65% Overall (26/40 plans complete)
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
-| Phase 4 | 6/8 | 22min | 4min |
+| Phase 4 | 7/8 | 27min | 4min |
 
 **Recent Trend:**
-- Last plan: 04-06 (4min, complete)
-- Previous: 04-05 (4min)
-- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4min)
+- Last plan: 04-07 (5min, complete)
+- Previous: 04-06 (4min)
+- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5min)
 
 *Updated after each plan completion*
 
@@ -201,6 +201,14 @@ Recent decisions affecting current work:
 - Fan-out pattern: Scheduled job with no userId fans out to per-user jobs with staggered delays
 - Optional worker startup: Workers only start when OMNII_REDIS_URL is set (non-blocking for development)
 
+**From Phase 4 Plan 07 (04-07):**
+- Tasks storage as Entity nodes: entity_type='task' for consistency with Phase 3 decision
+- Gmail emails as Entity nodes: entity_type='email' with gmail_message_id for deduplication
+- 30-day completed task retention: Skip older completed tasks to avoid graph bloat
+- 500 message limit for Gmail initial sync: Prevents API quota exhaustion
+- Source-specific incremental sync: updatedMin (Tasks), historyId (Gmail), syncToken (Contacts)
+- 404/410 error handling: Triggers automatic full sync fallback for expired tokens
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -244,11 +252,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T20:50:00Z
-Stopped at: Completed 04-06-PLAN.md
+Last session: 2026-01-25T20:57:00Z
+Stopped at: Completed 04-07-PLAN.md
 Resume file: None
 
-**Phase 4 Status:** IN PROGRESS. Plans 01-06 complete - Background sync infrastructure ready.
+**Phase 4 Status:** IN PROGRESS. Plans 01-07 complete - All 4 Google services have ingestion services.
 
 **Delivered (04-01):**
 - BullMQ job queue with exponential backoff for background job processing
@@ -288,4 +296,12 @@ Resume file: None
 - Optional worker startup when Redis available
 - Graceful shutdown stops workers cleanly on SIGTERM
 
-**Next:** Phase 4 Plan 07 - Additional data sources (Gmail, Tasks, Contacts) or Plan 08 (Testing)
+**Delivered (04-07):**
+- TasksIngestionService with updatedMin incremental sync
+- GmailIngestionService with historyId-based sync and 404 fallback
+- ContactsIngestionService with syncToken and 410 fallback
+- Email sender/recipient extraction as Contact nodes
+- Manual sync endpoints for all 4 services (calendar, tasks, gmail, contacts)
+- Workers updated to handle all source types
+
+**Next:** Phase 4 Plan 08 - Testing
