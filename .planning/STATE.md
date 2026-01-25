@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 
 ## Current Position
 
-Phase: 3 of 7 (GraphRAG & Advanced MCP) - IN PROGRESS
-Plan: 5 of 6 (03-05 complete)
-Status: OpenAI function calling integration with MCP tools operational
-Last activity: 2026-01-25 - Completed 03-05-PLAN.md
+Phase: 3 of 7 (GraphRAG & Advanced MCP) - COMPLETE
+Plan: 6 of 6 (03-06 complete)
+Status: All MCP integrations complete (Claude, OpenAI, local LLMs), GraphRAG operational
+Last activity: 2026-01-25 - Completed 03-06-PLAN.md
 
-Progress: [█████░░░░░] 83% Phase 3 in progress (5/6 plans executed)
+Progress: [██████░░░░] 100% Phase 3 complete (6/6 plans executed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: 5min
-- Total execution time: 87min
+- Total execution time: 93min
 
 **By Phase:**
 
@@ -30,12 +30,12 @@ Progress: [█████░░░░░] 83% Phase 3 in progress (5/6 plans ex
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
-| Phase 3 | 5/6 | 27min | 5min |
+| Phase 3 | 6/6 | 33min | 6min |
 
 **Recent Trend:**
-- Last plan: 03-05 (4min, complete)
-- Previous: 03-04 (8min)
-- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4min)
+- Last plan: 03-06 (6min, complete)
+- Previous: 03-05 (4min)
+- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4→6min)
 
 *Updated after each plan completion*
 
@@ -160,6 +160,12 @@ Recent decisions affecting current work:
 - MCP response format conversion: Convert MCP content array to OpenAI tool result format with tool_call_id for correlation
 - Separate adapter layer pattern: Created mcp/adapters/ for AI platform adapters to enable future integrations without modifying core tools
 
+**From Phase 3 Plan 06 (03-06):**
+- Sequential execution for local LLMs: Local LLMs unreliable with parallel tool calls per research, use for-of loop instead of Promise.all
+- Ollama vs LM Studio formats: Ollama uses custom format without strict mode, LM Studio reuses OpenAI format (strict: true)
+- Hallucination detection for local LLMs: validateToolCall checks tool name exists in TOOL_HANDLERS, filters invalid calls before execution
+- Local LLM bridge architecture: HTTP endpoints at /api/local-llm for tools list and execution, separate from MCP JSON-RPC transport
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -185,13 +191,14 @@ None yet.
 - ~~Embedding model selection~~ - RESOLVED: Using OpenAI ada-002 for server-side embeddings (Plan 02-02)
 - ~~Claude Desktop integration~~ - RESOLVED: User approved checkpoint, docs and config complete (Plan 02-07)
 
-**Phase 3 - IN PROGRESS:**
+**Phase 3 - COMPLETE:**
 - ~~GraphRAG implementation patterns~~ - RESEARCHED: Dual-channel retrieval (vector + graph), HybridCypherRetriever pattern, local search first (see 03-RESEARCH.md)
 - ~~Temporal context awareness~~ - COMPLETE: Natural language time queries with Neo4j datetime arithmetic (Plan 03-01)
 - ~~Dual-channel retrieval~~ - COMPLETE: HybridCypherRetriever pattern combining vector search with 1-2 hop graph traversal (Plan 03-02)
 - ~~Domain MCP tools~~ - COMPLETE: Calendar, contacts, tasks tools with temporal filtering and dual-channel retrieval (Plan 03-03)
 - ~~Relationship discovery~~ - COMPLETE: LLM-based entity extraction with quality prompts and MCP tool integration (Plan 03-04)
 - ~~OpenAI function calling~~ - COMPLETE: OpenAI adapter and HTTP endpoints for function calling integration (Plan 03-05)
+- ~~Local LLM integration~~ - COMPLETE: Ollama and LM Studio adapters with sequential execution and hallucination detection (Plan 03-06)
 
 **Phase 4 scope discipline:**
 - Must resist adding multiple data sources simultaneously - start with Google Calendar only, validate improvement before expanding
@@ -202,8 +209,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T18:34:13Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-01-25T18:28:49Z
+Stopped at: Completed 03-06-PLAN.md
 Resume file: None
 
-**Phase 3 Status:** In progress. 5/6 plans complete (83%). GraphRAG services, domain MCP tools, relationship discovery, and OpenAI function calling operational. MCP tools now accessible via Claude Desktop and OpenAI API. Ready for local search expansion (03-06).
+**Phase 3 Status:** Complete. 6/6 plans complete (100%). GraphRAG services operational (temporal filtering, dual-channel retrieval), domain MCP tools operational (calendar, contacts, tasks), relationship discovery via LLM entity extraction, and multi-client MCP integration complete (Claude Desktop, OpenAI API, Ollama, LM Studio). Ready for Phase 4 data ingestion.
