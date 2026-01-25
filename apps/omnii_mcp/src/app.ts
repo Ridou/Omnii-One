@@ -6,6 +6,9 @@ import './config/axios.config';
 // ✅ CRITICAL: Validate environment configuration at startup (fail-fast)
 import { env } from './config/env';
 
+// Log validated environment mode
+console.log(`Starting MCP backend in ${env.NODE_ENV} mode`);
+
 // ✅ CRITICAL: Initialize Neo4j driver at startup
 import { neo4jService } from './config/neo4j.config';
 
@@ -503,6 +506,7 @@ try {
   console.log(`📡 WebSocket endpoint available at: ws://${host}:${port}/ws`);
   console.log(`🏥 Health check: http://${host}:${port}/health`);
   console.log(`📊 Swagger docs: http://${host}:${port}/swagger`);
+  console.log(`MCP backend running at ${env.MCP_BASE_URL}`);
   
   // Get local network IP for React Native connections
   const os = require('os');
@@ -562,42 +566,30 @@ try {
 // Error handling
 app.onError(({ code, error, set }) => {
   // Log the error
-  console.error("Error:", error);
+  console.error("Unhandled error:", error);
 
-  // Set status code
-  const status =
-    typeof error === "object" && error !== null && "status" in error
-      ? (error as any).status
-      : 500;
-  set.status = status;
-
-  // Prepare error response - safely access error properties
+  // Extract error message safely
   const errorMessage =
     typeof error === "object" && error !== null && "message" in error
       ? (error as Error).message
       : "Internal Server Error";
 
-  const errorStack =
-    typeof error === "object" && error !== null && "stack" in error
-      ? (error as Error).stack
-      : undefined;
+  // Handle specific error types
+  if (errorMessage.includes('authorization') || errorMessage.includes('Invalid or expired token')) {
+    set.status = 401;
+    return { error: 'Unauthorized', message: errorMessage };
+  }
 
-  const errorCause =
-    typeof error === "object" && error !== null && "cause" in error
-      ? String((error as any).cause)
-      : undefined;
+  if (errorMessage.includes('not found')) {
+    set.status = 404;
+    return { error: 'Not Found', message: errorMessage };
+  }
 
+  // Generic server error
+  set.status = 500;
   return {
-    success: false,
-    error: errorMessage,
-    code:
-      typeof error === "object" && error !== null && "code" in error
-        ? (error as any).code
-        : code,
-    ...(process.env.NODE_ENV === "development" && {
-      stack: errorStack,
-      details: errorCause,
-    }),
+    error: 'Internal Server Error',
+    message: env.NODE_ENV === 'development' ? errorMessage : 'Something went wrong'
   };
 });
 

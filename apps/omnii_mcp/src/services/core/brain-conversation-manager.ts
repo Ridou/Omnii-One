@@ -18,7 +18,7 @@ import {
   BRAIN_MEMORY_CONSTANTS
 } from '../../types/brain-memory-schemas';
 import { TimeMemoryHelpers } from '../../utils/time-memory-helpers';
-import { getNeo4jDriver } from '../../config/neo4j.config';
+import { getNeo4jService } from '../../config/neo4j.config';
 
 /**
  * Enhanced BrainConversationManager that mimics human memory patterns
@@ -40,7 +40,12 @@ export class BrainConversationManager {
 
   constructor(driver?: Driver, openai?: OpenAI, mockRedisCache?: any) {
     // 🔧 CONSOLIDATED: Use the shared production-ready driver from neo4j.config.ts
-    this.driver = driver || getNeo4jDriver();
+    // Note: BrainConversationManager requires TCP driver, not HTTP API
+    // This will fail if driver not provided - legacy service deprecated
+    if (!driver) {
+      throw new Error('BrainConversationManager requires TCP driver (deprecated - use SimpleNeo4jService instead)');
+    }
+    this.driver = driver;
 
     this.openai = openai || new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
