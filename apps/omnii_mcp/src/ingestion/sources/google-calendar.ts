@@ -24,6 +24,7 @@ import {
 } from "../../graph/schema/nodes";
 import { RelationshipType } from "../../graph/schema/relationships";
 import type { Neo4jHTTPClient } from "../../services/neo4j/http-client";
+import { discoverRelationships } from "../../services/graphrag/relationship-discovery";
 
 const SYNC_SOURCE: SyncSource = "google_calendar";
 
@@ -36,6 +37,8 @@ export interface CalendarSyncResult {
   eventsCreated: number;
   eventsSkipped: number;
   contactsCreated: number;
+  entitiesExtracted: number;
+  relationshipsCreated: number;
   errors: string[];
   nextSyncToken?: string;
 }
@@ -53,11 +56,13 @@ export class CalendarIngestionService {
    * @param userId - User ID for Composio entity and Neo4j client lookup
    * @param client - Neo4j HTTP client for the user's database
    * @param forceFullSync - Force full sync ignoring sync token
+   * @param extractEntities - Whether to extract entities from event content (default: true)
    */
   async syncEvents(
     userId: string,
     client: Neo4jHTTPClient,
-    forceFullSync: boolean = false
+    forceFullSync: boolean = false,
+    extractEntities: boolean = true
   ): Promise<CalendarSyncResult> {
     const result: CalendarSyncResult = {
       success: false,
@@ -65,6 +70,8 @@ export class CalendarIngestionService {
       eventsCreated: 0,
       eventsSkipped: 0,
       contactsCreated: 0,
+      entitiesExtracted: 0,
+      relationshipsCreated: 0,
       errors: [],
     };
 
@@ -114,6 +121,40 @@ export class CalendarIngestionService {
           result.eventsCreated++;
         }
 
+        // Extract entities from event (title + description)
+        if (extractEntities && (event.summary || event.description)) {
+          const textToAnalyze = [
+            event.summary,
+            event.description,
+            // Include attendee names for context
+            ...(event.attendees?.map((a) => a.displayName).filter(Boolean) || []),
+          ]
+            .filter(Boolean)
+            .join(". ");
+
+          try {
+            const extractionResult = await discoverRelationships(
+              client,
+              userId,
+              textToAnalyze,
+              {
+                sourceContext: `calendar_event:${event.id}`,
+              }
+            );
+
+            if (extractionResult.nodesCreated > 0 || extractionResult.relationshipsCreated > 0) {
+              result.entitiesExtracted += extractionResult.nodesCreated + extractionResult.nodesLinked;
+              result.relationshipsCreated += extractionResult.relationshipsCreated;
+              console.log(
+                `Extracted ${extractionResult.entities.length} entities and ${extractionResult.relationshipsCreated} relationships from event "${event.summary}"`
+              );
+            }
+          } catch (extractError) {
+            // Log but don't fail the sync for extraction errors
+            console.warn(`Entity extraction failed for event ${event.id}:`, extractError);
+          }
+        }
+
         // Extract attendees as contacts
         if (event.attendees && event.attendees.length > 0) {
           const contactsCreated = await this.extractAttendees(
@@ -140,8 +181,8 @@ export class CalendarIngestionService {
           `Sync token expired for user ${userId}, triggering full sync`
         );
         await this.syncStateService.clearSyncToken(userId, SYNC_SOURCE);
-        // Retry with full sync
-        return this.syncEvents(userId, client, true);
+        // Retry with full sync, preserving extractEntities setting
+        return this.syncEvents(userId, client, true, extractEntities);
       }
 
       // Handle rate limiting
@@ -455,12 +496,18 @@ export function getCalendarIngestionService(): CalendarIngestionService {
 
 /**
  * Convenience function for one-off calendar sync
+ *
+ * @param userId - User ID for Composio entity and Neo4j client lookup
+ * @param client - Neo4j HTTP client for the user's database
+ * @param forceFullSync - Force full sync ignoring sync token
+ * @param extractEntities - Whether to extract entities from event content (default: true)
  */
 export async function ingestCalendarEvents(
   userId: string,
   client: Neo4jHTTPClient,
-  forceFullSync: boolean = false
+  forceFullSync: boolean = false,
+  extractEntities: boolean = true
 ): Promise<CalendarSyncResult> {
   const service = getCalendarIngestionService();
-  return service.syncEvents(userId, client, forceFullSync);
+  return service.syncEvents(userId, client, forceFullSync, extractEntities);
 }
