@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 3 of 7 (GraphRAG & Advanced MCP) - IN PROGRESS
-Plan: 4 of 6 (03-04 complete)
-Status: LLM-based relationship discovery with MCP tools operational
-Last activity: 2026-01-25 - Completed 03-04-PLAN.md
+Plan: 5 of 6 (03-05 complete)
+Status: OpenAI function calling integration with MCP tools operational
+Last activity: 2026-01-25 - Completed 03-05-PLAN.md
 
-Progress: [████░░░░░░] 67% Phase 3 in progress (4/6 plans executed)
+Progress: [█████░░░░░] 83% Phase 3 in progress (5/6 plans executed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 5min
-- Total execution time: 83min
+- Total execution time: 87min
 
 **By Phase:**
 
@@ -30,12 +30,12 @@ Progress: [████░░░░░░] 67% Phase 3 in progress (4/6 plans ex
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
-| Phase 3 | 4/6 | 23min | 6min |
+| Phase 3 | 5/6 | 27min | 5min |
 
 **Recent Trend:**
-- Last plan: 03-04 (8min, complete)
-- Previous: 03-03 (7min)
-- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8min)
+- Last plan: 03-05 (4min, complete)
+- Previous: 03-04 (8min)
+- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4min)
 
 *Updated after each plan completion*
 
@@ -154,6 +154,12 @@ Recent decisions affecting current work:
 - Entity matching before node creation: Case-insensitive name search prevents duplicate nodes when same entity mentioned multiple times across ingestion sources
 - Relationship type whitelist: ALLOWED_RELATIONSHIPS array validates types before Cypher execution to prevent injection (Neo4j doesn't support parameterized relationship types)
 
+**From Phase 3 Plan 05 (03-05):**
+- OpenAI Structured Outputs with strict mode: Set strict: true and additionalProperties: false on function parameters for reliable structured output parsing by OpenAI models
+- Parallel tool execution via Promise.all: Execute multiple tool calls in parallel per OpenAI recommendation to reduce latency
+- MCP response format conversion: Convert MCP content array to OpenAI tool result format with tool_call_id for correlation
+- Separate adapter layer pattern: Created mcp/adapters/ for AI platform adapters to enable future integrations without modifying core tools
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -185,6 +191,7 @@ None yet.
 - ~~Dual-channel retrieval~~ - COMPLETE: HybridCypherRetriever pattern combining vector search with 1-2 hop graph traversal (Plan 03-02)
 - ~~Domain MCP tools~~ - COMPLETE: Calendar, contacts, tasks tools with temporal filtering and dual-channel retrieval (Plan 03-03)
 - ~~Relationship discovery~~ - COMPLETE: LLM-based entity extraction with quality prompts and MCP tool integration (Plan 03-04)
+- ~~OpenAI function calling~~ - COMPLETE: OpenAI adapter and HTTP endpoints for function calling integration (Plan 03-05)
 
 **Phase 4 scope discipline:**
 - Must resist adding multiple data sources simultaneously - start with Google Calendar only, validate improvement before expanding
@@ -195,8 +202,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T18:14:35Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-01-25T18:34:13Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
 
-**Phase 3 Status:** In progress. 4/6 plans complete (67%). GraphRAG services and MCP tools operational. Relationship discovery enables automatic graph building from unstructured text. Ready for entity linking (03-05) and local search expansion (03-06).
+**Phase 3 Status:** In progress. 5/6 plans complete (83%). GraphRAG services, domain MCP tools, relationship discovery, and OpenAI function calling operational. MCP tools now accessible via Claude Desktop and OpenAI API. Ready for local search expansion (03-06).
