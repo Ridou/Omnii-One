@@ -5,3 +5,4 @@
  */
 
 export * from './openai';
+export * from './local-llm';
