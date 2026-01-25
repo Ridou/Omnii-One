@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 2 of 7 (Graph Core & MCP Server)
-Plan: 4 of 7 (MCP Tools for Graph Queries)
+Plan: 5 of 7 (Auth, Rate Limiting & Route Integration)
 Status: In progress
-Last activity: 2026-01-25 - Completed 02-04-PLAN.md (MCP Tools for Graph Queries)
+Last activity: 2026-01-25 - Completed 02-05-PLAN.md (Auth, Rate Limiting & Route Integration)
 
-Progress: [████░░░░░░] 57% Phase 2 (4/7 plans complete)
+Progress: [█████░░░░░] 71% Phase 2 (5/7 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: 4min
-- Total execution time: 48min
+- Total execution time: 54min
 
 **By Phase:**
 
@@ -29,12 +29,12 @@ Progress: [████░░░░░░] 57% Phase 2 (4/7 plans complete)
 |-------|-------|-------|----------|
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
-| Phase 2 | 4/7 | 10min | 3min |
+| Phase 2 | 5/7 | 16min | 3min |
 
 **Recent Trend:**
-- Last plan: 02-04 (3min)
-- Previous: 02-02 (3min)
-- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4→4→3→3min)
+- Last plan: 02-05 (6min)
+- Previous: 02-04 (3min)
+- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4→4→3→3→6min)
 
 *Updated after each plan completion*
 
@@ -114,6 +114,12 @@ Recent decisions affecting current work:
 - TOOL_DEFINITIONS + TOOL_HANDLERS pattern: Array of definitions for tools/list, map of handlers for tools/call
 - Zod validation at handler entry: Fail fast with structured error details for AI clients
 
+**From Phase 2 Plan 05 (02-05):**
+- Token bucket rate limiting: 100 requests per minute per user via elysia-rate-limit
+- Per-user rate limiting: Extract user ID from JWT sub claim; fallback to IP for unauthenticated
+- MCP routes at /mcp: Not under /api prefix - MCP clients expect /mcp endpoint directly
+- Supabase JWT auth: All MCP POST requests require valid Bearer token, validated via supabase.auth.getUser()
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -150,8 +156,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T10:06:00Z
-Stopped at: Completed 02-04-PLAN.md (MCP Tools for Graph Queries) - 3 tasks committed, SUMMARY created
+Last session: 2026-01-25T10:16:00Z
+Stopped at: Completed 02-05-PLAN.md (Auth, Rate Limiting & Route Integration) - 3 tasks committed, SUMMARY created
 Resume file: None
 
-**Phase 2 Status:** In progress (4/7 plans complete)
+**Phase 2 Status:** In progress (5/7 plans complete)
