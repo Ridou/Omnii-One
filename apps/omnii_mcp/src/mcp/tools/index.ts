@@ -36,6 +36,11 @@ import {
   handleTaskOperations,
   TaskOperationsInputSchema,
 } from './task-operations';
+import {
+  ExtractRelationshipsToolDefinition,
+  handleExtractRelationships,
+  ExtractRelationshipsInputSchema,
+} from './extract-relationships';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 
 /**
@@ -48,6 +53,7 @@ export const TOOL_DEFINITIONS = [
   calendarQueryToolDefinition,
   contactLookupToolDefinition,
   taskOperationsToolDefinition,
+  ExtractRelationshipsToolDefinition,
 ] as const;
 
 /**
@@ -69,6 +75,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   [calendarQueryToolDefinition.name]: handleCalendarQuery,
   [contactLookupToolDefinition.name]: handleContactLookup,
   [taskOperationsToolDefinition.name]: handleTaskOperations,
+  [ExtractRelationshipsToolDefinition.name]: handleExtractRelationships,
 };
 
 /**
@@ -126,6 +133,10 @@ export {
   taskOperationsToolDefinition,
   handleTaskOperations,
   TaskOperationsInputSchema,
+  // Extract relationships
+  ExtractRelationshipsToolDefinition,
+  handleExtractRelationships,
+  ExtractRelationshipsInputSchema,
 };
 
 // Re-export types
