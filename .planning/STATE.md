@@ -10,30 +10,30 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 1 of 7 (Foundation Infrastructure)
-Plan: 2 of 5 (Plan 01-02 complete)
+Plan: 1 of 5 (Plan 01-01 complete)
 Status: In progress
-Last activity: 2026-01-25 - Completed 01-02-PLAN.md (Environment Configuration)
+Last activity: 2026-01-25 - Completed 01-01-PLAN.md (Neo4j HTTP Client)
 
-Progress: [█████████░] 40% (2/5 plans in phase 1)
+Progress: [████░░░░░░] 20% (1/5 plans in phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 4min
-- Total execution time: 30min
+- Total plans completed: 6
+- Average duration: 5min
+- Total execution time: 31min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 0 | 5/5 | 24min | 5min |
-| Phase 1 | 2/5 | 6min | 3min |
+| Phase 1 | 1/5 | 7min | 7min |
 
 **Recent Trend:**
-- Last plan: 01-02 (3min)
-- Previous: 01-01 (3min)
-- Trend: Consistent (5→3→3→3min)
+- Last plan: 01-01 (7min)
+- Previous: 00-05 (3min)
+- Trend: Slight increase (6→6→4→5→3→7min)
 
 *Updated after each plan completion*
 
@@ -74,11 +74,11 @@ Recent decisions affecting current work:
 - Accept catalog: references in syncpack: Not actual mismatches - pnpm catalogs work correctly, syncpack just doesn't understand them
 - Python RDF package.json documented as known issue: Python service uses requirements.txt/Poetry, adding package.json would be artificial
 
-**From Phase 1 Plan 02 (01-02):**
-- Singleton pattern for env config: Validate once on import (fail-fast), cache result in module-level variable, export as const
-- Support both OMNII_* and legacy names: Legacy variable names optional during transition, new code uses OMNII_* namespace
-- Early env import in app.ts: Env validation runs before other services initialize for fail-fast behavior
-- Remove dotenv dependency: Bun loads .env natively, no dotenv package needed
+**From Phase 1 Plan 01 (01-01):**
+- Neo4j HTTP Query API over TCP driver: HTTP Query API v2 avoids 60-second timeouts from neo4j-driver TCP incompatibility with Bun runtime
+- Keep neo4j-driver for legacy compatibility: Neo4jDirectService still uses driver, removing would break that service
+- HTTP API response format mapping: HTTP v2 returns { fields, values } arrays instead of Record objects, requires mapping in service methods
+- Preserve neo4jService public API: Routes use existing method signatures (listNodes, searchSimilarConcepts, healthCheck), zero changes required
 
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
@@ -97,9 +97,9 @@ None yet.
 - ~~Runtime validation needed~~ - RESOLVED: omnii-mcp app startup confirmed (✅ initializes, env var failure expected)
 - Python RDF service lacks package.json (sherif warning - documented as known non-blocking issue)
 
-**Phase 1 critical decisions:**
-- Neo4j-Bun compatibility mitigation strategy - HTTP proxy vs. alternative database (research flag)
-- Embedding model selection - OpenAI vs. local models for offline use
+**Phase 1 - IN PROGRESS:**
+- ~~Neo4j-Bun compatibility mitigation strategy~~ - RESOLVED: Using HTTP Query API v2 instead of TCP driver (Plan 01-01)
+- Embedding model selection - OpenAI vs. local models for offline use (Plan 01-03)
 
 **Phase 3 research needed:**
 - GraphRAG implementation patterns with LangChain + Neo4j (emerging patterns)
@@ -113,8 +113,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25 04:05:15Z
-Stopped at: Completed 01-02-PLAN.md (Environment Configuration) - 2 tasks committed, SUMMARY created
+Last session: 2026-01-25T04:09:32Z
+Stopped at: Completed 01-01-PLAN.md (Neo4j HTTP Client) - 2 tasks committed, SUMMARY created
 Resume file: None
 
-**Phase 1 Status:** In progress (2/5 plans complete)
+**Phase 1 Status:** In progress (1/5 plans complete)
