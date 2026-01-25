@@ -1,13 +1,10 @@
-// Load environment variables first before any other imports (development only)
-if (process.env.NODE_ENV !== 'production') {
-  try {
-    require('dotenv').config();
-  } catch (error) {
-    // Silently ignore - .env file is optional
-  }
-}
+// Bun loads .env files automatically - no dotenv package needed
+// Environment validation happens on first import of env config
 
 import './config/axios.config';
+
+// ✅ CRITICAL: Validate environment configuration at startup (fail-fast)
+import { env } from './config/env';
 
 // ✅ CRITICAL: Initialize Neo4j driver at startup
 import { getNeo4jDriver } from './config/neo4j.config';

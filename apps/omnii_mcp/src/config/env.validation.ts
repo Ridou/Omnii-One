@@ -1,3 +1,14 @@
+/**
+ * @deprecated This file is deprecated. Use ./env.ts instead.
+ *
+ * Migration guide:
+ * - Import `env` from './config/env' instead of calling validateEnvironment()
+ * - Use OMNII_* namespace for shared infrastructure variables
+ * - Old variable names are still supported for backward compatibility
+ *
+ * This file is kept for backward compatibility only.
+ */
+
 import { z } from 'zod/v4';
 
 const Neo4jConfigSchema = z.object({
