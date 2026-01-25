@@ -13,6 +13,7 @@
     "test:simple": "bun -e \"console.log('Simple Bun test'); console.log('Memory:', process.memoryUsage()); setTimeout(() => { console.log('Still alive after 5s'); process.exit(0); }, 5000);\"",
     "test:minimal": "echo 'Minimal test works'",
     "dev": "bun run --watch src/app.ts",
+    "setup-schema": "bun scripts/setup-user-schema.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
