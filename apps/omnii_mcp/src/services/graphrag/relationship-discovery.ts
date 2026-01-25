@@ -9,8 +9,9 @@
 import OpenAI from 'openai';
 import { env } from '../../config/env';
 import type { Neo4jHTTPClient } from '../neo4j/http-client';
-import { createNode } from '../../graph/operations/crud';
-import { NodeLabel } from '../../graph/schema/nodes';
+import { createNode, createRelationship } from '../../graph/operations/crud';
+import { NodeLabel, type EntityNode, type ContactNode, type EventNode, type ConceptNode } from '../../graph/schema/nodes';
+import { RelationshipType } from '../../graph/schema/relationships';
 import { generateEmbedding } from '../../graph/operations/embeddings';
 
 /**
@@ -220,4 +221,257 @@ export async function extractEntities(text: string): Promise<{
   throw new Error(
     `Failed to extract entities after ${MAX_RETRIES} retries: ${lastError?.message || 'Rate limit exceeded'}`
   );
+}
+
+/**
+ * Allowed relationship types for validation.
+ * Prevents injection by whitelisting known relationship types.
+ */
+const ALLOWED_RELATIONSHIPS = [
+  'EMPLOYED_BY',
+  'FOUNDED',
+  'ATTENDED',
+  'REPLIED_TO',
+  'MENTIONED_IN',
+  'SCHEDULED_FOR',
+  'LOCATED_AT',
+  'WORKS_WITH',
+  'REPORTED_TO',
+  'PARTICIPANT_OF',
+  'KNOWS',
+  'WORKS_AT',
+  'CREATED_BY',
+  'OCCURRED_AT',
+  'ATTENDED_BY',
+];
+
+/**
+ * Find a matching node in the graph by name.
+ *
+ * Searches for existing nodes with the same name (case-insensitive) to avoid duplicates.
+ *
+ * @param client - Neo4j HTTP client for the user's database
+ * @param userId - User ID for multi-tenant filtering
+ * @param entity - Extracted entity to search for
+ * @returns Node ID if found, null otherwise
+ */
+async function findMatchingNode(
+  client: Neo4jHTTPClient,
+  userId: string,
+  entity: ExtractedEntity
+): Promise<{ id: string; name: string } | null> {
+  const cypher = `
+    MATCH (n {user_id: $userId})
+    WHERE toLower(n.name) = toLower($name)
+    RETURN n.id AS id, n.name AS name
+    LIMIT 1
+  `;
+
+  const result = await client.query(cypher, {
+    userId,
+    name: entity.name,
+  });
+
+  if (!result.data || !result.data.values || result.data.values.length === 0) {
+    return null;
+  }
+
+  const idIndex = result.data.fields.indexOf('id');
+  const nameIndex = result.data.fields.indexOf('name');
+
+  return {
+    id: result.data.values[0][idIndex] as string,
+    name: result.data.values[0][nameIndex] as string,
+  };
+}
+
+/**
+ * Map extracted entity type to NodeLabel.
+ */
+function mapEntityTypeToNodeLabel(type: ExtractedEntity['type']): NodeLabel {
+  switch (type) {
+    case 'Person':
+      return NodeLabel.Contact;
+    case 'Organization':
+      return NodeLabel.Entity;
+    case 'Event':
+      return NodeLabel.Event;
+    case 'Concept':
+      return NodeLabel.Concept;
+    case 'Location':
+      return NodeLabel.Entity;
+    default:
+      return NodeLabel.Entity;
+  }
+}
+
+/**
+ * Discover relationships from text and create graph nodes/relationships.
+ *
+ * This is the main entry point for relationship discovery:
+ * 1. Extracts entities and relationships from text using LLM
+ * 2. Matches entities to existing nodes or creates new ones
+ * 3. Creates relationships between nodes with provenance tracking
+ *
+ * @param client - Neo4j HTTP client for the user's database
+ * @param userId - User ID for multi-tenant filtering
+ * @param text - Text to analyze for entities and relationships
+ * @param options - Discovery options
+ * @returns Result with counts of nodes/relationships created
+ */
+export async function discoverRelationships(
+  client: Neo4jHTTPClient,
+  userId: string,
+  text: string,
+  options?: {
+    createMissingNodes?: boolean;  // Default: true
+    minConfidence?: number;        // Default: 0.5
+    sourceContext?: string;        // e.g., "email:abc123" for provenance
+  }
+): Promise<RelationshipDiscoveryResult> {
+  const createMissingNodes = options?.createMissingNodes ?? true;
+  const minConfidence = options?.minConfidence ?? 0.5;
+  const sourceContext = options?.sourceContext;
+
+  // Step 1: Extract entities and relationships using LLM
+  const extracted = await extractEntities(text);
+
+  // Step 2: Filter entities by confidence threshold
+  const filteredEntities = extracted.entities.filter(
+    (entity) => entity.confidence >= minConfidence
+  );
+
+  // Step 3: Match or create nodes for each entity
+  const entityNodeMap = new Map<string, string>(); // entity name -> node ID
+  let nodesCreated = 0;
+  let nodesLinked = 0;
+
+  for (const entity of filteredEntities) {
+    // Try to find matching node first
+    const matchingNode = await findMatchingNode(client, userId, entity);
+
+    if (matchingNode) {
+      // Matched to existing node
+      entityNodeMap.set(entity.name, matchingNode.id);
+      nodesLinked++;
+    } else if (createMissingNodes) {
+      // Create new node
+      const nodeLabel = mapEntityTypeToNodeLabel(entity.type);
+
+      // Generate embedding for the entity
+      const embeddingText = `${entity.name} ${JSON.stringify(entity.properties)}`;
+      const embedding = await generateEmbedding(embeddingText);
+
+      // Create node based on type
+      let nodeId: string;
+
+      if (nodeLabel === NodeLabel.Contact) {
+        const contactNode = await createNode<ContactNode>(client, NodeLabel.Contact, {
+          name: entity.name,
+          email: entity.properties.email as string | undefined,
+          organization: entity.properties.organization as string | undefined,
+          embedding,
+          user_id: userId, // Add user_id for multi-tenancy (not in interface but required at runtime)
+        } as any);
+        nodeId = contactNode.id;
+      } else if (nodeLabel === NodeLabel.Event) {
+        const eventNode = await createNode<EventNode>(client, NodeLabel.Event, {
+          name: entity.name,
+          startTime: (entity.properties.startTime as string) || new Date().toISOString(),
+          location: entity.properties.location as string | undefined,
+          description: entity.properties.description as string | undefined,
+          embedding,
+          user_id: userId, // Add user_id for multi-tenancy (not in interface but required at runtime)
+        } as any);
+        nodeId = eventNode.id;
+      } else if (nodeLabel === NodeLabel.Concept) {
+        const conceptNode = await createNode<ConceptNode>(client, NodeLabel.Concept, {
+          name: entity.name,
+          description: entity.properties.description as string | undefined,
+          category: entity.properties.category as string | undefined,
+          embedding,
+          user_id: userId, // Add user_id for multi-tenancy (not in interface but required at runtime)
+        } as any);
+        nodeId = conceptNode.id;
+      } else {
+        // Entity
+        const entityNode = await createNode<EntityNode>(client, NodeLabel.Entity, {
+          name: entity.name,
+          type: entity.type === 'Organization' ? 'organization' : entity.type === 'Location' ? 'place' : 'thing',
+          properties: entity.properties,
+          embedding,
+          user_id: userId, // Add user_id for multi-tenancy (not in interface but required at runtime)
+        } as any);
+        nodeId = entityNode.id;
+      }
+
+      entityNodeMap.set(entity.name, nodeId);
+      nodesCreated++;
+    }
+  }
+
+  // Step 4: Create relationships between nodes
+  let relationshipsCreated = 0;
+
+  for (const rel of extracted.relationships) {
+    const fromId = entityNodeMap.get(rel.from);
+    const toId = entityNodeMap.get(rel.to);
+
+    if (!fromId || !toId) {
+      // Skip relationships where both entities weren't processed
+      continue;
+    }
+
+    // Validate relationship type against whitelist
+    if (!ALLOWED_RELATIONSHIPS.includes(rel.type)) {
+      console.warn(`Skipping invalid relationship type: ${rel.type}`);
+      continue;
+    }
+
+    // Map to RelationshipType if possible, otherwise use as custom type
+    let relationshipType: string;
+    if (Object.values(RelationshipType).includes(rel.type as RelationshipType)) {
+      relationshipType = rel.type;
+    } else {
+      // Custom relationship type (validated against whitelist above)
+      relationshipType = rel.type;
+    }
+
+    // Add sourceContext to relationship properties
+    const relationshipProps = {
+      ...rel.properties,
+      sourceContext,
+    };
+
+    // Create relationship using dynamic query (validated type)
+    const cypher = `
+      MATCH (from {id: $fromId})
+      MATCH (to {id: $toId})
+      MERGE (from)-[r:${relationshipType}]->(to)
+      SET r += $props
+      RETURN r
+    `;
+
+    const result = await client.query(cypher, {
+      fromId,
+      toId,
+      props: {
+        ...relationshipProps,
+        createdAt: new Date().toISOString(),
+      },
+    });
+
+    if (result.data?.values?.length) {
+      relationshipsCreated++;
+    }
+  }
+
+  // Step 5: Return result
+  return {
+    entities: filteredEntities,
+    relationships: extracted.relationships,
+    nodesCreated,
+    nodesLinked,
+    relationshipsCreated,
+  };
 }
