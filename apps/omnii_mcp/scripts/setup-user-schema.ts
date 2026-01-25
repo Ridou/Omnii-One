@@ -14,7 +14,7 @@
  */
 
 import { createClientForUser } from '../src/services/neo4j/http-client';
-import { setupSchemaConstraints, checkConstraints } from '../src/graph/schema/constraints';
+import { setupSchemaConstraints, checkConstraints, createTemporalIndex } from '../src/graph/schema/constraints';
 import { createVectorIndex, checkVectorIndex, VECTOR_INDEX_NAME } from '../src/graph/schema/vector-index';
 import type { ConstraintInfo } from '../src/graph/schema/constraints';
 
@@ -31,6 +31,10 @@ export interface SchemaSetupResult {
   vectorIndex: {
     created: boolean;
     name: string;
+    error?: string;
+  };
+  temporalIndexes: {
+    created: number;
     error?: string;
   };
 }
@@ -55,6 +59,7 @@ export async function setupUserSchema(userId: string): Promise<SchemaSetupResult
     success: false,
     constraints: { created: 0, existing: [], errors: [] },
     vectorIndex: { created: false, name: VECTOR_INDEX_NAME },
+    temporalIndexes: { created: 0 },
   };
 
   try {
@@ -86,7 +91,16 @@ export async function setupUserSchema(userId: string): Promise<SchemaSetupResult
         error instanceof Error ? error.message : 'Unknown vector index error';
     }
 
-    // Success if no constraint errors (vector index errors are non-fatal)
+    // Step 3: Create temporal indexes
+    console.log('[Schema] Creating temporal indexes...');
+    try {
+      result.temporalIndexes.created = await createTemporalIndex(client);
+    } catch (error) {
+      result.temporalIndexes.error =
+        error instanceof Error ? error.message : 'Unknown temporal index error';
+    }
+
+    // Success if no constraint errors (vector/temporal index errors are non-fatal)
     result.success = result.constraints.errors.length === 0;
 
     console.log(`[Schema] Setup ${result.success ? 'complete' : 'completed with errors'}`);

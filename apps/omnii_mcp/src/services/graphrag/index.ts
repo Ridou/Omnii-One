@@ -1,9 +1,9 @@
 /**
- * GraphRAG Service
+ * GraphRAG Services
  *
- * Advanced graph-based retrieval augmented generation capabilities.
- * Combines vector similarity search with graph traversal for enhanced
- * context retrieval.
+ * Barrel export for GraphRAG-related services including dual-channel retrieval,
+ * local search, and temporal context awareness.
  */
 
-export * from './temporal-context';
+export * from './dual-channel';
+export * from './local-search';

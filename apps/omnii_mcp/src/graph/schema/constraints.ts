@@ -177,3 +177,35 @@ export async function dropAllConstraints(
 
   return dropped;
 }
+
+/**
+ * Create temporal indexes for time-based queries.
+ * Indexes created_at on Entity, Event, Contact, Concept nodes
+ * and start_time on Event nodes for efficient temporal filtering.
+ *
+ * @param client - Neo4j HTTP client for the user's database
+ * @returns Number of indexes created
+ */
+export async function createTemporalIndex(
+  client: Neo4jHTTPClient
+): Promise<number> {
+  const indexQueries = [
+    'CREATE INDEX entity_created_at IF NOT EXISTS FOR (n:Entity) ON (n.created_at)',
+    'CREATE INDEX event_start_time IF NOT EXISTS FOR (n:Event) ON (n.start_time)',
+    'CREATE INDEX contact_created_at IF NOT EXISTS FOR (n:Contact) ON (n.created_at)',
+    'CREATE INDEX concept_created_at IF NOT EXISTS FOR (n:Concept) ON (n.created_at)',
+  ];
+
+  let created = 0;
+
+  for (const query of indexQueries) {
+    try {
+      await client.query(query);
+      created++;
+    } catch (error) {
+      console.error('Failed to create temporal index:', error);
+    }
+  }
+
+  return created;
+}
