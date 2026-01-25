@@ -8,6 +8,7 @@
 // Schema exports
 export * from './schema/nodes';
 export * from './schema/relationships';
+export * from './schema/constraints';
 
 // Operations exports
 export * from './operations/crud';
