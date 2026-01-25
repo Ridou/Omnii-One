@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 4 of 7 (Data Ingestion Pipeline)
-Plan: 4 of 8 (OAuth connection routes complete)
-Status: In progress - OAuth endpoints ready for sync pipelines
-Last activity: 2026-01-25 - Completed 04-04-PLAN.md
+Plan: 5 of 8 (Calendar ingestion pipeline complete)
+Status: In progress - Calendar sync pipeline ready for testing
+Last activity: 2026-01-25 - Completed 04-05-PLAN.md
 
-Progress: [████████░░] 60% Overall (24/40 plans complete)
+Progress: [████████░░] 62.5% Overall (25/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
+- Total plans completed: 25
 - Average duration: 4min
-- Total execution time: 107min
+- Total execution time: 111min
 
 **By Phase:**
 
@@ -31,12 +31,12 @@ Progress: [████████░░] 60% Overall (24/40 plans complete)
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
-| Phase 4 | 4/8 | 14min | 4min |
+| Phase 4 | 5/8 | 18min | 4min |
 
 **Recent Trend:**
-- Last plan: 04-04 (5min, complete)
-- Previous: 04-03 (3min)
-- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5min)
+- Last plan: 04-05 (4min, complete)
+- Previous: 04-04 (5min)
+- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4min)
 
 *Updated after each plan completion*
 
@@ -188,6 +188,12 @@ Recent decisions affecting current work:
 - connectedAccountId response field: ConnectionRequest returns connectedAccountId, not connectionId
 - Status endpoint includes sync state: Integrates with SyncStateService to show lastSync, status, itemsSynced per connected service
 
+**From Phase 4 Plan 05 (04-05):**
+- Store google_event_id as node property: Enables deduplication by checking existing events before insertion
+- Use metadata field for relationship properties: RelationshipProperties doesn't have response_status, store in metadata
+- 90-day lookback for initial sync: Balances data volume with usefulness for calendar queries
+- Attendee extraction pattern: Create Contact nodes from event attendees with ATTENDED_BY relationships
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -231,11 +237,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T20:40:00Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-01-25T20:43:42Z
+Stopped at: Completed 04-05-PLAN.md
 Resume file: None
 
-**Phase 4 Status:** IN PROGRESS. Plans 01-04 complete - OAuth connection layer ready.
+**Phase 4 Status:** IN PROGRESS. Plans 01-05 complete - Calendar sync pipeline ready for testing.
 
 **Delivered (04-01):**
 - BullMQ job queue with exponential backoff for background job processing
@@ -260,4 +266,11 @@ Resume file: None
 - GET /api/ingestion/status/:userId - Connection + sync state
 - DELETE /api/ingestion/disconnect - OAuth revocation
 
-**Next:** Phase 4 Plan 05 - Calendar sync pipeline
+**Delivered (04-05):**
+- CalendarIngestionService with incremental sync using sync tokens
+- Event validation against CalendarEventSchema quality gate
+- Attendee extraction as Contact nodes with ATTENDED_BY relationships
+- 410 error handling with automatic full sync fallback
+- POST /api/ingestion/sync/calendar manual sync trigger endpoint
+
+**Next:** Phase 4 Plan 06 - Background job scheduling
