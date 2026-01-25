@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 4 of 7 (Data Ingestion Pipeline)
-Plan: 5 of 8 (Calendar ingestion pipeline complete)
-Status: In progress - Calendar sync pipeline ready for testing
-Last activity: 2026-01-25 - Completed 04-05-PLAN.md
+Plan: 6 of 8 (Background job scheduling complete)
+Status: In progress - Background sync infrastructure complete
+Last activity: 2026-01-25 - Completed 04-06-PLAN.md
 
-Progress: [████████░░] 62.5% Overall (25/40 plans complete)
+Progress: [████████░░] 65% Overall (26/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
+- Total plans completed: 26
 - Average duration: 4min
-- Total execution time: 111min
+- Total execution time: 115min
 
 **By Phase:**
 
@@ -31,12 +31,12 @@ Progress: [████████░░] 62.5% Overall (25/40 plans complete)
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
-| Phase 4 | 5/8 | 18min | 4min |
+| Phase 4 | 6/8 | 22min | 4min |
 
 **Recent Trend:**
-- Last plan: 04-05 (4min, complete)
-- Previous: 04-04 (5min)
-- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4min)
+- Last plan: 04-06 (4min, complete)
+- Previous: 04-05 (4min)
+- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4min)
 
 *Updated after each plan completion*
 
@@ -194,6 +194,13 @@ Recent decisions affecting current work:
 - 90-day lookback for initial sync: Balances data volume with usefulness for calendar queries
 - Attendee extraction pattern: Create Contact nodes from event attendees with ATTENDED_BY relationships
 
+**From Phase 4 Plan 06 (04-06):**
+- 15-minute default cron schedule: Balances data freshness with API quota conservation
+- 0-5 second jitter on all jobs: Prevents thundering herd when many users sync simultaneously
+- 10 jobs/minute rate limit: Respects Google API quota while maximizing throughput
+- Fan-out pattern: Scheduled job with no userId fans out to per-user jobs with staggered delays
+- Optional worker startup: Workers only start when OMNII_REDIS_URL is set (non-blocking for development)
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -237,11 +244,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T20:43:42Z
-Stopped at: Completed 04-05-PLAN.md
+Last session: 2026-01-25T20:50:00Z
+Stopped at: Completed 04-06-PLAN.md
 Resume file: None
 
-**Phase 4 Status:** IN PROGRESS. Plans 01-05 complete - Calendar sync pipeline ready for testing.
+**Phase 4 Status:** IN PROGRESS. Plans 01-06 complete - Background sync infrastructure ready.
 
 **Delivered (04-01):**
 - BullMQ job queue with exponential backoff for background job processing
@@ -273,4 +280,12 @@ Resume file: None
 - 410 error handling with automatic full sync fallback
 - POST /api/ingestion/sync/calendar manual sync trigger endpoint
 
-**Next:** Phase 4 Plan 06 - Background job scheduling
+**Delivered (04-06):**
+- BullMQ sync job scheduler with 15-min cron pattern
+- Jitter (0-5 seconds) on all jobs prevents thundering herd
+- Rate limiter (10 jobs/minute) respects Google API quota
+- Workers process jobs with concurrency limit (default: 3)
+- Optional worker startup when Redis available
+- Graceful shutdown stops workers cleanly on SIGTERM
+
+**Next:** Phase 4 Plan 07 - Additional data sources (Gmail, Tasks, Contacts) or Plan 08 (Testing)
