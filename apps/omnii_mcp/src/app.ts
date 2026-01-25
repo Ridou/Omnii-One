@@ -501,12 +501,23 @@ console.log(`   - Health endpoint: /health`);
 console.log(`   - WebSocket endpoint: /ws`);
 
 // Add graceful shutdown handling for Railway
-const gracefulShutdown = (signal: string) => {
+const gracefulShutdown = async (signal: string) => {
   console.log(`🛑 Received ${signal}. Graceful shutdown initiated...`);
-  
+
   // Close WebSocket connections
   console.log('📡 Closing WebSocket connections...');
-  
+
+  // Stop background ingestion workers if running
+  try {
+    const { stopIngestionWorkers, stopSyncScheduler } = await import("./ingestion/jobs");
+    console.log('🛑 Stopping ingestion workers...');
+    await stopSyncScheduler();
+    await stopIngestionWorkers();
+    console.log('✅ Ingestion workers stopped');
+  } catch {
+    // Module may not be loaded if Redis not available
+  }
+
   // Give some time for cleanup
   setTimeout(() => {
     console.log('✅ Graceful shutdown completed');
@@ -571,6 +582,27 @@ try {
     console.log(`🎯 Health endpoint: http://0.0.0.0:${port}/health`);
     serverReady = true; // Mark server as ready for health checks
     console.log("✅ Server readiness flag set to true");
+
+    // Optional: Start background ingestion workers
+    // Only start if Redis is available and not in test mode
+    if (process.env.OMNII_REDIS_URL && process.env.NODE_ENV !== "test") {
+      import("./ingestion/jobs")
+        .then(async ({ startIngestionWorkers, startSyncScheduler }) => {
+          try {
+            await startIngestionWorkers(3);
+            await startSyncScheduler("*/15 * * * *"); // Every 15 minutes
+            console.log("🔄 Background ingestion workers started");
+          } catch (error) {
+            console.warn("⚠️ Failed to start ingestion workers:", error);
+            // Non-fatal - app continues without background sync
+          }
+        })
+        .catch((err) => {
+          console.warn("⚠️ Ingestion module not available:", err);
+        });
+    } else {
+      console.log("ℹ️ Background ingestion workers disabled (OMNII_REDIS_URL not set or test mode)");
+    }
   }, 3000);
   
   // Log memory usage periodically for debugging Railway issues
