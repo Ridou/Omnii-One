@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 4 of 7 (Data Ingestion Pipeline)
-Plan: 3 of 8 (sync state persistence complete)
-Status: In progress - sync state layer ready for pipelines
-Last activity: 2026-01-25 - Completed 04-03-PLAN.md
+Plan: 4 of 8 (OAuth connection routes complete)
+Status: In progress - OAuth endpoints ready for sync pipelines
+Last activity: 2026-01-25 - Completed 04-04-PLAN.md
 
-Progress: [████████░░] 58% Overall (23/40 plans complete)
+Progress: [████████░░] 60% Overall (24/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
+- Total plans completed: 24
 - Average duration: 4min
-- Total execution time: 102min
+- Total execution time: 107min
 
 **By Phase:**
 
@@ -31,12 +31,12 @@ Progress: [████████░░] 58% Overall (23/40 plans complete)
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
-| Phase 4 | 3/8 | 9min | 3min |
+| Phase 4 | 4/8 | 14min | 4min |
 
 **Recent Trend:**
-- Last plan: 04-03 (3min, complete)
-- Previous: 04-02 (3min)
-- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4→6→3→3→3min)
+- Last plan: 04-04 (5min, complete)
+- Previous: 04-03 (3min)
+- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5min)
 
 *Updated after each plan completion*
 
@@ -69,7 +69,7 @@ Recent decisions affecting current work:
 - MCP_* namespace for MCP-specific vars: Enables multiple MCP apps with different BASE_URL/PORT without collision
 - Keep EXPO_PUBLIC_* as-is: React Native Metro bundler hardcoded to look for this prefix, don't fight the framework
 - Turborepo cache invalidation: globalEnv for all tasks, task env for specific tasks, globalDependencies for .env files
-- Environment loading order: System env → Root .env → App .env → App .env.local (gitignored overrides)
+- Environment loading order: System env -> Root .env -> App .env -> App .env.local (gitignored overrides)
 
 **From Phase 0 Plan 05 (00-05):**
 - Version enforcement via pnpm catalog + overrides: pnpm-workspace.yaml catalog defines versions, resolutions + pnpm.overrides enforce them across all dependencies
@@ -183,6 +183,11 @@ Recent decisions affecting current work:
 - Upsert pattern for updateState: Uses onConflict: "user_id,source" to handle both create and update in single operation
 - clearSyncToken nulls all fields: When 410 Gone received, all token fields nulled to trigger full sync on next attempt
 
+**From Phase 4 Plan 04 (04-04):**
+- Composio redirectUri parameter: Use redirectUri (not redirectUrl) per Composio SDK type definitions
+- connectedAccountId response field: ConnectionRequest returns connectedAccountId, not connectionId
+- Status endpoint includes sync state: Integrates with SyncStateService to show lastSync, status, itemsSynced per connected service
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -197,7 +202,7 @@ None yet.
 - ~~Monorepo tool selection (Turborepo vs. Nx)~~ - RESOLVED: Using Turborepo from omnii (already working)
 - ~~Codebase "source of truth" per domain~~ - RESOLVED: Monorepo for all domains (see Plan 00-02 decisions)
 - ~~MCP merge strategy~~ - RESOLVED: Skip merge, workspace is canonical (see Plan 00-03 decisions)
-- ~~Runtime validation needed~~ - RESOLVED: omnii-mcp app startup confirmed (✅ initializes, env var failure expected)
+- ~~Runtime validation needed~~ - RESOLVED: omnii-mcp app startup confirmed (initializes, env var failure expected)
 - Python RDF service lacks package.json (sherif warning - documented as known non-blocking issue)
 
 **Phase 1 - COMPLETE:**
@@ -226,11 +231,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T20:34:09Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-01-25T20:40:00Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
 
-**Phase 4 Status:** IN PROGRESS. Plans 01-03 complete - infrastructure + validation + sync state ready.
+**Phase 4 Status:** IN PROGRESS. Plans 01-04 complete - OAuth connection layer ready.
 
 **Delivered (04-01):**
 - BullMQ job queue with exponential backoff for background job processing
@@ -249,4 +254,10 @@ Resume file: None
 - Helper methods for sync lifecycle (started, completed, failed, rate-limited)
 - getUsersNeedingSync for background job scheduling
 
-**Next:** Phase 4 Plan 04 - Calendar sync pipeline
+**Delivered (04-04):**
+- POST /api/ingestion/connect - OAuth initiation via Composio
+- GET /api/ingestion/callback - OAuth redirect handler
+- GET /api/ingestion/status/:userId - Connection + sync state
+- DELETE /api/ingestion/disconnect - OAuth revocation
+
+**Next:** Phase 4 Plan 05 - Calendar sync pipeline
