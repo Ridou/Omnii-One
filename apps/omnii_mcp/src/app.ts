@@ -7,7 +7,7 @@ import './config/axios.config';
 import { env } from './config/env';
 
 // ✅ CRITICAL: Initialize Neo4j driver at startup
-import { getNeo4jDriver } from './config/neo4j.config';
+import { neo4jService } from './config/neo4j.config';
 
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
@@ -39,13 +39,13 @@ console.log("🚀 RDF_PYTHON_SERVICE_URL:", process.env.RDF_PYTHON_SERVICE_URL |
 console.log("🚀 RAILWAY_ENVIRONMENT:", process.env.RAILWAY_ENVIRONMENT || "not set");
 console.log("🚀 ===============================");
 
-// ✅ CRITICAL: Initialize Neo4j driver early in startup
-console.log("🚀 Initializing Neo4j driver...");
+// ✅ CRITICAL: Initialize Neo4j HTTP client early in startup
+console.log("🚀 Initializing Neo4j HTTP client...");
 try {
-  getNeo4jDriver();
-  console.log("✅ Neo4j driver initialization triggered");
+  // neo4jService is imported above and will initialize on import
+  console.log("✅ Neo4j HTTP client initialization triggered");
 } catch (error) {
-  console.error("❌ Neo4j driver initialization failed:", error);
+  console.error("❌ Neo4j HTTP client initialization failed:", error);
 }
 
 // ✅ CRITICAL: Initialize Direct Neo4j Service

@@ -1,5 +1,5 @@
-import neo4j, { Driver, Config, Session } from 'neo4j-driver';
-import type { Record as Neo4jRecord } from 'neo4j-driver';
+import type { Neo4jHTTPConfig } from '../types/neo4j.types';
+import { Neo4jHTTPClient } from '../services/neo4j/http-client';
 
 // Define supported node types
 type NodeType = 'Concept' | 'Email' | 'Event' | string;
@@ -25,7 +25,13 @@ interface ContextData {
   relationships: RelationshipData[];
 }
 
-export const createNeo4jDriver = (): Driver => {
+// Export type interfaces for use in other modules
+export type { NodeType, NodeData, RelationshipData, ContextData };
+
+/**
+ * Get Neo4j HTTP configuration from environment variables
+ */
+export const getNeo4jHTTPConfig = (): Neo4jHTTPConfig => {
   // Check required environment variables
   if (!process.env.NEO4J_URI) {
     console.error('❌ NEO4J_URI environment variable is required');
@@ -41,117 +47,56 @@ export const createNeo4jDriver = (): Driver => {
     throw new Error('NEO4J_PASSWORD environment variable is required');
   }
 
-  // ✅ Optimized configuration for direct Neo4j AuraDB connection
-  const config: Config = {
-    // Connection pool settings optimized for production
-    maxConnectionLifetime: 30 * 60 * 1000, // 30 minutes
-    maxConnectionPoolSize: 15, // Increased for better performance
-    connectionAcquisitionTimeout: 15000, // 15 seconds
-    connectionTimeout: 10000, // 10 seconds (must be <= connectionAcquisitionTimeout)
-    maxTransactionRetryTime: 15000, // 15 seconds
-    
-    // Performance settings
-    fetchSize: 1000,
-    disableLosslessIntegers: true,
-    
-    // Let neo4j+s:// URL handle encryption/trust automatically
-    // No need to specify encryption or trust settings
-    
-    // Enhanced logging for debugging
-    logging: {
-      level: 'info',
-      logger: (level: string, message: string) => {
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] [Neo4j-${level.toUpperCase()}] ${message}`);
-      }
-    }
+  // Convert neo4j+s:// protocol to https:// for HTTP Query API
+  let uri = process.env.NEO4J_URI;
+  if (uri.startsWith('neo4j+s://')) {
+    uri = uri.replace('neo4j+s://', 'https://');
+  } else if (uri.startsWith('neo4j://')) {
+    uri = uri.replace('neo4j://', 'http://');
+  }
+
+  const database = process.env.NEO4J_DATABASE || 'neo4j';
+
+  // Log configuration (without exposing password)
+  console.log(`🔍 Neo4j HTTP Configuration:`);
+  console.log(`   URI: ${uri.substring(0, 30)}...`);
+  console.log(`   User: ${process.env.NEO4J_USER}`);
+  console.log(`   Password: SET (length: ${process.env.NEO4J_PASSWORD.length})`);
+  console.log(`   Database: ${database}`);
+
+  return {
+    uri,
+    user: process.env.NEO4J_USER,
+    password: process.env.NEO4J_PASSWORD,
+    database,
   };
-
-  console.log(`🚀 Connecting directly to Neo4j AuraDB...`);
-  console.log(`🔧 Pool Size: ${config.maxConnectionPoolSize}, Timeout: ${config.connectionAcquisitionTimeout}ms`);
-  
-  // Environment variables verification
-  console.log(`🔍 Neo4j Configuration:`);
-  console.log(`   URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'} ${process.env.NEO4J_URI ? `(${process.env.NEO4J_URI.substring(0, 30)}...)` : ''}`);
-  console.log(`   User: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'} ${process.env.NEO4J_USER ? `(${process.env.NEO4J_USER})` : ''}`);
-  console.log(`   Password: ${process.env.NEO4J_PASSWORD ? 'SET' : 'MISSING'} ${process.env.NEO4J_PASSWORD ? `(length: ${process.env.NEO4J_PASSWORD.length})` : ''}`);
-  console.log(`   Database: ${process.env.NEO4J_DATABASE || 'neo4j (default)'}`);
-
-  // Create driver with direct connection
-  const driver = neo4j.driver(
-    process.env.NEO4J_URI,
-    neo4j.auth.basic(
-      process.env.NEO4J_USER,
-      process.env.NEO4J_PASSWORD
-    ),
-    config
-  );
-
-  // ✅ Async connection verification (non-blocking)
-  console.log(`🔗 Verifying direct Neo4j connection...`);
-  
-  (async () => {
-    try {
-      const session = driver.session({ database: process.env.NEO4J_DATABASE || 'neo4j' });
-      await session.run('RETURN 1 as test');
-      await session.close();
-      
-      neo4jConnected = true;
-      console.log(`✅ Direct Neo4j AuraDB connection verified successfully!`);
-      console.log(`🔗 Connected to: ${process.env.NEO4J_URI?.split('@')[1] || 'AuraDB Instance'}`);
-      console.log(`💾 Database: ${process.env.NEO4J_DATABASE || 'neo4j'}`);
-      console.log(`🎯 Using DIRECT connection - no intermediary services`);
-    } catch (err) {
-      neo4jConnected = false;
-      console.error(`❌ Direct Neo4j AuraDB connection failed:`, (err as Error).message);
-      console.error(`🔧 Connection details:`);
-      console.error(`🔧   NEO4J_URI: ${process.env.NEO4J_URI ? 'SET' : 'MISSING'}`);
-      console.error(`🔧   NEO4J_USER: ${process.env.NEO4J_USER ? 'SET' : 'MISSING'}`);
-      console.error(`🔧   NEO4J_PASSWORD: ${process.env.NEO4J_PASSWORD ? 'SET (length=' + process.env.NEO4J_PASSWORD.length + ')' : 'MISSING'}`);
-      console.error(`🔧   NEO4J_DATABASE: ${process.env.NEO4J_DATABASE || 'neo4j (default)'}`);
-      console.error(`💡 Tip: Ensure your Neo4j AuraDB instance is running and accessible`);
-    }
-  })();
-
-  return driver;
 };
 
-// Singleton driver instance and connectivity status
-let driverInstance: Driver | null = null;
-let neo4jConnected: boolean = false;
-
-export const getNeo4jDriver = (): Driver => {
-  if (!driverInstance) {
-    driverInstance = createNeo4jDriver();
-  }
-  return driverInstance;
-};
-
-export const isNeo4jConnected = (): boolean => neo4jConnected;
-
-// Graceful shutdown
-export const closeNeo4jDriver = async (): Promise<void> => {
-  if (driverInstance) {
-    await driverInstance.close();
-    driverInstance = null;
-    neo4jConnected = false;
-    console.log('🔌 Neo4j driver closed gracefully');
-  }
-};
-
-// Simple Neo4j Service class (replacing the complex one)
+// Simple Neo4j Service class using HTTP client
 class SimpleNeo4jService {
-  private getSession(): Session {
-    const driver = getNeo4jDriver();
-    const database = process.env.NEO4J_DATABASE || 'neo4j';
-    return driver.session({ database });
+  private client: Neo4jHTTPClient;
+
+  constructor() {
+    const config = getNeo4jHTTPConfig();
+    this.client = new Neo4jHTTPClient(config);
+
+    // Test connection on initialization
+    this.testConnection();
+  }
+
+  private async testConnection() {
+    const isConnected = await this.client.testConnection();
+    if (isConnected) {
+      console.log('✅ Neo4j HTTP client connection verified successfully!');
+    } else {
+      console.error('❌ Neo4j HTTP client connection test failed');
+    }
   }
 
   /**
    * List all nodes of a specific type for a user
    */
   async listNodes(userId: string, nodeType: NodeType = 'Concept', limit = 100, filter?: string): Promise<NodeData[]> {
-    const session = this.getSession();
     try {
       let filterQuery = '';
       if (filter) {
@@ -167,40 +112,37 @@ class SimpleNeo4jService {
           filterQuery = "AND ANY(key IN keys(n) WHERE n[key] CONTAINS $filter)";
         }
       }
-      
-      // Sanitize limit parameter
-      const sanitizedLimit = neo4j.int(Number.parseInt(String(limit), 10));
-      
-      const result = await session.run(
+
+      const result = await this.client.query(
         `
         MATCH (n:${nodeType})
         WHERE n.user_id = $userId ${filterQuery}
         RETURN n, labels(n) as labels
         LIMIT $limit
         `,
-        { 
-          userId, 
-          limit: sanitizedLimit,
-          filter 
+        {
+          userId,
+          limit,
+          filter
         }
       );
-      
-      const nodes = result.records.map((record: Neo4jRecord) => {
-        const node = record.get('n');
-        const labels = record.get('labels');
+
+      // HTTP API returns data in { fields, values } format
+      const nodes = result.data.values.map((row: any[]) => {
+        const nodeData = row[0]; // First column is 'n'
+        const labels = row[1];    // Second column is 'labels'
+
         return {
-          id: node.identity.toString(),
+          id: nodeData.elementId || nodeData.identity || 'unknown',
           labels: labels,
-          properties: node.properties
+          properties: nodeData
         };
       });
-      
+
       return nodes;
     } catch (error) {
       console.error(`Error in listNodes(${nodeType}):`, error);
       return [];
-    } finally {
-      await session.close();
     }
   }
 
@@ -208,19 +150,14 @@ class SimpleNeo4jService {
    * Search specifically for concepts
    */
   async searchSimilarConcepts(userId: string, text: string, limit = 5): Promise<NodeData[]> {
-    const session = this.getSession();
     try {
-      // Sanitize limit parameter
-      const sanitizedLimit = neo4j.int(Number.parseInt(String(limit), 10));
-      
-      // Simple text search
-      const result = await session.run(
+      const result = await this.client.query(
         `
         MATCH (c:Concept)
         WHERE c.user_id = $userId
         AND (c.name CONTAINS $text OR c.content CONTAINS $text OR c.description CONTAINS $text)
         WITH c, labels(c) as nodeLabels,
-             CASE 
+             CASE
                WHEN c.name CONTAINS $text THEN 3
                WHEN c.content CONTAINS $text THEN 2
                WHEN c.description CONTAINS $text THEN 1
@@ -231,31 +168,30 @@ class SimpleNeo4jService {
         ORDER BY relevance DESC
         LIMIT $limit
         `,
-        { 
-          userId, 
-          text, 
-          limit: sanitizedLimit
+        {
+          userId,
+          text,
+          limit
         }
       );
-      
-      const concepts = result.records.map((record: Neo4jRecord) => {
-        const node = record.get('c');
-        const labels = record.get('nodeLabels');
-        const relevance = record.get('relevance');
-        
+
+      // HTTP API returns data in { fields, values } format
+      const concepts = result.data.values.map((row: any[]) => {
+        const nodeData = row[0];  // 'c'
+        const labels = row[1];     // 'nodeLabels'
+        const relevance = row[2];  // 'relevance'
+
         return {
-          id: node.identity.toString(),
+          id: nodeData.elementId || nodeData.identity || 'unknown',
           labels: labels,
-          properties: { ...node.properties, relevance }
+          properties: { ...nodeData, relevance }
         };
       });
-      
+
       return concepts;
     } catch (error) {
       console.error('Error in searchSimilarConcepts:', error);
       return [];
-    } finally {
-      await session.close();
     }
   }
 
@@ -276,12 +212,12 @@ class SimpleNeo4jService {
    */
   async getConceptsForContext(userId: string, query: string, limit = 3): Promise<{concepts: NodeData[], relationships: RelationshipData[]}> {
     const contextData = await this.getContextForQuery(userId, query, limit);
-    
+
     // Filter to only include Concept nodes
-    const concepts = contextData.nodes.filter(node => 
+    const concepts = contextData.nodes.filter(node =>
       node.labels.includes('Concept')
     );
-    
+
     return {
       concepts,
       relationships: contextData.relationships
@@ -293,20 +229,16 @@ class SimpleNeo4jService {
    */
   async healthCheck() {
     try {
-      const driver = getNeo4jDriver();
-      const session = driver.session({ database: process.env.NEO4J_DATABASE || 'neo4j' });
-      
       // Test basic connectivity
-      await session.run('RETURN 1 as test');
-      await session.close();
-      
+      const isConnected = await this.client.testConnection();
+      if (!isConnected) {
+        throw new Error('Connection test failed');
+      }
+
       // Count some basic metrics
-      const metricsSession = driver.session({ database: process.env.NEO4J_DATABASE || 'neo4j' });
-      const conceptCountResult = await metricsSession.run('MATCH (c:Concept) RETURN count(c) as total');
-      const totalConceptsRaw = conceptCountResult.records[0]?.get('total');
-      const totalConcepts = totalConceptsRaw ? (typeof totalConceptsRaw === 'number' ? totalConceptsRaw : totalConceptsRaw.toNumber ? totalConceptsRaw.toNumber() : parseInt(totalConceptsRaw.toString())) : 0;
-      await metricsSession.close();
-      
+      const conceptCountResult = await this.client.query('MATCH (c:Concept) RETURN count(c) as total');
+      const totalConcepts = conceptCountResult.data.values[0]?.[0] || 0;
+
       return {
         status: 'healthy' as const,
         neo4j: true,
@@ -341,7 +273,7 @@ class SimpleNeo4jService {
     try {
       // Get related concepts for the message
       const concepts = await this.searchSimilarConcepts(userId, message, 5);
-      
+
       return {
         consolidation_metadata: {
           memory_strength: Math.random() * 0.5 + 0.5, // Random between 0.5-1.0
@@ -401,9 +333,9 @@ class SimpleNeo4jService {
     }
   }
 
-  // Close the driver when the application shuts down
+  // Close method (no-op for HTTP client)
   async close(): Promise<void> {
-    await closeNeo4jDriver();
+    console.log('🔌 Neo4j HTTP client service closed');
   }
 }
 
@@ -412,4 +344,4 @@ export const neo4jService = new SimpleNeo4jService();
 
 // For backward compatibility
 export const productionBrainService = neo4jService;
-export const getNeo4jService = () => neo4jService; 
+export const getNeo4jService = () => neo4jService;
