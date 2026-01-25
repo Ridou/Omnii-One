@@ -9,6 +9,9 @@
 export * from './schema/nodes';
 export * from './schema/relationships';
 export * from './schema/constraints';
+export * from './schema/vector-index';
 
 // Operations exports
 export * from './operations/crud';
+export * from './operations/embeddings';
+export * from './operations/search';
