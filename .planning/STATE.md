@@ -5,34 +5,35 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** AI always has the right context when querying user's personal data
-**Current focus:** Phase 0 - Monorepo Consolidation Preparation
+**Current focus:** Phase 1 - Foundation Infrastructure
 
 ## Current Position
 
-Phase: 0 of 7 (Monorepo Consolidation Preparation)
-Plan: 5 of 5 (Plan 00-05 complete)
-Status: Phase complete
-Last activity: 2026-01-24 - Completed 00-05-PLAN.md (Monorepo Tooling Validation)
+Phase: 1 of 7 (Foundation Infrastructure)
+Plan: 2 of 5 (Plan 01-02 complete)
+Status: In progress
+Last activity: 2026-01-25 - Completed 01-02-PLAN.md (Environment Configuration)
 
-Progress: [█████░░░░░] 100% (5/5 plans in phase 0)
+Progress: [█████████░] 40% (2/5 plans in phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 5min
-- Total execution time: 24min
+- Total plans completed: 7
+- Average duration: 4min
+- Total execution time: 30min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 0 | 5/5 | 24min | 5min |
+| Phase 1 | 2/5 | 6min | 3min |
 
 **Recent Trend:**
-- Last plan: 00-05 (3min)
-- Previous: 00-04 (5min)
-- Trend: Accelerating (6→6→4→5→3min)
+- Last plan: 01-02 (3min)
+- Previous: 01-01 (3min)
+- Trend: Consistent (5→3→3→3min)
 
 *Updated after each plan completion*
 
@@ -73,6 +74,12 @@ Recent decisions affecting current work:
 - Accept catalog: references in syncpack: Not actual mismatches - pnpm catalogs work correctly, syncpack just doesn't understand them
 - Python RDF package.json documented as known issue: Python service uses requirements.txt/Poetry, adding package.json would be artificial
 
+**From Phase 1 Plan 02 (01-02):**
+- Singleton pattern for env config: Validate once on import (fail-fast), cache result in module-level variable, export as const
+- Support both OMNII_* and legacy names: Legacy variable names optional during transition, new code uses OMNII_* namespace
+- Early env import in app.ts: Env validation runs before other services initialize for fail-fast behavior
+- Remove dotenv dependency: Bun loads .env natively, no dotenv package needed
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -106,8 +113,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-24 22:05:43Z
-Stopped at: Completed 00-05-PLAN.md (Monorepo Tooling Validation) - Phase 0 complete, 2 tasks committed, SUMMARY created
+Last session: 2026-01-25 04:05:15Z
+Stopped at: Completed 01-02-PLAN.md (Environment Configuration) - 2 tasks committed, SUMMARY created
 Resume file: None
 
-**Phase 0 Status:** COMPLETE - Ready for Phase 1
+**Phase 1 Status:** In progress (2/5 plans complete)
