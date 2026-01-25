@@ -83,15 +83,22 @@ lerna-debug.log*
 
 # ===== ENVIRONMENT & SECRETS =====
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .env*.local
+*.bak
+*.backup
 *.pem
 *.p12
 *.key
 *.mobileprovision
+**/secrets/
+credentials.json
+token.json
 
 # ===== PLATFORM SPECIFIC =====
 .DS_Store

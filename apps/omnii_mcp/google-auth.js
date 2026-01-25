@@ -11,11 +11,10 @@ const port = 8000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// OAuth2 credentials from Google Cloud Console
-const CLIENT_ID =
-  "process.env.GOOGLE_CLIENT_ID";
-const CLIENT_SECRET = "process.env.GOOGLE_CLIENT_SECRET";
-const REDIRECT_URI = "http://localhost:8000/auth/google/callback";
+// OAuth2 credentials from environment variables
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "http://localhost:8000/auth/google/callback";
 
 // Validate credentials
 if (!CLIENT_ID || !CLIENT_SECRET) {
