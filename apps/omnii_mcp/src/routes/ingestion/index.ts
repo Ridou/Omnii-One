@@ -277,4 +277,62 @@ export const ingestionRoutes = new Elysia({ prefix: "/ingestion" })
         userId: t.String({ minLength: 1 }),
       }),
     }
+  )
+
+  /**
+   * Trigger calendar sync for a user
+   *
+   * POST /api/ingestion/sync/calendar
+   * Body: { userId: string, forceFullSync?: boolean }
+   *
+   * Triggers immediate calendar sync. For production, use background jobs.
+   */
+  .post(
+    "/sync/calendar",
+    async ({ body, set }) => {
+      const { userId, forceFullSync } = body;
+
+      try {
+        // Import here to avoid circular dependency
+        const { ingestCalendarEvents } = await import("../../ingestion/sources/google-calendar");
+        const { createClientForUser } = await import("../../services/neo4j/http-client");
+
+        // Get user's Neo4j client
+        let client;
+        try {
+          client = await createClientForUser(userId);
+        } catch (clientError) {
+          set.status = 400;
+          return {
+            error: "User database not provisioned",
+            message: "User must have a Neo4j database before syncing",
+            details: clientError instanceof Error ? clientError.message : String(clientError),
+          };
+        }
+
+        // Run sync
+        const result = await ingestCalendarEvents(userId, client, forceFullSync || false);
+
+        return {
+          success: result.success,
+          eventsProcessed: result.eventsProcessed,
+          eventsCreated: result.eventsCreated,
+          eventsSkipped: result.eventsSkipped,
+          contactsCreated: result.contactsCreated,
+          errors: result.errors,
+        };
+      } catch (error) {
+        set.status = 500;
+        return {
+          error: "Sync failed",
+          details: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+    {
+      body: t.Object({
+        userId: t.String({ minLength: 1 }),
+        forceFullSync: t.Optional(t.Boolean()),
+      }),
+    }
   );
