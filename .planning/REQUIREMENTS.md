@@ -134,17 +134,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GRAPH-02 | Phase 2 | Pending |
 | GRAPH-03 | Phase 2 | Pending |
 | GRAPH-04 | Phase 2 | Pending |
-| GRAPH-05 | Phase 3 | Pending |
-| GRAPH-06 | Phase 3 | Pending |
-| GRAPH-07 | Phase 3 | Pending |
+| GRAPH-05 | Phase 3 | Complete |
+| GRAPH-06 | Phase 3 | Complete |
+| GRAPH-07 | Phase 3 | Complete |
 | MCP-01 | Phase 2 | Pending |
 | MCP-02 | Phase 2 | Pending |
 | MCP-03 | Phase 2 | Pending |
-| MCP-04 | Phase 3 | Pending |
+| MCP-04 | Phase 3 | Complete |
 | MCP-05 | Phase 2 | Pending |
 | MCP-06 | Phase 2 | Pending |
-| MCP-07 | Phase 3 | Pending |
-| MCP-08 | Phase 3 | Pending |
+| MCP-07 | Phase 3 | Complete |
+| MCP-08 | Phase 3 | Complete |
 | MCP-09 | Phase 2 | Pending |
 | INGEST-01 | Phase 4 | Pending |
 | INGEST-02 | Phase 4 | Pending |
@@ -181,4 +181,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-24*
-*Last updated: 2026-01-24 after roadmap creation*
+*Last updated: 2026-01-25 — Phase 3 requirements complete (GRAPH-05/06/07, MCP-04/07/08)*
