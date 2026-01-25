@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 4 of 7 (Data Ingestion Pipeline)
-Plan: 1 of ? (infrastructure complete)
-Status: In progress - ingestion infrastructure ready
-Last activity: 2026-01-25 - Completed 04-01-PLAN.md
+Plan: 2 of 8 (validation schemas complete)
+Status: In progress - validation schemas ready for pipelines
+Last activity: 2026-01-25 - Completed 04-02-PLAN.md
 
-Progress: [████████░░] 53% Overall (21/40 plans complete)
+Progress: [████████░░] 55% Overall (22/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: 5min
-- Total execution time: 96min
+- Total plans completed: 22
+- Average duration: 4min
+- Total execution time: 99min
 
 **By Phase:**
 
@@ -31,12 +31,12 @@ Progress: [████████░░] 53% Overall (21/40 plans complete)
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
-| Phase 4 | 1/? | 3min | 3min |
+| Phase 4 | 2/8 | 6min | 3min |
 
 **Recent Trend:**
-- Last plan: 04-01 (3min, complete)
-- Previous: 03-06 (6min)
-- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4→6→3min)
+- Last plan: 04-02 (3min, complete)
+- Previous: 04-01 (3min)
+- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4→6→3→3min)
 
 *Updated after each plan completion*
 
@@ -173,6 +173,11 @@ Recent decisions affecting current work:
 - Job retention policy: Keep last 100 completed jobs for inspection, 500 failed jobs for debugging
 - Singleton pattern: Lazy initialization with null check for both Composio client and Redis connection
 
+**From Phase 4 Plan 02 (04-02):**
+- Zod quality gates: Validate structure + business rules (end > start, contact identifiability) at ingestion boundary
+- Two-level Gmail part nesting: Explicit z.object() for first two levels with z.any() for deeper nesting (recursive z.lazy() had TypeScript issues)
+- validateIngestionData discriminated union: Returns { success: true, data } or { success: false, errors } for typed error handling
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -216,11 +221,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T20:27:59Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-01-25T20:28:25Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
 
-**Phase 4 Status:** IN PROGRESS. Plan 01 complete - ingestion infrastructure ready.
+**Phase 4 Status:** IN PROGRESS. Plans 01-02 complete - infrastructure + validation schemas ready.
 
 **Delivered (04-01):**
 - BullMQ job queue with exponential backoff for background job processing
@@ -228,4 +233,9 @@ Resume file: None
 - Redis connection factory for job queues
 - Barrel export aggregating ingestion module
 
-**Next:** Phase 4 Plan 02 - Calendar sync workers (pending planning)
+**Delivered (04-02):**
+- Zod validation schemas for all 4 Google service types (Calendar, Tasks, Gmail, Contacts)
+- Business rule validation (end > start, contact identifiability, message content)
+- validateIngestionData helper for uniform error handling
+
+**Next:** Phase 4 Plan 03 - Calendar sync pipeline
