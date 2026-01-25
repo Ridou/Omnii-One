@@ -15,6 +15,7 @@ import { getSyncStateService, type SyncSource } from "../sync-state";
 export interface SyncJobData {
   source: SyncSource;
   userId?: string; // If set, sync only this user. If null, sync all users.
+  extractEntities?: boolean; // Whether to extract entities during sync (default: true)
 }
 
 // Queue instance

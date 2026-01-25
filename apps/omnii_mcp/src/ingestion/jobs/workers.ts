@@ -21,6 +21,8 @@ interface SyncResult {
   eventsCreated: number;
   eventsSkipped: number;
   contactsCreated: number;
+  entitiesExtracted: number;
+  relationshipsCreated: number;
   errors: string[];
 }
 
@@ -32,9 +34,11 @@ async function processSyncJob(job: Job<SyncJobData>): Promise<{
   usersProcessed?: number;
   result?: SyncResult;
 }> {
-  const { source, userId } = job.data;
+  const { source, userId, extractEntities } = job.data;
+  // Default extractEntities to true if not specified
+  const shouldExtractEntities = extractEntities ?? true;
 
-  console.log(`Processing sync job ${job.id}: source=${source}, userId=${userId || "all"}`);
+  console.log(`Processing sync job ${job.id}: source=${source}, userId=${userId || "all"}, extractEntities=${shouldExtractEntities}`);
 
   // If no userId, this is a scheduled job - fan out to all users
   if (!userId) {
@@ -58,19 +62,42 @@ async function processSyncJob(job: Job<SyncJobData>): Promise<{
     let result: SyncResult;
 
     switch (source) {
-      case "google_calendar":
-        result = await ingestCalendarEvents(userId, client);
+      case "google_calendar": {
+        const calendarResult = await ingestCalendarEvents(
+          userId,
+          client,
+          false,
+          shouldExtractEntities
+        );
+        result = {
+          success: calendarResult.success,
+          eventsProcessed: calendarResult.eventsProcessed,
+          eventsCreated: calendarResult.eventsCreated,
+          eventsSkipped: calendarResult.eventsSkipped,
+          contactsCreated: calendarResult.contactsCreated,
+          entitiesExtracted: calendarResult.entitiesExtracted,
+          relationshipsCreated: calendarResult.relationshipsCreated,
+          errors: calendarResult.errors,
+        };
         break;
+      }
 
       case "google_tasks": {
         const { ingestTasks } = await import("../sources/google-tasks");
-        const taskResult = await ingestTasks(userId, client);
+        const taskResult = await ingestTasks(
+          userId,
+          client,
+          false,
+          shouldExtractEntities
+        );
         result = {
           success: taskResult.success,
           eventsProcessed: taskResult.tasksProcessed,
           eventsCreated: taskResult.tasksCreated,
           eventsSkipped: taskResult.tasksSkipped,
           contactsCreated: 0,
+          entitiesExtracted: taskResult.entitiesExtracted,
+          relationshipsCreated: taskResult.relationshipsCreated,
           errors: taskResult.errors,
         };
         break;
@@ -78,27 +105,37 @@ async function processSyncJob(job: Job<SyncJobData>): Promise<{
 
       case "google_gmail": {
         const { ingestGmail } = await import("../sources/google-gmail");
-        const gmailResult = await ingestGmail(userId, client);
+        const gmailResult = await ingestGmail(
+          userId,
+          client,
+          false,
+          shouldExtractEntities
+        );
         result = {
           success: gmailResult.success,
           eventsProcessed: gmailResult.messagesProcessed,
           eventsCreated: gmailResult.messagesCreated,
           eventsSkipped: gmailResult.messagesSkipped,
           contactsCreated: gmailResult.contactsCreated,
+          entitiesExtracted: gmailResult.entitiesExtracted,
+          relationshipsCreated: gmailResult.relationshipsCreated,
           errors: gmailResult.errors,
         };
         break;
       }
 
       case "google_contacts": {
+        // Contacts don't extract entities - they ARE entities
         const { ingestContacts } = await import("../sources/google-contacts");
-        const contactResult = await ingestContacts(userId, client);
+        const contactResult = await ingestContacts(userId, client, false);
         result = {
           success: contactResult.success,
           eventsProcessed: contactResult.contactsProcessed,
           eventsCreated: contactResult.contactsCreated,
           eventsSkipped: contactResult.contactsSkipped,
           contactsCreated: 0,
+          entitiesExtracted: 0,
+          relationshipsCreated: 0,
           errors: contactResult.errors,
         };
         break;
@@ -109,7 +146,8 @@ async function processSyncJob(job: Job<SyncJobData>): Promise<{
     }
 
     console.log(
-      `Sync complete for user ${userId}: ${result.eventsCreated} items created, ${result.contactsCreated} contacts`
+      `Sync complete for user ${userId}: ${result.eventsCreated} items, ` +
+        `${result.contactsCreated} contacts, ${result.entitiesExtracted} entities extracted`
     );
 
     return { success: result.success, result };
