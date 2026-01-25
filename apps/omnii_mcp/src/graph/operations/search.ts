@@ -6,12 +6,20 @@
  *
  * Uses Neo4j's db.index.vector.queryNodes procedure for efficient
  * approximate nearest neighbor search on entity embeddings.
+ *
+ * Includes text-based fallback when vector indexes are unavailable.
  */
 
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 import type { NodeLabel } from '../schema/nodes';
 import { VECTOR_INDEX_NAME } from '../schema/vector-index';
 import { generateEmbedding } from './embeddings';
+
+/**
+ * Flag to track if vector index is available.
+ * Set to false on first vector search failure to avoid repeated attempts.
+ */
+let vectorSearchAvailable: boolean | null = null;
 
 /**
  * Result from a semantic search operation.
@@ -160,11 +168,98 @@ export async function searchByEmbedding(
 }
 
 /**
+ * Text-based fallback search using Cypher string matching.
+ *
+ * Uses case-insensitive CONTAINS matching on name and description fields.
+ * This provides basic search functionality when vector indexes are unavailable.
+ *
+ * @param client - Neo4j HTTP client
+ * @param query - Search query string
+ * @param options - Search options
+ * @returns Array of search results with text match scores
+ */
+export async function textBasedSearch(
+  client: Neo4jHTTPClient,
+  query: string,
+  options?: SearchOptions
+): Promise<SearchResult[]> {
+  const limit = options?.limit ?? 10;
+  const nodeTypes = options?.nodeTypes;
+
+  // Extract search terms (split by spaces, filter short words)
+  const searchTerms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((term) => term.length >= 2);
+
+  if (searchTerms.length === 0) {
+    return [];
+  }
+
+  // Build label filter
+  const labelFilter = nodeTypes && nodeTypes.length > 0
+    ? `AND ANY(label IN labels(node) WHERE label IN $nodeTypes)`
+    : '';
+
+  // Text matching with score based on number of matching terms
+  const cypher = `
+    MATCH (node)
+    WHERE (node:Contact OR node:Event OR node:Entity OR node:Concept)
+    ${labelFilter}
+    WITH node,
+         [term IN $searchTerms WHERE toLower(node.name) CONTAINS term | term] AS nameMatches,
+         [term IN $searchTerms WHERE node.description IS NOT NULL AND toLower(node.description) CONTAINS term | term] AS descMatches
+    WHERE size(nameMatches) > 0 OR size(descMatches) > 0
+    WITH node,
+         // Score: name matches worth more than description matches, normalized 0-1
+         (size(nameMatches) * 2.0 + size(descMatches) * 1.0) / (size($searchTerms) * 3.0) AS score
+    RETURN
+      node.id AS id,
+      node.name AS name,
+      labels(node) AS labels,
+      score,
+      properties(node) AS properties
+    ORDER BY score DESC
+    LIMIT $limit
+  `;
+
+  try {
+    const result = await client.query(cypher, {
+      searchTerms,
+      limit,
+      nodeTypes,
+    });
+
+    if (!result.data || !result.data.values || result.data.values.length === 0) {
+      return [];
+    }
+
+    const fields = result.data.fields;
+    const idIndex = fields.indexOf('id');
+    const nameIndex = fields.indexOf('name');
+    const labelsIndex = fields.indexOf('labels');
+    const scoreIndex = fields.indexOf('score');
+    const propsIndex = fields.indexOf('properties');
+
+    return result.data.values.map((row) => ({
+      id: row[idIndex] as string,
+      name: row[nameIndex] as string,
+      labels: row[labelsIndex] as string[],
+      score: row[scoreIndex] as number,
+      properties: row[propsIndex] as Record<string, unknown>,
+    }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Text search failed: ${message}`);
+  }
+}
+
+/**
  * Search for nodes by natural language text query.
  *
  * Generates an embedding from the query text and performs
- * a vector similarity search. This is the primary search
- * interface for MCP tools.
+ * a vector similarity search. Falls back to text-based search
+ * if vector indexes are unavailable.
  *
  * @param client - Neo4j HTTP client for the user's database
  * @param query - Natural language search query
@@ -180,16 +275,76 @@ export async function searchByText(
     throw new Error('Search query cannot be empty');
   }
 
+  // If we know vector search is unavailable, use text search directly
+  if (vectorSearchAvailable === false) {
+    console.log('[Search] Using text-based search (vector index unavailable)');
+    return textBasedSearch(client, query, options);
+  }
+
   try {
     // Generate embedding for the search query
     const embedding = await generateEmbedding(query);
 
     // Perform vector similarity search
-    return searchByEmbedding(client, embedding, options);
+    const vectorResults = await searchByEmbedding(client, embedding, options);
+
+    // Mark vector search as available
+    if (vectorSearchAvailable === null) {
+      vectorSearchAvailable = true;
+      console.log('[Search] Vector search confirmed available');
+    }
+
+    // Also perform text search to catch nodes without embeddings
+    const textResults = await textBasedSearch(client, query, options);
+
+    // Merge and deduplicate results, preferring vector scores when available
+    const resultMap = new Map<string, SearchResult>();
+
+    // Add vector results first (they have semantic similarity scores)
+    for (const r of vectorResults) {
+      resultMap.set(r.id, r);
+    }
+
+    // Add text results that aren't already in the map
+    for (const r of textResults) {
+      if (!resultMap.has(r.id)) {
+        resultMap.set(r.id, r);
+      }
+    }
+
+    // Sort by score descending and limit
+    const mergedResults = Array.from(resultMap.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, options?.limit ?? 10);
+
+    console.log(`[Search] Merged ${vectorResults.length} vector + ${textResults.length} text = ${mergedResults.length} results`);
+
+    return mergedResults;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+
+    // Check if this is a vector index error - fall back to text search
+    if (
+      message.includes('vector') ||
+      message.includes('index') ||
+      message.includes('db.index.vector') ||
+      message.includes('400')
+    ) {
+      console.warn('[Search] Vector search failed, falling back to text search:', message);
+      vectorSearchAvailable = false;
+      return textBasedSearch(client, query, options);
+    }
+
     throw new Error(`Text search failed: ${message}`);
   }
+}
+
+/**
+ * Reset the vector search availability flag.
+ * Useful when vector index is created or for testing.
+ */
+export function resetVectorSearchStatus(): void {
+  vectorSearchAvailable = null;
 }
 
 /**

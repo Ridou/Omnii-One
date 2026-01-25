@@ -18,8 +18,8 @@ export const envSchema = z.object({
   OMNII_REDIS_URL: z.string().url().optional().describe('Redis connection URL'),
 
   // === MCP App-Specific (MCP_* namespace) ===
-  MCP_BASE_URL: z.string().url().default('http://localhost:8081'),
-  MCP_PORT: z.coerce.number().default(8081),
+  MCP_BASE_URL: z.string().url().default('http://localhost:8000'),
+  MCP_PORT: z.coerce.number().default(8000),
 
   // === Legacy Neo4j (for existing dev databases, will be per-user in production) ===
   NEO4J_URI: z.string().startsWith('neo4j+s://').optional().describe('Legacy Neo4j URI'),
@@ -38,6 +38,10 @@ export const envSchema = z.object({
 
   // === Environment ===
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+
+  // === Testing ===
+  INGESTION_TEST_MODE: z.coerce.boolean().default(false).describe('Enable test mode to bypass OAuth'),
+  ADMIN_KEY: z.string().min(1).optional().describe('Admin API key for protected endpoints'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

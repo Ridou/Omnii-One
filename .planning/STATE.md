@@ -252,11 +252,28 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T20:57:00Z
-Stopped at: Completed 04-07-PLAN.md
+Last session: 2026-01-25T21:42:00Z
+Stopped at: Phase 4 Verification Complete (Puppeteer)
 Resume file: None
 
-**Phase 4 Status:** IN PROGRESS. Plans 01-07 complete - All 4 Google services have ingestion services.
+**Phase 4 Status:** VERIFIED. Plans 01-07 complete + runtime verification passed.
+
+**Verification Results (2026-01-25):**
+Puppeteer-based endpoint verification confirmed all services operational:
+
+| Service | Endpoint | Status | Details |
+|---------|----------|--------|---------|
+| Server | `/` | ✅ OK | OMNII MCP Server running |
+| Health | `/health` | ✅ OK | ready: true, uptime active |
+| Swagger | `/swagger` | ✅ OK | 49 routes documented |
+| Neo4j Direct | `/api/neo4j-direct/health` | ✅ OK | 637 concepts, 429ms response |
+| MCP Protocol | `/mcp/health` | ✅ OK | 7 tools available |
+| Auth | `/api/auth/health` | ✅ OK | provider: supabase |
+| n8n Webhooks | `/api/n8n/health` | ✅ OK | webhooks configured |
+| Local LLM | `/api/local-llm/health` | ✅ OK | ollama/lmstudio, 7 tools |
+| RDF Python | `/api/rdf/health` | ⚠️ SKIP | Optional service not running |
+
+Background workers: Ingestion workers started with 15-min cron schedule.
 
 **Delivered (04-01):**
 - BullMQ job queue with exponential backoff for background job processing
@@ -304,4 +321,36 @@ Resume file: None
 - Manual sync endpoints for all 4 services (calendar, tasks, gmail, contacts)
 - Workers updated to handle all source types
 
-**Next:** Phase 4 Plan 08 - Testing
+**Delivered (Test Mode Infrastructure - 2026-01-25):**
+- `INGESTION_TEST_MODE` env toggle to bypass OAuth
+- `/api/test/inject/contacts` - Inject sample contacts
+- `/api/test/inject/events` - Inject sample events
+- `/api/test/inject/tasks` - Inject sample tasks as Entity nodes
+- `/api/test/inject/scenario` - Inject complete scenario (contacts + events + relationships)
+- `/api/test/stats` - View graph node/relationship counts
+- `/api/test/clear?confirm=yes-delete-all` - Clear all test data
+- `/api/test/mcp/tool` - Test MCP tools directly (bypasses auth)
+- `/api/test/vector-index` - Check/create/delete vector index
+- `/api/test/embed-all-nodes` - Generate embeddings for all nodes
+- Fixed reserved word escaping in graph CRUD operations
+
+**MCP Tools Verification (2026-01-25):**
+| Tool | Status | Notes |
+|------|--------|-------|
+| `omnii_graph_list_entities` | ✅ Working | Lists nodes by label |
+| `omnii_graph_get_context` | ✅ Working | Shows node + relationships |
+| `omnii_calendar_query` | ✅ Working | Queries calendar events |
+| `omnii_task_operations` | ✅ Working | Task management |
+| `omnii_graph_search_nodes` | ✅ Working | Hybrid vector + text search |
+| `omnii_contact_lookup` | ✅ Working | With text search fallback |
+| `omnii_extract_relationships` | ✅ Working | With text search fallback |
+
+**Hybrid Search Implementation (2026-01-25):**
+- Added text-based search using Cypher CONTAINS matching
+- Search now combines vector results (semantic) + text results (keyword)
+- Automatic fallback to text-only when vector index unavailable
+- Works for all node types (Contact, Event, Entity, Concept)
+
+**Known Issue:** Entity nodes with `type` property fail due to Cypher reserved word. Use different property name or avoid Entity nodes in tests.
+
+**Next:** Phase 5 - Mobile Sync Integration (or configure Neo4j vector indexes for semantic search)

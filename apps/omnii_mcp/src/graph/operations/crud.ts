@@ -71,12 +71,13 @@ export async function createNode<T extends BaseNodeProperties>(
   };
 
   // Build property string for Cypher query
+  // Use backticks to escape property names that might be reserved words (like 'type')
   const propKeys = Object.keys(nodeProperties);
-  const propString = propKeys.map((key) => `${key}: $${key}`).join(', ');
+  const propString = propKeys.map((key) => `\`${key}\`: $${key}`).join(', ');
 
   const cypher = `
     CREATE (n:${label} {${propString}})
-    RETURN ${propKeys.map((key) => `n.${key} AS ${key}`).join(', ')}
+    RETURN ${propKeys.map((key) => `n.\`${key}\` AS \`${key}\``).join(', ')}
   `;
 
   const result = await client.query(cypher, nodeProperties);
