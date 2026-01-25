@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 3 of 7 (GraphRAG & Advanced MCP) - IN PROGRESS
-Plan: 1 of 6 (03-01 complete)
-Status: Temporal context awareness implemented
-Last activity: 2026-01-25 - Completed 03-01-PLAN.md
+Plan: 2 of 6 (03-02 complete)
+Status: Dual-channel retrieval implemented
+Last activity: 2026-01-25 - Completed 03-02-PLAN.md
 
-Progress: [█░░░░░░░░░] 17% Phase 3 in progress (1/6 plans executed)
+Progress: [██░░░░░░░░] 33% Phase 3 in progress (2/6 plans executed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
+- Total plans completed: 16
 - Average duration: 4min
-- Total execution time: 64min
+- Total execution time: 68min
 
 **By Phase:**
 
@@ -30,12 +30,12 @@ Progress: [█░░░░░░░░░] 17% Phase 3 in progress (1/6 plans ex
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
-| Phase 3 | 1/6 | 4min | 4min |
+| Phase 3 | 2/6 | 8min | 4min |
 
 **Recent Trend:**
-- Last plan: 03-01 (4min, complete)
-- Previous: 02-07 (2min)
-- Trend: Stabilizing around 3-7min (6→4→5→3→7→3→4→4→3→3→6→4→2→4min)
+- Last plan: 03-02 (4min, complete)
+- Previous: 03-01 (4min)
+- Trend: Stabilizing around 3-7min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4min)
 
 *Updated after each plan completion*
 
@@ -136,6 +136,12 @@ Recent decisions affecting current work:
 - Error handling in parseTemporalQuery: Throws descriptive errors with valid options when time range not recognized (better UX than silent failure)
 - Age calculation pattern: Results include duration.between(created_at, datetime()) to provide recency context for AI assistants
 
+**From Phase 3 Plan 02 (03-02):**
+- Graph traversal depth cap: Maximum 2 hops prevents exponential path explosion in densely connected graphs while providing sufficient relationship context
+- Embedding exclusion from properties: DualChannelResult excludes 1536-dimension embedding field to reduce response payload size
+- Vector-only mode option: includeContext flag allows bypassing graph traversal when semantic similarity alone suffices
+- Timing estimation for dual-channel: 30/70 split (vector/graph) estimated based on typical query profiles for performance monitoring
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -164,6 +170,7 @@ None yet.
 **Phase 3 - IN PROGRESS:**
 - ~~GraphRAG implementation patterns~~ - RESEARCHED: Dual-channel retrieval (vector + graph), HybridCypherRetriever pattern, local search first (see 03-RESEARCH.md)
 - ~~Temporal context awareness~~ - COMPLETE: Natural language time queries with Neo4j datetime arithmetic (Plan 03-01)
+- ~~Dual-channel retrieval~~ - COMPLETE: HybridCypherRetriever pattern combining vector search with 1-2 hop graph traversal (Plan 03-02)
 
 **Phase 4 scope discipline:**
 - Must resist adding multiple data sources simultaneously - start with Google Calendar only, validate improvement before expanding
@@ -174,8 +181,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T18:03:12Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-01-25T18:03:41Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
 
-**Phase 3 Status:** In progress. 1/6 plans complete. Temporal context service ready for dual-channel integration.
+**Phase 3 Status:** In progress. 2/6 plans complete (33%). Dual-channel retrieval and local search services ready for MCP tool integration.
