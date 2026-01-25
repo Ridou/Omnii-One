@@ -104,6 +104,11 @@ Recent decisions affecting current work:
 - searchByText as primary interface: Natural language queries converted to embeddings for vector search
 - db.index.vector.queryNodes procedure: Neo4j native vector search for HNSW index
 
+**From Phase 2 Plan 03 (02-03):**
+- Protocol version 2025-11-25: Stable MCP protocol version, avoiding experimental 2026-03-26 features
+- Singleton pattern for MCP server: Single server instance for consistent state across all routes
+- Elysia HTTP transport: Routes at /mcp prefix for protocol traffic, matches existing app framework
+
 **From Phase 2 Plan 04 (02-04):**
 - MCPToolResponse type: Standard MCP response format `{ content: [{ type: 'text', text: string }], isError?: boolean }`
 - TOOL_DEFINITIONS + TOOL_HANDLERS pattern: Array of definitions for tools/list, map of handlers for tools/call
