@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 2 of 7 (Graph Core & MCP Server)
-Plan: 2 of 7 (Vector Search and Embeddings)
+Plan: 4 of 7 (MCP Tools for Graph Queries)
 Status: In progress
-Last activity: 2026-01-25 - Completed 02-02-PLAN.md (Vector Search and Embeddings)
+Last activity: 2026-01-25 - Completed 02-04-PLAN.md (MCP Tools for Graph Queries)
 
-Progress: [███░░░░░░░] 29% Phase 2 (2/7 plans complete)
+Progress: [████░░░░░░] 57% Phase 2 (4/7 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 4min
-- Total execution time: 45min
+- Total execution time: 48min
 
 **By Phase:**
 
@@ -29,12 +29,12 @@ Progress: [███░░░░░░░] 29% Phase 2 (2/7 plans complete)
 |-------|-------|-------|----------|
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
-| Phase 2 | 2/7 | 7min | 4min |
+| Phase 2 | 4/7 | 10min | 3min |
 
 **Recent Trend:**
-- Last plan: 02-02 (3min)
-- Previous: 02-01 (4min)
-- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4→4→3min)
+- Last plan: 02-04 (3min)
+- Previous: 02-02 (3min)
+- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4→4→3→3min)
 
 *Updated after each plan completion*
 
@@ -104,6 +104,11 @@ Recent decisions affecting current work:
 - searchByText as primary interface: Natural language queries converted to embeddings for vector search
 - db.index.vector.queryNodes procedure: Neo4j native vector search for HNSW index
 
+**From Phase 2 Plan 04 (02-04):**
+- MCPToolResponse type: Standard MCP response format `{ content: [{ type: 'text', text: string }], isError?: boolean }`
+- TOOL_DEFINITIONS + TOOL_HANDLERS pattern: Array of definitions for tools/list, map of handlers for tools/call
+- Zod validation at handler entry: Fail fast with structured error details for AI clients
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -140,8 +145,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T10:00:00Z
-Stopped at: Completed 02-02-PLAN.md (Vector Search and Embeddings) - 3 tasks committed, SUMMARY created
+Last session: 2026-01-25T10:06:00Z
+Stopped at: Completed 02-04-PLAN.md (MCP Tools for Graph Queries) - 3 tasks committed, SUMMARY created
 Resume file: None
 
-**Phase 2 Status:** In progress (2/7 plans complete)
+**Phase 2 Status:** In progress (4/7 plans complete)
