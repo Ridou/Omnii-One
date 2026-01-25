@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** AI always has the right context when querying user's personal data
-**Current focus:** Phase 3 - GraphRAG & Advanced MCP
+**Current focus:** Phase 4 - Data Ingestion Pipeline
 
 ## Current Position
 
-Phase: 3 of 7 (GraphRAG & Advanced MCP) - VERIFIED COMPLETE
-Plan: 6 of 6 (all verified)
-Status: Phase 3 verified - 18/18 must-haves confirmed, ready for Phase 4
-Last activity: 2026-01-25 - Phase 3 verified complete
+Phase: 4 of 7 (Data Ingestion Pipeline)
+Plan: 1 of ? (infrastructure complete)
+Status: In progress - ingestion infrastructure ready
+Last activity: 2026-01-25 - Completed 04-01-PLAN.md
 
-Progress: [████████░░] 50% Overall (4/8 phases complete)
+Progress: [████████░░] 53% Overall (21/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: 5min
-- Total execution time: 93min
+- Total execution time: 96min
 
 **By Phase:**
 
@@ -31,11 +31,12 @@ Progress: [████████░░] 50% Overall (4/8 phases complete)
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
+| Phase 4 | 1/? | 3min | 3min |
 
 **Recent Trend:**
-- Last plan: 03-06 (6min, complete)
-- Previous: 03-05 (4min)
-- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4→6min)
+- Last plan: 04-01 (3min, complete)
+- Previous: 03-06 (6min)
+- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4→6→3min)
 
 *Updated after each plan completion*
 
@@ -166,6 +167,12 @@ Recent decisions affecting current work:
 - Hallucination detection for local LLMs: validateToolCall checks tool name exists in TOOL_HANDLERS, filters invalid calls before execution
 - Local LLM bridge architecture: HTTP endpoints at /api/local-llm for tools list and execution, separate from MCP JSON-RPC transport
 
+**From Phase 4 Plan 01 (04-01):**
+- BullMQ default retry: 3 attempts with exponential backoff (1s, 2s, 4s) for rate-limited API calls
+- Redis connection lazy initialization: Single shared Redis instance via getRedisConnection() with maxRetriesPerRequest: null for BullMQ compatibility
+- Job retention policy: Keep last 100 completed jobs for inspection, 500 failed jobs for debugging
+- Singleton pattern: Lazy initialization with null check for both Composio client and Redis connection
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -209,17 +216,16 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T19:15:00Z
-Stopped at: Phase 3 verified complete
+Last session: 2026-01-25T20:27:59Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
 
-**Phase 3 Status:** VERIFIED COMPLETE. All 6 plans executed and verified (18/18 must-haves confirmed).
+**Phase 4 Status:** IN PROGRESS. Plan 01 complete - ingestion infrastructure ready.
 
-**Delivered:**
-- GraphRAG dual-channel retrieval (vector + 1-2 hop graph traversal)
-- Temporal context service (natural language time queries)
-- Domain MCP tools (calendar, contacts, tasks, relationship extraction)
-- Multi-client support (Claude Desktop, OpenAI function calling, Ollama, LM Studio)
-- 7 MCP tools total available
+**Delivered (04-01):**
+- BullMQ job queue with exponential backoff for background job processing
+- Composio client singleton for Google OAuth abstraction
+- Redis connection factory for job queues
+- Barrel export aggregating ingestion module
 
-**Next:** Phase 4 - Data Ingestion Pipeline (Google services integration)
+**Next:** Phase 4 Plan 02 - Calendar sync workers (pending planning)
