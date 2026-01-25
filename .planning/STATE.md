@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** AI always has the right context when querying user's personal data
-**Current focus:** Phase 1 - Foundation Infrastructure
+**Current focus:** Phase 2 - Graph Core & MCP Server
 
 ## Current Position
 
 Phase: 2 of 7 (Graph Core & MCP Server)
-Plan: 0 of ? (Phase 2 not yet planned)
-Status: Ready for planning
-Last activity: 2026-01-25 - Phase 1 UAT complete (6/6 tests passed)
+Plan: 1 of 7 (Graph Schema and CRUD)
+Status: In progress
+Last activity: 2026-01-25 - Completed 02-01-PLAN.md (Graph Schema and CRUD)
 
-Progress: [██████████] 100% Phase 1 complete, Phase 2 ready
+Progress: [██░░░░░░░░] 14% Phase 2 (1/7 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 4min
-- Total execution time: 38min
+- Total execution time: 42min
 
 **By Phase:**
 
@@ -29,11 +29,12 @@ Progress: [██████████] 100% Phase 1 complete, Phase 2 ready
 |-------|-------|-------|----------|
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
+| Phase 2 | 1/7 | 4min | 4min |
 
 **Recent Trend:**
-- Last plan: 01-04 (4min)
-- Previous: 01-03 (3min)
-- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4min)
+- Last plan: 02-01 (4min)
+- Previous: 01-04 (4min)
+- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4→4min)
 
 *Updated after each plan completion*
 
@@ -92,6 +93,11 @@ Recent decisions affecting current work:
 - URI conversion for HTTP API: Convert neo4j+s:// to https:// for HTTP Query API v2 compatibility
 - createClientForUser factory pattern: Per-user database isolation via client factory that looks up credentials from Supabase
 
+**From Phase 2 Plan 01 (02-01):**
+- Four node labels (Concept, Entity, Event, Contact): Covers core knowledge graph use cases for personal context
+- 1536-dimension embedding field for OpenAI ada-002: Standard embedding size for vector similarity search
+- Parameterized Cypher queries: All CRUD operations use parameters to prevent injection
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -126,8 +132,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-24T22:23:36Z
-Stopped at: Completed 01-04-PLAN.md (Database Provisioning) - 3 tasks committed, SUMMARY created
+Last session: 2026-01-25T09:54:00Z
+Stopped at: Completed 02-01-PLAN.md (Graph Schema and CRUD) - 3 tasks committed, SUMMARY created
 Resume file: None
 
-**Phase 1 Status:** In progress (4/5 plans complete)
+**Phase 2 Status:** In progress (1/7 plans complete)
