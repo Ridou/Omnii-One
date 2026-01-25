@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** AI always has the right context when querying user's personal data
-**Current focus:** Phase 2 - Graph Core & MCP Server
+**Current focus:** Phase 3 - GraphRAG & Advanced MCP
 
 ## Current Position
 
-Phase: 2 of 7 (Graph Core & MCP Server) - COMPLETE
-Plan: 7 of 7 (Integration Testing & Documentation)
-Status: Phase 2 complete
-Last activity: 2026-01-25 - Completed Phase 2 (checkpoint approved)
+Phase: 3 of 7 (GraphRAG & Advanced MCP) - IN PROGRESS
+Plan: 1 of 6 (03-01 complete)
+Status: Temporal context awareness implemented
+Last activity: 2026-01-25 - Completed 03-01-PLAN.md
 
-Progress: [██████████] 100% Phase 2 complete (7/7 plans)
+Progress: [█░░░░░░░░░] 17% Phase 3 in progress (1/6 plans executed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14 (13 full + 1 partial)
+- Total plans completed: 15
 - Average duration: 4min
-- Total execution time: 60min
+- Total execution time: 64min
 
 **By Phase:**
 
@@ -30,11 +30,12 @@ Progress: [██████████] 100% Phase 2 complete (7/7 plans)
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
+| Phase 3 | 1/6 | 4min | 4min |
 
 **Recent Trend:**
-- Last plan: 02-07 (2min, complete - checkpoint approved)
-- Previous: 02-06 (4min)
-- Trend: Stabilizing around 3-7min (6→4→5→3→7→3→4→4→3→3→6→4→2min)
+- Last plan: 03-01 (4min, complete)
+- Previous: 02-07 (2min)
+- Trend: Stabilizing around 3-7min (6→4→5→3→7→3→4→4→3→3→6→4→2→4min)
 
 *Updated after each plan completion*
 
@@ -129,6 +130,12 @@ Recent decisions affecting current work:
 - Comprehensive doc structure: Single guide covering auth, config, tools, troubleshooting for developer onboarding
 - Phase 2 env vars documented: OMNII_*, MCP_*, ADMIN_KEY all in .env.example with clear sections
 
+**From Phase 3 Plan 01 (03-01):**
+- Neo4j datetime() vs localdatetime(): Using datetime() (timezone-aware) for UTC storage ensures consistent temporal filtering across timezones
+- Temporal index strategy: Created 4 indexes (Entity.created_at, Event.start_time, Contact.created_at, Concept.created_at) to optimize temporal queries from O(n) scan to O(log n) lookup
+- Error handling in parseTemporalQuery: Throws descriptive errors with valid options when time range not recognized (better UX than silent failure)
+- Age calculation pattern: Results include duration.between(created_at, datetime()) to provide recency context for AI assistants
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -154,8 +161,9 @@ None yet.
 - ~~Embedding model selection~~ - RESOLVED: Using OpenAI ada-002 for server-side embeddings (Plan 02-02)
 - ~~Claude Desktop integration~~ - RESOLVED: User approved checkpoint, docs and config complete (Plan 02-07)
 
-**Phase 3 research needed:**
-- GraphRAG implementation patterns with LangChain + Neo4j (emerging patterns)
+**Phase 3 - IN PROGRESS:**
+- ~~GraphRAG implementation patterns~~ - RESEARCHED: Dual-channel retrieval (vector + graph), HybridCypherRetriever pattern, local search first (see 03-RESEARCH.md)
+- ~~Temporal context awareness~~ - COMPLETE: Natural language time queries with Neo4j datetime arithmetic (Plan 03-01)
 
 **Phase 4 scope discipline:**
 - Must resist adding multiple data sources simultaneously - start with Google Calendar only, validate improvement before expanding
@@ -166,8 +174,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T10:30:00Z
-Stopped at: Completed Phase 2 (checkpoint approved by user)
+Last session: 2026-01-25T18:03:12Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
 
-**Phase 2 Status:** Complete. All 7 plans executed, checkpoint approved. Ready for Phase 3.
+**Phase 3 Status:** In progress. 1/6 plans complete. Temporal context service ready for dual-channel integration.
