@@ -8,6 +8,7 @@
 import { z } from 'zod';
 import { searchByText, type NodeLabel } from '../../graph';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
+import { parseTemporalQuery } from '../../services/graphrag/temporal-context';
 
 /**
  * Zod schema for search_nodes input validation.
@@ -25,6 +26,21 @@ export const SearchNodesInputSchema = z.object({
     .max(1)
     .default(0.7)
     .describe('Minimum similarity score threshold'),
+  timeRange: z
+    .enum([
+      'today',
+      'yesterday',
+      'this week',
+      'last week',
+      'this month',
+      'last month',
+      'this year',
+      'last year',
+    ])
+    .optional()
+    .describe(
+      'Filter results by created_at/start_time within relative time range'
+    ),
 });
 
 /**
@@ -58,6 +74,20 @@ export const searchNodesToolDefinition = {
         type: 'number',
         description: 'Min similarity score (0-1, default 0.7)',
       },
+      timeRange: {
+        type: 'string',
+        enum: [
+          'today',
+          'yesterday',
+          'this week',
+          'last week',
+          'this month',
+          'last month',
+          'this year',
+          'last year',
+        ],
+        description: 'Filter results by time range (optional)',
+      },
     },
     required: ['query'],
   },
@@ -87,11 +117,73 @@ export async function handleSearchNodes(
     const parsed = SearchNodesInputSchema.parse(input);
 
     // Perform semantic search
-    const results = await searchByText(client, parsed.query, {
+    let results = await searchByText(client, parsed.query, {
       limit: parsed.limit,
       nodeTypes: parsed.nodeTypes?.map((t) => t as NodeLabel),
       minScore: parsed.minScore,
     });
+
+    // Apply temporal filtering if time_range is provided
+    if (parsed.timeRange) {
+      try {
+        const temporal = parseTemporalQuery(parsed.timeRange);
+
+        // Extract result IDs for temporal filtering
+        const resultIds = results.map((r) => r.id);
+
+        if (resultIds.length > 0) {
+          // Query to filter nodes by temporal range
+          const cypher = `
+            UNWIND $ids AS nodeId
+            MATCH (n {id: nodeId})
+
+            WITH n, datetime() AS now, datetime() - duration($duration) AS startTime
+
+            // Check temporal fields (created_at for most nodes, start_time for Events)
+            WHERE (n.created_at >= startTime AND n.created_at <= now)
+               OR (n.start_time >= startTime AND n.start_time <= now)
+
+            RETURN n.id AS id
+          `;
+
+          const filterResult = await client.query(cypher, {
+            ids: resultIds,
+            duration: temporal.duration,
+          });
+
+          if (filterResult.data && filterResult.data.values && filterResult.data.values.length > 0) {
+            // Create set of filtered IDs
+            const filteredIds = new Set(
+              filterResult.data.values.map(
+                (row) => row[filterResult.data.fields.indexOf('id')] as string
+              )
+            );
+
+            // Filter results to only include temporally matched nodes
+            results = results.filter((r) => filteredIds.has(r.id));
+          } else {
+            // No results match the temporal filter
+            results = [];
+          }
+        }
+      } catch (temporalError) {
+        // If temporal parsing fails, return error with valid options
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error:
+                  temporalError instanceof Error
+                    ? temporalError.message
+                    : 'Temporal filter error',
+              }),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
 
     // Format response as MCP content
     return {
@@ -101,6 +193,7 @@ export async function handleSearchNodes(
           text: JSON.stringify(
             {
               query: parsed.query,
+              timeRange: parsed.timeRange,
               resultCount: results.length,
               results: results.map((r) => ({
                 id: r.id,
