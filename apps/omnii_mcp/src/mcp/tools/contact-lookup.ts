@@ -65,15 +65,28 @@ export const contactLookupToolDefinition = {
  * Handle contact_lookup tool invocation.
  *
  * @param client - Neo4j HTTP client for the user's database
- * @param userId - User ID for multi-tenant isolation
  * @param input - Raw input from MCP tool call
+ * @param userId - User ID for multi-tenant isolation
  * @returns MCP-compliant response with contact details
  */
 export async function handleContactLookup(
   client: Neo4jHTTPClient,
-  userId: string,
-  input: unknown
+  input: unknown,
+  userId?: string
 ): Promise<MCPToolResponse> {
+  if (!userId) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            error: 'User ID is required for contact lookup',
+          }),
+        },
+      ],
+      isError: true,
+    };
+  }
   try {
     // Validate input with Zod schema
     const parsed = ContactLookupInputSchema.parse(input);

@@ -21,6 +21,21 @@ import {
   handleListEntities,
   ListEntitiesInputSchema,
 } from './list-entities';
+import {
+  calendarQueryToolDefinition,
+  handleCalendarQuery,
+  CalendarQueryInputSchema,
+} from './calendar-query';
+import {
+  contactLookupToolDefinition,
+  handleContactLookup,
+  ContactLookupInputSchema,
+} from './contact-lookup';
+import {
+  taskOperationsToolDefinition,
+  handleTaskOperations,
+  TaskOperationsInputSchema,
+} from './task-operations';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 
 /**
@@ -30,6 +45,9 @@ export const TOOL_DEFINITIONS = [
   searchNodesToolDefinition,
   getContextToolDefinition,
   listEntitiesToolDefinition,
+  calendarQueryToolDefinition,
+  contactLookupToolDefinition,
+  taskOperationsToolDefinition,
 ] as const;
 
 /**
@@ -37,7 +55,8 @@ export const TOOL_DEFINITIONS = [
  */
 export type ToolHandler = (
   client: Neo4jHTTPClient,
-  input: unknown
+  input: unknown,
+  userId?: string
 ) => Promise<MCPToolResponse>;
 
 /**
@@ -47,6 +66,9 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   [searchNodesToolDefinition.name]: handleSearchNodes,
   [getContextToolDefinition.name]: handleGetContext,
   [listEntitiesToolDefinition.name]: handleListEntities,
+  [calendarQueryToolDefinition.name]: handleCalendarQuery,
+  [contactLookupToolDefinition.name]: handleContactLookup,
+  [taskOperationsToolDefinition.name]: handleTaskOperations,
 };
 
 /**
@@ -92,6 +114,18 @@ export {
   listEntitiesToolDefinition,
   handleListEntities,
   ListEntitiesInputSchema,
+  // Calendar query
+  calendarQueryToolDefinition,
+  handleCalendarQuery,
+  CalendarQueryInputSchema,
+  // Contact lookup
+  contactLookupToolDefinition,
+  handleContactLookup,
+  ContactLookupInputSchema,
+  // Task operations
+  taskOperationsToolDefinition,
+  handleTaskOperations,
+  TaskOperationsInputSchema,
 };
 
 // Re-export types

@@ -133,7 +133,7 @@ async function handleMCPMethod(
 
       // Create user-isolated Neo4j client
       const neo4jClient = await createClientForUser(auth.tenantId);
-      return await handler(neo4jClient, args || {});
+      return await handler(neo4jClient, args || {}, auth.userId);
     }
 
     default:
