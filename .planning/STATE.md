@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 4 of 7 (Data Ingestion Pipeline)
-Plan: 2 of 8 (validation schemas complete)
-Status: In progress - validation schemas ready for pipelines
-Last activity: 2026-01-25 - Completed 04-02-PLAN.md
+Plan: 3 of 8 (sync state persistence complete)
+Status: In progress - sync state layer ready for pipelines
+Last activity: 2026-01-25 - Completed 04-03-PLAN.md
 
-Progress: [████████░░] 55% Overall (22/40 plans complete)
+Progress: [████████░░] 58% Overall (23/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
+- Total plans completed: 23
 - Average duration: 4min
-- Total execution time: 99min
+- Total execution time: 102min
 
 **By Phase:**
 
@@ -31,12 +31,12 @@ Progress: [████████░░] 55% Overall (22/40 plans complete)
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
-| Phase 4 | 2/8 | 6min | 3min |
+| Phase 4 | 3/8 | 9min | 3min |
 
 **Recent Trend:**
-- Last plan: 04-02 (3min, complete)
-- Previous: 04-01 (3min)
-- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4→6→3→3min)
+- Last plan: 04-03 (3min, complete)
+- Previous: 04-02 (3min)
+- Trend: Stabilizing around 3-8min (6→4→5→3→7→3→4→4→3→3→6→4→2→4→4→7→8→4→6→3→3→3min)
 
 *Updated after each plan completion*
 
@@ -178,6 +178,11 @@ Recent decisions affecting current work:
 - Two-level Gmail part nesting: Explicit z.object() for first two levels with z.any() for deeper nesting (recursive z.lazy() had TypeScript issues)
 - validateIngestionData discriminated union: Returns { success: true, data } or { success: false, errors } for typed error handling
 
+**From Phase 4 Plan 03 (04-03):**
+- Service role key for SyncStateService: Bypasses RLS for background jobs to access all users' sync states
+- Upsert pattern for updateState: Uses onConflict: "user_id,source" to handle both create and update in single operation
+- clearSyncToken nulls all fields: When 410 Gone received, all token fields nulled to trigger full sync on next attempt
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -221,11 +226,11 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T20:28:25Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-01-25T20:34:09Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
 
-**Phase 4 Status:** IN PROGRESS. Plans 01-02 complete - infrastructure + validation schemas ready.
+**Phase 4 Status:** IN PROGRESS. Plans 01-03 complete - infrastructure + validation + sync state ready.
 
 **Delivered (04-01):**
 - BullMQ job queue with exponential backoff for background job processing
@@ -238,4 +243,10 @@ Resume file: None
 - Business rule validation (end > start, contact identifiability, message content)
 - validateIngestionData helper for uniform error handling
 
-**Next:** Phase 4 Plan 03 - Calendar sync pipeline
+**Delivered (04-03):**
+- sync_state Supabase table for tracking sync tokens per user/source
+- SyncStateService with CRUD operations for incremental sync state
+- Helper methods for sync lifecycle (started, completed, failed, rate-limited)
+- getUsersNeedingSync for background job scheduling
+
+**Next:** Phase 4 Plan 04 - Calendar sync pipeline
