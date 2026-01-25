@@ -116,10 +116,15 @@ Plans:
 5. OpenAI function calling integration successfully invokes MCP tools
 6. Local LLM (Ollama or LM Studio) can connect and execute MCP tools
 
-**Plans**: TBD
+**Plans:** 6 plans in 4 waves
 
 Plans:
-- [ ] 03-01: TBD (to be planned)
+- [ ] 03-01-PLAN.md — Temporal context service with duration mapping and Neo4j datetime queries
+- [ ] 03-02-PLAN.md — Dual-channel retrieval combining vector search with graph traversal
+- [ ] 03-03-PLAN.md — Domain-aware MCP tools: calendar, contacts, tasks
+- [ ] 03-04-PLAN.md — Automatic relationship discovery with LLM-based entity extraction
+- [ ] 03-05-PLAN.md — OpenAI function calling adapter for MCP tools
+- [ ] 03-06-PLAN.md — Local LLM bridge for Ollama and LM Studio
 
 ---
 
@@ -226,7 +231,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 0. Monorepo Consolidation Preparation | 5/5 | ✓ Complete | 2026-01-24 |
 | 1. Foundation Infrastructure | 5/5 | ✓ Complete | 2026-01-25 |
 | 2. Graph Core & MCP Server | 7/7 | ✓ Complete | 2026-01-25 |
-| 3. GraphRAG & Advanced MCP | 0/0 | Not started | - |
+| 3. GraphRAG & Advanced MCP | 0/6 | Planned | - |
 | 4. Data Ingestion Pipeline | 0/0 | Not started | - |
 | 5. Mobile Client & Offline Sync | 0/0 | Not started | - |
 | 6. Orchestration & Automation | 0/0 | Not started | - |
@@ -234,4 +239,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-25 — Phase 2 complete (7/7 plans)*
+*Last updated: 2026-01-25 — Phase 3 planned (6 plans in 4 waves)*
