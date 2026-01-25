@@ -7,6 +7,7 @@
 
 import { Elysia, t } from "elysia";
 import { getComposioClient } from "../../ingestion/composio-client";
+import { getSyncStateService, type SyncSource } from "../../ingestion/sync-state";
 
 /**
  * Google service to Composio integration mapping
@@ -16,6 +17,16 @@ const GOOGLE_INTEGRATIONS: Record<string, string> = {
   tasks: "googletasks",
   gmail: "gmail",
   contacts: "googlecontacts",
+};
+
+/**
+ * Map service name to SyncSource enum value
+ */
+const SERVICE_TO_SYNC_SOURCE: Record<string, SyncSource> = {
+  calendar: "google_calendar",
+  tasks: "google_tasks",
+  gmail: "google_gmail",
+  contacts: "google_contacts",
 };
 
 /** Service type for type-safe body parsing */
@@ -141,7 +152,8 @@ export const ingestionRoutes = new Elysia({ prefix: "/ingestion" })
    *
    * GET /api/ingestion/status/:userId
    *
-   * Returns which Google services are connected for the user.
+   * Returns which Google services are connected for the user,
+   * along with sync status for each connected service.
    */
   .get(
     "/status/:userId",
@@ -151,22 +163,42 @@ export const ingestionRoutes = new Elysia({ prefix: "/ingestion" })
       try {
         const composio = getComposioClient();
         const entity = composio.getEntity(userId);
+        const syncStateService = getSyncStateService();
 
         // Check connection status for each Google service
         const connections = await Promise.all(
           Object.entries(GOOGLE_INTEGRATIONS).map(async ([service, integration]) => {
             try {
               const connection = await entity.getConnection({ app: integration });
+              const connected = connection?.status === "ACTIVE";
+
+              // Get sync state for connected services
+              let syncStatus = null;
+              if (connected) {
+                const source = SERVICE_TO_SYNC_SOURCE[service];
+                const state = await syncStateService.getState(userId, source);
+                if (state) {
+                  syncStatus = {
+                    lastSync: state.last_successful_sync_at,
+                    status: state.status,
+                    itemsSynced: state.items_synced,
+                    errorMessage: state.error_message,
+                  };
+                }
+              }
+
               return {
                 service,
-                connected: connection?.status === "ACTIVE",
-                connectionId: connection?.id,
+                connected,
+                connectionId: connection?.id ?? null,
+                syncStatus,
               };
             } catch {
               return {
                 service,
                 connected: false,
                 connectionId: null,
+                syncStatus: null,
               };
             }
           })
