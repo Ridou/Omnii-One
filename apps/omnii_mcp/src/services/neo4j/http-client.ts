@@ -1,4 +1,5 @@
 import type { Neo4jQueryResult, Neo4jHTTPConfig, Neo4jHTTPError } from '../../types/neo4j.types';
+import { createSupabaseAdmin } from '@omnii/auth';
 
 /**
  * Neo4j HTTP Query API Client
@@ -122,4 +123,33 @@ export class Neo4jHTTPClient {
   getEndpoint(): string {
     return this.baseUrl;
   }
+}
+
+/**
+ * Create Neo4j HTTP client for authenticated user.
+ * Looks up user's database credentials from Supabase.
+ */
+export async function createClientForUser(userId: string): Promise<Neo4jHTTPClient> {
+  const supabase = createSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from('user_databases')
+    .select('neo4j_uri, neo4j_user, neo4j_password, database_name, status')
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data) {
+    throw new Error('User database not found. Provisioning may still be in progress.');
+  }
+
+  if (data.status !== 'ready') {
+    throw new Error(`Database not ready. Current status: ${data.status}`);
+  }
+
+  return new Neo4jHTTPClient({
+    uri: data.neo4j_uri,
+    user: data.neo4j_user,
+    password: data.neo4j_password,
+    database: data.database_name,
+  });
 }
