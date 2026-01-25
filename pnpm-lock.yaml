@@ -80,6 +80,18 @@ importers:
       '@omnii/validators':
         specifier: workspace:^
         version: link:../../packages/validators
+      '@op-engineering/op-sqlite':
+        specifier: ^14.1.4
+        version: 14.1.4(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)
+      '@powersync/op-sqlite':
+        specifier: ^0.7.18
+        version: 0.7.18(@op-engineering/op-sqlite@14.1.4(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0))(@powersync/common@1.45.0)(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)
+      '@powersync/react':
+        specifier: ^1.8.2
+        version: 1.8.2(@powersync/common@1.45.0)(react@19.0.0)
+      '@powersync/react-native':
+        specifier: ^1.28.1
+        version: 1.28.1(@powersync/common@1.45.0)(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)
       '@react-native-async-storage/async-storage':
         specifier: 2.1.2
         version: 2.1.2(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))
@@ -518,10 +530,10 @@ importers:
         version: 0.10.0
       drizzle-orm:
         specifier: ^0.44.1
-        version: 0.44.2(@cloudflare/workers-types@4.20250620.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2)
+        version: 0.44.2(@cloudflare/workers-types@4.20250620.0)(@op-engineering/op-sqlite@15.2.5(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0))(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2)
       drizzle-zod:
         specifier: ^0.8.2
-        version: 0.8.2(drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250620.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2))(zod@3.25.67)
+        version: 0.8.2(drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250620.0)(@op-engineering/op-sqlite@15.2.5(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0))(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2))(zod@3.25.67)
       zod:
         specifier: 'catalog:'
         version: 3.25.67
@@ -2356,6 +2368,18 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
+  '@op-engineering/op-sqlite@14.1.4':
+    resolution: {integrity: sha512-ZIZAqfHUKIjSxhaxWovEz4kCp6Gtoi8RPnJ36lPwTr73c7pEFNidE2vFm0dMBEj2ikm9wfYkab1/boW98SkVKA==}
+    peerDependencies:
+      react: 19.0.0
+      react-native: 0.79.3
+
+  '@op-engineering/op-sqlite@15.2.5':
+    resolution: {integrity: sha512-Vmgwt0AzY7qoge3X6EONhsb5NlM2yoQUF0/lseUWBelfc9BUili7/DFsFsS73cvtYWlwPpqeTGOoce5mzHozBw==}
+    peerDependencies:
+      react: 19.0.0
+      react-native: 0.79.3
+
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
@@ -2363,6 +2387,34 @@ packages:
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@powersync/common@1.45.0':
+    resolution: {integrity: sha512-C0r0Lago5MPcGiXSQhX6CDEqmHuMLjHZJzHjk61un1cvn+7SDoJrX1KTln+HuvoLovBTKK/DUJoAGzpTCIFF5Q==}
+
+  '@powersync/op-sqlite@0.7.18':
+    resolution: {integrity: sha512-25d+Wm/qeB6o4gButieNm372frPwLCHzmgp3jf4CSWmm+PMeu2FPTFsv+x2jsF4aVPy7fkTItCRXlvqZS3t2fQ==}
+    peerDependencies:
+      '@op-engineering/op-sqlite': ^13.0.0 || ^14.0.0
+      '@powersync/common': ^1.45.0
+      react: 19.0.0
+      react-native: 0.79.3
+
+  '@powersync/react-native@1.28.1':
+    resolution: {integrity: sha512-CPxuxla0uVPHn5x8Bq7eZ/hfUDurEodFVhstQMUCcyeaHSgNP7xA/CuLgY9G9gabXiXwaAvKXQPojNU9pxZlkQ==}
+    peerDependencies:
+      '@journeyapps/react-native-quick-sqlite': ^2.5.0
+      '@powersync/common': ^1.45.0
+      react: 19.0.0
+      react-native: 0.79.3
+    peerDependenciesMeta:
+      '@journeyapps/react-native-quick-sqlite':
+        optional: true
+
+  '@powersync/react@1.8.2':
+    resolution: {integrity: sha512-15z8JKt66dq2bqX2P7QQ71eUIx3DWLc5WMdB/PDc9MIAHf1SERqKfzbzWGxKplQGHC/GogDA7G8IDoRadhNXOA==}
+    peerDependencies:
+      '@powersync/common': ^1.41.1
+      react: 19.0.0
 
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
@@ -4036,6 +4088,12 @@ packages:
   async-limiter@1.0.1:
     resolution: {integrity: sha512-csOlWGAcRFJaI6m+F2WKdnMKr4HhdhFVBk0H/QbJFMCr+uO2kwohwXQPxw/9OCxp05r5ghVBFSyioixx3gfkNQ==}
 
+  async-lock@1.4.1:
+    resolution: {integrity: sha512-Az2ZTpuytrtqENulXwO3GGv1Bztugx6TT37NIo7imr/Qo0gsYiGtSdBa2B6fsXhTpVZDNfu1Qn3pk531e3q+nQ==}
+
+  async-mutex@0.5.0:
+    resolution: {integrity: sha512-1A94B18jkJ3DYq284ohPxoXbfTA5HsQ7/Mf4DEhcyLx3Bz27Rh59iScbB6EPiP+B+joue6YCxcMXSbFC1tZKwA==}
+
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
@@ -5290,6 +5348,9 @@ packages:
   etag@1.8.1:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
+
+  event-iterator@2.0.0:
+    resolution: {integrity: sha512-KGft0ldl31BZVV//jj+IAIGCxkvvUkkON+ScH6zfoX+l+omX6001ggyRSpI0Io2Hlro0ThXotswCtfzS8UkIiQ==}
 
   event-target-shim@5.0.1:
     resolution: {integrity: sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==}
@@ -11491,10 +11552,47 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
+  '@op-engineering/op-sqlite@14.1.4(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      react: 19.0.0
+      react-native: 0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0)
+
+  '@op-engineering/op-sqlite@15.2.5(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      react: 19.0.0
+      react-native: 0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0)
+    optional: true
+
   '@opentelemetry/api@1.9.0': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
+
+  '@powersync/common@1.45.0':
+    dependencies:
+      async-mutex: 0.5.0
+      event-iterator: 2.0.0
+
+  '@powersync/op-sqlite@0.7.18(@op-engineering/op-sqlite@14.1.4(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0))(@powersync/common@1.45.0)(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      '@op-engineering/op-sqlite': 14.1.4(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)
+      '@powersync/common': 1.45.0
+      async-lock: 1.4.1
+      react: 19.0.0
+      react-native: 0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0)
+
+  '@powersync/react-native@1.28.1(@powersync/common@1.45.0)(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      '@powersync/common': 1.45.0
+      '@powersync/react': 1.8.2(@powersync/common@1.45.0)(react@19.0.0)
+      async-mutex: 0.5.0
+      react: 19.0.0
+      react-native: 0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0)
+
+  '@powersync/react@1.8.2(@powersync/common@1.45.0)(react@19.0.0)':
+    dependencies:
+      '@powersync/common': 1.45.0
+      react: 19.0.0
 
   '@radix-ui/number@1.1.1': {}
 
@@ -13394,6 +13492,12 @@ snapshots:
 
   async-limiter@1.0.1: {}
 
+  async-lock@1.4.1: {}
+
+  async-mutex@0.5.0:
+    dependencies:
+      tslib: 2.8.1
+
   asynckit@0.4.0: {}
 
   available-typed-arrays@1.0.7:
@@ -14367,18 +14471,19 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250620.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2):
+  drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250620.0)(@op-engineering/op-sqlite@15.2.5(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0))(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2):
     optionalDependencies:
       '@cloudflare/workers-types': 4.20250620.0
+      '@op-engineering/op-sqlite': 15.2.5(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0)
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.11.6
       '@vercel/postgres': 0.10.0
       bun-types: 1.3.6
       kysely: 0.28.2
 
-  drizzle-zod@0.8.2(drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250620.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2))(zod@3.25.67):
+  drizzle-zod@0.8.2(drizzle-orm@0.44.2(@cloudflare/workers-types@4.20250620.0)(@op-engineering/op-sqlite@15.2.5(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0))(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2))(zod@3.25.67):
     dependencies:
-      drizzle-orm: 0.44.2(@cloudflare/workers-types@4.20250620.0)(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2)
+      drizzle-orm: 0.44.2(@cloudflare/workers-types@4.20250620.0)(@op-engineering/op-sqlite@15.2.5(react-native@0.79.3(@babel/core@7.27.4)(@types/react@19.1.8)(bufferutil@4.0.9)(react@19.0.0))(react@19.0.0))(@opentelemetry/api@1.9.0)(@types/pg@8.11.6)(@vercel/postgres@0.10.0)(bun-types@1.3.6)(kysely@0.28.2)
       zod: 3.25.67
 
   dunder-proto@1.0.1:
@@ -14889,6 +14994,8 @@ snapshots:
   esutils@2.0.3: {}
 
   etag@1.8.1: {}
+
+  event-iterator@2.0.0: {}
 
   event-target-shim@5.0.1: {}
 
@@ -16826,7 +16933,7 @@ snapshots:
       console-table-printer: 2.14.3
       p-queue: 6.6.2
       p-retry: 4.6.2
-      semver: 7.7.2
+      semver: 7.7.3
       uuid: 10.0.0
     optionalDependencies:
       openai: 4.104.0(ws@8.18.2(bufferutil@4.0.9))(zod@3.25.67)
