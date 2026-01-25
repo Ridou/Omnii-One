@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Monorepo Consolidation Preparation** - Establish tooling and merge strategy before consolidation ✓
 - [x] **Phase 1: Foundation Infrastructure** - Authentication, Neo4j multi-tenancy, compatibility resolution ✓
-- [ ] **Phase 2: Graph Core & MCP Server** - Graph schema, basic CRUD, MCP protocol implementation
+- [x] **Phase 2: Graph Core & MCP Server** - Graph schema, basic CRUD, MCP protocol implementation ✓
 - [ ] **Phase 3: GraphRAG & Advanced MCP** - Dual-channel retrieval, domain-aware tools, multi-AI support
 - [ ] **Phase 4: Data Ingestion Pipeline** - Google services integration with quality gates
 - [ ] **Phase 5: Mobile Client & Offline Sync** - React Native app with local-first architecture
@@ -91,13 +91,13 @@ Plans:
 **Plans:** 7 plans in 6 waves
 
 Plans:
-- [ ] 02-01-PLAN.md — Graph schema constants, node interfaces, and CRUD operations
-- [ ] 02-02-PLAN.md — Vector index configuration and semantic search operations
-- [ ] 02-03-PLAN.md — MCP server core with capability negotiation and transport
-- [ ] 02-04-PLAN.md — MCP tools: search_nodes, get_context, list_entities
-- [ ] 02-05-PLAN.md — Auth middleware and rate limiting for MCP routes
-- [ ] 02-06-PLAN.md — Schema setup wiring into user provisioning flow
-- [ ] 02-07-PLAN.md — Claude Desktop integration testing and documentation
+- [x] 02-01-PLAN.md — Graph schema constants, node interfaces, and CRUD operations
+- [x] 02-02-PLAN.md — Vector index configuration and semantic search operations
+- [x] 02-03-PLAN.md — MCP server core with capability negotiation and transport
+- [x] 02-04-PLAN.md — MCP tools: search_nodes, get_context, list_entities
+- [x] 02-05-PLAN.md — Auth middleware and rate limiting for MCP routes
+- [x] 02-06-PLAN.md — Schema setup wiring into user provisioning flow
+- [x] 02-07-PLAN.md — Claude Desktop integration testing and documentation
 
 ---
 
@@ -225,7 +225,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 0. Monorepo Consolidation Preparation | 5/5 | ✓ Complete | 2026-01-24 |
 | 1. Foundation Infrastructure | 5/5 | ✓ Complete | 2026-01-25 |
-| 2. Graph Core & MCP Server | 0/7 | Ready | - |
+| 2. Graph Core & MCP Server | 7/7 | ✓ Complete | 2026-01-25 |
 | 3. GraphRAG & Advanced MCP | 0/0 | Not started | - |
 | 4. Data Ingestion Pipeline | 0/0 | Not started | - |
 | 5. Mobile Client & Offline Sync | 0/0 | Not started | - |
@@ -234,4 +234,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-25 — Phase 2 planned (7 plans in 6 waves)*
+*Last updated: 2026-01-25 — Phase 2 complete (7/7 plans)*
