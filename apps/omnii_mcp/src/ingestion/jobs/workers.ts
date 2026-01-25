@@ -8,11 +8,21 @@
 import { Worker, Job } from "bullmq";
 import { getRedisConnection } from "./queue";
 import { enqueueAllUserSyncs, type SyncJobData } from "./sync-scheduler";
-import { ingestCalendarEvents, type CalendarSyncResult } from "../sources/google-calendar";
+import { ingestCalendarEvents } from "../sources/google-calendar";
 import { getSyncStateService } from "../sync-state";
 
 // Worker instances for cleanup
 let syncWorker: Worker<SyncJobData> | null = null;
+
+/** Unified sync result interface for all sources */
+interface SyncResult {
+  success: boolean;
+  eventsProcessed: number;
+  eventsCreated: number;
+  eventsSkipped: number;
+  contactsCreated: number;
+  errors: string[];
+}
 
 /**
  * Process a sync job
@@ -20,7 +30,7 @@ let syncWorker: Worker<SyncJobData> | null = null;
 async function processSyncJob(job: Job<SyncJobData>): Promise<{
   success: boolean;
   usersProcessed?: number;
-  result?: CalendarSyncResult;
+  result?: SyncResult;
 }> {
   const { source, userId } = job.data;
 
@@ -45,34 +55,64 @@ async function processSyncJob(job: Job<SyncJobData>): Promise<{
     }
 
     // Run the appropriate sync based on source
-    let result: CalendarSyncResult;
+    let result: SyncResult;
 
     switch (source) {
       case "google_calendar":
         result = await ingestCalendarEvents(userId, client);
         break;
 
-      // Future sources will be added here
-      // case "google_tasks":
-      //   result = await ingestTasks(userId, client);
-      //   break;
-      // case "google_gmail":
-      //   result = await ingestGmail(userId, client);
-      //   break;
-      // case "google_contacts":
-      //   result = await ingestContacts(userId, client);
-      //   break;
+      case "google_tasks": {
+        const { ingestTasks } = await import("../sources/google-tasks");
+        const taskResult = await ingestTasks(userId, client);
+        result = {
+          success: taskResult.success,
+          eventsProcessed: taskResult.tasksProcessed,
+          eventsCreated: taskResult.tasksCreated,
+          eventsSkipped: taskResult.tasksSkipped,
+          contactsCreated: 0,
+          errors: taskResult.errors,
+        };
+        break;
+      }
+
+      case "google_gmail": {
+        const { ingestGmail } = await import("../sources/google-gmail");
+        const gmailResult = await ingestGmail(userId, client);
+        result = {
+          success: gmailResult.success,
+          eventsProcessed: gmailResult.messagesProcessed,
+          eventsCreated: gmailResult.messagesCreated,
+          eventsSkipped: gmailResult.messagesSkipped,
+          contactsCreated: gmailResult.contactsCreated,
+          errors: gmailResult.errors,
+        };
+        break;
+      }
+
+      case "google_contacts": {
+        const { ingestContacts } = await import("../sources/google-contacts");
+        const contactResult = await ingestContacts(userId, client);
+        result = {
+          success: contactResult.success,
+          eventsProcessed: contactResult.contactsProcessed,
+          eventsCreated: contactResult.contactsCreated,
+          eventsSkipped: contactResult.contactsSkipped,
+          contactsCreated: 0,
+          errors: contactResult.errors,
+        };
+        break;
+      }
 
       default:
         throw new Error(`Unsupported sync source: ${source}`);
     }
 
     console.log(
-      `Sync complete for user ${userId}: ${result.eventsCreated} events, ${result.contactsCreated} contacts`
+      `Sync complete for user ${userId}: ${result.eventsCreated} items created, ${result.contactsCreated} contacts`
     );
 
     return { success: result.success, result };
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Sync failed for user ${userId}:`, errorMessage);

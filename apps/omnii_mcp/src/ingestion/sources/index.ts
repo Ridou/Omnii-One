@@ -2,12 +2,36 @@
  * Ingestion Sources
  *
  * Per-source data ingestion services.
- * Each service handles fetching, validating, and inserting data from one Google service.
  */
 
+// Calendar
 export {
   CalendarIngestionService,
   getCalendarIngestionService,
   ingestCalendarEvents,
   type CalendarSyncResult,
 } from "./google-calendar";
+
+// Tasks
+export {
+  TasksIngestionService,
+  getTasksIngestionService,
+  ingestTasks,
+  type TasksSyncResult,
+} from "./google-tasks";
+
+// Gmail
+export {
+  GmailIngestionService,
+  getGmailIngestionService,
+  ingestGmail,
+  type GmailSyncResult,
+} from "./google-gmail";
+
+// Contacts
+export {
+  ContactsIngestionService,
+  getContactsIngestionService,
+  ingestContacts,
+  type ContactsSyncResult,
+} from "./google-contacts";

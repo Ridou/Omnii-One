@@ -335,4 +335,108 @@ export const ingestionRoutes = new Elysia({ prefix: "/ingestion" })
         forceFullSync: t.Optional(t.Boolean()),
       }),
     }
+  )
+
+  /**
+   * Trigger tasks sync for a user
+   *
+   * POST /api/ingestion/sync/tasks
+   * Body: { userId: string, forceFullSync?: boolean }
+   */
+  .post(
+    "/sync/tasks",
+    async ({ body, set }) => {
+      const { userId, forceFullSync } = body;
+      try {
+        const { ingestTasks } = await import("../../ingestion/sources/google-tasks");
+        const { createClientForUser } = await import("../../services/neo4j/http-client");
+        const client = await createClientForUser(userId);
+        if (!client) {
+          set.status = 400;
+          return { error: "User database not provisioned" };
+        }
+        const result = await ingestTasks(userId, client, forceFullSync || false);
+        return {
+          success: result.success,
+          tasksProcessed: result.tasksProcessed,
+          tasksCreated: result.tasksCreated,
+          tasksSkipped: result.tasksSkipped,
+          errors: result.errors,
+        };
+      } catch (error) {
+        set.status = 500;
+        return { error: "Sync failed", details: error instanceof Error ? error.message : String(error) };
+      }
+    },
+    { body: t.Object({ userId: t.String({ minLength: 1 }), forceFullSync: t.Optional(t.Boolean()) }) }
+  )
+
+  /**
+   * Trigger Gmail sync for a user
+   *
+   * POST /api/ingestion/sync/gmail
+   * Body: { userId: string, forceFullSync?: boolean }
+   */
+  .post(
+    "/sync/gmail",
+    async ({ body, set }) => {
+      const { userId, forceFullSync } = body;
+      try {
+        const { ingestGmail } = await import("../../ingestion/sources/google-gmail");
+        const { createClientForUser } = await import("../../services/neo4j/http-client");
+        const client = await createClientForUser(userId);
+        if (!client) {
+          set.status = 400;
+          return { error: "User database not provisioned" };
+        }
+        const result = await ingestGmail(userId, client, forceFullSync || false);
+        return {
+          success: result.success,
+          messagesProcessed: result.messagesProcessed,
+          messagesCreated: result.messagesCreated,
+          messagesSkipped: result.messagesSkipped,
+          contactsCreated: result.contactsCreated,
+          errors: result.errors,
+        };
+      } catch (error) {
+        set.status = 500;
+        return { error: "Sync failed", details: error instanceof Error ? error.message : String(error) };
+      }
+    },
+    { body: t.Object({ userId: t.String({ minLength: 1 }), forceFullSync: t.Optional(t.Boolean()) }) }
+  )
+
+  /**
+   * Trigger contacts sync for a user
+   *
+   * POST /api/ingestion/sync/contacts
+   * Body: { userId: string, forceFullSync?: boolean }
+   */
+  .post(
+    "/sync/contacts",
+    async ({ body, set }) => {
+      const { userId, forceFullSync } = body;
+      try {
+        const { ingestContacts } = await import("../../ingestion/sources/google-contacts");
+        const { createClientForUser } = await import("../../services/neo4j/http-client");
+        const client = await createClientForUser(userId);
+        if (!client) {
+          set.status = 400;
+          return { error: "User database not provisioned" };
+        }
+        const result = await ingestContacts(userId, client, forceFullSync || false);
+        return {
+          success: result.success,
+          contactsProcessed: result.contactsProcessed,
+          contactsCreated: result.contactsCreated,
+          contactsUpdated: result.contactsUpdated,
+          contactsSkipped: result.contactsSkipped,
+          errors: result.errors,
+        };
+      } catch (error) {
+        set.status = 500;
+        return { error: "Sync failed", details: error instanceof Error ? error.message : String(error) };
+      }
+    },
+    { body: t.Object({ userId: t.String({ minLength: 1 }), forceFullSync: t.Optional(t.Boolean()) }) }
   );
