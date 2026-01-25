@@ -12,6 +12,8 @@ import { getMCPServer } from './server';
 import { SERVER_INFO } from './capabilities';
 import { TOOL_DEFINITIONS, getToolHandler } from './tools';
 import { mcpRateLimiter } from '../middleware/rate-limit';
+import { checkConstraints } from '../graph/schema/constraints';
+import { checkVectorIndex } from '../graph/schema/vector-index';
 
 /**
  * JSON-RPC 2.0 request structure
@@ -42,6 +44,21 @@ interface AuthContext {
 }
 
 /**
+ * User schema status for health check
+ */
+interface UserSchemaStatus {
+  userId: string;
+  constraintCount: number;
+  vectorIndex: {
+    name: string;
+    state: string;
+    populationPercent: number;
+    entityCount: number;
+    type: string;
+  } | null;
+}
+
+/**
  * MCP health check response structure
  */
 interface MCPHealthResponse {
@@ -50,6 +67,7 @@ interface MCPHealthResponse {
   server: string;
   version: string;
   tools: number;
+  userSchema?: UserSchemaStatus | { userId: string; error: string };
 }
 
 /**
@@ -139,15 +157,45 @@ export function createMCPRoutes() {
   app.use(mcpRateLimiter);
 
   // Health check for MCP endpoint (no auth required)
-  app.get('/health', (): MCPHealthResponse => {
+  // Optionally check user schema with ?userId=<uuid>
+  app.get('/health', async ({ query }): Promise<MCPHealthResponse> => {
     const { isInitialized } = getMCPServer();
-    return {
+    const baseHealth: MCPHealthResponse = {
       status: 'ok',
       initialized: isInitialized(),
       server: SERVER_INFO.name,
       version: SERVER_INFO.version,
       tools: TOOL_DEFINITIONS.length,
     };
+
+    // If userId provided, check their schema status
+    const userId = query.userId as string | undefined;
+    if (userId) {
+      try {
+        const client = await createClientForUser(userId);
+        const constraints = await checkConstraints(client);
+        const vectorIndex = await checkVectorIndex(client);
+
+        return {
+          ...baseHealth,
+          userSchema: {
+            userId,
+            constraintCount: constraints.length,
+            vectorIndex,
+          },
+        };
+      } catch (error) {
+        return {
+          ...baseHealth,
+          userSchema: {
+            userId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        };
+      }
+    }
+
+    return baseHealth;
   });
 
   // Main MCP message handler with authentication
