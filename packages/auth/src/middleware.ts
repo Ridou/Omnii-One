@@ -9,6 +9,10 @@ export interface AuthContext extends Record<string, unknown> {
 
 /**
  * Elysia middleware that validates Supabase JWT and extracts user info.
+ *
+ * NOTE: This middleware has issues with Bun's runtime when used via .use(authMiddleware).
+ * The .derive() doesn't propagate correctly. For now, inline auth checks are recommended.
+ *
  * Usage: app.use(authMiddleware).get('/protected', ({ user, tenantId }) => ...)
  */
 export const authMiddleware = new Elysia({ name: 'auth' })

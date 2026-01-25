@@ -1,11 +1,40 @@
 import { Elysia, t } from 'elysia';
-import { authMiddleware } from '@omnii/auth';
+import { createSupabaseClient } from '@omnii/auth';
 import { createClientForUser } from '../services/neo4j/http-client';
 import { getProvisioningStatus } from '../services/neo4j/provisioning';
+import type { User } from '@supabase/supabase-js';
+
+// Define auth context inline since plugin chain isn't working correctly
+interface AuthContext {
+  user: User;
+  tenantId: string;
+}
 
 export const graphRoutes = new Elysia({ prefix: '/graph' })
-  // All routes require authentication
-  .use(authMiddleware)
+  // Inline auth check - Elysia plugin chain doesn't propagate derive() correctly in Bun
+  .derive(async ({ headers, set }): Promise<AuthContext> => {
+    const authHeader = headers.authorization;
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      set.status = 401;
+      throw new Error('Missing or invalid authorization header');
+    }
+
+    const token = authHeader.substring(7);
+    const supabase = createSupabaseClient();
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      set.status = 401;
+      throw new Error('Invalid or expired token');
+    }
+
+    return {
+      user,
+      tenantId: user.id,
+    };
+  })
 
   // Check database status for current user
   .get('/status', async ({ tenantId }) => {

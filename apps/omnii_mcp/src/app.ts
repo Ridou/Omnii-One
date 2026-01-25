@@ -456,6 +456,39 @@ app.ws("/ws", {
 
 console.log("✅ WebSocket endpoint configured");
 
+// ✅ CRITICAL: Error handlers must be registered BEFORE app.listen()
+// Auth errors (401)
+app.onError(({ code, error, set }) => {
+  console.error("🚨 Error caught:", error);
+
+  // Extract error message safely
+  const errorMessage =
+    typeof error === "object" && error !== null && "message" in error
+      ? (error as Error).message
+      : "Internal Server Error";
+
+  // Handle auth errors - check for authorization-related messages
+  if (errorMessage.includes('authorization') ||
+      errorMessage.includes('Invalid or expired token') ||
+      errorMessage.includes('Missing or invalid')) {
+    set.status = 401;
+    return { error: 'Unauthorized', message: errorMessage };
+  }
+
+  // Handle not found
+  if (code === "NOT_FOUND" || errorMessage.includes('not found')) {
+    set.status = 404;
+    return { error: 'Not Found', message: errorMessage };
+  }
+
+  // Generic server error
+  set.status = 500;
+  return {
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? errorMessage : 'Something went wrong'
+  };
+});
+
 // Railway and other cloud platforms provide PORT via environment
 const port = process.env.PORT || DEFAULT_PORT;
 const host = "0.0.0.0"; // Listen on all interfaces for cloud deployment
@@ -562,49 +595,3 @@ try {
   console.error('💥 Failed to start server:', error);
   process.exit(1);
 }
-
-// Error handling
-app.onError(({ code, error, set }) => {
-  // Log the error
-  console.error("Unhandled error:", error);
-
-  // Extract error message safely
-  const errorMessage =
-    typeof error === "object" && error !== null && "message" in error
-      ? (error as Error).message
-      : "Internal Server Error";
-
-  // Handle specific error types
-  if (errorMessage.includes('authorization') || errorMessage.includes('Invalid or expired token')) {
-    set.status = 401;
-    return { error: 'Unauthorized', message: errorMessage };
-  }
-
-  if (errorMessage.includes('not found')) {
-    set.status = 404;
-    return { error: 'Not Found', message: errorMessage };
-  }
-
-  // Generic server error
-  set.status = 500;
-  return {
-    error: 'Internal Server Error',
-    message: env.NODE_ENV === 'development' ? errorMessage : 'Something went wrong'
-  };
-});
-
-// 404 handler
-app.onError(({ code, set }) => {
-  if (code === "NOT_FOUND") {
-    set.status = 404;
-    return {
-      success: false,
-      error: "Not Found",
-      message: "The requested resource was not found",
-    };
-  }
-});
-
-console.log('app',app)
-
-// export default app;
