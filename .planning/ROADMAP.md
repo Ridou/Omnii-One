@@ -62,10 +62,14 @@ Plans:
 4. Environment configuration system supports local, dev, and prod environments with proper secret management
 5. Second codebase consolidated into monorepo using established tooling
 
-**Plans**: TBD
+**Plans:** 5 plans in 4 waves
 
 Plans:
-- [ ] 01-01: TBD (to be planned)
+- [ ] 01-01-PLAN.md — Replace neo4j-driver with HTTP Query API client for Bun compatibility
+- [ ] 01-02-PLAN.md — Environment configuration with OMNII_* namespace and Zod validation
+- [ ] 01-03-PLAN.md — Standardize on Supabase Auth, remove better-auth, add auth middleware
+- [ ] 01-04-PLAN.md — Database-per-user provisioning via Neo4j Aura API and Supabase webhook
+- [ ] 01-05-PLAN.md — Wire auth middleware to routes and verify end-to-end auth flow
 
 ---
 
@@ -214,7 +218,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Monorepo Consolidation Preparation | 5/5 | ✓ Complete | 2026-01-24 |
-| 1. Foundation Infrastructure | 0/0 | Not started | - |
+| 1. Foundation Infrastructure | 0/5 | Planned | - |
 | 2. Graph Core & MCP Server | 0/0 | Not started | - |
 | 3. GraphRAG & Advanced MCP | 0/0 | Not started | - |
 | 4. Data Ingestion Pipeline | 0/0 | Not started | - |
@@ -224,4 +228,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-24 — Phase 0 complete*
+*Last updated: 2026-01-24 — Phase 1 planned (5 plans in 4 waves)*
