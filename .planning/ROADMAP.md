@@ -145,10 +145,17 @@ Plans:
 7. Incremental sync works using delta updates (not full refresh) with last sync timestamp tracking
 8. Background sync runs with rate limiting and jitter to avoid API quota exhaustion
 
-**Plans**: TBD
+**Plans:** 8 plans in 6 waves
 
 Plans:
-- [ ] 04-01: TBD (to be planned)
+- [ ] 04-01-PLAN.md — Infrastructure: Composio client, BullMQ queue, dependencies
+- [ ] 04-02-PLAN.md — Quality gates: Zod validation schemas for all Google services
+- [ ] 04-03-PLAN.md — Sync state: Supabase table and persistence service
+- [ ] 04-04-PLAN.md — OAuth routes: Google account connection via Composio
+- [ ] 04-05-PLAN.md — Calendar ingestion: Events to graph with incremental sync
+- [ ] 04-06-PLAN.md — Background jobs: BullMQ scheduler and workers
+- [ ] 04-07-PLAN.md — Additional sources: Tasks, Gmail, Contacts ingestion
+- [ ] 04-08-PLAN.md — Entity extraction wiring and end-to-end verification
 
 ---
 
@@ -232,11 +239,11 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundation Infrastructure | 5/5 | ✓ Complete | 2026-01-25 |
 | 2. Graph Core & MCP Server | 7/7 | ✓ Complete | 2026-01-25 |
 | 3. GraphRAG & Advanced MCP | 6/6 | ✓ Complete | 2026-01-25 |
-| 4. Data Ingestion Pipeline | 0/0 | Not started | - |
+| 4. Data Ingestion Pipeline | 0/8 | Planned | - |
 | 5. Mobile Client & Offline Sync | 0/0 | Not started | - |
 | 6. Orchestration & Automation | 0/0 | Not started | - |
 | 7. Production Hardening | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-25 — Phase 3 complete (6/6 plans executed, all verified)*
+*Last updated: 2026-01-25 — Phase 4 planned (8 plans in 6 waves)*
