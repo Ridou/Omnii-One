@@ -11,6 +11,7 @@ import chatDirectN8nRoutes from './chat-direct-n8n';
 import authRoutes from './auth';
 import { authWebhooks } from './webhooks/auth';
 import { graphRoutes } from './graph';
+import { createMCPRoutes } from '../mcp/transport';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
 
@@ -81,5 +82,10 @@ export default (app: Elysia) => {
   api.use(chatDirectN8nRoutes);
 
   // Mount the API routes under /api
-  return app.use(api);
+  app.use(api);
+
+  // Mount MCP routes at /mcp (not under /api - MCP clients expect /mcp directly)
+  app.use(createMCPRoutes());
+
+  return app;
 };
