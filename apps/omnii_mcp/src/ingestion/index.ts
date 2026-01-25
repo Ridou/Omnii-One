@@ -6,6 +6,7 @@
  * - BullMQ queue for background job processing
  * - Sync state for incremental sync tracking
  * - Validators for data quality gates
+ * - Sources for per-service ingestion logic
  */
 
 // Infrastructure
@@ -36,3 +37,11 @@ export {
   type GmailMessage,
   type GoogleContact,
 } from "./validators";
+
+// Sources
+export {
+  CalendarIngestionService,
+  getCalendarIngestionService,
+  ingestCalendarEvents,
+  type CalendarSyncResult,
+} from "./sources";
