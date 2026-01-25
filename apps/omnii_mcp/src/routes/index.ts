@@ -13,6 +13,7 @@ import { authWebhooks } from './webhooks/auth';
 import { graphRoutes } from './graph';
 import { openaiRoutes } from './openai';
 import { localLLMRoutes } from './local-llm';
+import { ingestionRoutes } from './ingestion';
 import { createMCPRoutes } from '../mcp/transport';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
@@ -84,6 +85,7 @@ export default (app: Elysia) => {
   api.use(chatHttpRoutes);
   api.use(n8nWebhookRoutes);
   api.use(chatDirectN8nRoutes);
+  api.use(ingestionRoutes);
 
   // Mount the API routes under /api
   app.use(api);
