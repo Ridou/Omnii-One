@@ -10,30 +10,30 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 1 of 7 (Foundation Infrastructure)
-Plan: 3 of 5 (Plan 01-03 complete)
+Plan: 4 of 5 (Plan 01-04 complete)
 Status: In progress
-Last activity: 2026-01-25 - Completed 01-03-PLAN.md (Standardize Supabase Auth)
+Last activity: 2026-01-24 - Completed 01-04-PLAN.md (Database Provisioning)
 
-Progress: [██████░░░░] 60% (3/5 plans in phase 1)
+Progress: [████████░░] 80% (4/5 plans in phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 4min
-- Total execution time: 34min
+- Total execution time: 38min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 0 | 5/5 | 24min | 5min |
-| Phase 1 | 2/5 | 10min | 5min |
+| Phase 1 | 4/5 | 14min | 4min |
 
 **Recent Trend:**
-- Last plan: 01-03 (3min)
-- Previous: 01-01 (7min)
-- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3min)
+- Last plan: 01-04 (4min)
+- Previous: 01-03 (3min)
+- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4min)
 
 *Updated after each plan completion*
 
@@ -86,6 +86,12 @@ Recent decisions affecting current work:
 - user_databases schema: Tracks Neo4j URI, credentials, Aura instance ID per user with status field for provisioning workflow
 - AuthContext interface: Extends Record<string, unknown> for Elysia middleware derive return type compatibility
 
+**From Phase 1 Plan 04 (01-04):**
+- Neo4j Aura API for database provisioning: Free-db tier for development, automatic provisioning on user signup via webhook
+- Background polling pattern for readiness: 5s intervals, 5min timeout, updates user_databases.status when instance is 'running'
+- URI conversion for HTTP API: Convert neo4j+s:// to https:// for HTTP Query API v2 compatibility
+- createClientForUser factory pattern: Per-user database isolation via client factory that looks up credentials from Supabase
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -120,8 +126,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T04:16:25Z
-Stopped at: Completed 01-03-PLAN.md (Standardize Supabase Auth) - 2 tasks committed, SUMMARY created
+Last session: 2026-01-24T22:23:36Z
+Stopped at: Completed 01-04-PLAN.md (Database Provisioning) - 3 tasks committed, SUMMARY created
 Resume file: None
 
-**Phase 1 Status:** In progress (3/5 plans complete)
+**Phase 1 Status:** In progress (4/5 plans complete)
