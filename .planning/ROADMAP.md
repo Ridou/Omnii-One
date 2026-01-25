@@ -13,7 +13,7 @@ This roadmap consolidates three divergent codebases (omnii monorepo, omnii-mobil
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Monorepo Consolidation Preparation** - Establish tooling and merge strategy before consolidation ✓
-- [ ] **Phase 1: Foundation Infrastructure** - Authentication, Neo4j multi-tenancy, compatibility resolution
+- [x] **Phase 1: Foundation Infrastructure** - Authentication, Neo4j multi-tenancy, compatibility resolution ✓
 - [ ] **Phase 2: Graph Core & MCP Server** - Graph schema, basic CRUD, MCP protocol implementation
 - [ ] **Phase 3: GraphRAG & Advanced MCP** - Dual-channel retrieval, domain-aware tools, multi-AI support
 - [ ] **Phase 4: Data Ingestion Pipeline** - Google services integration with quality gates
@@ -65,10 +65,10 @@ Plans:
 **Plans:** 5 plans in 4 waves
 
 Plans:
-- [ ] 01-01-PLAN.md — Replace neo4j-driver with HTTP Query API client for Bun compatibility
-- [ ] 01-02-PLAN.md — Environment configuration with OMNII_* namespace and Zod validation
-- [ ] 01-03-PLAN.md — Standardize on Supabase Auth, remove better-auth, add auth middleware
-- [ ] 01-04-PLAN.md — Database-per-user provisioning via Neo4j Aura API and Supabase webhook
+- [x] 01-01-PLAN.md — Replace neo4j-driver with HTTP Query API client for Bun compatibility
+- [x] 01-02-PLAN.md — Environment configuration with OMNII_* namespace and Zod validation
+- [x] 01-03-PLAN.md — Standardize on Supabase Auth, remove better-auth, add auth middleware
+- [x] 01-04-PLAN.md — Database-per-user provisioning via Neo4j Aura API and Supabase webhook
 - [ ] 01-05-PLAN.md — Wire auth middleware to routes and verify end-to-end auth flow
 
 ---
@@ -88,10 +88,16 @@ Plans:
 5. Claude Desktop can connect to MCP server and execute graph query tools successfully
 6. MCP requests are authenticated and rate-limited to prevent abuse
 
-**Plans**: TBD
+**Plans:** 7 plans in 6 waves
 
 Plans:
-- [ ] 02-01: TBD (to be planned)
+- [ ] 02-01-PLAN.md — Graph schema constants, node interfaces, and CRUD operations
+- [ ] 02-02-PLAN.md — Vector index configuration and semantic search operations
+- [ ] 02-03-PLAN.md — MCP server core with capability negotiation and transport
+- [ ] 02-04-PLAN.md — MCP tools: search_nodes, get_context, list_entities
+- [ ] 02-05-PLAN.md — Auth middleware and rate limiting for MCP routes
+- [ ] 02-06-PLAN.md — Schema setup wiring into user provisioning flow
+- [ ] 02-07-PLAN.md — Claude Desktop integration testing and documentation
 
 ---
 
@@ -218,8 +224,8 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Monorepo Consolidation Preparation | 5/5 | ✓ Complete | 2026-01-24 |
-| 1. Foundation Infrastructure | 0/5 | Planned | - |
-| 2. Graph Core & MCP Server | 0/0 | Not started | - |
+| 1. Foundation Infrastructure | 5/5 | ✓ Complete | 2026-01-25 |
+| 2. Graph Core & MCP Server | 0/7 | Ready | - |
 | 3. GraphRAG & Advanced MCP | 0/0 | Not started | - |
 | 4. Data Ingestion Pipeline | 0/0 | Not started | - |
 | 5. Mobile Client & Offline Sync | 0/0 | Not started | - |
@@ -228,4 +234,4 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-24 — Phase 1 planned (5 plans in 4 waves)*
+*Last updated: 2026-01-25 — Phase 2 planned (7 plans in 6 waves)*
