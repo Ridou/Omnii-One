@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 2 of 7 (Graph Core & MCP Server)
-Plan: 1 of 7 (Graph Schema and CRUD)
+Plan: 2 of 7 (Vector Search and Embeddings)
 Status: In progress
-Last activity: 2026-01-25 - Completed 02-01-PLAN.md (Graph Schema and CRUD)
+Last activity: 2026-01-25 - Completed 02-02-PLAN.md (Vector Search and Embeddings)
 
-Progress: [██░░░░░░░░] 14% Phase 2 (1/7 plans complete)
+Progress: [███░░░░░░░] 29% Phase 2 (2/7 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: 4min
-- Total execution time: 42min
+- Total execution time: 45min
 
 **By Phase:**
 
@@ -29,12 +29,12 @@ Progress: [██░░░░░░░░] 14% Phase 2 (1/7 plans complete)
 |-------|-------|-------|----------|
 | Phase 0 | 5/5 | 24min | 5min |
 | Phase 1 | 4/5 | 14min | 4min |
-| Phase 2 | 1/7 | 4min | 4min |
+| Phase 2 | 2/7 | 7min | 4min |
 
 **Recent Trend:**
-- Last plan: 02-01 (4min)
-- Previous: 01-04 (4min)
-- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4→4min)
+- Last plan: 02-02 (3min)
+- Previous: 02-01 (4min)
+- Trend: Stabilizing around 3-7min (6→6→4→5→3→7→3→4→4→3min)
 
 *Updated after each plan completion*
 
@@ -98,6 +98,12 @@ Recent decisions affecting current work:
 - 1536-dimension embedding field for OpenAI ada-002: Standard embedding size for vector similarity search
 - Parameterized Cypher queries: All CRUD operations use parameters to prevent injection
 
+**From Phase 2 Plan 02 (02-02):**
+- HNSW algorithm with cosine similarity: Best balance of speed and accuracy for embedding search
+- Exponential backoff for rate limits: 1s/2s/4s retry pattern respects OpenAI API limits
+- searchByText as primary interface: Natural language queries converted to embeddings for vector search
+- db.index.vector.queryNodes procedure: Neo4j native vector search for HNSW index
+
 **From Roadmap:**
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
@@ -115,10 +121,12 @@ None yet.
 - ~~Runtime validation needed~~ - RESOLVED: omnii-mcp app startup confirmed (✅ initializes, env var failure expected)
 - Python RDF service lacks package.json (sherif warning - documented as known non-blocking issue)
 
-**Phase 1 - IN PROGRESS:**
+**Phase 1 - COMPLETE:**
 - ~~Neo4j-Bun compatibility mitigation strategy~~ - RESOLVED: Using HTTP Query API v2 instead of TCP driver (Plan 01-01)
 - ~~Auth standardization (better-auth vs Supabase)~~ - RESOLVED: Standardized on Supabase Auth, better-auth removed (Plan 01-03)
-- Embedding model selection - OpenAI vs. local models for offline use (awaiting Plan 01-04 or later)
+
+**Phase 2 - IN PROGRESS:**
+- ~~Embedding model selection~~ - RESOLVED: Using OpenAI ada-002 for server-side embeddings (Plan 02-02)
 
 **Phase 3 research needed:**
 - GraphRAG implementation patterns with LangChain + Neo4j (emerging patterns)
@@ -132,8 +140,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T09:54:00Z
-Stopped at: Completed 02-01-PLAN.md (Graph Schema and CRUD) - 3 tasks committed, SUMMARY created
+Last session: 2026-01-25T10:00:00Z
+Stopped at: Completed 02-02-PLAN.md (Vector Search and Embeddings) - 3 tasks committed, SUMMARY created
 Resume file: None
 
-**Phase 2 Status:** In progress (1/7 plans complete)
+**Phase 2 Status:** In progress (2/7 plans complete)
