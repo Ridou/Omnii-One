@@ -1,5 +1,6 @@
 import { createSupabaseAdmin } from '@omnii/auth';
 import type { AuraInstanceRequest, AuraInstanceResponse, AuraInstanceStatus } from '../../types/neo4j.types';
+import { setupUserSchema } from '../../../scripts/setup-user-schema';
 
 const AURA_API_BASE = 'https://api.neo4j.io/v1';
 
@@ -128,7 +129,22 @@ async function pollInstanceStatus(userId: string, instanceId: string): Promise<v
           .update({ status: 'ready' })
           .eq('user_id', userId);
 
-        console.log(`Database ready for user ${userId}`);
+        console.log(`[Provisioning] Database ready for user ${userId}`);
+
+        // Trigger schema setup in background (don't block or fail provisioning)
+        setupUserSchema(userId)
+          .then((result) => {
+            if (result.success) {
+              console.log(`[Provisioning] Schema setup complete for user ${userId}`);
+            } else {
+              console.warn(`[Provisioning] Schema setup issues for user ${userId}:`, result);
+            }
+          })
+          .catch((error) => {
+            console.error(`[Provisioning] Schema setup failed for user ${userId}:`, error);
+            // Don't throw - schema setup failure shouldn't fail provisioning
+          });
+
         return;
       }
 

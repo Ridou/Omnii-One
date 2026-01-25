@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { provisionUserDatabase, getProvisioningStatus } from '../../services/neo4j/provisioning';
+import { setupUserSchema } from '../../../scripts/setup-user-schema';
 
 // Supabase webhook payload type
 const SignupWebhookBody = t.Object({
@@ -55,6 +56,30 @@ export const authWebhooks = new Elysia({ prefix: '/webhooks/auth' })
   .get('/status/:userId', async ({ params }) => {
     const status = await getProvisioningStatus(params.userId);
     return status;
+  }, {
+    params: t.Object({
+      userId: t.String(),
+    }),
+  })
+
+  // Manual schema setup endpoint (admin only)
+  .post('/setup-schema/:userId', async ({ params, headers, set }) => {
+    const adminKey = headers['x-admin-key'];
+    if (adminKey !== process.env.ADMIN_KEY) {
+      set.status = 401;
+      return { error: 'Unauthorized' };
+    }
+
+    try {
+      const result = await setupUserSchema(params.userId);
+      return result;
+    } catch (error) {
+      set.status = 500;
+      return {
+        error: 'Schema setup failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }, {
     params: t.Object({
       userId: t.String(),
