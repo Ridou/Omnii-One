@@ -1,82 +1,25 @@
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
-import { expoClient } from "@better-auth/expo/client";
-import { createAuthClient } from "better-auth/react";
+// apps/omnii-mobile/src/utils/auth.ts
+// Legacy auth utilities - now using Supabase
 
-import { getBaseUrl } from "./base-url";
-
-// Platform-aware storage adapter
-const createPlatformStorage = () => {
-  if (Platform.OS === 'web') {
-    // Web fallback using localStorage
-    return {
-      getItem: async (key: string) => {
-        try {
-          return localStorage.getItem(key);
-        } catch {
-          return null;
-        }
-      },
-      setItem: async (key: string, value: string) => {
-        try {
-          localStorage.setItem(key, value);
-        } catch {
-          // Ignore errors
-        }
-      },
-      removeItem: async (key: string) => {
-        try {
-          localStorage.removeItem(key);
-        } catch {
-          // Ignore errors
-        }
-      },
-      // Required sync methods for web compatibility
-      getValueWithKeySync: (key: string) => {
-        try {
-          return localStorage.getItem(key);
-        } catch {
-          return null;
-        }
-      },
-      setValueWithKeySync: (key: string, value: string) => {
-        try {
-          localStorage.setItem(key, value);
-        } catch {
-          // Ignore errors
-        }
-      },
-      deleteValueWithKeySync: (key: string) => {
-        try {
-          localStorage.removeItem(key);
-        } catch {
-          // Ignore errors
-        }
-      },
-    };
-  }
-  
-  // Native mobile - use SecureStore directly
-  return SecureStore;
-};
-
-export const authClient = createAuthClient({
-  baseURL: getBaseUrl(),
-  plugins: [
-    expoClient({
-      scheme: "omnii-mobile",
-      storagePrefix: "omnii",
-      storage: createPlatformStorage(),
-    }),
-  ],
-});
+import { supabase } from '~/lib/supabase';
 
 // Debug helper to check auth status
 export const debugAuthStatus = async () => {
   try {
-    const session = await authClient.getSession();
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn('[Auth Debug] Error getting session:', error.message);
+      return null;
+    }
     return session;
   } catch (error) {
+    console.warn('[Auth Debug] Exception:', error);
     return null;
   }
+};
+
+// Get current user ID (for compatibility)
+export const getCurrentUserId = async (): Promise<string | null> => {
+  const session = await debugAuthStatus();
+  return session?.user?.id ?? null;
 };
