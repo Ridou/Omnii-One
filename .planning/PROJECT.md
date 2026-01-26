@@ -8,30 +8,51 @@ A personal context server that consolidates all user data (emails, calendar, tas
 
 **AI always has the right context.** When you ask any AI about your life, work, or data, it can query your personal graph and respond with full awareness of who you are, what you're doing, and what matters to you.
 
+## Current Milestone: v2.0 Feature Expansion
+
+**Goal:** Expand the personal context server with local file ingestion, notes capture, enhanced AI intelligence, and gamification to create a complete personal knowledge system.
+
+**Target features:**
+- Local files/documents ingestion (PDFs, Word, text, code, markdown)
+- Notes/knowledge capture (quick capture, templates, wiki-style linking)
+- Enhanced AI intelligence (entity extraction, proactive suggestions, cross-source connections)
+- Full gamification system (XP, levels, achievements, mascot, analytics)
+
 ## Requirements
 
-### Validated
+### Validated (v1.0)
 
-(None yet — ship to validate)
+Shipped and confirmed working in v1.0:
 
-### Active
+- ✓ Unified graph database with database-per-user multi-tenancy — v1.0 Phase 1
+- ✓ MCP server exposing 10 tools to Claude, OpenAI, local LLMs — v1.0 Phase 2-3
+- ✓ Google services integration (Calendar, Tasks, Gmail, Contacts) — v1.0 Phase 4
+- ✓ n8n orchestration with webhook triggers and AI execution — v1.0 Phase 6
+- ✓ Mobile app with PowerSync offline-first architecture — v1.0 Phase 5
+- ✓ GraphRAG dual-channel retrieval (67% better than traditional RAG) — v1.0 Phase 3
+- ✓ Sentry error tracking, OpenTelemetry, adaptive sync — v1.0 Phase 7
+- ✓ GDPR data export and version history with rollback — v1.0 Phase 7
 
-- [ ] Unified graph database storing all user data with proper multi-tenant isolation
-- [ ] MCP server exposing graph queries to Claude, OpenAI, and local LLMs
-- [ ] Google services integration (Calendar, Tasks, Gmail, Contacts)
-- [ ] n8n orchestration for workflows, automations, and data ingestion
-- [ ] Mobile app with fun styling showing unified data view
-- [ ] Local files/documents ingestion into graph
-- [ ] Notes/knowledge capture system
-- [ ] SMS/messaging integration via Twilio
-- [ ] Integration store for users to select and connect data sources
-- [ ] Secure API for AI context retrieval
+### Active (v2.0)
+
+Current scope for v2.0:
+
+- [ ] Local file ingestion (PDFs, Word docs, text files, code repos, markdown)
+- [ ] Notes/knowledge capture system (quick capture, templates, wiki-linking)
+- [ ] Enhanced entity extraction with custom NLP models
+- [ ] Proactive context suggestions ("Heads Up" before meetings)
+- [ ] Cross-source relationship inference
+- [ ] XP and level progression system
+- [ ] Achievement system
+- [ ] Mascot companion
+- [ ] Productivity analytics dashboard
 
 ### Out of Scope
 
-- Gamification system (XP, levels, achievements) — deferred to later phase, keep UI styling vibe
-- Complex analytics dashboards — focus on core data flow first
-- Third-party app marketplace — user-managed integrations only for now
+- Third-party app marketplace — user-managed integrations only
+- Social/sharing features — personal data stays private
+- Built-in LLM — model-agnostic MCP approach is strategic advantage
+- Real-time collaboration — single-user focus for v2
 
 ## Context
 
@@ -74,4 +95,4 @@ A personal context server that consolidates all user data (emails, calendar, tas
 | Neo4j multi-tenancy approach | Research needed for best practices | — Pending |
 
 ---
-*Last updated: 2026-01-24 after initialization*
+*Last updated: 2026-01-26 after v1.0 complete, starting v2.0*
