@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { searchByText, type NodeLabel } from '../../graph';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 import { parseTemporalQuery } from '../../services/graphrag/temporal-context';
+import { logAuditEvent, AuditEventType } from '../../services/audit';
 
 /**
  * Zod schema for search_nodes input validation.
@@ -110,11 +111,29 @@ export interface MCPToolResponse {
  */
 export async function handleSearchNodes(
   client: Neo4jHTTPClient,
-  input: unknown
+  input: unknown,
+  userId?: string
 ): Promise<MCPToolResponse> {
   try {
     // Validate input with Zod schema
     const parsed = SearchNodesInputSchema.parse(input);
+
+    // Log audit event for SEC-04 compliance
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'graph_search', name: 'omnii_graph_search_nodes' },
+      severity: 'info',
+      metadata: {
+        query: parsed.query,
+        limit: parsed.limit,
+        nodeTypes: parsed.nodeTypes,
+        minScore: parsed.minScore,
+        timeRange: parsed.timeRange,
+      },
+    });
 
     // Perform semantic search
     let results = await searchByText(client, parsed.query, {
@@ -230,6 +249,19 @@ export async function handleSearchNodes(
     }
 
     // Handle other errors
+    // Log error audit event
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'graph_search', name: 'omnii_graph_search_nodes' },
+      severity: 'error',
+      metadata: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
     return {
       content: [
         {

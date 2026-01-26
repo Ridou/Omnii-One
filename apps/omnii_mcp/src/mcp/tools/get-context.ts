@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { getNode, findRelatedNodes } from '../../graph';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 import type { MCPToolResponse } from './search-nodes';
+import { logAuditEvent, AuditEventType } from '../../services/audit';
 
 /**
  * Zod schema for get_context input validation.
@@ -65,11 +66,27 @@ export const getContextToolDefinition = {
  */
 export async function handleGetContext(
   client: Neo4jHTTPClient,
-  input: unknown
+  input: unknown,
+  userId?: string
 ): Promise<MCPToolResponse> {
   try {
     // Validate input with Zod schema
     const parsed = GetContextInputSchema.parse(input);
+
+    // Log audit event for SEC-04 compliance
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'graph_node', name: 'omnii_graph_get_context', id: parsed.nodeId },
+      severity: 'info',
+      metadata: {
+        nodeId: parsed.nodeId,
+        includeRelated: parsed.includeRelated,
+        maxDepth: parsed.maxDepth,
+      },
+    });
 
     // Fetch the node
     const node = await getNode(client, parsed.nodeId);
@@ -156,6 +173,19 @@ export async function handleGetContext(
     }
 
     // Handle other errors
+    // Log error audit event
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'graph_node', name: 'omnii_graph_get_context' },
+      severity: 'error',
+      metadata: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
     return {
       content: [
         {
