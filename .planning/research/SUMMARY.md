@@ -1,517 +1,337 @@
-# Project Research Summary
+# Project Research Summary - v2.0
 
-**Project:** Omnii One - Personal Context Server
-**Domain:** Personal knowledge graph / MCP server / Local-first AI context system
-**Researched:** 2026-01-24
-**Confidence:** MEDIUM-HIGH
+**Project:** Omnii One v2.0 Feature Expansion
+**Domain:** Personal context server with knowledge management
+**Researched:** 2026-01-26
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Omnii One sits at a strategic intersection: a personal knowledge graph that exposes context to AI assistants via MCP, built with local-first architecture for privacy, and consolidating three divergent codebases. Research reveals this is a **high-value white space** — no major competitor combines graph-native storage, MCP exposure, and n8n extensibility. However, success hinges on avoiding the "build everything at once" trap that plagues 60% of AI projects.
+v2.0 adds local file ingestion, notes capture, enhanced AI intelligence, and gamification to the existing v1.0 personal context server. Research shows these features integrate cleanly with the proven Bun/Elysia/Neo4j/PowerSync architecture by extending existing patterns: BullMQ workers for file processing (mirrors Google services ingestion), Neo4j Document/Chunk nodes (extends entity graph), PowerSync sync for offline notes, and Supabase tables for gamification state.
 
-The recommended approach prioritizes **retrieval over ingestion**: design how AI queries the graph before populating it. Use Neo4j's database-per-user multi-tenancy for complete isolation, implement GraphRAG (dual-channel vector + graph retrieval) for 67% better accuracy than traditional RAG, and expose capabilities via MCP's official TypeScript SDK. The critical path is Foundation → MCP Exposure → Mobile Client, resisting scope creep into too many data sources simultaneously.
+The recommended approach prioritizes file ingestion first (extends proven pipeline, provides document corpus), then notes capture (needs chunking strategies), then enhanced NLP (needs document corpus for validation), and finally gamification (pure additive). This sequence follows dependency chains and derisks integration by building on validated v1.0 patterns. Use JavaScript-native NLP (compromise, Transformers.js) rather than Python microservices to maintain operational simplicity; defer to v3.0 if accuracy metrics demand it.
 
-**Key risks and mitigation:** (1) **Neo4j-Bun incompatibility** requires HTTP proxy layer or alternative database; (2) **Monorepo consolidation** demands specialized tooling (Nx/Turborepo) before merge; (3) **Local-first sync conflicts** require CRDTs or proven sync engines, not custom implementations; (4) **MCP security vulnerabilities** necessitate tool permission boundaries and input validation from day one. Start with ONE data source, validate AI improvement, then expand incrementally.
+Critical risks center on data quality degradation and user trust erosion. File parsing achieves only 50-70% accuracy "out of the box" without validation gates. LLM entity extraction generates hallucinations and duplicate nodes at scale without semantic entity resolution. Gamification effectiveness drops after 3 days without meaningful progression systems. Notes sync conflicts cause data loss if not using CRDTs. All require human-in-the-loop validation and quality scoring that v1.0's structured Google data didn't need. Prevention: build extraction quality scoring, entity resolution, and CRDT-based sync from day one—not as post-launch fixes.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is modern and production-ready for 2025-2026, but faces a **critical incompatibility issue**: Neo4j's JavaScript driver doesn't work reliably with Bun runtime. This requires architectural mitigation before implementation begins.
+v2.0 builds on the validated v1.0 stack (Bun, Elysia, Neo4j HTTP API, Supabase, PowerSync, React Native 0.79.3/Expo 53) with strategic additions focused on JavaScript-native solutions to maintain operational simplicity.
 
 **Core technologies:**
-- **Bun + Elysia**: Recommended for 3x Node.js performance, native TypeScript, end-to-end type safety via Eden Treaty. Caveat: Neo4j compatibility blocker requires HTTP proxy layer
-- **Neo4j 5.21+**: Industry-leading graph database with native vector search (HNSW), mature multi-tenancy via database-per-user pattern, excellent GraphRAG ecosystem. Use database-per-tenant, not label-based filtering
-- **Supabase**: PostgreSQL + auth + storage with native MCP authentication support (OAuth 2.1), RLS for multi-tenancy, local development via Docker. Handles user profiles, auth, relational metadata
-- **MCP TypeScript SDK**: Official implementation supporting Streamable HTTP, OAuth helpers, full 2025-11-25 spec. Avoid niche frameworks; stick with battle-tested SDK
-- **React Native + Expo SDK 52+**: Mobile framework with official local-first architecture docs. Use Expo Router for file-based navigation, Legend-State or TinyBase for offline sync
-- **n8n (self-hosted)**: Workflow orchestration with 400+ integrations, native AI/LangChain support, pairs with Composio for secure OAuth
-- **Composio**: Brokered credentials for external integrations (Google, etc.), tokens never reach app runtime, SOC 2 compliant
 
-**Critical decision required:** Neo4j + Bun incompatibility mitigation. Options: (A) HTTP proxy layer wrapping neo4j-driver in Node.js, (B) Alternative graph DB (FalkorDB, SurrealDB), or (C) Hybrid runtime. Recommendation: Option A if GraphRAG ecosystem is non-negotiable.
+**Backend additions:**
+- **unpdf (v1.4.0)**: PDF text extraction — Modern serverless-optimized parser using PDF.js internally, works across all JS runtimes including Bun, more robust than pdf-parse for complex documents
+- **mammoth (v1.8.0)**: Word doc parsing — De facto standard for .docx conversion to HTML, actively maintained
+- **markdown-it (v14.1.0) + markdown-it-wikilinks (v1.0.0)**: Markdown parsing with wiki-style linking — Enables Obsidian-style `[[brackets]]` bidirectional links
+- **tree-sitter (v0.21.1)**: Code parsing — Superior AST-based parsing for 70+ languages, used by GitHub
+- **compromise (v14.13.0) + @xenova/transformers (v2.17.0)**: Entity extraction — JavaScript-native NLP avoiding Python microservice complexity. Use compromise for real-time, Transformers.js with BERT NER for batch processing
+- **file-type (v19.6.0)**: MIME detection for ingestion routing
 
-**Confidence note:** HIGH on individual technologies, MEDIUM on integration approach due to Bun-Neo4j conflict requiring workaround.
+**Mobile additions:**
+- **@jamsch/expo-speech-recognition (v0.3.1)**: Voice transcription — Uses native iOS/Android speech recognition, faster to ship than whisper.rn
+- **react-native-reanimated (v4.2.1)**: Core animations — 60fps UI thread animations, v4.x compatible with RN 0.79.3 New Architecture
+- **lottie-react-native (v7.3.5) + rive-react-native (v6.0.0)**: Dual animation system — Lottie for mascot character (After Effects workflow), Rive for UI gamification (3x faster, 12x smaller files)
+- **react-native-gifted-charts (v1.4.40)**: Analytics charts — Feature-rich, visually appealing, covers 90% of dashboard needs
+
+**Key decisions:**
+- JavaScript-native NLP over Python microservices (defer to v3.0 if accuracy metrics show need)
+- Native OS speech recognition over whisper.rn (100MB+ model download, ship faster for MVP)
+- Both Lottie AND Rive (artists use Lottie, performance needs Rive)
+- Backend-side entity extraction (consistency, GPU acceleration, centralized fine-tuning)
 
 ### Expected Features
 
-The competitive landscape divides into knowledge management (Obsidian), AI-first memory (Mem.ai, Rewind), and personal CRM (Clay). Omnii One's unique positioning combines all three via MCP exposure — no competitor offers this.
+Research identifies a clear split between table stakes (users expect in any knowledge management system) and differentiators (Omnii One's competitive advantages from MCP + graph architecture).
 
 **Must have (table stakes):**
-- Multi-source data ingestion — users expect data everywhere (email, calendar, notes, files)
-- Semantic search — 2026 baseline; keyword-only feels outdated
-- Graph visualization — users need to see connections to trust the system
-- Offline mode — local-first expected; cloud-only is dealbreaker
-- Mobile access — capture/retrieve anywhere with offline-first architecture
-- Privacy controls — local storage option, transparent data usage (Rewind's local-only was key selling point)
-- Auto-categorization — AI must reduce manual organization friction
+- **Import common file formats (PDF, DOCX, TXT, MD, code)** — Users have existing documents, expect seamless ingestion
+- **Quick capture (<3 seconds from anywhere)** — Notion's Cmd+Shift+N pattern, mobile widgets, speed is critical or users abandon
+- **Wiki-style linking `[[brackets]]`** — Third-generation note apps standard since Roam 2019, bidirectional with backlinks panel
+- **Search across all content** — Vector + full-text search for file contents and notes
+- **Entity extraction (people, dates, places)** — Baseline NER is table stakes, graph stays shallow without it
+- **Basic progress indicators** — XP bar, current level, next milestone visibility for gamification engagement
 
 **Should have (competitive differentiators):**
-- **MCP server exposure** — UNIQUE POSITIONING: let AI assistants access personal context natively (no major competitor does this)
-- **GraphRAG retrieval** — 67% better accuracy vs. traditional RAG via dual-channel (vector + graph traversal)
-- **n8n workflow integration** — power users build custom automations (auto-import Slack, summarize emails)
-- **Relationship discovery** — surface hidden connections via graph algorithms (community detection, similarity)
-- **Automatic data enrichment** — AI fills missing details (job titles, company info) without user input
-- **Contextual resurfacing** — proactive "Heads Up" notifications before meetings
+- **Cross-source relationship inference** — Auto-connect "This meeting is with John, who emailed yesterday about project X" (GraphRAG advantage)
+- **Proactive context ("Heads Up")** — Surface relevant info 15min before meetings (Gemini launched this Jan 2026 as "Personal Intelligence")
+- **Code repository ingestion** — Developers want work context, most PKM apps ignore code
+- **Offline-first file processing** — Process locally, sync when ready (privacy + speed vs. cloud-first competitors)
+- **MCP-native gamification** — AI can grant achievements via tool calls ("Claude helped you complete 50th task")
+- **Incremental achievements** — Long-term goals broken into tiers (research shows 10-session minimum reduces abandonment)
+- **Mascot with personality** — Emotional connection drives retention (Duolingo model)
+- **Actionable analytics** — "Your 3pm meetings have 40% more follow-up tasks" not vanity metrics
 
 **Defer (v2+):**
-- Built-in note editor — focus on ingestion + retrieval; let users write where they want (Obsidian, Notion)
-- Voice-first capture — valuable but mobile-dependent, complex transcription pipeline
-- Social/sharing features — anti-pattern for personal data; focus on individual use
-- Multi-modal storage (images, PDFs, audio) — start text-only, expand incrementally
+- **Custom entity types** — Complex, not critical for initial release
+- **Multi-modal extraction (images/charts)** — Defer until text extraction validated
+- **Real-time collaborative editing** — Single-user focus, massive complexity (CRDT, conflict resolution)
+- **Social/sharing features** — Against privacy principles
 
 **Anti-features (explicitly avoid):**
-- Built-in LLM — expensive, outdated quickly; MCP lets users bring their own (Claude, ChatGPT)
-- Rigid folder hierarchies — goes against graph/networked thought model; use tags + graph
-- Single AI model lock-in — model-agnostic MCP approach is strategically superior
+- **Built-in rich text editor** — Scope creep, support markdown + external editors
+- **Mandatory cloud sync** — Privacy dealbreaker, make cloud optional
+- **Overly chatty AI** — Research shows constant interruptions = annoying, user-initiated only
+- **Streak-based gamification only** — Creates anxiety, use persistent XP + levels instead
+- **Vanity metric dashboards** — Show actionable patterns, not "You created 47 notes!"
 
 ### Architecture Approach
 
-The architecture follows a multi-layered pattern with clear separation: MCP server layer exposes knowledge graph to AI applications, backend API (Bun/Elysia) orchestrates business logic and real-time communication, Neo4j stores per-user graph databases, Supabase handles auth and relational data, n8n coordinates workflows and external integrations, and mobile clients use local-first architecture with offline sync.
+v2.0 extends v1.0's proven patterns (BullMQ workers, Neo4j graph, PowerSync sync, MCP tools) rather than replacing them. Integration follows four parallel tracks that converge on the existing infrastructure.
 
 **Major components:**
-1. **MCP Server Layer** — Exposes tools, resources, and prompts to AI applications via JSON-RPC 2.0. Supports STDIO (local) and HTTP+SSE (remote). Provides graph queries, entity creation, action execution, and intervention requests
-2. **Backend API Layer (Bun/Elysia)** — Business logic with tRPC WebSocket subscriptions for real-time updates. Houses entity recognition (BiLSTM+CRF), action planning, intervention management, and sync service (delta sync with conflict resolution)
-3. **Neo4j Graph Layer** — Multi-tenant via database-per-user (complete isolation). Stores entities, relationships, concepts with embeddings for semantic search. Implements GraphRAG with hybrid retrieval (BM25 + vector)
-4. **Supabase Layer** — Authentication (JWT with tenant_id in app_metadata), RLS for relational data, OAuth integration. PostgreSQL for user profiles, settings, metadata
-5. **n8n Orchestration Layer** — Workflow automation for data pipelines, external service integration (Google via Composio), multi-agent AI workflows, scheduled tasks
-6. **Mobile Client Layer (React Native/Expo)** — Offline-first with local Realm/SQLite, tRPC WebSocket sync, background sync with jitter, conflict resolution via CRDTs or proven sync engine
 
-**Critical patterns to follow:**
-- **Database-per-tenant** (Neo4j 4.0+): Complete data isolation, independent backups, aligns with local-first philosophy
-- **GraphRAG dual-channel retrieval**: Vector search + graph traversal combined for 90% hallucination reduction vs. traditional RAG
-- **Local-first with delta sync**: Store locally first, sync changes in batches, conflict resolution via CRDTs (Automerge, Yjs)
-- **Brokered credentials (Composio)**: OAuth tokens never reach app runtime, automatic lifecycle management, SOC 2 compliant
+1. **File Ingestion Pipeline** — Extends BullMQ worker pattern from Google services. Uses officeParser for multi-format parsing, semantic/markdown/code chunking strategies, generates embeddings via existing service. Neo4j Document/Chunk nodes with kNN similarity graph. Supabase Storage for blobs (existing infrastructure), metadata in graph. Key: Async processing with status updates via PowerSync, not blocking UI.
 
-**Anti-patterns to avoid:**
-- Polling for real-time updates — use WebSocket subscriptions instead
-- Shared Neo4j database with label filtering — data leakage risk, performance issues
-- Full-sync on every app launch — use first-time sync + delta sync pattern
-- Synchronous graph queries blocking UI — local-first with async background sync
-- Monolithic MCP server — one server = one clear purpose; separate filesystem/database/API servers
+2. **Notes Capture System** — Leverages PowerSync offline-first sync, Neo4j bidirectional relationships for wiki-style `[[links]]`. Note nodes with LINKS_TO relationships, WikiLinkParser service for extraction, template system for common note types. Supabase sync_notes table for mobile offline queue. Key: CRDT-based sync to prevent data loss from offline conflicts, quick capture (<3s) from widgets.
+
+3. **Enhanced NLP Pipeline** — Builds on existing EntityExtractionService with hybrid approach: compromise for real-time lightweight extraction, @xenova/transformers with BERT NER for batch processing, LLM fallback for ambiguous cases. ProactiveContextService queries temporal context (upcoming 24hrs) and surfaces GraphRAG retrieval. RelationshipInference service suggests cross-source connections with user approval. Key: Backend-side processing (consistency, GPU, centralized tuning), confidence thresholds, semantic entity resolution to prevent duplicate explosion.
+
+4. **Gamification System** — Uses Supabase tables (user_gamification, achievements, user_achievements, xp_transactions) synced via PowerSync. XPEngine awards XP for actions, AchievementEngine evaluates criteria, MascotSystem manages mood/dialogue. Real-time tRPC subscriptions for live XP updates. Event-driven architecture: action completes → award XP → PowerSync sync → mobile animation. Key: Batched XP awards (30s windows), persistent levels not streaks, optional opt-out.
+
+**Integration matrix:**
+
+| v2.0 Feature | Extends v1.0 Component | New Services | Storage |
+|--------------|------------------------|--------------|---------|
+| File Ingestion | BullMQ workers, embedding service | FileParserService, ChunkingStrategy | Supabase Storage (blobs), Neo4j Document/Chunk nodes |
+| Notes Capture | PowerSync sync, search_nodes tool | WikiLinkParser, TemplateSystem | Neo4j Note nodes, Supabase sync_notes |
+| Enhanced NLP | EntityExtractionService, GraphRAG | EnhancedEntityExtractor, ProactiveContextService | Neo4j MENTIONS relationships |
+| Gamification | PowerSync sync, tRPC subscriptions | XPEngine, AchievementEngine, MascotSystem | Supabase tables |
+
+**Storage strategy:**
+- Neo4j: Rich relationships, semantic search, entity linking (Document/Chunk/Note metadata)
+- Supabase: Sync state, real-time updates, relational queries, auth (sync tables, gamification)
+- Supabase Storage: Blob storage with CDN (file binaries)
 
 ### Critical Pitfalls
 
-Research identified 26 pitfalls across six high-risk domains. Top 5 critical issues:
+Research identifies six critical pitfalls that cause rewrites, data loss, or user trust violations. All stem from v2.0 features being inherently less reliable than v1.0's structured Google data.
 
-1. **Building for the graph, not for inference** — Elaborate schemas but no retrieval strategy; graph becomes data graveyard. **Prevention:** Design retrieval patterns BEFORE schema, prototype queries first, measure context relevance (not just graph completeness), build for GraphRAG (unstructured RAG through structured knowledge-graph layer)
-2. **MCP security vulnerabilities** — Prompt injection, data exfiltration via tool composition, command injection. **Prevention:** Least-privilege tool access, validate/sanitize ALL inputs, use official MCP SDK (avoid niche frameworks), rate limiting, audit tool composition, proper credential storage (system keychains, secrets managers)
-3. **Neo4j multi-tenancy data isolation failures** — User data bleeds across tenants due to label-based partitioning or improper privileges. **Prevention:** Use database-per-tenant (Neo4j 4.0+), create tenant-specific admin roles (no global admin), design for single-database constraints (relationships can't span databases), test isolation upfront
-4. **Monorepo consolidation without specialized tooling** — Build times explode, tests run unnecessarily, CI breaks, team abandons monorepo. **Prevention:** Adopt Nx/Turborepo BEFORE consolidation, implement incremental builds, configure smart caching, migrate incrementally (not "big bang"), reconfigure CI/CD for monorepo
-5. **Local-first sync conflicts without CRDT strategy** — Naive last-write-wins causes lost edits, data inconsistencies, user trust erosion. **Prevention:** Adopt CRDTs (Automerge, Yjs) or proven sync engines (Replicache, WatermelonDB), don't write custom sync (rabbit hole of edge cases), design conflict-free operations where possible, test offline scenarios rigorously
+1. **File Parsing Silent Failures** — PDFs "successfully" ingested but tables garbled, images missing, content incomplete. Users discover weeks later. Manual entry error rate ~1%, automated parsing can be worse without validation. **Prevention:** Implement extraction quality scoring from day one. Flag low-confidence extractions (<70%) for human review. Test with real-world scanned documents and complex layouts, not just clean test files. Provide extraction preview before committing to graph. Track parsing errors and implement fallback strategies.
 
-**Additional high-risk pitfalls:**
-- **Consolidation-specific**: Assuming "similar tech" means "easy merge" — React Native/Neo4j/n8n versions may be incompatible despite surface similarity. Requires deep divergence analysis BEFORE consolidation
-- **Scope creep**: Attempting to model entire user life (emails, calendar, photos, documents, social media) simultaneously — project never ships. Start with ONE data source, validate AI improvement before adding next
-- **Context data quality neglect**: 60% of AI projects without AI-ready data abandoned through 2026. Build quality gates into ingestion pipeline (validate, clean, strip HTML, normalize formats)
+2. **LLM Entity Extraction Hallucination Cascade** — Enhanced NLP creates fictional entities and relationships. Graph fills with non-existent people, invented meetings. AI returns confident but wrong context. **Prevention:** Use small specialized models for 80-95% of extractions, escalate hard cases only. Implement confidence thresholds (reject <80%, flag 80-90%). Cross-reference with existing entities before creating new nodes. Human-in-the-loop for high-impact entities. Use semantic entity resolution to detect and merge duplicates/hallucinations. Test with adversarial inputs (prompt injection, fictional content).
+
+3. **Graph Database Duplicate Entity Explosion** — "John Smith" becomes 47 separate nodes (John, J. Smith, john smith, etc.). LLM extraction produces large numbers of duplicates. Queries return incomplete results, visualizations become "exceptionally noisy, obfuscating important patterns." **Prevention:** Implement entity resolution pipeline during ingestion, not after. Use semantic entity resolution with language models for matching and merging. Create canonical entity IDs, normalize names. Prefer merging similar entities over creating new nodes. Use external IDs (emails, phones) when available. Monitor duplicate rate, track entity creation vs. unique entities.
+
+4. **Notes Sync Conflicts and Data Loss** — User captures notes offline, returns online, edits disappear. Last-write-wins guarantees data loss. Users lose trust, abandon feature. **Prevention:** Implement CRDT for note content (Yjs, Automerge). Use proven sync engines (PowerSync already in v1.0), never build custom sync. Avoid last-write-wins. Design conflict-free operations (append-only events). Provide clear sync status (local-only vs. synced). Test offline scenarios extensively (network loss during write, concurrent edits). Implement optimistic UI with rollback.
+
+5. **Storage Bloat from Unmanaged File Ingestion** — No quotas, storing originals + extracted text + embeddings without dedup, versioning everything. Storage costs explode 10-100x, query performance degrades, vector search becomes prohibitively expensive. **Prevention:** Enforce file size quotas per user (5GB free tier). Use appropriate storage tiers (hot for frequent, cold for archives). Hash-based deduplication across users. Separate file storage (S3/GCS) from graph storage (Neo4j for metadata only). Intelligent archiving moves old/unused files automatically. Compress embeddings with quantization. Limit versioning to last N versions.
+
+6. **Gamification Reward Fatigue and User Annoyance** — XP system launches with fanfare, after 3 days users find it annoying. Notifications become spam. Research shows gamification rarely increases productivity beyond 3 days. Streak anxiety, focus on metrics over meaningful work (Goodhart's Law). **Prevention:** Reward outcomes not activity (goals achieved, not hours logged). Make rewards meaningful (unlock features, not just badges). Avoid streak mechanics (create anxiety). Allow opt-out. Design for long-term engagement beyond novelty. Respect user focus (minimal notifications, in-context achievements, no interrupts). Measure real productivity impact, not engagement vanity metrics. Start minimal, add based on validated feedback.
 
 ## Implications for Roadmap
 
-Based on research, the critical path is Foundation → MCP Exposure → Mobile Client. Attempting to build all layers simultaneously risks the "complexity spike" that derails 34% of monorepo consolidations. Each phase must deliver working functionality before proceeding.
+Based on dependency analysis, integration risks, and research findings, recommend 4-phase structure aligned with architectural dependency chains:
 
-### Phase 0: Pre-Consolidation (Preparation)
-**Rationale:** Monorepo consolidation without specialized tooling causes build time explosions and CI breakage. Must establish infrastructure before merging codebases.
-
-**Delivers:**
-- Monorepo tooling selected and configured (Nx or Turborepo)
-- Deep divergence analysis of three codebases (omnii, omnii-mobile, omnii-mcp)
-- Merge strategy document (which codebase is "source of truth" per domain)
-- Environment variable reconciliation plan (namespace conflicts identified)
-- Git workflow defined (hybrid: rebase local, merge for integration)
-
-**Avoids:**
-- Pitfall #4: Monorepo consolidation without specialized tooling
-- Pitfall #24: Assuming "similar tech" means "easy merge"
-- Pitfall #6: Git divergent branch reconciliation chaos
-
-**Research flags:** Standard patterns; skip research-phase (established monorepo best practices)
-
-### Phase 1: Foundation Infrastructure
-**Rationale:** Authentication and data storage are prerequisites for all functionality. Neo4j multi-tenancy decision must be made upfront; migrating from label-based to database-per-tenant later is complex and risky.
+### Phase 1: File Ingestion Foundation
+**Rationale:** Extends proven v1.0 BullMQ ingestion pattern, provides document corpus required for Phases 2-3. Highest confidence path (follows established patterns). Validates chunking strategies needed for notes. Derisk file parsing quality before building dependent features.
 
 **Delivers:**
-- Supabase setup (auth with JWT containing tenant_id in app_metadata, RLS policies)
-- Neo4j multi-database setup (database-per-user provisioning on signup)
-- Basic graph schema (Entity, Concept, Relationship nodes)
-- Neo4j-Bun compatibility mitigation (HTTP proxy layer or alternative DB decision finalized)
-- Initial monorepo consolidation (first codebase migrated with tooling validation)
+- Multi-format file parsing (PDF, DOCX, TXT, MD, code)
+- Semantic/markdown/code chunking strategies
+- Neo4j Document/Chunk schema extension
+- Supabase Storage integration
+- Background processing via BullMQ
+- Extraction quality scoring and validation gates
 
-**Addresses features:**
-- Privacy controls (database-per-user isolation)
-- Multi-tenancy foundation for all future features
+**Addresses:**
+- Import common file formats (table stakes)
+- Search file contents (extend vector search)
+- Offline-first processing (differentiator)
 
 **Avoids:**
-- Pitfall #3: Neo4j multi-tenancy data isolation failures
-- Pitfall #1: Building for graph without retrieval strategy (design core queries first)
+- File parsing silent failures (quality scoring from day one)
+- Storage bloat (quotas, deduplication, tiered storage)
 
-**Research flags:**
-- **Needs deeper research:** Neo4j-Bun mitigation strategy (HTTP proxy implementation or FalkorDB/SurrealDB evaluation)
-- **Standard patterns:** Supabase auth, RLS policies (well-documented)
+**Research needs:** Standard patterns, skip research-phase. File parsing libraries well-documented, chunking strategies established in RAG literature.
 
-### Phase 2: Backend API + MCP Server
-**Rationale:** MCP exposure is the unique differentiator. Building this layer early validates the core value proposition and enables AI-assisted development of subsequent phases.
+---
+
+### Phase 2: Notes Capture System
+**Rationale:** Needs chunking strategies from Phase 1 for long notes. Provides user-generated content for Phase 3 NLP validation. Leverages PowerSync offline-first architecture already validated in v1.0. Critical for "quick capture" table stakes feature.
 
 **Delivers:**
-- Bun/Elysia backend with tRPC WebSocket support
-- MCP server layer (tools, resources, prompts via official TypeScript SDK)
-- GraphRAG retrieval (dual-channel: vector search + graph traversal)
-- Basic entity CRUD operations
-- MCP security boundaries (tool permissions, input validation, rate limiting)
-- Second codebase consolidated into monorepo
+- Note node schema in Neo4j
+- PowerSync sync_notes table for offline
+- WikiLinkParser for bidirectional `[[links]]`
+- Mobile quick capture UI with templates
+- Backlinks panel and visualization
+- CRDT-based sync to prevent data loss
 
-**Addresses features:**
-- MCP server exposure (UNIQUE positioning)
-- Semantic search (2026 baseline)
-- GraphRAG retrieval (67% better accuracy)
+**Addresses:**
+- Quick capture <3 seconds (table stakes)
+- Wiki-style linking `[[brackets]]` (table stakes)
+- Backlinks panel (table stakes)
+- Templates for common note types (table stakes)
 
 **Avoids:**
-- Pitfall #2: MCP security vulnerabilities (implement auth, tool permissions from start)
-- Pitfall #15: MCP server monolith (design multi-server architecture)
-- Pitfall #1: Building for graph not inference (retrieval-first approach)
+- Notes sync conflicts and data loss (CRDT from day one, not LWW)
+- Notes capture friction kills adoption (minimize time-to-capture, one-tap widgets)
 
-**Research flags:**
-- **Needs deeper research:** GraphRAG implementation patterns, embedding model selection (OpenAI vs. local)
-- **Standard patterns:** tRPC setup, basic CRUD operations
+**Research needs:** Minimal research required. PowerSync patterns established, CRDT libraries (Yjs, Automerge) well-documented. Quick capture UX patterns studied extensively (Notion, Obsidian).
 
-### Phase 3: Mobile Client + Offline Sync
-**Rationale:** Mobile-first architecture with offline capabilities is table stakes. Local-first sync is the most complex technical challenge; getting it wrong causes user trust erosion from lost edits.
+---
+
+### Phase 3: Enhanced NLP Pipeline
+**Rationale:** Needs document corpus from Phases 1-2 for validation and tuning. Builds on existing EntityExtractionService with confidence. Implements differentiators (cross-source relationships, proactive context) that justify "AI always has right context" value prop. Most complex integration, benefits from validated file ingestion and notes infrastructure.
 
 **Delivers:**
-- React Native/Expo app structure with Expo Router
-- Local-first data layer (Realm for graph-like relationships)
-- Delta sync implementation (last sync timestamp tracking, conflict resolution)
-- tRPC WebSocket subscriptions for real-time updates
-- Background sync with jitter (avoid DDoS on own servers)
-- Third codebase consolidated into monorepo
+- Enhanced entity extraction (compromise + Transformers.js BERT NER)
+- Confidence scoring and validation gates
+- Semantic entity resolution (prevent duplicates)
+- ProactiveContextService for "Heads Up" notifications
+- RelationshipInference with user approval
+- Cross-source relationship discovery
 
-**Addresses features:**
-- Mobile access (capture/retrieve anywhere)
-- Offline mode (local-first expected)
-- Cross-device sync (conflict resolution)
+**Addresses:**
+- Entity extraction (table stakes)
+- Cross-source relationship inference (differentiator - HIGH VALUE)
+- Proactive context "Heads Up" (differentiator - HIGH VALUE)
+- Actionable analytics patterns (differentiator)
 
 **Avoids:**
-- Pitfall #5: Local-first sync without CRDT strategy (use Automerge/Yjs or proven sync engine)
-- Pitfall #12: Background task API overload (implement jitter, JSON-only)
-- Pitfall #13: Offline-first wishful thinking (test with airplane mode)
+- LLM hallucination cascade (confidence thresholds, small models, validation)
+- Duplicate entity explosion (semantic entity resolution from start)
+- LLM cost explosion (model routing: 80-95% to mini/fast, batch processing, caching)
+- Integration performance degradation (async extraction via BullMQ, not synchronous)
 
-**Research flags:**
-- **Needs deeper research:** CRDT library selection (Automerge vs. Yjs vs. Replicache), conflict resolution strategies
-- **Needs deeper research:** Mobile background sync optimization, iOS/Android battery impact mitigation
+**Research needs:** MODERATE research during phase planning. Entity resolution strategies emerging in 2026, LLM routing for cost optimization needs specific parameter tuning, proactive context timing patterns require UX validation.
 
-### Phase 4: External Integrations (n8n + Composio)
-**Rationale:** Multi-source data ingestion is table stakes, but attempting too many sources simultaneously causes scope creep. Start with ONE source (Google Calendar recommended), validate AI improvement, then expand.
+---
+
+### Phase 4: Gamification System
+**Rationale:** Pure additive feature with no blocking dependencies. Can start in parallel with Phase 3. Builds on validated PowerSync sync and tRPC subscriptions. Polish and engagement layer works better once users have adopted core features (files + notes + AI). Lowest integration risk.
 
 **Delivers:**
-- n8n workflow orchestration setup (self-hosted)
-- Composio integration (brokered credentials for Google OAuth)
-- Google Calendar ingestion (first data source)
-- Data quality pipeline (validate, clean, strip HTML, normalize)
-- Workflow error handling templates
-- Auto-categorization (tag suggestions based on graph structure)
+- XP + levels system with exponential curve
+- Achievement system (standard + incremental)
+- Mascot companion with mood/dialogue
+- Analytics dashboard with actionable insights
+- Real-time XP updates via tRPC subscriptions
+- Supabase tables synced via PowerSync
 
-**Addresses features:**
-- Multi-source data ingestion (start with calendar)
-- Auto-categorization (AI reduces manual organization)
-- n8n workflow integration (power-user differentiator)
-
-**Avoids:**
-- Pitfall #14: Scope creep (start with ONE source, resist "just add everything")
-- Pitfall #7-10: n8n workflow mistakes (credential management, error handling, batching, debug mode)
-- Pitfall #16: Context data quality neglect (build quality gates)
-
-**Research flags:**
-- **Needs deeper research:** Composio MCP integration patterns, Google API rate limits and error handling
-- **Standard patterns:** n8n workflow basics (well-documented)
-
-### Phase 5: AI Intelligence Layer
-**Rationale:** Entity recognition and relationship discovery require working graph + data pipeline. Building this before foundation is "cart before horse."
-
-**Delivers:**
-- Entity recognition service (NLP pipeline: BiLSTM + CRF)
-- Automatic relationship extraction from ingested data
-- Graph visualization (interactive, filterable)
-- Relationship discovery algorithms (community detection, similarity)
-- Contextual resurfacing ("Heads Up" before meetings)
-
-**Addresses features:**
-- Graph visualization (trust builder)
-- Relationship discovery (surface hidden connections)
-- Automatic data enrichment (AI fills missing details)
-- Contextual resurfacing (proactive notifications)
+**Addresses:**
+- Basic progress indicators (table stakes for gamification)
+- Incremental achievements (differentiator)
+- Mascot with personality (differentiator)
+- Actionable analytics dashboard (differentiator)
+- MCP-native gamification (differentiator)
 
 **Avoids:**
-- Pitfall #1: Over-personalization (measure context relevance, not volume)
-- Pitfall #16: Poor data quality causing AI confusion
+- Reward fatigue and user annoyance (reward outcomes not activity, allow opt-out, minimal notifications)
+- Streak anxiety (persistent XP + levels, not fragile streaks)
+- Vanity metrics (actionable patterns: "3pm meetings → 40% more follow-ups")
 
-**Research flags:**
-- **Needs deeper research:** Entity recognition model selection (spaCy vs. BERT vs. custom), relationship extraction patterns
-- **Needs deeper research:** Graph visualization library (force-directed layout performance at scale)
+**Research needs:** LOW research needs. Gamification patterns well-documented, XP/achievement systems established in gaming and productivity apps. Trophy.so, level-up libraries provide reference architectures.
 
-### Phase 6: Production Hardening
-**Rationale:** Once core functionality works, production-ready polish prevents post-launch fires.
-
-**Delivers:**
-- Advanced mobile features (push notifications, adaptive sync frequency)
-- Monitoring and observability (Sentry error tracking, performance monitoring)
-- Audit logging (compliance for personal data)
-- Data export functionality (JSON, Markdown, CSV)
-- Version history (rollback AI changes)
-
-**Addresses features:**
-- Data export (reduce lock-in fears)
-
-**Avoids:**
-- Production incidents from unmonitored failures
-
-**Research flags:** Standard patterns; skip research-phase (established DevOps practices)
+---
 
 ### Phase Ordering Rationale
 
-**Why this sequence:**
-1. **Foundation before features** — Auth and data storage are prerequisites; attempting features first causes rework
-2. **MCP early for validation** — Unique differentiator should be validated early; enables AI-assisted development of later phases
-3. **Mobile after backend** — Client depends on API; reversing this causes mock data overhead and integration pain
-4. **Integrations after core** — External data sources require stable ingestion pipeline; adding too early causes complexity spike
-5. **AI intelligence last in core** — Requires working graph + data; building first is "cart before horse"
+**Dependency chain:**
+```
+File Ingestion (provides document corpus)
+  └─→ Notes Capture (needs chunking strategies from Phase 1)
+        └─→ Enhanced NLP (needs document corpus from Phases 1-2 for validation)
+
+Gamification (parallel, no dependencies on other phases)
+```
+
+**Why this order:**
+1. **File Ingestion first** — Extends proven v1.0 pattern (BullMQ workers, Neo4j nodes), highest confidence. Provides document corpus needed for Phases 2-3. Validates chunking strategies. Derisk file parsing quality before dependent features.
+
+2. **Notes Capture second** — Needs chunking from Phase 1 for long notes. Provides user-generated content for Phase 3 NLP tuning. Leverages validated PowerSync offline-first. Critical table stakes feature.
+
+3. **Enhanced NLP third** — Needs document corpus for validation. Most complex integration benefits from stable infrastructure. Implements high-value differentiators (cross-source relationships, proactive context) that justify product positioning.
+
+4. **Gamification last (or parallel with Phase 3)** — Pure additive, no blocking dependencies. Engagement layer works better after feature adoption. Lowest integration risk allows parallel development.
 
 **How this avoids pitfalls:**
-- **Incremental consolidation** (Phase 0-3) — One codebase per phase prevents "big bang" merge disaster
-- **Retrieval-first** (Phase 1-2) — Design how AI queries graph before populating it
-- **One data source first** (Phase 4) — Resist scope creep; validate improvement before expanding
-- **CRDT strategy upfront** (Phase 3) — Local-first sync planned from start, not retrofitted
-
-**Dependencies validated:**
-- Mobile client → Backend API → Auth/Database ✓
-- Sync engine → Mobile client + Backend API ✓
-- n8n workflows → Backend API + External OAuth ✓
-- Entity recognition → Backend API + Neo4j ✓
-- MCP server → GraphRAG + Entity recognition + Backend API ✓
-
-**Parallel opportunities:**
-- Mobile UI development (Phase 3) can start with mock data while Phase 2 completes
-- n8n workflow design (Phase 4) can begin while Phase 3 sync engine is being tested
-- Monitoring setup (Phase 6) can be incremental throughout earlier phases
+- Builds quality scoring and validation gates from Phase 1 (file parsing failures)
+- Validates entity extraction on real corpus before scaling (hallucination cascade)
+- Implements CRDT sync from Phase 2 start (data loss)
+- Semantic entity resolution baked into Phase 3 architecture (duplicate explosion)
+- Async processing via BullMQ prevents performance degradation
+- Gamification designed with opt-out and meaningful progression (reward fatigue)
 
 ### Research Flags
 
-**Phases needing `/gsd:research-phase` during planning:**
-- **Phase 1:** Neo4j-Bun mitigation strategies (sparse documentation on HTTP proxy patterns)
-- **Phase 2:** GraphRAG implementation with LangChain + Neo4j (emerging patterns, need current examples)
-- **Phase 3:** CRDT library comparison for React Native offline sync (multiple options, need decision framework)
-- **Phase 4:** Composio MCP integration patterns (new feature, limited documentation)
-- **Phase 5:** Entity recognition model selection and graph algorithms (complex domain, performance tradeoffs)
+**Phases needing deeper research during planning:**
+- **Phase 3 (Enhanced NLP):** Semantic entity resolution strategies emerging in 2026, needs specific algorithm selection. LLM routing parameters for cost optimization require load testing. Proactive context timing patterns need UX validation with user studies.
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 0:** Monorepo tooling (Nx/Turborepo well-documented)
-- **Phase 1:** Supabase auth + RLS (official guides comprehensive)
-- **Phase 2:** tRPC setup, basic CRUD (standard patterns)
-- **Phase 4:** Basic n8n workflows (extensive community examples)
-- **Phase 6:** DevOps monitoring (established practices)
+- **Phase 1 (File Ingestion):** File parsing libraries (unpdf, mammoth, tree-sitter) well-documented. Chunking strategies established in RAG/GraphRAG literature. BullMQ worker patterns validated in v1.0.
+- **Phase 2 (Notes Capture):** PowerSync sync patterns established in v1.0. CRDT libraries (Yjs, Automerge) have extensive docs. Wiki-linking patterns from Obsidian/Roam well-studied.
+- **Phase 4 (Gamification):** XP/achievement systems well-documented in gaming literature. Trophy.so and level-up libraries provide reference implementations. Analytics dashboard patterns from productivity apps.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM | Technologies individually proven, but Neo4j-Bun incompatibility requires workaround. HTTP proxy mitigation path exists but adds complexity. Alternative DBs (FalkorDB, SurrealDB) less mature for GraphRAG. |
-| Features | HIGH | Competitive landscape well-researched with 2026 sources. MCP positioning validated as unique. Table stakes vs. differentiators clearly identified based on user expectations across Obsidian, Mem.ai, Clay, Rewind. |
-| Architecture | MEDIUM-HIGH | Patterns are proven (local-first, database-per-tenant, GraphRAG) but integration complexity is high. Six-layer architecture requires careful orchestration. tRPC WebSocket + CRDT sync is cutting-edge but has working examples. |
-| Pitfalls | HIGH | 26 pitfalls identified from 2025-2026 sources, cross-validated across domains. Critical issues (graph-not-inference, MCP security, multi-tenancy isolation, monorepo tooling, CRDT sync) have clear prevention strategies with high-confidence sources. |
+| Stack | HIGH | All recommended libraries are production-proven with 2026 releases. JavaScript-native NLP validated in multiple sources. React Native 0.79.3 compatibility confirmed for all mobile libraries. |
+| Features | MEDIUM | Table stakes features validated via competitive analysis (Notion, Obsidian, Roam). Differentiator validation based on 2026 trends (Gemini proactive intelligence, GraphRAG advantages) but limited direct competitor comparison for MCP+graph combo. |
+| Architecture | HIGH | Extends validated v1.0 patterns (BullMQ, PowerSync, Neo4j). Integration points clearly defined. officeParser, PowerSync, Neo4j patterns have production case studies. |
+| Pitfalls | HIGH | 2025-2026 research specifically addresses LLM entity extraction hallucinations, CRDT sync conflicts, gamification effectiveness. PDF parsing accuracy studies from 2026. Entity resolution strategies from Neo4j 2026 research. |
 
-**Overall confidence:** MEDIUM-HIGH
-
-Research is comprehensive across stack, features, architecture, and pitfalls. Lower confidence areas are concentrated in **integration complexity** (Neo4j-Bun workaround, six-layer orchestration) rather than fundamental approach validity. The recommended path (retrieval-first, incremental consolidation, one data source initially) has high confidence based on industry research showing 60% of AI projects without data quality fail and 34% of monorepos experience complexity spikes.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-**Critical gaps requiring decisions before Phase 1:**
+**Entity extraction accuracy thresholds:** Research shows 50-70% "out of the box" accuracy but specific thresholds for confidence scoring (80%? 90%?) need validation during Phase 3 with real document corpus. Plan to A/B test thresholds and measure impact on precision/recall.
 
-1. **Neo4j-Bun mitigation strategy** — Must choose between: (A) HTTP proxy layer (Node.js wrapper), (B) Alternative graph DB (FalkorDB for GraphRAG optimization or SurrealDB for Bun compatibility), or (C) Hybrid runtime. Recommendation: Option A if GraphRAG ecosystem is non-negotiable; Option B if Bun native compatibility prioritized. **Action:** Prototype both approaches in Phase 1, measure latency/complexity tradeoffs.
+**Semantic entity resolution algorithm selection:** 2026 research identifies semantic entity resolution as solution to duplicate explosion but multiple approaches exist (embedding similarity, LLM-based, rule-based hybrid). Need to evaluate specific algorithms (sentence-transformers, GliNER2, custom BERT fine-tuning) during Phase 3 planning with production data characteristics.
 
-2. **Codebase consolidation "source of truth"** — Three divergent codebases (omnii, omnii-mobile, omnii-mcp) likely have incompatible React Native architectures (old bridge vs. new Fabric), Neo4j schema designs, n8n workflow integration patterns. **Action:** Deep divergence analysis in Phase 0 to identify which codebase's patterns become canonical per domain (mobile architecture, graph schema, MCP server structure).
+**Gamification progression curve tuning:** Research provides general principles (exponential curves, 10-session minimum, avoid streaks) but specific XP amounts per action and level thresholds require user testing. Plan to start conservative (generous XP awards) and tune down if inflation occurs rather than starting stingy and frustrating users.
 
-3. **Embedding model selection** — OpenAI (proven quality, expensive, cloud-dependent) vs. local models (nomic-embed-text, bge-small, E5-base-instruct for offline mobile). **Action:** Start with OpenAI for MVP, add local embedding fallback incrementally for offline use cases. Measure retrieval quality delta.
+**File parsing quality scoring metrics:** Need to define "good enough" extraction quality score. 70% confidence? 80%? 90%? How to measure confidence for document parsing (not just entity extraction)? Plan to use combination of signals: text coverage %, layout preservation score, OCR confidence (if applicable), user validation rate.
 
-**Moderate gaps for validation during implementation:**
-
-4. **CRDT library choice** — Automerge (feature-rich, larger bundle) vs. Yjs (performance-optimized, lightweight) vs. Replicache (full sync engine). **Action:** Phase 3 research-phase to prototype conflict scenarios with realistic data, measure mobile bundle size impact.
-
-5. **Graph visualization library** — Force-directed layout performance degrades at scale (>1000 nodes). **Action:** Defer to Phase 5; evaluate D3.js vs. Cytoscape.js vs. vis.js with actual user graph sizes.
-
-6. **MCP tool granularity** — High-level domain tools (`schedule_meeting`) vs. low-level graph CRUD (`create_entity`). **Action:** Phase 2 to design both levels, let AI applications choose abstraction based on task.
-
-**Non-blocking gaps (can resolve later):**
-
-7. **Multi-modal storage** — Text-only sufficient for MVP; images/PDFs/audio deferred to v2+. **Action:** Design schema extensibility for future addition.
-
-8. **Voice capture transcription** — Valuable but complex pipeline (Whisper integration, audio storage, speaker diarization). **Action:** Defer to post-Phase 6; focus on text ingestion first.
-
-## Critical Decisions Summary
-
-These decisions must be made before implementation begins:
-
-### Decision 1: Neo4j-Bun Compatibility Mitigation
-**Options:**
-- A) HTTP proxy layer (Node.js service wrapping neo4j-driver, Bun/Elysia communicates via REST)
-- B) Alternative graph DB (FalkorDB for GraphRAG, SurrealDB for Bun native compatibility)
-- C) Switch runtime for DB queries only (Bun for HTTP, Node child processes for Neo4j)
-
-**Recommendation:** Option A if GraphRAG ecosystem is non-negotiable. Option B if flexibility exists and native Bun compatibility prioritized.
-
-**Action required:** Decide in Phase 1 before graph implementation.
-
-### Decision 2: Monorepo Consolidation Strategy
-**Context:** Three codebases with divergent patterns despite similar technologies.
-
-**Approach:**
-- Adopt Nx or Turborepo in Phase 0 before any consolidation
-- Deep divergence analysis to identify incompatibilities (React Native architecture versions, Neo4j schema patterns, n8n workflow integration approaches)
-- Incremental migration: one codebase per phase (Phases 0-3)
-- Define "source of truth" per domain in merge strategy document
-
-**Action required:** Complete Phase 0 analysis before consolidation begins.
-
-### Decision 3: Initial Data Source Scope
-**Context:** Multi-source ingestion is table stakes, but scope creep is a documented failure mode.
-
-**Recommendation:** Start with ONE high-value source (Google Calendar recommended).
-
-**Rationale:**
-- Calendar data is structured (easy ingestion)
-- Time-based context is valuable for "Heads Up" feature
-- Validates retrieval quality before adding complexity
-- Avoids the "build everything at once" trap that causes 60% of AI projects to fail
-
-**Action required:** Resist pressure to add email, documents, social media simultaneously in Phase 4.
-
-### Decision 4: CRDT vs. Proven Sync Engine
-**Context:** Local-first sync without conflict-free strategy causes lost edits and user trust erosion.
-
-**Options:**
-- A) Implement CRDT library (Automerge or Yjs)
-- B) Use proven sync engine (Replicache, WatermelonDB with sync, PowerSync)
-- C) Custom sync logic (NOT RECOMMENDED — "rabbit hole of edge cases")
-
-**Recommendation:** Option B (proven sync engine) for faster time-to-market, Option A if full control required.
-
-**Action required:** Decide in Phase 3 planning.
-
-### Decision 5: MCP Server Granularity
-**Context:** Tool abstraction level affects AI agent experience.
-
-**Approach:**
-- Implement BOTH high-level domain tools (`schedule_meeting`, `find_contact`) AND low-level graph operations (`query_graph`, `create_entity`)
-- Let AI applications choose abstraction based on task complexity
-- Follow MCP best practice: "One server = one clear purpose" (separate filesystem, database, calendar servers)
-
-**Action required:** Design multi-server architecture in Phase 2.
-
-## Tensions and Conflicts
-
-Research revealed several strategic tensions requiring explicit resolution:
-
-### Tension 1: Performance vs. Compatibility (Bun vs. Neo4j)
-**Conflict:** Bun provides 3x Node.js performance and superior DX, but Neo4j driver has known incompatibilities causing connection hangs and debugging issues.
-
-**Impact:** Forces choice between runtime performance and database ecosystem maturity.
-
-**Resolution path:** HTTP proxy layer preserves both (Bun for API, Node wrapper for Neo4j). Alternative DBs (FalkorDB, SurrealDB) sacrifice GraphRAG ecosystem maturity for native Bun compatibility.
-
-**Roadmap impact:** Phase 1 must include compatibility layer implementation; adds architectural complexity but preserves both advantages.
-
-### Tension 2: Privacy vs. Convenience (Local-First vs. Cloud Sync)
-**Conflict:** Users demand privacy (local-first, offline-capable) but also expect seamless cross-device sync and cloud backup.
-
-**Impact:** Requires sophisticated sync architecture; naive approaches cause data loss and conflicts.
-
-**Resolution path:** Local-first data layer (Realm/SQLite) with optional cloud sync (Supabase). User controls sync behavior; default is offline-capable with opt-in cloud.
-
-**Roadmap impact:** Phase 3 sync implementation is critical path; getting it wrong causes user trust erosion.
-
-### Tension 3: Scope vs. Shipping (Data Source Breadth)
-**Conflict:** Knowledge graphs thrive on comprehensive context (emails, calendar, documents, social, health), but attempting all sources simultaneously prevents shipping.
-
-**Impact:** Scope creep is documented as top failure mode for personal AI systems.
-
-**Resolution path:** Start with ONE source (calendar), validate AI improvement, expand incrementally. Resist "just add everything" instinct.
-
-**Roadmap impact:** Phase 4 scoped to single integration; additional sources become Phase 7+ based on validated improvement metrics.
-
-### Tension 4: Flexibility vs. Maintainability (Custom vs. Proven Solutions)
-**Conflict:** Custom implementations offer full control (sync logic, embedding pipelines, graph algorithms) but increase maintenance burden and bug surface area.
-
-**Impact:** "Not invented here" syndrome causes teams to rebuild solved problems poorly.
-
-**Resolution path:** Use battle-tested solutions (official MCP SDK, proven CRDT libraries, established sync engines) unless differentiation requires custom.
-
-**Roadmap impact:** Phase 2 uses official MCP SDK (not niche frameworks), Phase 3 uses proven sync engine (not custom), Phase 5 uses established NLP libraries (spaCy/BERT).
-
-### Tension 5: Monorepo Benefits vs. Consolidation Complexity
-**Conflict:** Monorepos enable code sharing and unified tooling, but 34% experience short-term complexity spikes that derail progress.
-
-**Impact:** Consolidation without specialized tooling causes build explosions, CI breakage, team frustration.
-
-**Resolution path:** Invest in tooling (Nx/Turborepo) BEFORE consolidation. Incremental migration over 3 phases prevents "big bang" disaster.
-
-**Roadmap impact:** Phase 0 dedicated to tooling setup; upfront investment prevents later rework.
+**Proactive context timing optimization:** Research shows 15-30min before meetings works, but specific timing per user may vary (some want 1hr prep, others want 5min). Plan to implement user preferences with smart defaults, learn from dismissal patterns.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-**Stack Research:**
-- Bun official documentation: [Containerize with Docker](https://bun.com/docs/guides/ecosystem/docker)
-- Neo4j official documentation: [Multi-Tenancy Worked Example](https://neo4j.com/developer/multi-tenancy-worked-example/)
-- MCP official specification: [TypeScript SDK GitHub](https://github.com/modelcontextprotocol/typescript-sdk)
-- Expo official documentation: [Local-First Architecture](https://docs.expo.dev/guides/local-first/)
-- Supabase official documentation: [MCP Authentication](https://supabase.com/docs/guides/auth/oauth-server/mcp-authentication)
+**Stack research:**
+- [unpdf - GitHub](https://github.com/unjs/unpdf) — Modern PDF parser with Bun compatibility
+- [mammoth.js - GitHub](https://github.com/mwilliamson/mammoth.js) — De facto DOCX parsing standard
+- [@jamsch/expo-speech-recognition](https://github.com/jamsch/expo-speech-recognition) — Most comprehensive Expo voice solution 2026
+- [Reanimated 4 Stable Release](https://blog.swmansion.com/reanimated-4-stable-release-the-future-of-react-native-animations-ba68210c3713) — RN 0.79.3 compatibility confirmed
+- [Lottie vs. Rive comparison](https://www.callstack.com/blog/lottie-vs-rive-optimizing-mobile-app-animation) — Performance benchmarks
+- [Transformers.js Documentation](https://huggingface.co/docs/transformers.js/en/index) — JavaScript-native NLP
 
-**Features Research:**
-- Anthropic MCP announcement: [Model Context Protocol](https://www.anthropic.com/news/model-context-protocol)
-- Mem.ai product updates: [Mem 2.0 features](https://get.mem.ai/blog/mem-2-dot-0)
-- Notion AI 2026 releases: [Official releases page](https://www.notion.com/releases/2026-01-20)
-- Contextual retrieval best practices: [Anthropic blog](https://www.anthropic.com/news/contextual-retrieval)
+**Features research:**
+- [MinerU GitHub](https://github.com/opendatalab/MinerU) — Document processing for LLMs
+- [Obsidian Extract PDF Plugin](https://github.com/akaalias/obsidian-extract-pdf) — Wiki-linking patterns
+- [GliNER2: Extracting Structured Information](https://towardsdatascience.com/gliner2-extracting-structured-information-from-text/) — Entity extraction state-of-art
+- [Gemini's Proactive AI Responses (Jan 2026)](https://startupnews.fyi/2026/01/15/geminis-new-beta-feature-delivers-pro/) — Proactive context timing
+- [Top 10 Gamified Productivity Apps 2025](https://yukaichou.com/lifestyle-gamification/the-top-ten-gamified-productivity-apps/) — Gamification patterns
 
-**Architecture Research:**
-- MCP architecture documentation: [Official architecture guide](https://modelcontextprotocol.io/docs/learn/architecture)
-- tRPC WebSocket documentation: [Subscriptions guide](https://trpc.io/docs/server/subscriptions)
-- Neo4j GraphRAG: [Blog post](https://neo4j.com/blog/developer/neo4j-graphrag-workflow-langchain-langgraph/)
-- Local-first 2026 architecture: [DEV Community article](https://dev.to/the_nortern_dev/the-architecture-shift-why-im-betting-on-local-first-in-2026-1nh6)
+**Architecture research:**
+- [officeParser - npm](https://www.npmjs.com/package/officeparser) — Multi-format parsing architecture
+- [PowerSync: Backend DB - SQLite sync](https://www.powersync.com) — Offline-first sync patterns
+- [Neo4j Knowledge Graph Generation](https://neo4j.com/blog/developer/knowledge-graph-generation/) — Graph integration patterns
+- [Chunking Strategies for LLM Applications](https://www.pinecone.io/learn/chunking-strategies/) — Semantic chunking
 
-**Pitfalls Research:**
-- MCP security analysis: [Red Hat blog](https://www.redhat.com/en/blog/model-context-protocol-mcp-understanding-security-risks-and-controls)
-- Monorepo mistakes: [InfoQ presentation](https://www.infoq.com/presentations/monorepo-mistakes/)
-- Local-first sync patterns: [Evil Martians blog](https://evilmartians.com/chronicles/cool-front-end-arts-of-local-first-storage-sync-and-conflicts)
-- Knowledge graph anti-patterns: [Cognee blog](https://www.cognee.ai/blog/fundamentals/knowledge-graph-myths)
+**Pitfalls research:**
+- [A survey on privacy risks in LLMs](https://link.springer.com/article/10.1007/s44443-025-00177-1) — Hallucination and privacy risks
+- [Entity Resolved Knowledge Graphs: Tutorial](https://neo4j.com/blog/developer/entity-resolved-knowledge-graphs/) — Duplicate prevention
+- [Offline-First Apps: 2026 Benefits](https://www.octalsoftware.com/blog/offline-first-apps) — CRDT sync patterns
+- [Productivity App Gamification That Doesn't Backfire](https://trophy.so/blog/productivity-app-gamification-doesnt-backfire) — Reward fatigue prevention
+- [Data Extraction API Complete Guide 2026](https://parseur.com/blog/data-extraction-api) — Parsing accuracy studies
 
 ### Secondary (MEDIUM confidence)
 
-**Stack:**
-- Bun + Neo4j compatibility issues: [GitHub Issue #12772](https://github.com/oven-sh/bun/issues/12772)
-- GraphRAG 2026 trends: [RAGflow blog](https://ragflow.io/blog/rag-review-2025-from-rag-to-context)
-- Best embedding models 2026: [Elephas blog](https://elephas.app/blog/best-embedding-models)
-- n8n hybrid automation: [Community discussion](https://community.n8n.io/t/when-workflows-meet-agents-emerging-patterns-for-hybrid-automation-in-2025/157805)
+- [7 PDF Parsing Libraries for Node.js](https://strapi.io/blog/7-best-javascript-pdf-parsing-libraries-nodejs-2025) — Library comparisons
+- [20 Productivity App Gamification Examples](https://trophy.so/blog/productivity-gamification-examples) — Feature patterns
+- [The Rise of Semantic Entity Resolution](https://towardsdatascience.com/the-rise-of-semantic-entity-resolution/) — Algorithm approaches
+- [Focus apps productivity claims](https://theconversation.com/focus-apps-claim-to-improve-your-productivity-do-they-actually-work-271388) — Gamification effectiveness data
 
-**Features:**
-- Second brain apps comparison: [AFFiNE blog](https://affine.pro/blog/best-second-brain-apps)
-- Personal CRM tools 2026: [Monday blog](https://monday.com/blog/crm-and-sales/personal-crm-software/)
-- Privacy trends 2026: [SecurePrivacy blog](https://secureprivacy.ai/blog/data-privacy-trends-2026)
+### Tertiary (LOW confidence)
 
-**Architecture:**
-- Neo4j multi-tenancy patterns: [GraphAware blog (2020)](https://graphaware.com/blog/multi-tenancy-neo4j/)
-- Multi-agent orchestration: [n8n blog](https://blog.n8n.io/multi-agent-systems/)
-- React Native databases 2026: [Algosoft blog](https://www.algosoft.co/blogs/top-11-local-databases-for-react-native-app-development-in-2026/)
-
-**Pitfalls:**
-- n8n workflow mistakes: [Medium article](https://medium.com/@connect.hashblock/5-n8n-workflow-mistakes-that-quietly-break-automation-f1a4cfdac8bc)
-- CRDT vs. OT comparison: [DEV Community](https://dev.to/puritanic/building-collaborative-interfaces-operational-transforms-vs-crdts-2obo)
-- Context rot research: [Chroma blog](https://research.trychroma.com/context-rot)
-
-### Tertiary (LOW confidence, needs validation)
-
-- FalkorDB vs. Neo4j for GraphRAG (limited production comparisons; needs benchmarking)
-- Legend-State vs. TinyBase for React Native (both newer; needs real-world usage validation)
-- Composio MCP integration patterns (new feature, sparse documentation; needs prototyping)
+- Community discussions on Reddit r/PKM (personal knowledge management) — User expectations for features, needs validation
+- GitHub issue discussions on CRDTs and sync conflicts — Implementation patterns, needs testing with Omnii One's specific stack
 
 ---
-*Research completed: 2026-01-24*
+*Research completed: 2026-01-26*
 *Ready for roadmap: yes*
-*Total sources: 75+ verified across official docs, 2025-2026 articles, academic research*

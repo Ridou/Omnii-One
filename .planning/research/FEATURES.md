@@ -1,296 +1,326 @@
-# Feature Landscape: Personal Context Server / Knowledge Graph
+# Feature Landscape: v2.0 Expansion
 
-**Domain:** Personal AI context systems, knowledge graphs, second brain applications
-**Researched:** 2026-01-24
-**Confidence:** HIGH
+**Domain:** Personal context server with file ingestion, notes, AI intelligence, and gamification
+**Researched:** 2026-01-26
+**Confidence:** MEDIUM (based on ecosystem analysis and product patterns)
 
-## Executive Summary
+## Context
 
-Personal context servers and knowledge graph products in 2026 have evolved from passive note storage into active AI memory systems. The competitive landscape divides into three categories: **knowledge management** (Obsidian, Notion, Roam), **AI-first memory** (Mem.ai, Rewind, Limitless), and **relationship/CRM** (Monica HQ, Clay). Your unified personal data platform sits at the intersection of all three, with MCP exposure as a key differentiator.
+This research covers NEW v2.0 features building on existing v1.0 foundation:
 
-**Critical insight:** In 2026, AI integration is table stakes. The differentiator is *quality of context retrieval* — not just storing everything, but surfacing the right information at the right time. GraphRAG (graph-based retrieval) is rapidly replacing traditional RAG, with 67% better retrieval accuracy when combined with reranking.
+**Already built in v1.0:**
+- Graph database (Neo4j) with entities, events, contacts, concepts
+- MCP tools for AI assistants
+- Google services sync (Calendar, Tasks, Gmail, Contacts)
+- Mobile app with offline-first architecture
+- n8n workflow automation
 
-## Table Stakes Features
+**v2.0 focus:**
+- Local file ingestion
+- Notes/knowledge capture
+- Enhanced AI intelligence
+- Gamification systems
 
-Features users expect. Missing any = product feels incomplete or broken.
+---
 
-| Feature | Why Expected | Complexity | Notes | Sources |
-|---------|--------------|------------|-------|---------|
-| **Multi-source data ingestion** | Users have data everywhere (email, calendar, notes, files) | High | Must handle structured + unstructured data | [Notion AI](https://www.notion.com/releases/2026-01-20), [Clay](https://clay.earth/) |
-| **Bidirectional linking** | Core to knowledge graph UX; users expect to navigate relationships | Medium | Both manual and automatic linking | [Obsidian](https://obsidian.md/), [Roam Research](https://roamresearch.com/) |
-| **Graph visualization** | Users need to see connections to trust the system | Medium | Interactive, filterable graph view | [Obsidian graph view](https://forum.obsidian.md/t/personal-knowledge-graphs/69264) |
-| **Full-text search** | Minimum viable retrieval; anything less frustrates users | Medium | With fuzzy matching and relevance ranking | All competitors |
-| **Semantic search** | 2026 standard; keyword-only search feels outdated | High | Embedding-based retrieval with context | [Mem.ai Deep Search](https://get.mem.ai/blog/mem-2-dot-0), [Context7 best practices](https://www.anthropic.com/news/contextual-retrieval) |
-| **Mobile access** | Users expect to capture/retrieve anywhere | High | Offline-first architecture critical | [Obsidian mobile](https://obsidian.md/), [Logseq offline](https://toolfinder.co/lists/best-pkm-apps) |
-| **Offline mode** | Must work without internet; cloud-only is dealbreaker | High | Local-first sync architecture | [AFFiNE local-first](https://affine.pro/blog/best-second-brain-apps), [Anytype P2P](https://www.kosmik.app/blog/best-pkm-apps) |
-| **Privacy controls** | Users are wary of AI data harvesting in 2026 | High | Local storage option, transparent data usage | [Rewind local-only](https://www.oreateai.com/blog/rewind-ai-the-future-of-personal-memory-management/529657657f7c6471db1e73932db35e1c), [n8n self-hosting](https://n8n.io/) |
-| **Data export** | Lock-in fears are high; must provide escape hatch | Low | Standard formats (JSON, Markdown, CSV) | [Obsidian Markdown](https://www.primeproductiv4.com/apps-tools/obsidian-review), [Monica API](https://www.monicahq.com/features) |
-| **Auto-categorization** | Manual organization is friction; AI must reduce it | Medium | Tag suggestions, folder routing | [Mem.ai auto-organize](https://get.mem.ai/blog/the-new-mem), [Notion AI auto-tag](https://kipwise.com/blog/notion-ai-features-capabilities) |
-| **Relationship mapping** | For contacts/people data; CRM-like functionality | Medium | Track interactions, relationship strength | [Clay auto-aggregation](https://monday.com/blog/crm-and-sales/personal-crm-software/), [Monica relationship tracking](https://www.monicahq.com/features) |
-| **Frictionless capture** | Users abandon systems with high input friction | High | Voice, email forwarding, quick capture UI | [Mem.ai Voice Mode](https://get.mem.ai/blog/mem-2-dot-0), [Notion quick capture](https://www.notion.com/releases) |
-| **Cross-device sync** | Users expect seamless experience across devices | High | Conflict resolution, low-latency sync | [Heptabase offline sync](https://www.kosmik.app/blog/best-pkm-apps), [Obsidian sync](https://www.primeproductiv4.com/apps-tools/obsidian-review) |
+## Table Stakes
 
-**MVP Priority (top 5 for launch):**
-1. Multi-source data ingestion (core value prop)
-2. Semantic search (2026 baseline)
-3. Graph visualization (trust builder)
-4. Offline mode (privacy signal)
-5. MCP exposure (unique positioning)
+Features users expect in a personal context/knowledge system. Missing these = product feels incomplete.
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Import common file formats** | Users have existing docs in PDF, Word, text, markdown | Medium | Must handle: PDF (text + OCR), DOCX, TXT, MD, code files. Tools like MinerU, PyMuPDF show this is expected in 2026 |
+| **Quick capture (< 3 seconds)** | Capture thoughts instantly or they're lost | Low | Notion uses keyboard shortcuts (Cmd+Shift+N), mobile widgets. Speed is critical - if it's slow, users won't use it |
+| **Wiki-style linking [[brackets]]** | Third-generation note apps standard since Roam (2019) | Low | Bidirectional links with `[[note name]]` syntax. Obsidian, Roam, Notion all support this. Users expect it now |
+| **Backlinks panel** | See what connects to current note/entity | Low | Show all notes/entities that link here. Filtering required once connections grow |
+| **Search across all content** | Find anything ingested, regardless of source | Medium | Already have vector search (v1.0). Need full-text search for file contents |
+| **View file attachments** | See PDFs/images without leaving app | Low | Mobile especially needs inline viewers |
+| **Templates for common note types** | Reduce friction for recurring patterns (meeting notes, contacts, journal) | Low | Meeting notes, daily journal, contact notes, project templates. Users create these manually if not provided |
+| **Entity extraction (people, dates, places)** | AI should understand what's in content | High | Baseline NER (named entity recognition) is table stakes. Tools: spaCy, GliNER2. Without this, graph stays shallow |
+| **Basic progress indicators** | Show completion/activity level | Low | For gamification: XP bar, current level, next milestone. Without visibility, no engagement |
+| **Achievement notifications** | Recognize milestones when reached | Low | "You reached level 5!" popup. If hidden, users don't feel rewarded |
+
+### Dependencies on Existing Features
+
+```
+File Ingestion → Entity Extraction (needs graph from v1.0)
+Wiki Linking → Graph database (already exists)
+Quick Capture → Mobile app (already exists)
+Templates → Notes storage (needs implementation)
+Gamification → Activity tracking (needs analytics)
+```
+
+---
 
 ## Differentiators
 
-Features that set products apart. Not expected, but highly valued when present.
+Features that set Omnii One apart from competitors. Not expected, but highly valued.
 
-| Feature | Value Proposition | Complexity | Notes | Sources |
-|---------|-------------------|------------|-------|---------|
-| **MCP server exposure** | Let AI assistants (Claude, ChatGPT) access user's personal context natively | Medium | **UNIQUE POSITIONING** — no major competitor does this yet | [Anthropic MCP](https://www.anthropic.com/news/model-context-protocol), [Limitless MCP](https://www.limitless.ai/new) |
-| **GraphRAG retrieval** | 67% better retrieval accuracy vs traditional RAG | High | Structure data in knowledge graph, use graph traversal for context | [GraphRAG 2026](https://ragflow.io/blog/rag-review-2025-from-rag-to-context), [Context retrieval](https://www.anthropic.com/news/contextual-retrieval) |
-| **Automatic data enrichment** | AI fills in missing details (job titles, company info, context) without user input | High | Differentiate from manual CRM tools | [Clay AI enrichment](https://www.clay.com/glossary/ai-data-enrichment), [AI data enrichment 2026](https://www.warmly.ai/p/blog/ai-data-enrichment) |
-| **Relationship discovery** | Surface hidden connections (people who know each other, related projects) | High | Graph algorithms: community detection, similarity | [Neo4j knowledge graphs](https://neo4j.com/use-cases/knowledge-graph/), [Graph patterns](https://pub.towardsai.net/connecting-the-dots-with-graphs-0738c1716a53) |
-| **Temporal context** | "What was I working on when I met this person?" | Medium | Time-based graph queries, event correlation | [Rewind temporal search](https://www.oreateai.com/blog/rewind-ai-the-future-of-personal-memory-management/529657657f7c6471db1e73932db35e1c) |
-| **Contextual resurfacing** | "Heads up" — surface relevant notes before meetings | High | Proactive retrieval based on calendar/location | [Mem.ai Heads Up](https://get.mem.ai/blog/mem-2-dot-0), [Notion AI context](https://kipwise.com/blog/notion-ai-features-capabilities) |
-| **Voice-first capture** | Walk and brain dump; AI transcribes + organizes | Medium | Differentiates from desktop-centric tools | [Mem.ai Voice Mode](https://get.mem.ai/blog/mem-2-dot-0), [Limitless transcription](https://declom.com/limitless) |
-| **n8n workflow integration** | Let users build custom automations (auto-import Slack, summarize emails) | Medium | Power-user feature; extends platform | [n8n personal data](https://medium.com/@aksh8t/n8n-workflow-automation-the-2026-guide-to-building-ai-powered-workflows-that-actually-work-cd62f22afcc8) |
-| **Multi-modal storage** | Handle text, images, PDFs, audio in unified graph | High | 2026 expectation: "multimodal capture" is new baseline | [AFFiNE multimodal](https://affine.pro/blog/best-second-brain-apps), [Heptabase canvas](https://www.kosmik.app/blog/best-pkm-apps) |
-| **AI chat interface** | Ask questions about your data ("What did Sarah say about the project?") | Medium | Table stakes for AI-first tools, differentiator for traditional PKM | [Mem Chat](https://get.mem.ai/blog/mem-2-dot-0), [Notion AI](https://cybernews.com/ai-tools/notion-ai-review/) |
-| **Smart chunking** | Break large documents into semantically meaningful pieces for better retrieval | Medium | Critical for embedding quality | [Embedding best practices](https://www.openxcell.com/blog/best-embedding-models/) |
-| **Hybrid retrieval** | Combine semantic (embeddings) + keyword (BM25) search | Medium | Significantly improves recall | [Contextual BM25](https://www.anthropic.com/news/contextual-retrieval), [Hybrid search](https://www.openxcell.com/blog/best-embedding-models/) |
-| **Domain-aware tools (MCP)** | Expose high-level actions like "schedule_meeting" vs raw database CRUD | Medium | Better AI agent experience | [MCP best practices](https://oshea00.github.io/posts/mcp-practices/) |
-| **Continuous enrichment** | Auto-update contact info monthly as data changes | Medium | Keeps data fresh without user effort | [HubSpot enrichment](https://knowledge.hubspot.com/records/get-started-with-data-enrichment) |
-| **Version history** | Roll back AI changes; important for trust | Low | Users need escape hatch from AI modifications | [Mem version history](https://get.mem.ai/blog/mem-2-dot-0) |
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Cross-source relationship inference** | Auto-connect email sender to calendar event to contact | High | "This meeting is with John, who emailed you yesterday about project X." Competitors keep data siloed. GraphRAG advantage |
+| **Proactive context ("Heads Up")** | Surface relevant info BEFORE meetings/events | High | "Meeting in 15min with Sarah. Last discussed: Q4 budget concerns (see email from Jan 20)." Gemini launched this in Jan 2026 as "Personal Intelligence" |
+| **Code repository ingestion** | Developers want work context, not just personal | Medium | Parse code files, commit messages, understand project structure. Most PKM apps ignore code |
+| **Offline-first file processing** | Process files locally, sync when ready | Medium | Privacy + speed. Most apps require cloud upload first (Notion, Evernote) |
+| **MCP-native gamification** | AI can grant achievements via tool calls | Medium | "Claude just helped you complete your 50th task - Achievement unlocked!" Unique to MCP architecture |
+| **Custom entity types** | Users define their own entities beyond standard NER | High | "Track 'workouts', 'recipes', 'books' as entities." Flexible schema vs rigid types |
+| **Incremental achievements** | Long-term goals (10,000 items) broken into tiers | Low | Research shows: 10-session minimum, progress bars critical, reduces abandonment. Most apps do one-time badges only |
+| **Mascot with personality** | Emotional connection to productivity system | Low-Medium | Research shows gamification works when emotionally intelligent. Duolingo's owl = retention driver. Risk: annoying if not done well |
+| **Actionable analytics** | Show time patterns, connection density, vs vanity metrics | Medium | "Your 3pm meetings have 40% more follow-up tasks than morning meetings." Not just "You created 47 notes this week" |
+| **Multi-modal entity extraction** | Extract from images, charts, diagrams in PDFs | High | MinerU supports this. Go beyond text-only NER. Extract data from screenshots, handwritten notes |
 
-**Recommended differentiation strategy:**
-1. **MCP-first** — Unique positioning as "the personal context server for AI assistants"
-2. **GraphRAG quality** — Best-in-class retrieval through graph structure
-3. **n8n extensibility** — Power users can build custom workflows
-4. **Relationship intelligence** — Surface connections others miss
+### Competitive Analysis
+
+| Feature | Omnii One | Obsidian | Notion | Roam | Evernote |
+|---------|-----------|----------|--------|------|----------|
+| Cross-source connections | YES | No (manual only) | No | No | No |
+| Proactive suggestions | YES | No | No | No | No |
+| MCP integration | YES | No | No | No | No |
+| Local-first processing | YES | YES | No | No | No |
+| Graph database | YES | No (flat files) | No | No | No |
+| Gamification | YES | Plugins only | No | No | No |
+
+---
 
 ## Anti-Features
 
 Features to explicitly NOT build. Common mistakes in this domain.
 
-| Anti-Feature | Why Avoid | What to Do Instead | Sources |
-|--------------|-----------|-------------------|---------|
-| **Built-in note editor** | Becomes feature treadmill; users have preferences (Obsidian, Notion) | Focus on ingestion + retrieval; let users write where they want | [PKM tool comparison](https://www.dsebastien.net/12-common-personal-knowledge-management-mistakes-and-how-to-avoid-them/) |
-| **Custom query language** | High learning curve; users abandon complex systems | Natural language queries via AI + simple filters | [Knowledge graph usability](https://neo4j.com/blog/graph-data-science/data-modeling-pitfalls/) |
-| **Mandatory cloud sync** | Privacy dealbreaker in 2026; local-first is expected | Self-hosted option or local-only mode | [Local-first 2026](https://voicescriber.com/local-first-privacy-stack-iphone-apps), [Privacy trends](https://secureprivacy.ai/blog/data-privacy-trends-2026) |
-| **Rigid folder hierarchies** | Goes against graph/networked thought model | Tag-based + graph-based organization | [Roam networked thought](https://www.primeproductiv4.com/apps-tools/roam-research-review) |
-| **Manual relationship creation** | Too much friction; users won't maintain it | Auto-detect relationships from data (emails, calendar) | [Clay auto-aggregation](https://monday.com/blog/crm-and-sales/personal-crm-software/) |
-| **Single AI model lock-in** | Models change rapidly; vendor lock-in risk | Model-agnostic MCP approach | [MCP sampling](https://modelcontextprotocol.io/docs/learn/architecture) |
-| **Complex permission system** | Personal tool, not enterprise; over-engineering | Simple: local-only or encrypted cloud | [Monica privacy](https://www.monicahq.com/features) |
-| **Built-in LLM** | Expensive, outdated quickly, privacy concerns | MCP lets users bring their own (Claude, ChatGPT) | [MCP client features](https://modelcontextprotocol.io/docs/learn/architecture) |
-| **Social/sharing features** | Scope creep; personal data is private | Focus on individual use; sharing is anti-pattern | [Second brain philosophy](https://affine.pro/blog/build-ai-second-brain) |
-| **Complex visualization builder** | Power users want it, but most don't use it | Simple default graph view + export for power tools | [Obsidian graph simplicity](https://ericmjl.github.io/notes/blog_drafts/building-a-great-personal-knowledge-graph-with-obsidian/) |
-| **Everything in one app** | "The Notion trap" — trying to be everything | Interop via MCP/n8n; play well with ecosystem | [Knowledge management mistakes](https://www.ariglad.com/blogs/common-pitfalls-knowledge-management) |
-| **Aggressive auto-categorization** | Users lose trust when AI miscategorizes | Suggest, don't force; always allow manual override | [PKM mistakes](https://www.dsebastien.net/12-common-personal-knowledge-management-mistakes-and-how-to-avoid-them/) |
-| **Tool hopping features** | Invites constant reconfiguration; reduces actual use | Opinionated defaults, minimal customization | [Tool hopping anti-pattern](https://www.dsebastien.net/12-common-personal-knowledge-management-mistakes-and-how-to-avoid-them/) |
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Built-in rich text editor** | Scope creep. Obsidian spent years on editor. Not differentiator | Support markdown, let users edit in their preferred tool (VS Code, Obsidian, etc.) |
+| **Real-time collaborative editing** | Single-user focus. Adds massive complexity (CRDT, conflict resolution) | Defer to v3+. Focus on personal context first |
+| **Mandatory cloud sync** | Privacy dealbreaker. Users want local-first | Make cloud optional. Local processing is differentiator |
+| **Overly chatty AI assistant** | Research shows: constant interruptions = annoying. Amy.ai case study: bombarded users with emails, harmed brand | Only surface suggestions contextually (before meeting, not randomly). User-initiated queries via MCP |
+| **Streak-based gamification only** | Creates anxiety when life interrupts. "Missed my 47-day streak!" = abandonment | Use XP + levels (persistent) instead of streaks (fragile). Allow grace periods |
+| **Vanity metric dashboards** | "You created 47 notes!" means nothing. Doesn't drive action | Show actionable patterns: "Your tasks from emails are 3x more likely to get done than verbal tasks" |
+| **Auto-linking everything** | "Smart" auto-links become noise. Users lose control | Let users create links explicitly with [[brackets]]. Show suggestions, don't force |
+| **Exporting to every format** | Pandoc rabbit hole. Maintenance burden | Export to markdown + JSON. Users can convert with tools |
+| **Building OCR from scratch** | Solved problem. Tesseract, Google Vision, Azure exist | Use existing OCR APIs/libraries. Focus on processing results |
+| **Custom NLP models per user** | Can't fine-tune models for each user. Compute + data requirements prohibitive | Use general-purpose NER, allow custom entity types via schema |
+| **Social/sharing features** | Against privacy principles. Personal data stays private | Hard pass. No sharing, no social graph |
+| **AI-powered everything** | LLM overhead for simple tasks. GliNER2 shows: specialized models > general LLMs for extraction | Use LLMs via MCP for queries. Use specialized NLP for extraction (cheaper, faster) |
 
-**Key principle:** Build a **context layer**, not a productivity suite. Ingest, store, retrieve. Let other tools handle creation and presentation.
+---
 
 ## Feature Dependencies
 
-Critical ordering constraints for development.
+Mapping how features build on each other:
 
 ```
-Foundation Layer (Phase 1):
-├─ Data ingestion → Enables: All other features
-├─ Graph storage → Enables: Relationship discovery, graph visualization
-└─ Basic search → Enables: Semantic search, retrieval
+FOUNDATION (v1.0 - already built)
+├─ Graph database (Neo4j)
+├─ MCP server
+├─ Mobile app
+├─ Google sync
+└─ Vector search (GraphRAG)
 
-Retrieval Layer (Phase 2):
-├─ Embeddings pipeline → Enables: Semantic search, hybrid retrieval
-├─ Graph algorithms → Enables: Relationship discovery, contextual resurfacing
-└─ MCP server basics → Enables: AI assistant integration
+FILE INGESTION
+├─ PDF parsing (MinerU, PyMuPDF)
+├─ Text extraction
+├─ Metadata capture (created date, author, source)
+└─ → Feeds into: Entity Extraction
 
-Intelligence Layer (Phase 3):
-├─ GraphRAG → Requires: Graph storage + embeddings
-├─ Auto-enrichment → Requires: Ingestion + graph storage
-├─ Contextual resurfacing → Requires: Graph algorithms + calendar integration
-└─ Domain-aware MCP tools → Requires: MCP basics + graph queries
+ENTITY EXTRACTION
+├─ Requires: File content + existing graph
+├─ Tools: spaCy, GliNER2
+├─ Outputs: People, places, dates, custom entities
+└─ → Feeds into: Cross-source connections
 
-Platform Layer (Phase 4+):
-├─ Mobile app → Requires: Offline sync architecture
-├─ n8n integration → Requires: Stable API + webhook support
-└─ Voice capture → Requires: Mobile app + transcription pipeline
+NOTES SYSTEM
+├─ Quick capture UI (< 3 sec)
+├─ Wiki linking [[syntax]]
+├─ Backlinks panel
+├─ Templates library
+└─ → Feeds into: Graph + Entity Extraction
+
+PROACTIVE AI
+├─ Requires: Calendar (v1.0) + Notes + Entities
+├─ Context window: upcoming events
+├─ Triggers: 15min before meeting, morning digest
+└─ → Surfaces: Related notes, recent communications, task history
+
+GAMIFICATION
+├─ XP system (activity tracking)
+│  ├─ +10 XP: Note created
+│  ├─ +20 XP: File ingested
+│  ├─ +30 XP: Task completed
+│  └─ +50 XP: Weekly review
+├─ Levels (1-50, exponential curve)
+├─ Achievements (standard + incremental)
+│  ├─ Standard: "First note", "Connected 10 entities"
+│  ├─ Incremental: "100 tasks → 500 tasks → 1000 tasks"
+│  └─ Hidden: Easter eggs for power users
+├─ Mascot (visual companion)
+└─ Analytics (actionable patterns)
 ```
 
-**Critical path:** Data ingestion → Graph storage → MCP exposure. Everything else branches from these three.
+---
 
-## Feature Category Analysis
+## MVP Recommendation (v2.0)
 
-### Knowledge Management Baseline
-From Obsidian, Notion, Roam research:
-- Bidirectional linking is non-negotiable
-- Graph visualization builds trust
-- Markdown/JSON export reduces lock-in fears
-- Community values local-first architecture
+Based on complexity, impact, and dependencies, prioritize:
 
-### AI-First Memory Additions
-From Mem.ai, Rewind, Limitless:
-- Voice capture lowers friction significantly
-- Proactive resurfacing (Heads Up) creates "magic moments"
-- Auto-organization must be invisible to user
-- Privacy is table stakes (Rewind's local-only was key selling point)
+### Phase 1: File Foundation
+1. **File ingestion pipeline** (PDF, DOCX, TXT, MD) - Table stakes
+2. **Basic entity extraction** (spaCy NER) - Table stakes
+3. **Search file contents** (extend existing vector search) - Table stakes
 
-### CRM/Relationship Intelligence
-From Clay, Monica HQ:
-- Auto-enrichment saves massive time
-- Relationship mapping must be automatic (manual fails)
-- Integration with communication tools (email, calendar) is critical
-- Reconnection prompts add value without being intrusive
+**Why first:** Foundation for everything else. Without files in the graph, notes and AI have nothing to work with.
 
-### MCP Differentiation
-From Anthropic examples and community servers:
-- Domain-aware tools > generic CRUD operations
-- Resource exposure for static context (schema, documentation)
-- Sampling capability lets server stay model-agnostic
-- Notifications enable real-time updates to AI assistants
+### Phase 2: Notes System
+4. **Quick capture UI** (mobile + desktop) - Table stakes
+5. **Wiki linking [[syntax]]** - Table stakes
+6. **Backlinks panel** - Table stakes
+7. **Basic templates** (3-5 types) - Table stakes
 
-## Competitive Feature Matrix
+**Why second:** Users need to capture thoughts about the files they ingest. Notes + files = complete knowledge base.
 
-| Feature | Obsidian | Notion AI | Mem.ai | Rewind | Clay | **Your Platform** |
-|---------|----------|-----------|--------|--------|------|-------------------|
-| Bidirectional linking | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
-| Graph visualization | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |
-| Semantic search | Plugin | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Local-first | ✓ | ✗ | ✗ | ✓ | ✗ | ✓ |
-| MCP exposure | ✗ | ✗ | ✗ | ✗ | ✗ | **✓** (differentiator) |
-| Auto-enrichment | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ |
-| Voice capture | ✗ | Mobile | ✓ | ✓ | ✗ | ✓ (future) |
-| Relationship discovery | ✗ | ✗ | ✗ | ✗ | ✓ | **✓** (differentiator) |
-| n8n integration | ✗ | ✓ | ✗ | ✗ | ✗ | **✓** (differentiator) |
-| GraphRAG | ✗ | ✗ | ✗ | ✗ | ✗ | **✓** (differentiator) |
-| Multi-source ingestion | Manual | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Mobile app | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (planned) |
+### Phase 3: Enhanced Intelligence
+8. **Cross-source relationship inference** - Differentiator (HIGH VALUE)
+9. **Proactive context ("Heads Up")** - Differentiator (HIGH VALUE)
+10. **Actionable analytics** - Differentiator
 
-**White space opportunity:** No competitor combines graph-native storage + MCP exposure + n8n extensibility. This is your unique positioning.
+**Why third:** Intelligence layer that justifies "AI always has the right context" value prop. This is where Omnii One beats competitors.
 
-## 2026 Context and Trends
+### Phase 4: Gamification
+11. **XP + levels system** - Table stakes for gamification
+12. **Achievement system** (standard + incremental) - Table stakes
+13. **Mascot companion** - Differentiator
+14. **Analytics dashboard** - Differentiator (use findings from Phase 3)
 
-### What Changed Since 2025
-1. **AI integration is now baseline** — Apps without AI feel outdated
-2. **GraphRAG emerged as successor to RAG** — 67% better retrieval accuracy
-3. **Local-first architecture resurgence** — Privacy concerns driving demand
-4. **MCP adoption accelerating** — Anthropic donated to Linux Foundation (Dec 2025)
-5. **Multimodal is expected** — Text-only feels limited
-6. **Voice interfaces normalized** — Walk-and-capture is standard UX
+**Why last:** Polish and engagement layer. Works better once users have adopted core features (files + notes + AI).
 
-### Privacy Landscape
-- Users are "weary of cloud-only locks" and want data ownership
-- Local-first apps are "most private option" — cloud breaches can't expose local data
-- 2026 privacy laws expanding consumer data control
-- Self-hosting option is competitive advantage
+### Defer to Post-v2.0
 
-### AI Context Window Evolution
-- Models now handle 2M-10M tokens (Gemini 3 Pro: 2M, Llama 4: 10M)
-- BUT: Reliability degrades before advertised limit (200K → unreliable at 130K)
-- Implication: Quality retrieval still matters more than jamming context window
+- **Custom entity types** - Complex, not critical for initial release
+- **Multi-modal extraction** (images/charts) - Nice-to-have, defer until text extraction validated
+- **Code repository ingestion** - Niche use case, evaluate demand first
+- **MCP-native gamification** - Creative but not critical path
 
-### Retrieval Best Practices (2026)
-1. **Smart chunking** — Semantic boundaries, not arbitrary character limits
-2. **Hybrid search** — Combine dense embeddings + sparse (BM25)
-3. **Contextual embeddings** — Add context to chunks before embedding
-4. **GraphRAG** — Use knowledge graph to narrow search space
-5. **Reranking** — Two-stage retrieval (broad recall → precise rerank)
+---
 
-## MVP Feature Recommendation
+## Implementation Notes
 
-**Core MVP (3 months):**
-1. Email + calendar ingestion (Gmail, Google Calendar via API)
-2. Graph storage (Neo4j) with automatic relationship extraction
-3. Semantic search (embeddings + vector DB)
-4. Basic MCP server (expose search tool + contact resources)
-5. Simple web UI for viewing graph
-6. Local-first option (SQLite + local files)
+### File Ingestion Complexity
 
-**MVP+ (6 months):**
-7. Task and note ingestion (Todoist, Obsidian import)
-8. GraphRAG retrieval (graph traversal + contextual embeddings)
-9. Domain-aware MCP tools (schedule_meeting, find_contact, get_context)
-10. Mobile app (offline sync, quick capture)
+**PDF Processing:**
+- Text-based PDFs: PyMuPDF (fast, good structure preservation)
+- Scanned PDFs: MinerU (OCR + layout analysis)
+- Scientific/complex: MinerU (handles formulas, tables, figures)
 
-**Post-MVP (12 months):**
-11. n8n workflow integration
-12. Auto-enrichment (contact data, company info)
-13. Relationship discovery algorithms
-14. Voice capture and transcription
-15. Contextual resurfacing (Heads Up feature)
+**Expected processing time:**
+- 10-page PDF: < 5 seconds (text extraction)
+- 100-page PDF: 30-60 seconds (with OCR)
+- User expectation: Background processing with progress indicator
 
-**Defer indefinitely:**
-- Built-in note editor (use Obsidian/Notion)
-- Social/sharing features (anti-pattern for personal data)
-- Custom visualization builder (export to graph tools)
-- Multiple AI models (use MCP sampling instead)
+### Quick Capture Performance
 
-## Success Metrics by Feature
+Research indicates users abandon capture if it takes > 3 seconds. Requirements:
+- Open capture interface: < 500ms
+- Save note: < 1 second
+- Sync to graph: Background (don't block UI)
 
-| Feature | Success Metric | Target |
-|---------|----------------|--------|
-| Multi-source ingestion | Data sources connected per user | 3+ |
-| Semantic search | Query success rate | >85% |
-| MCP exposure | AI assistant queries per day | 10+ |
-| Graph visualization | User engagement (weekly views) | >50% users |
-| Auto-enrichment | Fields filled automatically | >60% |
-| Relationship discovery | Connections surfaced per 100 contacts | 20+ |
-| Mobile app | Offline captures per week | 5+ |
-| Voice capture | Capture-to-search time | <24 hours |
+Mobile implementation:
+- Widget on home screen (iOS/Android)
+- Share sheet integration
+- Keyboard shortcut (desktop)
 
-## Open Questions
+### Entity Extraction Approaches
 
-Areas requiring deeper research during development:
+**Baseline (v2.0):** spaCy with pre-trained models
+- People: Named entities (PERSON tag)
+- Places: Location entities (GPE, LOC tags)
+- Dates: Temporal entities (DATE tag)
+- Orgs: Organization entities (ORG tag)
 
-1. **Embedding model selection** — Which model best balances quality/cost/speed for personal data?
-2. **Graph schema design** — Optimal node/relationship types for personal context?
-3. **Sync conflict resolution** — How to handle offline edits on multiple devices?
-4. **MCP tool granularity** — What's the right level of abstraction for domain tools?
-5. **Auto-enrichment data sources** — Which APIs provide best contact enrichment?
-6. **Privacy-preserving embeddings** — Can we do local embedding without cloud?
-7. **Graph query optimization** — How to keep relationship discovery fast at scale?
+**Enhanced (v2.1+):** GliNER2 for schema-driven extraction
+- Custom entities: Projects, topics, products
+- Relationship extraction: "John works on Project X"
+- Structured data: Extract JSON from meeting notes
+
+**LLM fallback (via MCP):** For ambiguous cases
+- "Is 'Mercury' a planet, element, or company?"
+- Use Claude/GPT only when needed (cost control)
+
+### Gamification Balance
+
+Research findings inform design:
+
+**What works:**
+- XP for core actions (not everything)
+- Levels with meaningful milestones (every 5 levels = unlock)
+- Incremental achievements (10-session minimum)
+- Progress bars (visual feedback)
+- Emotional design (mascot with personality)
+
+**What fails:**
+- Points for everything (cheapens rewards)
+- Streak-only systems (anxiety when broken)
+- Hidden mechanics (users feel manipulated)
+- Vanity metrics (no actionable insight)
+- Constant interruptions (annoying)
+
+### Proactive AI Timing
+
+Timing research shows:
+- Before meetings: 15-30 minutes (gives time to prepare)
+- Morning digest: 8-9am (planning window)
+- End of day review: 5-6pm (reflection time)
+- Never: Random interruptions (users ignore/disable)
+
+Frequency limits:
+- Max 1 proactive suggestion per hour
+- User can adjust or disable
+- Learn from dismissals (if user ignores 3x, stop that pattern)
+
+---
 
 ## Sources
 
-### Knowledge Management
-- [Mem.ai features](https://get.mem.ai/blog/mem-2-dot-0)
-- [Notion AI 2026 updates](https://www.notion.com/releases/2026-01-20)
-- [Obsidian knowledge graphs](https://obsidian.md/)
-- [Roam Research networked thought](https://roamresearch.com/)
+### File Ingestion & Document Processing
+- [Best Python PDF to Text Parser Libraries: A 2026 Evaluation](https://unstract.com/blog/evaluating-python-pdf-to-text-libraries/)
+- [MinerU GitHub - Document Processing for LLMs](https://github.com/opendatalab/MinerU)
+- [Obsidian Extract PDF Plugin](https://github.com/akaalias/obsidian-extract-pdf)
+- [Building a Scalable Document Pre-Processing Pipeline - AWS](https://aws.amazon.com/blogs/architecture/building-a-scalable-document-pre-processing-pipeline/)
+- [Data Ingestion: An Introduction - Confluent](https://www.confluent.io/learn/data-ingestion/)
+- [7 Best PDF Parsing Tools - Otio Blog](https://otio.ai/blog/pdf-parsing)
 
-### AI Memory Systems
-- [Rewind.ai personal memory](https://www.oreateai.com/blog/rewind-ai-the-future-of-personal-memory-management/529657657f7c6471db1e73932db35e1c)
-- [Limitless AI wearable](https://www.limitless.ai/new)
-- [Second brain apps 2026](https://affine.pro/blog/best-second-brain-apps)
+### Notes & Quick Capture Systems
+- [How to Take Notion Quick Notes with iPhone Shortcuts (2026)](https://bennybuildsit.com/blog/how-to-take-notion-quick-notes-iphone-shortcuts)
+- [Notion Quick Capture Hacks - The Sweet Setup](https://thesweetsetup.com/notion-quick-capture-hacks/)
+- [Roam Research: Networked Note-Taking](https://www.primeproductiv4.com/apps-tools/roam-research-review)
+- [Best Note-Taking Apps 2026: Data & screenshots for 41 apps](https://noteapps.info/best_note_taking_apps_2025)
+- [Backlinks as the backbone of note-taking](https://zblesk.net/blog/backlinks-as-the-backbone-of-note-taking/)
+- [The rise of networked note-taking](https://reflect.app/blog/rise-of-networked-note-taking)
 
-### Personal CRM
-- [Clay features](https://clay.earth/)
-- [Monica HQ personal CRM](https://www.monicahq.com/features)
-- [Personal CRM tools 2026](https://monday.com/blog/crm-and-sales/personal-crm-software/)
+### Entity Extraction & Knowledge Graphs
+- [GliNER2: Extracting Structured Information from Text](https://towardsdatascience.com/gliner2-extracting-structured-information-from-text/)
+- [Building a Knowledge Graph: Comprehensive Guide (Jan 2026)](https://medium.com/@brian-curry-research/building-a-knowledge-graph-a-comprehensive-end-to-end-guide-using-modern-tools-e06fe8f3b368)
+- [Knowledge Graph Extraction and Challenges - Neo4j](https://neo4j.com/blog/developer/knowledge-graph-extraction-challenges/)
+- [Entity Linking and Relationship Extraction With Relik - Neo4j](https://neo4j.com/blog/developer/entity-linking-relationship-extraction-relik-llamaindex/)
+- [Named Entity Recognition: Comprehensive Guide - Kanerika](https://medium.com/@kanerika/named-entity-recognition-a-comprehensive-guide-to-nlps-key-technology-636a124eaa46)
 
-### MCP and Context Retrieval
-- [Anthropic MCP announcement](https://www.anthropic.com/news/model-context-protocol)
-- [MCP architecture](https://modelcontextprotocol.io/docs/learn/architecture)
-- [MCP best practices](https://oshea00.github.io/posts/mcp-practices/)
-- [Contextual retrieval (Anthropic)](https://www.anthropic.com/news/contextual-retrieval)
-- [MCP vs RAG 2026](https://kanerika.com/blogs/mcp-vs-rag/)
+### Gamification & User Engagement
+- [20 Productivity App Gamification Examples (2025)](https://trophy.so/blog/productivity-gamification-examples)
+- [Next-Gen Gamification: The Future of Tasks by 2026](https://magictask.io/blog/next-gen-gamification-task-management/)
+- [Top 10 Gamified Productivity Apps for 2025](https://yukaichou.com/lifestyle-gamification/the-top-ten-gamified-productivity-apps/)
+- [Gamification Strategies to Boost Mobile App Engagement](https://www.storyly.io/post/gamification-strategies-to-increase-app-engagement)
+- [Achievements - Android Developers](https://developer.android.com/games/pgs/achievements)
 
-### Graph Databases and Retrieval
-- [Neo4j knowledge graphs](https://neo4j.com/use-cases/knowledge-graph/)
-- [Graph database mistakes](https://neo4j.com/blog/graph-data-science/data-modeling-pitfalls/)
-- [GraphRAG 2026 trends](https://ragflow.io/blog/rag-review-2025-from-rag-to-context)
+### Productivity Analytics
+- [AI Metrics That Matter: Value vs Vanity in Marketing](https://www.thegutenberg.com/blog/ai-value-vs-vanity-metrics-measuring-true-business-impact/)
+- [What KPIs Matter in 2026: Master Meaningful Metrics](https://alliedinsight.com/resources/what-kpis-matter-in-2026/)
+- [Vanity Metrics vs. Actionable Insights - AgencyAnalytics](https://agencyanalytics.com/blog/vanity-metrics)
+- [How To Identify and Use Actionable Metrics - Amplitude](https://amplitude.com/blog/actionable-metrics)
 
-### Privacy and Local-First
-- [Local-first apps 2026](https://voicescriber.com/local-first-privacy-stack-iphone-apps)
-- [Privacy trends 2026](https://secureprivacy.ai/blog/data-privacy-trends-2026)
-- [Data privacy laws 2026](https://www.ketch.com/blog/posts/us-privacy-laws-2026)
+### Context-Aware AI & Proactive Suggestions
+- [Gemini's New Beta Feature: Proactive AI Responses](https://startupnews.fyi/2026/01/15/geminis-new-beta-feature-delivers-pro/)
+- [Lenovo Defines Next Era of Hybrid AI (Jan 2026)](https://news.lenovo.com/pressroom/press-releases/hybrid-ai-personalized-perceptive-proactive-ai-portfolio-tech-world-ces-2026/)
+- [Designing a Proactive Context-Aware AI Chatbot - CHI 2024](https://dl.acm.org/doi/10.1145/3613905.3650912)
+- [10 Best AI Personal Assistants in 2026](https://www.dume.ai/blog/10-ai-personal-assistants-youll-need-in-2026)
 
-### Workflow Automation
-- [n8n workflow automation](https://n8n.io/)
-- [n8n personal data integration](https://medium.com/@aksh8t/n8n-workflow-automation-the-2026-guide-to-building-ai-powered-workflows-that-actually-work-cd62f22afcc8)
-
-### AI and Embeddings
-- [Best embedding models 2026](https://www.openxcell.com/blog/best-embedding-models/)
-- [AI data enrichment](https://www.warmly.ai/p/blog/ai-data-enrichment)
-- [Long context windows 2026](https://research.aimultiple.com/ai-context-window/)
-
-### Knowledge Management Anti-Patterns
-- [PKM mistakes to avoid](https://www.dsebastien.net/12-common-personal-knowledge-management-mistakes-and-how-to-avoid-them/)
-- [Knowledge management pitfalls](https://www.ariglad.com/blogs/common-pitfalls-knowledge-management)
+### AI Assistant UX Anti-Patterns
+- [Is your product's AI annoying people? - TechCrunch](https://techcrunch.com/2019/06/17/is-your-products-ai-annoying-people/)
+- [Why do I find on-device AI assistants so annoying? - IT Pro](https://www.itpro.com/technology/artificial-intelligence/on-device-ai-assistants-annoying)
+- [AI Gaslighting is Real: When Your Digital Assistant Drives You Mad](https://retrosusie.com/ai-assistant-frustration-is-real-lessons-from-my-creative-breakdown-with-chatgpt/)

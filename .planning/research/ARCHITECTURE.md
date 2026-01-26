@@ -1,1243 +1,1126 @@
-# Architecture Patterns: Personal Context Server / MCP System
+# Architecture Integration: v2.0 Feature Expansion
 
-**Domain:** Personal Knowledge Graph / MCP Server
-**Researched:** 2026-01-24
-**Confidence:** MEDIUM-HIGH
+**Domain:** Personal Context Server - v2.0 Feature Additions
+**Researched:** 2026-01-26
+**Confidence:** HIGH (verified with current documentation and 2026 sources)
 
 ## Executive Summary
 
-Personal context servers integrating with the Model Context Protocol (MCP) follow a multi-layered architecture with clear separation between data ingestion, graph storage, AI interaction, and client applications. The architecture combines:
+v2.0 feature expansion builds on the proven v1.0 architecture (Bun/Elysia backend, Neo4j graph, PowerSync mobile sync, MCP tools) by adding four major capabilities: local file ingestion, notes capture, enhanced NLP, and gamification. Integration follows the existing patterns established in v1.0:
 
-1. **MCP server layer** providing tools, resources, and prompts to AI applications
-2. **Knowledge graph layer** (Neo4j) storing entities, relationships, and concepts with multi-tenancy
-3. **Orchestration layer** (n8n) coordinating workflows and data pipelines
-4. **Backend API layer** (Bun/Elysia) handling real-time communication and business logic
-5. **Mobile client layer** (React Native/Expo) with local-first architecture and offline sync
-6. **Authentication/data layer** (Supabase) managing users and relational data
+1. **File ingestion** extends the BullMQ worker pattern from Google services ingestion, using officeParser for multi-format parsing and semantic chunking for embedding generation
+2. **Notes capture** leverages Neo4j's bidirectional relationships for wiki-style linking and PowerSync for offline-first mobile capture
+3. **Enhanced NLP** builds on the existing entity extraction service with transformer-based models (spaCy/BERT) running backend-side for consistency
+4. **Gamification** uses Supabase tables synced via PowerSync with real-time tRPC subscriptions for live XP/achievement updates
 
-This architecture enables offline-first mobile experiences, real-time updates, AI-powered entity recognition, and seamless integration with external services through standardized protocols.
+All features integrate with existing components rather than replacing them. Build order prioritizes file ingestion first (extends proven ingestion pipeline), then notes (needs file chunking), then NLP (needs document corpus), finally gamification (pure additive feature).
 
-## Recommended Architecture
+## v1.0 Architecture Recap
+
+**Existing foundation (DO NOT MODIFY):**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        AI Applications Layer                         │
-│                    (Claude Desktop, Claude Code)                     │
+│                   AI Applications (Claude, OpenAI)                   │
 └────────────────┬────────────────────────────────────────────────────┘
-                 │ MCP Protocol (JSON-RPC 2.0)
-                 │ Transport: STDIO (local) or HTTP+SSE (remote)
-                 │
+                 │ MCP Protocol (10 tools)
 ┌────────────────▼────────────────────────────────────────────────────┐
-│                         MCP Server Layer                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
-│  │   Tools      │  │  Resources   │  │   Prompts    │              │
-│  │ (Actions)    │  │ (Context)    │  │ (Templates)  │              │
-│  └──────────────┘  └──────────────┘  └──────────────┘              │
-│                                                                      │
-│  Capabilities:                                                       │
-│  - Entity recognition and linking                                   │
-│  - Graph traversal and querying                                     │
-│  - Context retrieval for LLM                                        │
-│  - Action execution with intervention mgmt                          │
-└────────────┬────────────────────────────────────────────────────────┘
-             │
-             │ Internal API (tRPC over WebSocket)
-             │
-┌────────────▼────────────────────────────────────────────────────────┐
-│                    Backend API Layer (Bun/Elysia)                    │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │ Real-Time Communication (WebSocket + tRPC Subscriptions)     │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │ Business Logic Layer                                         │  │
-│  │ - Entity Recognition Service (NLP Pipeline)                  │  │
-│  │ - Action Planning Service (Step Executors)                   │  │
-│  │ - Intervention Management Service                            │  │
-│  │ - Sync Service (Conflict Resolution, Delta Sync)             │  │
-│  └──────────────────────────────────────────────────────────────┘  │
+│                    MCP Server Layer (apps/omnii_mcp)                 │
+│  Tools: search_nodes, get_context, calendar_query, task_operations  │
+│  GraphRAG: Dual-channel retrieval (vector + graph)                  │
 └─────┬──────────────────────────────────┬─────────────────┬──────────┘
       │                                  │                 │
-      │                                  │                 │
 ┌─────▼────────┐           ┌─────────────▼─────┐    ┌────▼──────────┐
-│   Neo4j      │           │    Supabase       │    │     n8n       │
-│ Graph Layer  │           │  - PostgreSQL     │    │ Orchestration │
-│              │           │  - Auth (RLS)     │    │   Workflows   │
-│ Multi-tenant │           │  - Multi-tenancy  │    │               │
-│ Per-user DB  │           │  - User metadata  │    │ Data Pipeline │
+│   Neo4j      │           │    Supabase       │    │   BullMQ      │
+│ HTTP Query   │           │  Auth + Sync      │    │  Workers      │
+│ Multi-DB     │           │  Tables           │    │               │
 └──────────────┘           └───────────────────┘    └───────────────┘
-      │                              │                     │
-      │                              │                     │
-      └──────────────────┬───────────┴─────────────────────┘
-                         │
-           ┌─────────────▼────────────────┐
-           │   External Integrations      │
-           │  - Google (via Composio)     │
-           │  - Email, Calendar, Drive    │
-           │  - Custom OAuth Apps         │
-           └──────────────────────────────┘
-                         │
-                         │ REST/GraphQL APIs
-                         │
-┌────────────────────────▼─────────────────────────────────────────────┐
-│                    Mobile Client Layer (React Native/Expo)            │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ Local-First Architecture                                     │   │
-│  │ - Local SQLite/Realm (Graph Subset Replica)                  │   │
-│  │ - Context Providers (State Management)                       │   │
-│  │ - Offline Queue (Mutations, Actions)                         │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │ Sync Engine                                                  │   │
-│  │ - Background sync when online                                │   │
-│  │ - Conflict resolution (CRDTs/Operational Transform)          │   │
-│  │ - Delta sync (only changed data)                             │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────────┘
+                                  │
+                    ┌─────────────▼────────────────┐
+                    │  Mobile (PowerSync Sync)     │
+                    │  React Native + Expo         │
+                    └──────────────────────────────┘
 ```
 
-## Component Boundaries
+**Key v1.0 patterns to extend:**
+- BullMQ workers for background data ingestion (apps/omnii_mcp/src/ingestion/jobs/)
+- Neo4j Document/Chunk nodes with embeddings (apps/omnii_mcp/src/graph/schema/)
+- PowerSync sync tables in Supabase (apps/omnii_mcp/supabase/)
+- tRPC subscriptions for real-time updates (apps/omnii_mcp/src/routes/)
+- Entity extraction service (apps/omnii_mcp/src/services/graphrag/)
 
-### 1. MCP Server Layer
+## v2.0 Feature Integration
 
-**Responsibility:** Expose knowledge graph capabilities to AI applications via standardized MCP protocol
+### 1. File Ingestion Pipeline
 
-**Communicates with:**
-- AI applications (Claude Desktop, Claude Code) via MCP protocol
-- Backend API layer via internal APIs
-- Neo4j graph database for context retrieval
+**Goal:** Ingest local files (PDFs, Word docs, text, code, markdown) into Neo4j graph with semantic chunking
 
-**Key interfaces:**
-- **Tools:** `graph/query`, `entity/create`, `relationship/add`, `action/execute`, `intervention/request`
-- **Resources:** `context/personal`, `graph/schema`, `entity/{id}`, `memory/recent`
-- **Prompts:** `entity_extraction`, `action_planning`, `context_summarization`
+#### Integration Points
 
-**Implementation notes:**
-- Uses JSON-RPC 2.0 for all MCP communication
-- Supports both STDIO (local development) and HTTP+SSE (production)
-- Implements capability negotiation during initialization
-- Sends `notifications/tools/list_changed` when graph structure changes
-- Provides sampling/elicitation callbacks for LLM interaction and user confirmation
+**Extends existing ingestion architecture:**
+- Uses BullMQ queue pattern from Google services ingestion
+- Follows Document → Chunk node structure from v1.0
+- Leverages existing embedding service for vector generation
+- Integrates with existing sync_state table for incremental updates
 
-### 2. Backend API Layer (Bun/Elysia)
+#### New Components
 
-**Responsibility:** Business logic orchestration, real-time communication, service coordination
-
-**Communicates with:**
-- MCP server layer (internal API)
-- Mobile clients via tRPC over WebSocket
-- Neo4j for graph operations
-- Supabase for auth and relational data
-- n8n for workflow triggers
-- External services via Composio
-
-**Sub-components:**
-
-#### Real-Time Communication Service
-- **Technology:** tRPC WebSocket subscriptions
-- **Pattern:** Lazy connection with auto-reconnect, bidirectional queries/mutations/subscriptions
-- **Provides:** Live entity updates, action status changes, intervention requests
-- **Implementation:** BehaviorSubject for connection state tracking, tracked() events for recovery
-
-#### Entity Recognition Service
-- **Technology:** NLP pipeline (transformer-based, likely spaCy/BERT)
-- **Pattern:** BiLSTM for bidirectional context + CRF for structured prediction
-- **Provides:** Named entity recognition, entity linking to graph nodes
-- **Flow:** Text → Tokenization → BiLSTM → CRF → Entity labels → Graph linking
-
-#### Action Planning Service
-- **Pattern:** Multi-agent orchestration with step executors
-- **Provides:** Action decomposition, execution planning, step-by-step tracking
-- **Uses:** Working memory (session-specific) + persistent memory (cross-session)
-- **Implementation:** Modular sub-workflows for each action type
-
-#### Intervention Management Service
-- **Pattern:** Human-in-the-loop with override mechanisms
-- **Provides:** Approval workflows, exception handling, risk assessment
-- **Features:** Configurable intervention thresholds, audit logging, rollback support
-
-#### Sync Service
-- **Pattern:** Delta sync with conflict resolution
-- **Provides:** Mobile client synchronization, offline queue processing
-- **Strategies:** Last-write-wins, client-wins, server-wins, time-based resolver
-- **Implementation:** Bi-temporal data model (event time + ingestion time)
-
-**Architecture pattern:** Clean architecture with BFF (Backend-for-Frontend) layer for mobile clients
-
-**Deployment:** Cluster mode with SO_REUSEPORT for multi-core CPU utilization
-
-### 3. Neo4j Graph Layer
-
-**Responsibility:** Store and query knowledge graph with multi-tenancy isolation
-
-**Communicates with:**
-- Backend API layer via Cypher queries
-- MCP server layer for context retrieval
-
-**Multi-tenancy pattern:** Multiple databases (Neo4j 4.0+)
-- **Approach:** One database per user/tenant
-- **Isolation:** Complete separation, no cross-database relationships
-- **Queries:** USE statement for database selection
-- **Federation:** Composite databases with proxy nodes for cross-user queries (optional)
-- **Access control:** Per-database privileges, separate admin/app users
-
-**Schema:**
-- **Nodes:** Concepts, Entities, Users, Actions, Interventions
-- **Relationships:** HAS_CONCEPT, RELATES_TO, TRIGGERED_BY, DEPENDS_ON
-- **Properties:** Timestamps, metadata, embeddings (for semantic search)
-
-**Performance considerations:**
-- Graph traversal for relationship discovery
-- BM25 + semantic embeddings for hybrid retrieval
-- Indexed entity properties for fast lookups
-
-### 4. Supabase Layer
-
-**Responsibility:** Authentication, relational data, multi-tenant access control
-
-**Communicates with:**
-- Backend API layer for auth verification
-- Mobile clients for authentication flows
-- PostgreSQL for relational data storage
-
-**Multi-tenancy pattern:** Row-Level Security (RLS)
-- **Approach:** Shared tables with `tenant_id` column
-- **Isolation:** RLS policies filter by `app_metadata.tenant_id`
-- **Authentication:** JWT tokens with tenant context in `app_metadata`
-- **Limitation:** Single tenant per session (can't switch tenants without re-auth)
-
-**Schema:**
-- **Tables:** users, profiles, settings, oauth_connections
-- **RLS policies:** Automatic filtering by authenticated user's tenant
-- **Functions:** `get_tenant_id()` extracts tenant from JWT
-
-**Integration with Composio:**
-- OAuth tokens stored in Supabase
-- Brokered credentials pattern for security
-- AgentAuth handles token lifecycle
-
-### 5. n8n Orchestration Layer
-
-**Responsibility:** Workflow automation, data pipeline orchestration, AI agent coordination
-
-**Communicates with:**
-- Backend API via webhooks and HTTP requests
-- External services (Google, email, etc.)
-- Neo4j for graph updates
-- Supabase for data triggers
-
-**Orchestration patterns:**
-
-#### Single Agent with State
-- Session-specific working memory
-- Memory nodes for context retention
-- Sequential AI model calls with intermediate processing
-
-#### Multi-Agent with Gatekeeper
-- Centralized control agent
-- Specialized agent delegation
-- Routing patterns for task assignment
-
-#### Multi-Agent Teams
-- Parallel specialized agents
-- Orchestrator pattern using AI Agent Tool nodes
-- Sub-workflow modularity for debugging
-
-**Best practices:**
-- Modular design with sub-workflows
-- Conditional logic for complex decisions
-- Load balancer distribution for webhook triggers
-- AI Agent nodes for autonomous tasking
-
-**Integration with backend:**
-- Webhook triggers for graph events
-- HTTP requests for action execution
-- Database queries for state updates
-
-### 6. Mobile Client Layer (React Native/Expo)
-
-**Responsibility:** Offline-first UI, local data caching, user interaction
-
-**Communicates with:**
-- Backend API via tRPC WebSocket
-- Supabase for authentication
-- Local storage (SQLite/Realm) for offline data
-
-**Local-first architecture:**
-
-#### Data Tier Structure
-1. **Local storage** (SQLite/WatermelonDB/Realm) for instant offline reads
-2. **Remote APIs** (tRPC) for authoritative data
-3. **Real-time sync** for collaborative/time-sensitive features
-
-#### Local Database Choice
-- **Realm:** Object-oriented, direct object storage, graph-like relationships via links/backlinks
-- **WatermelonDB:** SQLite-based, handles large data sets, offline-first optimized
-- **SQLite:** Lightweight, serverless, full SQL syntax support
-
-**Recommended:** Realm for graph-like data with relationships
-
-#### Sync Engine
-- **Pattern:** Local-first, sync-later
-- **Flow:** UI → Local DB (immediate) → Offline queue → Background sync (batched)
-- **First-time sync (FTS):** Download relevant graph subset for user
-- **Delta sync:** Only modified entities/relationships
-- **Conflict resolution:** Time-based resolver with manual override option
-
-#### State Management
-- **Recommendation:** Zustand or TanStack Query (not Redux)
-- **Context providers:** User context, graph context, sync status, action queue
-- **Caching:** TanStack Query for server state caching with auto-refetch
-
-#### React Server Components (RSC)
-- **Via:** Expo Router ecosystem
-- **Benefit:** Direct database access for initial renders without REST/GraphQL
-- **Pattern:** Hybrid client/server components for data fetching
-
-## Data Flow Patterns
-
-### 1. Entity Recognition Flow
-
-```
-User Input (text/voice/import)
-  │
-  ├─→ Mobile Client: Capture & queue
-  │     │
-  │     └─→ Local DB: Save draft entity
-  │           │
-  │           └─→ Offline queue: Add to sync
-  │
-  ├─→ [When online] Sync to Backend
-  │     │
-  │     └─→ Entity Recognition Service
-  │           │
-  │           ├─→ Tokenization
-  │           ├─→ BiLSTM (bidirectional context)
-  │           ├─→ CRF (structured prediction)
-  │           └─→ Entity labels + confidence scores
-  │
-  └─→ Graph Linking
-        │
-        ├─→ Neo4j: Query existing entities
-        ├─→ Link to existing OR create new node
-        ├─→ Create relationships
-        └─→ Update graph embeddings
-              │
-              └─→ Sync back to Mobile
-                    │
-                    ├─→ Update local DB
-                    └─→ Notify UI (tRPC subscription)
-```
-
-### 2. Context Retrieval Flow (GraphRAG)
-
-```
-AI Application query
-  │
-  └─→ MCP Server: tools/call("graph/query")
-        │
-        ├─→ Query Processing
-        │     │
-        │     ├─→ Embed query (semantic search)
-        │     └─→ Entity linking (map to graph nodes)
-        │
-        ├─→ Dual-Channel Retrieval
-        │     │
-        │     ├─→ Vector retrieval (text passages)
-        │     │     └─→ Semantic similarity search
-        │     │
-        │     └─→ Graph retrieval
-        │           ├─→ Relevant subgraphs
-        │           ├─→ Neighbor nodes
-        │           └─→ Multi-hop relationships
-        │
-        ├─→ Context Merger
-        │     │
-        │     └─→ Combine text + structured data
-        │           ├─→ Documentary evidence
-        │           └─→ Relational context
-        │
-        └─→ MCP Response: content[] array
-              │
-              └─→ AI Application: LLM generation with context
-```
-
-**Performance:** Sub-50ms query latency with FalkorDB-style optimization
-
-**Advantages:** 90% hallucination reduction vs. traditional RAG, exact matching via graph query language
-
-### 3. Action Execution Flow (with Intervention)
-
-```
-User action request (mobile/AI)
-  │
-  ├─→ Action Planning Service
-  │     │
-  │     ├─→ Decompose into steps
-  │     ├─→ Check dependencies
-  │     └─→ Risk assessment
-  │           │
-  │           └─→ [HIGH RISK] → Intervention Management
-  │                 │
-  │                 ├─→ Request approval (MCP elicitation/create)
-  │                 ├─→ User notification (mobile push)
-  │                 └─→ [APPROVED] → Continue
-  │                       [REJECTED] → Abort & log
-  │
-  └─→ Step Executors
-        │
-        ├─→ Execute step 1
-        │     │
-        │     ├─→ n8n workflow trigger (if external action)
-        │     │     └─→ Composio integration (Google/OAuth)
-        │     │
-        │     └─→ Update Neo4j (action state)
-        │           └─→ Notify subscribers (tRPC)
-        │
-        ├─→ Execute step 2 (conditional)
-        │     └─→ [FAILURE] → Rollback & notify
-        │
-        └─→ Complete & persist
-              │
-              ├─→ Update persistent memory
-              └─→ Log audit trail
-```
-
-### 4. Mobile Sync Flow
-
-```
-Mobile app startup
-  │
-  └─→ Authentication (Supabase)
-        │
-        ├─→ Get JWT with tenant_id in app_metadata
-        │
-        └─→ [First-time sync]
-              │
-              ├─→ Request user's graph subset
-              │     └─→ Backend queries Neo4j (user's database)
-              │           └─→ Return entities + relationships
-              │
-              └─→ Populate local Realm DB
-                    └─→ Ready for offline use
-
-[User makes offline changes]
-  │
-  └─→ Queue mutations in local DB
-        │
-        └─→ [When online detected]
-              │
-              ├─→ Delta sync (only changed data)
-              │     │
-              │     ├─→ Send local changes to backend
-              │     └─→ Receive remote changes since last sync
-              │
-              ├─→ Conflict detection
-              │     │
-              │     ├─→ [NO CONFLICT] → Apply changes
-              │     │
-              │     └─→ [CONFLICT] → Resolution strategy
-              │           ├─→ Time-based (most recent wins)
-              │           ├─→ Client-wins (user priority)
-              │           ├─→ Server-wins (authority priority)
-              │           └─→ Manual (notify user for decision)
-              │
-              └─→ Update local DB
-                    └─→ Notify UI (re-render)
-```
-
-### 5. External Integration Flow (via Composio)
-
-```
-n8n workflow triggered
-  │
-  └─→ Google Calendar action needed
-        │
-        ├─→ Composio AgentAuth
-        │     │
-        │     ├─→ Check OAuth token validity
-        │     │
-        │     └─→ [EXPIRED] → Refresh token
-        │           └─→ Update Supabase
-        │
-        ├─→ Brokered API call
-        │     │
-        │     └─→ Composio → Google Calendar API
-        │           (Tokens never reach app runtime)
-        │
-        └─→ Response to n8n
-              │
-              ├─→ Update Neo4j (calendar entity)
-              │
-              └─→ Sync to mobile
-                    └─→ Update local DB
-```
-
-## Architecture Patterns to Follow
-
-### Pattern 1: MCP Server Capability Negotiation
-
-**What:** Initialize MCP connection with capability exchange before any operations
-
-**When:** Every MCP client-server connection establishment
-
-**Example:**
+**File Parser Service** (`apps/omnii_mcp/src/ingestion/sources/files/`)
 ```typescript
-// Server declares capabilities
-const serverCapabilities = {
-  tools: { listChanged: true },      // Can send tool update notifications
-  resources: {},                     // Supports resources primitive
-  prompts: {}                        // Supports prompts primitive
-};
+// New service extending existing pattern
+import { officeParser } from 'officeparser';
 
-// Client declares capabilities
-const clientCapabilities = {
-  elicitation: {},                   // Can handle user interaction requests
-  sampling: {}                       // Can provide LLM sampling
-};
-
-// Initialization handshake
-await session.initialize({
-  protocolVersion: "2025-06-18",
-  capabilities: clientCapabilities,
-  clientInfo: { name: "omnii-one", version: "1.0.0" }
-});
-
-// Server responds with its capabilities
-// Now both sides know what's available
-```
-
-**Why:** Enables dynamic feature discovery, prevents unsupported operations, allows protocol evolution
-
-### Pattern 2: Local-First with Delta Sync
-
-**What:** Store data locally first, sync changes in batches with delta-only updates
-
-**When:** Mobile app needs offline functionality with eventual consistency
-
-**Example:**
-```typescript
-// User creates entity offline
-const entity = await localDB.entities.create({
-  id: uuid(),
-  name: "Project Alpha",
-  type: "project",
-  _syncStatus: "pending",
-  _localModifiedAt: Date.now()
-});
-
-// Queue for sync
-await syncQueue.add(entity.id);
-
-// When online, sync only delta
-const lastSyncTimestamp = await syncState.getLastSync();
-const changedEntities = await localDB.entities
-  .where("_localModifiedAt").gt(lastSyncTimestamp)
-  .where("_syncStatus").equals("pending");
-
-// Send to backend
-await backend.sync.push(changedEntities);
-
-// Receive server changes
-const serverChanges = await backend.sync.pull(lastSyncTimestamp);
-
-// Merge with conflict resolution
-for (const change of serverChanges) {
-  const local = await localDB.entities.get(change.id);
-  if (!local) {
-    await localDB.entities.put(change);
-  } else if (change._serverModifiedAt > local._localModifiedAt) {
-    await localDB.entities.put({ ...change, _syncStatus: "synced" });
-  } else {
-    // Conflict: decide strategy
-    await handleConflict(local, change);
-  }
+interface FileParserService {
+  parseFile(filePath: string, mimeType: string): Promise<ParsedDocument>;
+  // Supports: PDF, DOCX, PPTX, XLSX, TXT, MD, code files
 }
+
+// Uses officeParser (v6.0.4) for multi-format parsing
+// Returns AST with text, formatting, metadata, attachments
 ```
 
-**Why:** Instant UI updates, works offline, minimal bandwidth, eventual consistency
-
-### Pattern 3: Multi-Database Neo4j Multi-Tenancy
-
-**What:** Separate Neo4j database per user/tenant for complete data isolation
-
-**When:** Multi-tenant knowledge graph requiring strong isolation and user-specific schemas
-
-**Example:**
+**Chunking Strategy Service** (`apps/omnii_mcp/src/services/chunking/`)
 ```typescript
-// Create user database on signup
-await neo4j.execute(`CREATE DATABASE user_${userId}`);
-await neo4j.execute(`GRANT ALL ON DATABASE user_${userId} TO ${userId}_role`);
+interface ChunkingStrategy {
+  semantic: SemanticChunker;      // Groups by semantic similarity
+  markdown: MarkdownChunker;       // Splits by headings, preserves structure
+  code: CodeChunker;               // Respects function/class boundaries
+  fixed: FixedSizeChunker;         // Fallback: 300 chars, 100 overlap
+}
 
-// Query user's graph
-const session = driver.session({ database: `user_${userId}` });
-await session.run(`
-  MATCH (e:Entity)-[r:RELATES_TO]->(c:Concept)
-  WHERE e.id = $entityId
-  RETURN e, r, c
-`, { entityId });
-
-// Optional: Cross-user federation with composite database
-await neo4j.execute(`
-  CREATE COMPOSITE DATABASE shared_view
-  FOR DATABASE user_alice, DATABASE user_bob
-`);
-
-// Query across users with proxy nodes
-await session.run(`
-  USE shared_view
-  MATCH (p:Product) WHERE p.id = $productId
-  RETURN p
-`, { productId });
-// Product nodes exist in both databases for federation
+// Semantic chunking uses embedding similarity
+// Markdown preserves section hierarchy
+// Code respects AST boundaries
 ```
 
-**Why:** Complete isolation, independent backups, per-user scaling, regulatory compliance
+**Storage Pattern**
+```
+Neo4j Graph:
+(:Document {id, name, type, source, createdAt})
+  -[:CONTAINS_CHUNK {sequence}]->
+    (:Chunk {id, text, embedding, semanticGroup})
+      -[:MENTIONS]-> (:Entity)
+      -[:SIMILAR_TO {score}]-> (:Chunk)  // kNN graph for related chunks
+```
 
-### Pattern 4: GraphRAG Dual-Channel Retrieval
+#### Data Flow
 
-**What:** Combine vector similarity search with graph traversal for context retrieval
+```
+File upload (mobile or desktop)
+  │
+  └─→ Upload to Supabase Storage
+        │
+        ├─→ Create Document node in Neo4j
+        │
+        └─→ BullMQ job: process-file
+              │
+              ├─→ FileParserService.parseFile()
+              │     └─→ officeParser extracts text, metadata
+              │
+              ├─→ ChunkingStrategy (semantic/markdown/code)
+              │     └─→ Split into logical chunks
+              │
+              ├─→ EmbeddingService.generateEmbeddings()
+              │     └─→ Create vector embeddings for each chunk
+              │
+              ├─→ Neo4j: Create Chunk nodes
+              │     └─→ Link to Document, set embeddings
+              │
+              ├─→ EntityExtractionService (existing)
+              │     └─→ Extract entities from chunk text
+              │
+              └─→ PowerSync: Sync document metadata to mobile
+                    └─→ Update sync_documents table
+```
 
-**When:** Providing context to LLM from knowledge graph
+**Storage recommendation:**
+- File blobs → Supabase Storage (existing infrastructure)
+- Document metadata → Neo4j Document nodes
+- Chunks + embeddings → Neo4j Chunk nodes
+- Mobile sync metadata → Supabase sync_documents table
 
-**Example:**
+#### Build Order Integration
+
+**Phase 1: File parsing infrastructure**
+- Install officeParser, configure supported formats
+- Create FileParserService with multi-format support
+- Add Supabase Storage bucket for documents
+- Create Neo4j Document/Chunk schema (extends v1.0 pattern)
+
+**Phase 2: Chunking and embedding**
+- Implement semantic/markdown/code chunking strategies
+- Wire into existing EmbeddingService
+- Create kNN similarity graph between chunks
+
+**Phase 3: Ingestion pipeline**
+- Create BullMQ process-file job (mirrors process-calendar pattern)
+- Wire into existing entity extraction
+- Add tRPC upload routes
+
+**Phase 4: Mobile upload**
+- Add document picker to mobile app
+- Upload to Supabase Storage
+- Trigger backend processing job
+- Show processing status via PowerSync sync
+
+### 2. Notes Capture System
+
+**Goal:** Quick capture with templates, wiki-style bidirectional linking, offline-first mobile experience
+
+#### Integration Points
+
+**Extends existing graph and sync:**
+- Uses Neo4j bidirectional relationships for wiki links
+- Leverages PowerSync offline queue for instant capture
+- Follows Document/Chunk pattern from file ingestion
+- Integrates with existing search_nodes MCP tool
+
+#### New Components
+
+**Note Node Schema** (`apps/omnii_mcp/src/graph/schema/nodes.ts`)
 ```typescript
-async function retrieveContext(query: string) {
-  // Channel 1: Vector/semantic search
-  const queryEmbedding = await embedModel.embed(query);
-  const semanticResults = await vectorDB.search(queryEmbedding, {
-    limit: 10,
-    threshold: 0.7
-  });
+interface NoteNode {
+  id: string;
+  title: string;
+  content: string;           // Full markdown text
+  template?: string;         // Template ID if created from template
+  tags: string[];
+  createdAt: DateTime;
+  updatedAt: DateTime;
+  embedding?: number[];      // For semantic search
+}
 
-  // Channel 2: Graph traversal
-  const entities = await entityLinker.link(query);
-  const graphResults = await neo4j.run(`
-    MATCH (e:Entity)-[r*1..3]-(related)
-    WHERE e.id IN $entityIds
-    RETURN e, r, related
-    ORDER BY length(r) ASC
-    LIMIT 20
-  `, { entityIds: entities.map(e => e.id) });
+// Relationships:
+// (:Note)-[:LINKS_TO]->(:Note)           // Wiki-style [[links]]
+// (:Note)-[:CREATED_FROM]->(:Template)   // Template tracking
+// (:Note)-[:MENTIONS]->(:Entity)         // Extracted entities
+// (:Note)-[:CHUNK]->(:Chunk)             // For long notes
+```
 
-  // Merge both channels
-  const context = {
-    documents: semanticResults.map(r => r.text),
-    relationships: graphResults.records.map(r => ({
-      source: r.get('e').properties,
-      target: r.get('related').properties,
-      type: r.get('r')[0].type
-    }))
+**Wiki Link Parser Service** (`apps/omnii_mcp/src/services/notes/`)
+```typescript
+interface WikiLinkParser {
+  extractLinks(markdown: string): string[];  // Find [[link]] syntax
+  resolveLinks(noteId: string): Promise<BiDirectionalLinks>;
+  createBacklinks(noteId: string, linkedNoteIds: string[]): Promise<void>;
+}
+
+// Pattern: [[Note Title]] creates bidirectional link
+// Neo4j: (:Note)-[:LINKS_TO]->(:Note) + reverse for backlinks
+// Updates automatically when links added/removed
+```
+
+**Template System** (`apps/omnii_mcp/src/services/notes/templates.ts`)
+```typescript
+interface NoteTemplate {
+  id: string;
+  name: string;
+  content: string;           // Markdown with {{placeholders}}
+  fields: TemplateField[];   // Structured data fields
+}
+
+// Example templates:
+// - Meeting Notes: {{date}}, {{attendees}}, {{topics}}
+// - Daily Log: {{date}}, {{mood}}, {{tasks}}
+// - Project: {{name}}, {{status}}, {{deadline}}
+```
+
+#### Data Flow
+
+```
+Mobile: Quick capture
+  │
+  ├─→ Local: Create Note in PowerSync SQLite
+  │     └─→ Instant UI update (offline-first)
+  │
+  └─→ [When online] Sync to backend
+        │
+        ├─→ Create Note node in Neo4j
+        │
+        ├─→ WikiLinkParser.extractLinks()
+        │     └─→ Create LINKS_TO relationships
+        │
+        ├─→ EntityExtractionService (existing)
+        │     └─→ Extract entities from note content
+        │
+        └─→ If note > 1000 chars:
+              └─→ Chunking + embedding (reuse file pipeline)
+```
+
+**PowerSync schema extension:**
+```typescript
+// Supabase sync_notes table
+interface SyncNote {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  created_at: timestamp;
+  updated_at: timestamp;
+}
+
+// PowerSync syncs to mobile SQLite
+// Enables offline capture with conflict resolution
+```
+
+#### Build Order Integration
+
+**Phase 1: Note schema and storage**
+- Create Note node schema in Neo4j
+- Add sync_notes table in Supabase
+- Configure PowerSync rules for notes
+
+**Phase 2: Mobile capture UI**
+- Quick capture screen with templates
+- Markdown editor with [[link]] syntax
+- Offline queue for captures
+- Tag picker and template selector
+
+**Phase 3: Wiki linking backend**
+- WikiLinkParser service
+- Bidirectional relationship creation
+- Backlink resolution API
+
+**Phase 4: Search and retrieval**
+- Add note search to search_nodes MCP tool
+- Backlink visualization in mobile
+- Template management UI
+
+### 3. Enhanced NLP Pipeline
+
+**Goal:** Improved entity extraction with custom models, proactive context suggestions, cross-source relationship inference
+
+#### Integration Points
+
+**Extends existing entity extraction:**
+- Builds on EntityExtractionService from v1.0
+- Uses existing Neo4j MENTIONS relationships
+- Integrates with GraphRAG dual-channel retrieval
+- Leverages relationship discovery from Phase 3
+
+#### New Components
+
+**Enhanced Entity Extractor** (`apps/omnii_mcp/src/services/nlp/`)
+```typescript
+interface EnhancedEntityExtractor {
+  extractors: {
+    spacy: SpaCyExtractor;           // Transformer-based NER
+    bert: BERTExtractor;             // Fine-tuned for personal data
+    custom: CustomModelExtractor;     // Domain-specific models
   };
 
-  // Format for LLM
-  return formatContextForLLM(context);
-}
-```
-
-**Why:** Semantic similarity + relational structure, 90% hallucination reduction, explainable retrieval
-
-### Pattern 5: tRPC WebSocket Subscriptions for Real-Time Updates
-
-**What:** Bidirectional real-time communication over single WebSocket with type safety
-
-**When:** Need live updates for graph changes, action status, interventions
-
-**Example:**
-```typescript
-// Backend: Define subscription
-const appRouter = router({
-  graph: {
-    onEntityChanged: publicProcedure
-      .input(z.object({ userId: z.string() }))
-      .subscription(async ({ input }) => {
-        return observable<Entity>((emit) => {
-          const listener = (entity: Entity) => {
-            emit.next(entity);
-          };
-
-          graphEvents.on(`entity:${input.userId}`, listener);
-
-          return () => {
-            graphEvents.off(`entity:${input.userId}`, listener);
-          };
-        });
-      })
-  }
-});
-
-// Mobile client: Subscribe
-const subscription = trpc.graph.onEntityChanged
-  .subscribe({ userId: currentUser.id }, {
-    onData(entity) {
-      // Update local DB
-      localDB.entities.put(entity);
-      // UI auto-updates via observer
-    },
-    onError(err) {
-      console.error('Subscription error:', err);
-    }
-  });
-
-// Automatic reconnection on disconnect
-// Queries and mutations also use same WebSocket
-```
-
-**Why:** Type-safe, automatic reconnection, bidirectional, efficient batching
-
-### Pattern 6: n8n Multi-Agent Orchestration
-
-**What:** Coordinate specialized agents with gatekeeper pattern for complex workflows
-
-**When:** Need to orchestrate multiple AI agents, external services, and decision trees
-
-**Example:**
-```typescript
-// n8n workflow structure
-{
-  "nodes": [
-    {
-      "type": "n8n-nodes-base.ai-agent",
-      "name": "Gatekeeper Agent",
-      "parameters": {
-        "model": "claude-opus-4-5",
-        "systemPrompt": "Route tasks to specialized agents",
-        "tools": [
-          "route_to_entity_agent",
-          "route_to_calendar_agent",
-          "route_to_email_agent"
-        ]
-      }
-    },
-    {
-      "type": "n8n-nodes-base.switch",
-      "name": "Route Decision",
-      "parameters": {
-        "rules": [
-          { "condition": "route === 'entity'", "output": 0 },
-          { "condition": "route === 'calendar'", "output": 1 },
-          { "condition": "route === 'email'", "output": 2 }
-        ]
-      }
-    },
-    {
-      "type": "n8n-nodes-base.executeWorkflow",
-      "name": "Entity Agent Workflow",
-      "parameters": {
-        "workflowId": "entity_workflow_id"
-      }
-    }
-    // ... more specialized agents
-  ]
+  extract(text: string, source: string): Promise<ExtractedEntities>;
+  // Returns: {people, organizations, locations, dates, topics}
+  // Confidence scores, entity linking to existing graph nodes
 }
 
-// Each sub-workflow has its own agent + tools
-// Gatekeeper routes based on task analysis
-// Results merge back to main workflow
+// Uses hybrid approach:
+// 1. Rule-based for high-precision (emails, phone numbers)
+// 2. Transformer models for contextual understanding
+// 3. Entity linking to existing graph nodes
 ```
 
-**Why:** Modular debugging, specialized expertise, parallel execution, clear routing logic
-
-### Pattern 7: Brokered Credentials with Composio
-
-**What:** Never expose OAuth tokens to app runtime, use secure middle layer for API calls
-
-**When:** Integrating with external OAuth services (Google, GitHub, etc.)
-
-**Example:**
+**Proactive Context Service** (`apps/omnii_mcp/src/services/context/`)
 ```typescript
-// Traditional (insecure) approach
-const accessToken = await getTokenFromDB(userId);
-const response = await fetch('https://www.googleapis.com/calendar/v3/events', {
-  headers: { Authorization: `Bearer ${accessToken}` }
-});
-// Token exposed in app memory, logs, error traces
+interface ProactiveContextService {
+  getUpcomingContext(userId: string, timeframe: string): Promise<ContextCard[]>;
+  // "Heads Up" before meetings
 
-// Composio brokered approach
-const composio = new Composio(apiKey);
+  // Uses temporal context service from v1.0
+  // Queries: upcoming calendar events, related emails, notes, tasks
+  // Surfaces: relevant people, recent interactions, action items
+}
 
-// Connect user once via Composio UI
-// Tokens stored in Composio's SOC 2 vault
-
-// Execute action without seeing token
-const response = await composio.execute({
-  action: 'GOOGLE_CALENDAR_CREATE_EVENT',
-  params: { summary: 'Meeting', start: '2026-01-25T10:00:00Z' },
-  entityId: userId  // Composio maps to stored credentials
-});
-// Token never reaches your runtime
-// Automatic refresh on expiry
+// Example: Meeting at 2pm with "Alice"
+// Returns: Recent emails with Alice, shared documents, past meetings
 ```
 
-**Why:** Security isolation, automatic token lifecycle, no OAuth boilerplate, audit compliance
+**Cross-Source Relationship Inference** (`apps/omnii_mcp/src/services/graphrag/relationship-inference.ts`)
+```typescript
+interface RelationshipInference {
+  inferRelationships(userId: string): Promise<InferredRelationships>;
 
-## Anti-Patterns to Avoid
+  // Patterns:
+  // - Email sender → Calendar attendee: Suggests COLLABORATES_WITH
+  // - Task assignee → Note mentions: Suggests WORKING_ON
+  // - Document author → Calendar event: Suggests PRESENTED_AT
+}
 
-### Anti-Pattern 1: Polling for Real-Time Updates
+// Uses LLM to analyze patterns and suggest new relationships
+// User approval required before creating graph edges
+```
 
-**What goes wrong:** Mobile client polls backend every N seconds to check for updates
+#### Architecture Decision: Backend vs Edge
+
+**DECISION: Run NLP backend-side**
+
+**Rationale:**
+- Consistency: Same model versions across all users
+- Performance: GPU acceleration on server (vs limited mobile compute)
+- Privacy: Models stay server-side, no client-side model downloads
+- Accuracy: Centralized fine-tuning and updates
+- Cost: Shared compute resources vs per-device inference
+
+**Implementation:**
+- Entity extraction runs in BullMQ workers (async, batched)
+- Average inference: 55ms per request (from research)
+- GPU clusters for batch processing: 100K notes in 44 minutes
+
+**Exception: Mobile quick capture**
+- Mobile app extracts basic entities locally (dates, times, names)
+- Backend refines with transformer models when synced
+- Best of both worlds: instant feedback + accurate enrichment
+
+#### Data Flow
+
+```
+Content ingestion (email, note, file)
+  │
+  └─→ BullMQ job: extract-entities
+        │
+        ├─→ EnhancedEntityExtractor
+        │     │
+        │     ├─→ SpaCy transformer model
+        │     ├─→ BERT fine-tuned for personal data
+        │     └─→ Custom domain models
+        │           │
+        │           └─→ Extract: people, orgs, locations, dates, topics
+        │
+        ├─→ Entity linking to existing graph nodes
+        │     └─→ Neo4j: Create MENTIONS relationships
+        │
+        └─→ RelationshipInference (if enabled)
+              │
+              ├─→ Analyze patterns across sources
+              ├─→ Suggest new relationships
+              └─→ Request user approval (intervention)
+```
+
+**Proactive context flow:**
+```
+Mobile app: Open calendar
+  │
+  └─→ tRPC subscription: upcoming-context
+        │
+        └─→ ProactiveContextService
+              │
+              ├─→ Query temporal context (next 24 hours)
+              ├─→ GraphRAG retrieval for each event
+              ├─→ Surface: emails, notes, files, people
+              └─→ Push to mobile: "Heads Up" notification
+```
+
+#### Build Order Integration
+
+**Phase 1: Enhanced extractor**
+- Add spaCy and BERT to backend
+- Create EnhancedEntityExtractor service
+- Wire into existing ingestion jobs
+- Benchmark accuracy vs v1.0 baseline
+
+**Phase 2: Proactive context**
+- ProactiveContextService implementation
+- tRPC subscription for upcoming context
+- Mobile "Heads Up" notifications
+- Context card UI components
+
+**Phase 3: Relationship inference**
+- RelationshipInference service
+- LLM-based pattern analysis
+- User approval workflow (intervention pattern)
+- Graph visualization updates
+
+### 4. Gamification System
+
+**Goal:** XP, levels, achievements, mascot companion, analytics - fully synced offline-first
+
+#### Integration Points
+
+**Extends existing sync and real-time:**
+- Uses Supabase tables synced via PowerSync
+- Leverages tRPC subscriptions for live updates
+- Follows event-driven pattern from n8n workflows
+- Integrates with existing audit logging
+
+#### New Components
+
+**Gamification State Schema** (`apps/omnii_mcp/supabase/migrations/`)
+```sql
+-- User gamification state
+CREATE TABLE user_gamification (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+  current_xp BIGINT DEFAULT 0,
+  current_level INT DEFAULT 1,
+  lifetime_xp BIGINT DEFAULT 0,
+  streak_days INT DEFAULT 0,
+  last_activity_date DATE,
+  mascot_mood TEXT DEFAULT 'happy',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Achievement definitions (admin-managed)
+CREATE TABLE achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  description TEXT,
+  icon TEXT,
+  xp_reward INT DEFAULT 0,
+  criteria JSONB,  -- Flexible criteria definition
+  tier TEXT,       -- bronze, silver, gold, platinum
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- User achievement progress
+CREATE TABLE user_achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id),
+  achievement_id UUID REFERENCES achievements(id),
+  progress FLOAT DEFAULT 0,  -- 0.0 to 1.0
+  unlocked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, achievement_id)
+);
+
+-- XP transaction log (audit trail)
+CREATE TABLE xp_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id),
+  amount INT NOT NULL,
+  source TEXT NOT NULL,  -- 'note_created', 'file_uploaded', 'streak_maintained'
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**XP Engine Service** (`apps/omnii_mcp/src/services/gamification/`)
+```typescript
+interface XPEngine {
+  awardXP(userId: string, source: string, amount: number): Promise<XPResult>;
+  checkLevelUp(userId: string): Promise<LevelUpEvent | null>;
+  calculateStreak(userId: string): Promise<StreakInfo>;
+}
+
+// XP sources:
+// - note_created: 10 XP
+// - file_uploaded: 25 XP
+// - calendar_event_attended: 5 XP
+// - task_completed: 15 XP
+// - streak_maintained: 50 XP
+// - achievement_unlocked: Variable (from achievement definition)
+
+// Level formula: XP = 100 * level^1.5 (exponential curve)
+```
+
+**Achievement Engine Service** (`apps/omnii_mcp/src/services/gamification/achievements.ts`)
+```typescript
+interface AchievementEngine {
+  checkAchievements(userId: string, event: GameEvent): Promise<UnlockedAchievements>;
+  updateProgress(userId: string, achievementId: string, progress: number): Promise<void>;
+}
+
+// Achievement examples:
+// - "First Steps": Create your first note (10 XP)
+// - "Librarian": Upload 100 documents (250 XP)
+// - "Connected Mind": Create 50 wiki links (150 XP)
+// - "Streak Master": Maintain 30-day streak (500 XP)
+// - "Graph Explorer": Browse 1000 nodes (200 XP)
+```
+
+**Mascot System** (`apps/omnii_mcp/src/services/gamification/mascot.ts`)
+```typescript
+interface MascotSystem {
+  updateMood(userId: string, activityLevel: string): Promise<MascotMood>;
+  getDialogue(userId: string, context: string): Promise<string>;
+}
+
+// Moods: happy, excited, sleepy, curious, proud
+// Context-aware: Congratulates on level up, encourages on streak break
+// Appears in mobile app as animated character
+```
+
+#### Real-Time Sync Architecture
+
+**Event-driven XP awards:**
+```
+User action (create note, upload file)
+  │
+  ├─→ Action completes in backend
+  │
+  ├─→ XPEngine.awardXP()
+  │     │
+  │     ├─→ Insert xp_transactions record
+  │     ├─→ Update user_gamification.current_xp
+  │     └─→ Check for level up
+  │           │
+  │           └─→ [LEVEL UP] Broadcast event
+  │
+  └─→ PowerSync triggers sync
+        │
+        └─→ Mobile receives update
+              │
+              ├─→ Show XP animation
+              ├─→ Update level progress bar
+              └─→ [LEVEL UP] Show celebration modal
+```
+
+**Achievement unlock flow:**
+```
+User activity tracked
+  │
+  └─→ AchievementEngine.checkAchievements()
+        │
+        ├─→ Evaluate criteria (via JSONB query)
+        │
+        └─→ [UNLOCKED] Update user_achievements
+              │
+              ├─→ Award XP via XPEngine
+              ├─→ PowerSync sync to mobile
+              └─→ Push notification: "Achievement unlocked!"
+```
+
+**Streak tracking:**
+```
+Daily cron job (or mobile app open)
+  │
+  └─→ XPEngine.calculateStreak()
+        │
+        ├─→ Check last_activity_date
+        │
+        ├─→ [TODAY] Update streak_days++
+        │     └─→ Award streak XP (50 XP)
+        │
+        └─→ [MISSED] Reset streak to 0
+              └─→ Update mascot mood to "sleepy"
+```
+
+#### Data Flow
+
+**PowerSync configuration:**
+```typescript
+// apps/omnii_mcp/supabase/migrations/powersync_schema.sql
+-- Sync gamification state to mobile
+SELECT id, current_xp, current_level, streak_days, mascot_mood
+FROM user_gamification
+WHERE user_id = auth.uid();
+
+-- Sync user achievements
+SELECT a.*, ua.progress, ua.unlocked_at
+FROM achievements a
+LEFT JOIN user_achievements ua ON ua.achievement_id = a.id
+WHERE ua.user_id = auth.uid() OR ua.user_id IS NULL;
+```
+
+**tRPC real-time subscription:**
+```typescript
+// apps/omnii_mcp/src/routes/gamification.ts
+const gamificationRouter = router({
+  onXPUpdated: publicProcedure
+    .input(z.object({ userId: z.string() }))
+    .subscription(({ input }) => {
+      return observable<XPUpdate>((emit) => {
+        // Listen to Supabase realtime for user_gamification changes
+        const subscription = supabase
+          .channel('xp-updates')
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_gamification',
+            filter: `user_id=eq.${input.userId}`
+          }, (payload) => {
+            emit.next({
+              currentXP: payload.new.current_xp,
+              currentLevel: payload.new.current_level,
+              delta: payload.new.current_xp - payload.old.current_xp
+            });
+          })
+          .subscribe();
+
+        return () => subscription.unsubscribe();
+      });
+    })
+});
+```
+
+#### Build Order Integration
+
+**Phase 1: State schema and engine**
+- Create Supabase gamification tables
+- Implement XPEngine and AchievementEngine services
+- Configure PowerSync sync rules
+- Add RLS policies for multi-tenant isolation
+
+**Phase 2: Event integration**
+- Wire XP awards into existing actions (note creation, file upload, etc.)
+- Create achievement criteria definitions
+- Implement streak tracking cron job
+
+**Phase 3: Mobile UI**
+- XP progress bar and level indicator
+- Achievement badge grid
+- Mascot character with mood animations
+- Celebration modals for level ups
+
+**Phase 4: Analytics dashboard**
+- Activity heatmap
+- XP history chart
+- Achievement completion percentage
+- Leaderboard (optional, private by default)
+
+## Component Integration Matrix
+
+| v2.0 Feature | Extends v1.0 Component | New Services | Mobile Changes | Neo4j Changes |
+|--------------|------------------------|--------------|----------------|---------------|
+| **File Ingestion** | BullMQ workers, embedding service | FileParserService, ChunkingStrategy | Document picker, upload UI | Document/Chunk nodes (extend existing) |
+| **Notes Capture** | PowerSync sync, search_nodes tool | WikiLinkParser, TemplateSystem | Quick capture screen, markdown editor | Note nodes, LINKS_TO relationships |
+| **Enhanced NLP** | EntityExtractionService, GraphRAG | EnhancedEntityExtractor, ProactiveContextService | "Heads Up" notifications | Improved MENTIONS relationships |
+| **Gamification** | PowerSync sync, tRPC subscriptions | XPEngine, AchievementEngine, MascotSystem | XP progress UI, achievement grid | None (uses Supabase tables) |
+
+## Data Storage Strategy
+
+| Data Type | Storage Location | Why |
+|-----------|------------------|-----|
+| **File blobs** | Supabase Storage | Existing infrastructure, CDN, auth integration |
+| **Document metadata** | Neo4j Document nodes | Enables graph relationships, semantic search |
+| **Document chunks** | Neo4j Chunk nodes | Embeddings for RAG, entity linking |
+| **Notes (full text)** | Neo4j Note nodes | Graph relationships, semantic search |
+| **Notes (sync cache)** | Supabase sync_notes | PowerSync offline-first sync |
+| **Gamification state** | Supabase tables | PowerSync sync, real-time subscriptions, relational queries |
+| **XP transactions** | Supabase audit table | Compliance, history, analytics |
+| **Achievements** | Supabase static data | Admin-managed, infrequent updates |
+
+**Why this split?**
+- Neo4j: Rich relationships, semantic search, entity linking
+- Supabase: Sync state, real-time updates, relational queries, auth
+- Supabase Storage: Blob storage with CDN
+
+## Recommended Build Order
+
+Based on dependency analysis and risk mitigation:
+
+### Milestone v2.0 Phase Sequence
+
+**Phase 1: File Ingestion Foundation** (highest priority, extends proven pattern)
+1. Install officeParser, configure file parser service
+2. Implement semantic/markdown/code chunking strategies
+3. Create Document/Chunk schema extension in Neo4j
+4. Add Supabase Storage bucket and upload routes
+5. Wire into existing BullMQ job system
+6. Connect to existing embedding and entity extraction services
+
+**Why first:** Extends proven v1.0 ingestion pipeline pattern, provides document corpus for other features
+
+**Phase 2: Notes Capture System** (depends on file chunking)
+1. Create Note node schema in Neo4j
+2. Add sync_notes table and PowerSync rules
+3. Implement WikiLinkParser for bidirectional links
+4. Build mobile quick capture UI with templates
+5. Wire into existing entity extraction
+6. Add note search to search_nodes MCP tool
+
+**Why second:** Needs chunking strategy from Phase 1 for long notes, provides user-generated content for NLP
+
+**Phase 3: Enhanced NLP Pipeline** (depends on document corpus)
+1. Install spaCy and BERT transformer models
+2. Create EnhancedEntityExtractor service
+3. Wire into existing ingestion jobs
+4. Implement ProactiveContextService
+5. Add "Heads Up" notifications to mobile
+6. Create RelationshipInference service with user approval
+
+**Why third:** Needs document corpus from Phases 1-2, builds on existing entity extraction
+
+**Phase 4: Gamification System** (pure additive, no dependencies)
+1. Create Supabase gamification tables and PowerSync sync
+2. Implement XPEngine and AchievementEngine
+3. Wire XP awards into existing user actions
+4. Build mobile XP progress and achievement UI
+5. Implement streak tracking and mascot system
+6. Create analytics dashboard
+
+**Why last:** Pure additive feature with no blocking dependencies, can be built in parallel with Phase 3
+
+**Total estimated time:** 16-24 weeks (4-6 months) for all v2.0 features
+
+## Critical Integration Points
+
+### 1. BullMQ Job Queue
+
+**Existing:** `apps/omnii_mcp/src/ingestion/jobs/`
+- calendar-sync, task-sync, gmail-sync, contacts-sync workers
+
+**Extension for v2.0:**
+- Add `process-file` worker (file parsing and chunking)
+- Add `extract-entities` worker (enhanced NLP)
+- Add `check-achievements` worker (gamification triggers)
+
+**Pattern to follow:**
+```typescript
+// Existing pattern from calendar-sync.ts
+export const calendarSyncWorker = new Worker(
+  'calendar-sync',
+  async (job: Job) => {
+    const { userId } = job.data;
+    // Process job
+  },
+  { connection: redis }
+);
+
+// New pattern for file processing
+export const fileProcessWorker = new Worker(
+  'process-file',
+  async (job: Job) => {
+    const { userId, fileId } = job.data;
+    // Parse file, chunk, embed, extract entities
+  },
+  { connection: redis }
+);
+```
+
+### 2. PowerSync Sync Rules
+
+**Existing:** `apps/omnii_mcp/supabase/migrations/powersync_schema.sql`
+- sync_entities, sync_relationships tables
+
+**Extension for v2.0:**
+```sql
+-- Add document sync
+CREATE TABLE sync_documents (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id),
+  name TEXT,
+  type TEXT,
+  status TEXT,  -- 'processing', 'complete', 'failed'
+  created_at TIMESTAMPTZ
+);
+
+-- Add notes sync
+CREATE TABLE sync_notes (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id),
+  title TEXT,
+  content TEXT,
+  tags TEXT[],
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+);
+
+-- Add gamification sync
+CREATE TABLE sync_gamification (
+  user_id UUID PRIMARY KEY,
+  current_xp BIGINT,
+  current_level INT,
+  streak_days INT,
+  mascot_mood TEXT,
+  updated_at TIMESTAMPTZ
+);
+```
+
+### 3. Neo4j Schema Extension
+
+**Existing:** `apps/omnii_mcp/src/graph/schema/nodes.ts`
+- Concept, Entity, Event, Contact nodes
+
+**Extension for v2.0:**
+```typescript
+// Document and Chunk nodes (extend existing pattern)
+export const DocumentNode = {
+  label: 'Document',
+  properties: ['id', 'name', 'type', 'source', 'createdAt'],
+  indexes: ['id', 'name'],
+  constraints: ['id']
+};
+
+export const ChunkNode = {
+  label: 'Chunk',
+  properties: ['id', 'text', 'embedding', 'semanticGroup', 'sequence'],
+  indexes: ['id'],
+  constraints: ['id']
+};
+
+// Note nodes
+export const NoteNode = {
+  label: 'Note',
+  properties: ['id', 'title', 'content', 'template', 'tags', 'createdAt', 'updatedAt'],
+  indexes: ['id', 'title'],
+  constraints: ['id']
+};
+
+// Relationships
+export const DocumentRelationships = {
+  CONTAINS_CHUNK: { from: 'Document', to: 'Chunk', properties: ['sequence'] },
+  LINKS_TO: { from: 'Note', to: 'Note', properties: ['createdAt'] },
+  SIMILAR_TO: { from: 'Chunk', to: 'Chunk', properties: ['score'] }
+};
+```
+
+### 4. tRPC Route Extensions
+
+**Existing:** `apps/omnii_mcp/src/routes/`
+- mcp.ts, calendar.ts, tasks.ts, gmail.ts, contacts.ts
+
+**Extension for v2.0:**
+```typescript
+// apps/omnii_mcp/src/routes/files.ts
+export const filesRouter = router({
+  upload: publicProcedure
+    .input(z.object({ name: z.string(), mimeType: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      // Upload to Supabase Storage, queue processing job
+    }),
+
+  getStatus: publicProcedure
+    .input(z.object({ fileId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      // Return processing status
+    })
+});
+
+// apps/omnii_mcp/src/routes/notes.ts
+export const notesRouter = router({
+  create: publicProcedure
+    .input(z.object({ title: z.string(), content: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      // Create note, parse wiki links
+    }),
+
+  getBacklinks: publicProcedure
+    .input(z.object({ noteId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      // Return bidirectional links
+    })
+});
+
+// apps/omnii_mcp/src/routes/gamification.ts
+export const gamificationRouter = router({
+  onXPUpdated: publicProcedure
+    .input(z.object({ userId: z.string() }))
+    .subscription(({ input }) => {
+      // Real-time XP updates
+    })
+});
+```
+
+## Architecture Anti-Patterns to Avoid
+
+### 1. Processing Files on Mobile Device
+
+**Anti-pattern:** Running officeParser or NLP models on mobile
 
 **Why bad:**
-- Battery drain from constant HTTP requests
-- Network bandwidth waste (mostly "no changes" responses)
-- Delays between polling intervals (not truly real-time)
-- Backend load from unnecessary requests
-- Difficult to scale with many clients
+- Battery drain from heavy processing
+- Inconsistent results across device capabilities
+- Large model downloads (100MB+ for BERT)
+- Memory pressure on low-end devices
 
-**Instead:** Use tRPC WebSocket subscriptions or Server-Sent Events
-- Single persistent connection
-- Server pushes updates when they occur
-- Automatic reconnection handling
-- Efficient batching of multiple subscriptions
+**Instead:** Server-side processing with status updates via PowerSync
+- Mobile uploads to Supabase Storage
+- Backend processes asynchronously
+- Mobile shows progress via sync_documents.status
 
-### Anti-Pattern 2: Shared Neo4j Database with Label-Based Filtering
+### 2. Real-Time XP Updates Without Batching
 
-**What goes wrong:** All users share one Neo4j database, using `WHERE user_id = $userId` in every query
+**Anti-pattern:** Award XP for every single user action immediately
 
 **Why bad:**
-- Query performance degrades as total data grows (everyone's data in one graph)
-- Risk of query bugs exposing other users' data
-- Difficult to backup/restore single user
-- Schema migrations affect all users simultaneously
-- No per-user scaling or data sovereignty
+- Excessive database writes
+- Real-time subscription spam
+- Mobile battery drain from constant updates
+- Race conditions on concurrent actions
 
-**Instead:** Use multiple databases (Neo4j 4.0+) with one database per user/tenant
-- Complete isolation
-- Independent scaling
-- Per-user backups
-- Regulatory compliance (data residency)
+**Instead:** Batch XP awards with debouncing
+- Group XP awards in 30-second windows
+- Single database transaction per batch
+- Single real-time notification per batch
+- Mobile animates XP change smoothly
 
-### Anti-Pattern 3: Full-Sync on Every Mobile App Launch
+### 3. Storing File Blobs in Neo4j
 
-**What goes wrong:** App downloads entire graph from server on every startup
-
-**Why bad:**
-- Slow app launch (wait for download)
-- Massive bandwidth waste
-- Server load from full serialization
-- Doesn't work offline at all
-- User frustration from delays
-
-**Instead:** Implement first-time sync + delta sync pattern
-- First launch: Download graph subset
-- Store locally in Realm/SQLite
-- Subsequent syncs: Only changes since last sync timestamp
-- Offline queue for local changes
-- Background sync when online
-
-### Anti-Pattern 4: Storing OAuth Tokens in App Code or Local Storage
-
-**What goes wrong:** OAuth refresh tokens stored in mobile app's local storage or committed to git
+**Anti-pattern:** Store PDF/DOCX binary data in Neo4j properties
 
 **Why bad:**
-- Security vulnerability (tokens extractable from device)
-- Compliance violations (GDPR, SOC 2)
-- No centralized revocation
-- Manual token refresh logic
-- Risk of token exposure in logs
+- Neo4j optimized for graph queries, not blob storage
+- Massive memory overhead
+- Slow query performance
+- No CDN caching
 
-**Instead:** Use brokered credentials pattern (Composio) or secure backend storage
-- Tokens never reach client
-- Automatic lifecycle management
-- Centralized audit trail
-- SOC 2 compliant storage
+**Instead:** Supabase Storage for blobs, Neo4j for metadata
+- Files in Supabase Storage (existing infrastructure)
+- Document/Chunk nodes reference storage URL
+- Neo4j focuses on relationships and search
 
-### Anti-Pattern 5: Synchronous Graph Queries Blocking UI
+### 4. Synchronous Entity Extraction
 
-**What goes wrong:** Mobile app makes synchronous Neo4j queries, freezing UI while waiting
+**Anti-pattern:** Extract entities during note creation API call
 
 **Why bad:**
-- Poor user experience (app feels frozen)
-- No offline functionality
-- Network latency directly impacts UX
-- Can't show loading states
-- App crashes on timeout
+- Slow API response times (seconds)
+- Poor user experience (waiting for save)
+- Blocks concurrent requests
+- Mobile timeout issues
 
-**Instead:** Local-first with async background sync
-- Read from local Realm/SQLite (instant)
-- Async sync to server in background
-- Optimistic UI updates
-- Loading states for network operations
-- Graceful offline degradation
+**Instead:** Asynchronous extraction via BullMQ
+- Note saves immediately
+- Background job extracts entities
+- PowerSync updates mobile when complete
+- User sees instant feedback, entities appear later
 
-### Anti-Pattern 6: Single Monolithic n8n Workflow
+### 5. Client-Side Wiki Link Resolution
 
-**What goes wrong:** One giant n8n workflow handles all automation logic (entity recognition, calendar sync, email processing, etc.)
+**Anti-pattern:** Mobile app resolves [[links]] locally
 
 **Why bad:**
-- Impossible to debug (too many nodes)
-- Hard to test individual pieces
-- Difficult to version control
-- Performance bottlenecks
-- Error in one part breaks everything
+- Sync complexity (what if target note not synced?)
+- Inconsistent link resolution
+- Mobile storage bloat (must sync all notes for linking)
+- Stale backlinks
 
-**Instead:** Modular sub-workflows with clear boundaries
-- Each workflow does one thing
-- Execute Workflow nodes for composition
-- Independent testing and deployment
-- Clear error boundaries
-- Parallel execution where possible
-
-### Anti-Pattern 7: Using user_metadata for Tenant ID
-
-**What goes wrong:** Storing `tenant_id` in Supabase `user_metadata` instead of `app_metadata`
-
-**Why bad:**
-- **Critical security flaw:** Users can modify `user_metadata` via client API
-- Attackers can change their tenant ID to access other users' data
-- RLS policies based on user_metadata are bypassable
-- No audit trail for tenant changes
-
-**Instead:** Always use `app_metadata` for tenant context
-- `app_metadata` only modifiable by server/admin
-- Stored in JWT (verified by server)
-- Safe to use in RLS policies
-- Use `auth.jwt() -> 'app_metadata' ->> 'tenant_id'` in RLS
+**Instead:** Server-side link resolution with PowerSync
+- Backend resolves links during save
+- Creates bidirectional relationships in Neo4j
+- PowerSync syncs link metadata to mobile
+- Mobile displays links, taps fetch from server if needed
 
 ## Scalability Considerations
 
 ### At 100 Users
 
-| Concern | Approach |
-|---------|----------|
-| **Neo4j** | Single instance, one database per user, 100 total databases |
-| **Backend** | Single Bun instance with cluster mode (4-8 workers) |
-| **WebSocket** | Single instance handles all connections (<1000 concurrent) |
-| **Supabase** | Free tier sufficient (50k monthly active users) |
-| **n8n** | Single instance, webhook load balancer optional |
-| **Mobile sync** | Background sync every 15 min, delta-only |
+| Component | v1.0 Approach | v2.0 Extension |
+|-----------|---------------|----------------|
+| **File storage** | N/A | Supabase Storage (5GB free tier per project) |
+| **Document processing** | N/A | Single BullMQ worker, 1-2 concurrent jobs |
+| **NLP inference** | Basic entity extraction | Single CPU instance, batch processing |
+| **Gamification state** | N/A | Supabase free tier (500MB DB, 2GB bandwidth) |
 
-**Estimated costs:** ~$50-100/month (Neo4j AuraDB Starter + Supabase Free + minimal compute)
+**Cost:** ~$100-150/month (v1.0 base + Supabase storage)
 
 ### At 10K Users
 
-| Concern | Approach |
-|---------|----------|
-| **Neo4j** | Multiple sharded instances (1000 DBs per instance), composite DBs for cross-user queries |
-| **Backend** | Load balanced Elysia instances (3-5 nodes), Redis for session state |
-| **WebSocket** | SO_REUSEPORT cluster mode, connection pooling, 10k concurrent connections distributed |
-| **Supabase** | Pro tier (100k MAU), read replicas for auth queries |
-| **n8n** | Distributed webhook triggers across 2-3 instances, queue-based execution |
-| **Mobile sync** | Incremental delta sync, CDN for static graph data, compression |
+| Component | v1.0 Approach | v2.0 Extension |
+|-----------|---------------|----------------|
+| **File storage** | N/A | Supabase Storage Pro (100GB+), CDN caching |
+| **Document processing** | N/A | 3-5 BullMQ workers, Redis cluster, 10+ concurrent jobs |
+| **NLP inference** | Basic entity extraction | GPU instance for batch processing (100K docs in 44 min) |
+| **Gamification state** | N/A | Supabase Pro tier (25GB DB, 250GB bandwidth) |
 
-**Estimated costs:** ~$1,500-2,500/month (Neo4j sharded + Supabase Pro + compute fleet)
+**Cost:** ~$2,000-3,000/month
 
 **Optimizations needed:**
-- Connection pooling for Neo4j
-- Redis caching for frequently accessed entities
-- Background job queue (BullMQ) for async tasks
-- CDN for mobile app assets
-- Database connection limits per instance
+- CDN for file downloads
+- GPU batch processing for NLP
+- Redis cluster for BullMQ
+- Database read replicas
 
 ### At 1M Users
 
-| Concern | Approach |
-|---------|----------|
-| **Neo4j** | Federated clusters (10k DBs per cluster), data sharding by region/tenant tier, read replicas |
-| **Backend** | Kubernetes auto-scaling (50+ pods), regional deployments, service mesh |
-| **WebSocket** | Dedicated WebSocket gateway layer (separate from API), regional distribution |
-| **Supabase** | Enterprise tier, dedicated Postgres instance, horizontal read scaling |
-| **n8n** | Dedicated workflow cluster, queue-based execution with Redis, worker auto-scaling |
-| **Mobile sync** | Regional edge caching, push notifications for sync triggers, adaptive sync frequency |
+| Component | v1.0 Approach | v2.0 Extension |
+|-----------|---------------|----------------|
+| **File storage** | N/A | Multi-region Supabase Storage, edge caching |
+| **Document processing** | N/A | Distributed BullMQ workers (50+ instances), Kafka queue |
+| **NLP inference** | Basic entity extraction | GPU cluster with auto-scaling, model serving infrastructure |
+| **Gamification state** | N/A | Sharded Postgres, read replicas, write batching |
 
-**Estimated costs:** ~$15,000-30,000/month (Neo4j Enterprise + Supabase Enterprise + K8s fleet)
+**Cost:** ~$20,000-40,000/month
 
 **Architecture changes needed:**
-- Multi-region deployment (US, EU, APAC)
-- GraphQL Federation for cross-region queries
-- Message queue (Kafka/RabbitMQ) for event streaming
-- Dedicated sync service (separate from main API)
-- Rate limiting and quota enforcement
-- Advanced monitoring (Datadog/New Relic)
-- Chaos engineering for resilience testing
+- Microservices for file processing
+- Dedicated NLP inference cluster
+- Message queue (Kafka) for event streaming
+- Edge functions for real-time gamification
 
-**Data sovereignty:**
-- EU users → EU Neo4j cluster + EU Supabase
-- US users → US infrastructure
-- Compliance with GDPR, CCPA, data residency laws
-
-## Build Order Dependencies
-
-Based on component dependencies, recommended build sequence:
-
-### Phase 1: Core Infrastructure
-**Goal:** Authentication and basic data storage operational
-
-1. Supabase setup (auth + PostgreSQL)
-   - User registration/login
-   - RLS policies for multi-tenancy
-   - Basic user profile tables
-
-2. Neo4j multi-database setup
-   - Database creation on user signup
-   - Basic schema (Entity, Concept, Relationship nodes)
-   - Connection pooling
-
-**Why first:** Everything depends on auth and data storage. No functionality possible without these.
-
-**Time estimate:** 1-2 weeks
-
-### Phase 2: Backend API Foundation
-**Goal:** tRPC API with WebSocket support
-
-3. Bun/Elysia backend skeleton
-   - tRPC router setup
-   - WebSocket transport configuration
-   - Health check endpoints
-
-4. Basic CRUD operations
-   - Create/read/update/delete entities
-   - Graph relationship management
-   - User context middleware
-
-**Why second:** Provides API layer for all other services to build on.
-
-**Time estimate:** 2-3 weeks
-
-### Phase 3: Mobile Client MVP
-**Goal:** Offline-first mobile app with local storage
-
-5. React Native/Expo app structure
-   - Authentication flow
-   - Realm local database
-   - Context providers
-
-6. Basic entity management UI
-   - List/create/edit entities
-   - Local-first operations
-   - Offline queue
-
-**Why third:** Enables user testing of core functionality before advanced features.
-
-**Time estimate:** 3-4 weeks
-
-### Phase 4: Sync Engine
-**Goal:** Mobile-backend synchronization
-
-7. Delta sync implementation
-   - Last sync timestamp tracking
-   - Changed entity detection
-   - Conflict resolution strategies
-
-8. Real-time subscriptions
-   - tRPC WebSocket subscriptions
-   - Live entity updates
-   - Connection recovery
-
-**Why fourth:** Connects mobile local storage with authoritative backend graph.
-
-**Time estimate:** 2-3 weeks
-
-### Phase 5: External Integrations
-**Goal:** Connect to Google services via Composio
-
-9. Composio integration
-   - Google OAuth setup
-   - Brokered credentials configuration
-   - Calendar/Email/Drive connections
-
-10. n8n workflow setup
-    - Basic automation workflows
-    - Webhook triggers from backend
-    - Data pipeline to Neo4j
-
-**Why fifth:** Requires stable backend API and auth to build on.
-
-**Time estimate:** 2-3 weeks
-
-### Phase 6: AI/NLP Features
-**Goal:** Entity recognition and context intelligence
-
-11. Entity recognition service
-    - NLP pipeline (spaCy/BERT)
-    - Entity linking to graph
-    - Confidence scoring
-
-12. GraphRAG context retrieval
-    - Dual-channel retrieval (vector + graph)
-    - Embedding generation
-    - Context formatting for LLM
-
-**Why sixth:** Most complex features requiring all previous layers operational.
-
-**Time estimate:** 4-6 weeks
-
-### Phase 7: MCP Server Layer
-**Goal:** Expose knowledge graph to AI applications
-
-13. MCP server implementation
-    - Tools, resources, prompts definition
-    - JSON-RPC 2.0 protocol
-    - Capability negotiation
-
-14. AI agent integration
-    - Action planning service
-    - Step executors
-    - Intervention management
-
-**Why seventh:** Requires complete backend, graph, and NLP pipeline to expose via MCP.
-
-**Time estimate:** 3-4 weeks
-
-### Phase 8: Advanced Features
-**Goal:** Production-ready polish
-
-15. Advanced mobile features
-    - Push notifications
-    - Background sync optimization
-    - Adaptive sync frequency
-
-16. Monitoring and observability
-    - Error tracking (Sentry)
-    - Performance monitoring
-    - Audit logging
-
-**Why last:** Nice-to-haves that enhance production experience.
-
-**Time estimate:** 2-3 weeks
-
-**Total estimated timeline:** 20-30 weeks (5-7.5 months) for full system
-
-## Critical Path
-
-**Cannot build Y until X is complete:**
-
-- Mobile client → Backend API → Auth/Database
-- Sync engine → Mobile client + Backend API
-- n8n workflows → Backend API + External OAuth
-- Entity recognition → Backend API + Neo4j
-- MCP server → GraphRAG + Entity recognition + Backend API
-- Action planning → MCP server + n8n workflows
-
-**Parallel opportunities:**
-
-- Mobile UI can develop in parallel with backend (using mock data)
-- n8n workflows can develop in parallel with entity recognition
-- Monitoring can be added incrementally throughout
-
-## How n8n Fits as Orchestration Layer
-
-n8n serves as the **workflow automation and integration hub**, sitting between the backend API and external services:
-
-### Primary Responsibilities
-
-1. **Data Pipeline Orchestration**
-   - Triggered by backend webhooks when new entities created
-   - Enriches entities with external data (Google Calendar, Email)
-   - Updates Neo4j with enriched information
-
-2. **External Service Integration**
-   - Handles all Google API interactions (Calendar, Gmail, Drive)
-   - Uses Composio for secure OAuth credential management
-   - Transforms API responses to graph-compatible format
-
-3. **Multi-Agent AI Workflows**
-   - Gatekeeper agent routes tasks to specialized agents
-   - Sub-workflows for entity extraction, classification, relationship discovery
-   - Parallel execution for batch operations
-
-4. **Scheduled Tasks**
-   - Periodic sync of external data sources
-   - Cleanup of stale entities
-   - Background graph optimization
-
-### Integration Patterns
-
-**Backend → n8n:**
-- Webhook triggers for events (entity created, action requested)
-- HTTP requests for synchronous workflow execution
-- Database queries for state checks
-
-**n8n → Backend:**
-- HTTP requests to tRPC endpoints
-- Direct Neo4j queries for graph updates
-- Webhook callbacks for async completion
-
-**n8n → External Services:**
-- Composio integration for Google OAuth
-- HTTP requests to third-party APIs
-- Email/SMS notifications
-
-### Architecture Position
+## Build Dependencies Graph
 
 ```
-Mobile/AI Application
-        ↓
-Backend API (Bun/Elysia)
-        ↓
-    ┌───┴────┐
-    ↓        ↓
-  Neo4j    n8n ──→ External Services (Google, etc.)
-            ↓
-       Backend API (callback)
+File Ingestion
+  └─→ Notes Capture (needs chunking)
+        └─→ Enhanced NLP (needs document corpus)
+
+Gamification (parallel, no dependencies)
 ```
 
-**Key principle:** n8n handles **orchestration and integration**, not core business logic. Entity recognition, action planning, and graph management stay in the backend for type safety and testability.
+**Critical path:** File Ingestion → Notes Capture → Enhanced NLP (16-18 weeks)
+**Parallel track:** Gamification (6-8 weeks, can start anytime)
+
+## Success Metrics
+
+### File Ingestion
+- Parse success rate: >95% for supported formats
+- Average processing time: <30s for 10MB document
+- Chunk quality: >80% semantic coherence score
+- Storage efficiency: <10% overhead vs raw file size
+
+### Notes Capture
+- Offline capture reliability: 100% (PowerSync guarantee)
+- Wiki link resolution accuracy: >95%
+- Sync latency: <2s when online
+- Template usage: >30% of notes use templates
+
+### Enhanced NLP
+- Entity extraction accuracy: >85% (vs v1.0 baseline)
+- Proactive context relevance: >70% user engagement
+- Relationship inference precision: >80%
+- Inference latency: <100ms per document
+
+### Gamification
+- Real-time sync latency: <500ms for XP updates
+- Streak tracking accuracy: 100%
+- Achievement unlock reliability: 100%
+- User engagement lift: +40% daily active usage
 
 ## Sources
 
-### MCP Architecture
-- [Architecture overview - Model Context Protocol](https://modelcontextprotocol.io/docs/learn/architecture)
-- [Architectural Components of MCP - Hugging Face MCP Course](https://huggingface.co/learn/mcp-course/en/unit1/architectural-components)
-- [MCP Architecture: Components, Lifecycle & Client-Server Tutorial | Obot AI](https://obot.ai/resources/learning-center/mcp-architecture/)
-- [How MCP servers work: Components, logic, and architecture — WorkOS](https://workos.com/blog/how-mcp-servers-work)
+### File Ingestion & Document Processing
+- [7 PDF Parsing Libraries for Extracting Data in Node.js | Strapi](https://strapi.io/blog/7-best-javascript-pdf-parsing-libraries-nodejs-2025)
+- [officeParser - npm](https://www.npmjs.com/package/officeparser)
+- [GitHub - harshankur/officeParser](https://github.com/harshankur/officeParser)
+- [Building a Scalable OCR Pipeline | HealthEdge](https://healthedge.com/resources/blog/building-a-scalable-ocr-pipeline-technical-architecture-behind-healthedge-s-document-processing-platform)
+- [Extract and Map Information from Unstructured Content | Microsoft Azure](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/idea/multi-modal-content-processing)
+- [Document Processing Pipeline | MinerU](https://github.com/opendatalab/MinerU)
 
-### Knowledge Graphs
-- [An Ecosystem for Personal Knowledge Graphs: A Survey and Research Roadmap](https://arxiv.org/pdf/2304.09572)
-- [GitHub - getzep/graphiti: Build Real-Time Knowledge Graphs for AI Agents](https://github.com/getzep/graphiti)
-- [The 2026 Graph Database Landscape: What's Next for Connected Intelligence](https://medium.com/@tongbing00/the-2026-graph-database-landscape-whats-next-for-connected-intelligence-c1212f00d399)
+### Document Chunking & Embeddings
+- [Chunking Strategies for LLM Applications | Pinecone](https://www.pinecone.io/learn/chunking-strategies/)
+- [Mastering Semantic Search in 2026 | Medium](https://medium.com/@smenon_85/mastering-semantic-search-in-2026-44bc012c4e41)
+- [Chunk documents | Azure AI Search](https://learn.microsoft.com/en-us/azure/search/vector-search-how-to-chunk-documents)
+- [Evaluating Chunking Strategies for Retrieval | Chroma Research](https://research.trychroma.com/evaluating-chunking)
+- [GitHub - Zackriya-Solutions/MCP-Markdown-RAG](https://github.com/Zackriya-Solutions/MCP-Markdown-RAG)
+- [rag-agent: Transform Markdown into searchable knowledge base](https://github.com/kevwan/rag-agent)
 
-### Neo4j Multi-Tenancy
-- [Multi-Tenancy in Neo4j 4.0](https://adamcowley.co.uk/posts/multi-tenancy-neo4j-40/)
-- [Multi Tenancy in Neo4j: A Worked Example](https://neo4j.com/developer/multi-tenancy-worked-example/)
-- [Neo4j 4: Multi tenancy](https://graphaware.com/blog/multi-tenancy-neo4j/)
+### NLP & Entity Extraction
+- [spaCy · Industrial-strength Natural Language Processing](https://spacy.io/)
+- [Natural Language Processing Technology | Microsoft Azure](https://learn.microsoft.com/en-us/azure/architecture/data-guide/technology-choices/natural-language-processing)
+- [How to deploy NLP: Named entity recognition | Elastic](https://www.elastic.co/blog/how-to-deploy-nlp-named-entity-recognition-ner-example)
+- [Context-Aware ML/NLP Pipeline for Real-Time Anomaly Detection | MDPI](https://www.mdpi.com/2504-4990/8/1/25)
+- [Rule-based Entity Recognition with Spark NLP | John Snow Labs](https://www.johnsnowlabs.com/rule-based-entity-recognition-with-spark-nlp/)
 
-### n8n Orchestration
-- [AI Agent Orchestration Frameworks: Which One Works Best for You? – n8n Blog](https://blog.n8n.io/ai-agent-orchestration-frameworks/)
-- [Multi-agent system: Frameworks & step-by-step tutorial – n8n Blog](https://blog.n8n.io/multi-agent-systems/)
-- [n8n Guide 2026: Features & Workflow Automation Deep Dive](https://hatchworks.com/blog/ai-agents/n8n-guide/)
+### Neo4j Knowledge Graphs
+- [Knowledge Graph Generation | Neo4j](https://neo4j.com/blog/developer/knowledge-graph-generation/)
+- [Neo4j LLM Knowledge Graph Builder | Neo4j Labs](https://neo4j.com/labs/genai-ecosystem/llm-graph-builder/)
+- [Creating Knowledge Graphs from Unstructured Data | Neo4j](https://neo4j.com/developer/genai-ecosystem/importing-graph-from-unstructured-data/)
+- [Using LlamaParse to Create Knowledge Graphs | Neo4j Medium](https://medium.com/neo4j/using-llamaparse-for-knowledge-graph-creation-from-documents-3bd1e1849754)
+- [Graph database | Wikipedia](https://en.wikipedia.org/wiki/Graph_database)
 
-### Local-First Architecture
-- [The Architecture Shift: Why I'm Betting on Local-First in 2026](https://dev.to/the_nortern_dev/the-architecture-shift-why-im-betting-on-local-first-in-2026-1nh6)
-- [Offline-first frontend apps in 2025: IndexedDB and SQLite in the browser and beyond](https://blog.logrocket.com/offline-first-frontend-apps-2025-indexeddb-sqlite/)
-- [Offline-First Done Right: Sync Patterns for Real-World Mobile Networks](https://developersvoice.com/blog/mobile/offline-first-sync-patterns/)
+### Wiki-Style Linking
+- [GitHub - mirkonasato/graphipedia](https://github.com/mirkonasato/graphipedia)
+- [Using SurrealDB as a Graph Database](https://surrealdb.com/docs/surrealdb/models/graph)
+- [WikiLinkGraphs Dataset | arXiv](https://arxiv.org/pdf/1902.04298)
 
-### React Native Architecture
-- [2026 Paradigm Shift: Top 10 Fundamental Developments in React Native Architecture](https://instamobile.io/blog/react-native-paradigm-shift/)
-- [Top 11 Local Databases for React Native App Development in 2026](https://www.algosoft.co/blogs/top-11-local-databases-for-react-native-app-development-in-2026/)
-- [React Native Local Database Options: A Comprehensive Summary](https://www.powersync.com/blog/react-native-local-database-options)
+### Gamification Architecture
+- [Trophy 1.0: Developer APIs for gamification | Product Hunt](https://www.producthunt.com/products/trophy-1-0)
+- [GitHub - cjmellor/level-up](https://github.com/cjmellor/level-up)
+- [GitHub - hpi-schul-cloud/gamification](https://github.com/hpi-schul-cloud/gamification)
+- [Gamification Architecture Best Practices | Smartico](https://www.smartico.ai/blog-post/gamification-architecture-best-practices)
+- [Top 5 gamification tools for mobile apps in 2026 | Plotline](https://www.plotline.so/blog/tools-to-gamify-apps)
+- [State Management in Vanilla JS: 2026 Trends | Medium](https://medium.com/@chirag.dave/state-management-in-vanilla-js-2026-trends-f9baed7599de)
 
-### tRPC & WebSockets
-- [WebSockets | tRPC](https://trpc.io/docs/server/websockets)
-- [WebSocket and Real-time Communication | trpc/trpc](https://deepwiki.com/trpc/trpc/4.5-websocket-and-real-time-communication)
-- [Subscriptions | tRPC](https://trpc.io/docs/server/subscriptions)
+### PowerSync & Offline-First
+- [PowerSync: Backend DB - SQLite sync engine](https://www.powersync.com)
+- [2025 PowerSync Roadmap Update](https://www.powersync.com/blog/2025-powersync-roadmap-update)
+- [GitHub - powersync-ja/powersync.dart](https://github.com/powersync-ja/powersync.dart)
+- [PowerSync | Works With Supabase](https://supabase.com/partners/integrations/powersync)
 
-### Bun & Elysia
-- [Elysia - Ergonomic Framework for Humans | ElysiaJS](https://elysiajs.com/)
-- [Deploy to Production - ElysiaJS](https://elysiajs.com/patterns/deploy)
-- [GitHub - lukas-andre/bun-elysia-clean-architecture-example](https://github.com/lukas-andre/bun-elysia-clean-architecture-example)
-
-### Supabase Multi-Tenancy
-- [Multi-Tenant Applications with RLS on Supabase](https://www.antstack.com/blog/multi-tenant-applications-with-rls-on-supabase-postgress/)
-- [Supabase Multi-Tenancy CRM Integration Guide](https://www.stacksync.com/blog/supabase-multi-tenancy-crm-integration)
-- [Enforcing Row Level Security in Supabase: A Deep Dive into Multi-Tenant Architecture](https://dev.to/blackie360/-enforcing-row-level-security-in-supabase-a-deep-dive-into-lockins-multi-tenant-architecture-4hd2)
-
-### Composio Integration
-- [From Auth to Action: The Complete Guide to Secure & Scalable AI Agent Infrastructure (2026)](https://composio.dev/blog/secure-ai-agent-infrastructure-guide)
-- [AI agent authentication platforms: buyer's guide and comparison (2026)](https://composio.dev/blog/ai-agent-authentication-platforms)
-- [MCP Gateways: A Developer's Guide to AI Agent Architecture in 2026](https://composio.dev/blog/mcp-gateways-guide)
-
-### GraphRAG
-- [RAG Tutorial: How to Build a RAG System on a Knowledge Graph](https://neo4j.com/blog/developer/rag-tutorial/)
-- [From LLMs to Knowledge Graphs: Building Production-Ready Graph Systems in 2025](https://medium.com/@claudiubranzan/from-llms-to-knowledge-graphs-building-production-ready-graph-systems-in-2025-2b4aff1ec99a)
-- [What is Graph RAG | Ontotext Fundamentals](https://www.ontotext.com/knowledgehub/fundamentals/what-is-graph-rag/)
-- [Building, Improving, and Deploying Knowledge Graph RAG Systems on Databricks](https://www.databricks.com/blog/building-improving-and-deploying-knowledge-graph-rag-systems-databricks)
-
-### AI Agent Architecture
-- [A Complete Guide to AI Agent Architecture in 2026 | Lindy](https://www.lindy.ai/blog/ai-agent-architecture)
-- [Agentic AI for Enterprises in 2026 | AcmeMinds](https://acmeminds.com/agentic-ai-for-enterprises-in-2026-a-practical-guide/)
-- [From Generative to Agentic AI: A Roadmap in 2026](https://medium.com/@anicomanesh/from-generative-to-agentic-ai-a-roadmap-in-2026-8e553b43aeda)
-
-### Entity Recognition & NLP
-- [Context-Aware ML/NLP Pipeline for Real-Time Anomaly Detection](https://www.mdpi.com/2504-4990/8/1/25)
-- [Recent Advances in Named Entity Recognition: A Comprehensive Survey](https://arxiv.org/html/2401.10825v3)
-- [Named Entity Recognition: A Comprehensive Guide to NLP's Key Technology](https://medium.com/@kanerika/named-entity-recognition-a-comprehensive-guide-to-nlps-key-technology-636a124eaa46)
+### Backend Architecture
+- [AI-Powered Backend Architecture in 2026 | Refonte Learning](https://www.refontelearning.com/blog/ai-powered-backend-architecture-in-2026-how-backend-engineers-build-scalable-intelligent-systems)
+- [10 Explosive Backend Development Trends in 2026 | Ainexis Lab](https://ainexislab.com/backend-development-trends-in-2026-the-future-guide/)
+- [State management | Building Mobile Apps at Scale](https://www.mobileatscale.com/content/posts/01-state-management/)

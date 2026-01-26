@@ -1,256 +1,313 @@
-# Domain Pitfalls
+# Domain Pitfalls: v2.0 Feature Expansion
 
-**Domain:** Personal knowledge graph / MCP server / codebase consolidation
-**Researched:** 2026-01-24
-**Project:** Omnii One - Consolidating three divergent codebases (omnii monorepo, omnii-mobile, omnii-mcp)
+**Domain:** Personal knowledge management - adding file ingestion, notes capture, NLP/entity extraction, gamification
+**Researched:** 2026-01-26
+**Project:** Omnii One v2.0 - Adding features to existing personal context server
 
 ## Executive Summary
 
-This consolidation project sits at the intersection of six high-risk domains, each with documented failure modes. The greatest danger is not technical complexity but **strategic sequencing errors** - attempting to solve too many problems simultaneously. Research shows 60% of AI projects without AI-ready data will be abandoned through 2026, and 34% of monorepo consolidations experience short-term complexity spikes that derail progress.
+This pitfall research focuses on common mistakes when ADDING file ingestion, notes capture, enhanced AI intelligence, and gamification to an **existing production system**. Unlike greenfield development, integration with live v1.0 infrastructure introduces unique failure modes: backward compatibility breaks, performance degradation from new workloads, user trust erosion from data quality issues, and feature adoption drop-off from excessive friction.
 
-**Critical insight:** The industry will spend 2026 debating context graphs without successful implementation. This project's success depends on avoiding the "build everything at once" trap and the "context is slippery" problem that plagues personal AI systems.
+**Critical insight:** Research shows that 50-70% accuracy in entity extraction "out of the box" degrades to production failures without human-in-the-loop validation. Gamification effectiveness drops after 3 days without meaningful progression systems. Document parsing failures are silent until users discover missing content. These features require different quality gates than v1.0's structured data ingestion.
+
+**Integration risk:** Adding resource-intensive features (document parsing, LLM entity extraction) to existing infrastructure can trigger the "performance degradation trap" - technically successful deployment that feels like failure due to response time slowdowns, increased costs, and user experience degradation.
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites or major issues.
+Mistakes that cause rewrites, data loss, or user trust violations.
 
-### Pitfall 1: Building for the Graph, Not for Inference
+### Pitfall 1: File Parsing Silent Failures
 
-**What goes wrong:** Teams build elaborate knowledge graphs with beautiful schemas but no clear retrieval strategy. The graph becomes a data graveyard - information goes in but never comes back out in useful ways.
+**What goes wrong:** PDFs and Word documents are "successfully" ingested but critical content is missing. Tables become garbled, images disappear, formatting corruption makes text unreadable. Users discover weeks later that important information never made it into the knowledge graph.
 
-**Why it happens:** Knowledge graph tooling makes it easy to model relationships. Developers focus on the schema (nodes, edges, properties) without designing the queries and retrieval patterns that will actually serve AI context.
+**Why it happens:**
+- Manual data entry error rate is ~1% (10 errors per 1,000 entries), but automated parsing can be worse without validation
+- Complex document layouts (multi-column, embedded tables, scanned images) fail silently
+- Parsing libraries return partial results without error codes
+- No human-in-the-loop validation of extraction quality
+- Developers test on clean PDFs, not real-world scanned documents or complex layouts
 
 **Consequences:**
-- AI gets irrelevant or incomplete context despite having "all the data"
-- Over-personalization: Model makes connections between unrelated topics (e.g., sees 100 golf photos, assumes user loves golf, misses that user loves their son)
-- Context rot: Adding more data makes retrieval worse, not better
-- 27% of organizations had knowledge graphs in production in late 2025, down from evaluations - suggesting implementation failures
+- Users lose trust in the system ("My notes are incomplete")
+- AI provides incomplete context because source documents are mangled
+- Cannot reliably retrieve information that should be in the graph
+- Data loss discovered only when user searches for specific content
+- Compliance/legal issues if important documents are corrupted
 
 **Prevention:**
-1. **Design retrieval patterns BEFORE schema** - Start with "What questions will AI ask?" not "What relationships exist?"
-2. **Prototype with mock queries** - Write the Cypher/graph queries for actual use cases before populating data
-3. **Measure context relevance** - Track whether retrieved context actually helps AI responses (don't just measure graph completeness)
-4. **Build for GraphRAG, not just graph** - Unstructured RAG delivered through structured knowledge-graph layer achieves stronger results than either alone
+1. **Implement extraction quality scoring** - Track confidence scores for each document; flag low-quality extractions for review
+2. **Human-in-the-loop validation for critical documents** - Allow users to verify extraction, especially for first-time document types
+3. **Test with real-world documents** - Scanned PDFs, mobile photos, complex layouts, not just clean test files
+4. **Use adaptive parsing strategies** - Vision LLMs for complex layouts, traditional parsers for simple documents
+5. **Provide extraction preview** - Show users what was extracted BEFORE committing to graph
+6. **Track parsing errors** - Log failures, partial extractions, and low-confidence results
+7. **Implement fallback strategies** - If parsing fails, store original file and allow manual annotation
 
 **Detection:**
-- Graph grows but AI accuracy doesn't improve
-- High retrieval latency (complex traversals with no clear termination)
-- AI responses cite irrelevant personal information
-- Users report "AI doesn't understand me" despite extensive data collection
+- Users reporting "I uploaded X but can't find it"
+- Search queries returning no results for known document content
+- Extraction confidence scores consistently below 70%
+- High variance in extraction quality across document types
+- Support tickets about "missing information"
 
 **Phase mapping:**
-- **Phase 1 (Foundation):** Define core retrieval patterns, prototype key queries
-- **Phase 2:** Implement retrieval-first, populate data second
-- **Phase 3+:** Measure and optimize context relevance
+- **File Ingestion Phase:** Build quality scoring and preview into extraction pipeline from day one
+- **Testing Phase:** Comprehensive testing with diverse document types (scanned, complex layouts, various formats)
+- **Monitoring Phase:** Track extraction quality metrics, user feedback on accuracy
 
-**Confidence:** HIGH - Multiple sources confirm this anti-pattern (Cognee blog, research papers, industry adoption data)
+**Confidence:** HIGH - Research on PDF parsing accuracy, manual data entry error rates, and extraction validation from multiple 2026 sources
+
+**Sources:**
+- [Data Extraction API For Documents - The Complete Guide (2026) | Parseur](https://parseur.com/blog/data-extraction-api)
+- [How to Parse PDFs Effectively: Tools, Methods & Use Cases (2026)](https://parabola.io/blog/best-methods-pdf-parsing)
+- [A Comparative Study of PDF Parsing Tools Across Diverse Document Categories](https://arxiv.org/html/2410.09871v1)
 
 ---
 
-### Pitfall 2: MCP Security Vulnerabilities and Tool Permission Creep
+### Pitfall 2: Storage Bloat from Unmanaged File Ingestion
 
-**What goes wrong:** MCP servers are deployed with inadequate security controls, allowing prompt injection, data exfiltration through tool composition, or command injection vulnerabilities that "shouldn't exist in 2025."
+**What goes wrong:** Users upload PDFs, Word docs, code repositories, and images. Storage costs explode. Database queries slow down. Vector indexing takes hours. System grinds to a halt under the weight of unoptimized file storage.
 
 **Why it happens:**
-- Developers treat MCP servers as internal-only tools and skip authentication/authorization
-- Tool permissions aren't scoped - combining tools can exfiltrate files silently
-- Lookalike tools can replace trusted ones without detection
-- Niche frameworks are adopted instead of battle-tested SDKs
+- No file size limits or quotas enforced
+- Storing original files AND extracted text AND embeddings without deduplication
+- Versioning every file change creates exponential storage growth
+- No archiving strategy for old/inactive documents
+- Inappropriate storage tier (hot storage for rarely-accessed files)
 
 **Consequences:**
-- Prompt injection attacks manipulate tool execution
-- Sensitive data leaked through tool chaining (e.g., read_file + send_http)
-- Command injection via unsanitized inputs
-- Production incidents requiring full security audit and rebuild
+- Storage costs increase 10-100x beyond projections
+- Query performance degrades as database size grows
+- Vector search becomes prohibitively expensive
+- Infrastructure costs make product economically unviable
+- User experience suffers from slow retrieval
 
 **Prevention:**
-1. **Implement least-privilege tool access** - Each client/context gets minimal tool set needed
-2. **Validate and sanitize ALL inputs** - Treat every parameter as hostile, especially file paths and shell commands
-3. **Use official MCP SDKs** - Don't adopt niche frameworks; stick with standard implementations
-4. **Add rate limiting** - Prevent DoS attacks and manage costs for resource-intensive operations
-5. **Audit tool composition** - Explicitly review what combinations of tools enable
-6. **Store credentials properly** - System keychains, environment variables, or dedicated secrets managers (HashiCorp Vault, AWS Secrets Manager)
+1. **Implement file size quotas** - Per-user limits (e.g., 5GB free, upgrade for more)
+2. **Use appropriate storage tiers** - Hot storage for recent/frequent access, cold storage for archives
+3. **Deduplicate aggressively** - Hash-based dedup for identical files across users
+4. **Separate file storage from graph storage** - S3/GCS for files, Neo4j for metadata/relationships only
+5. **Implement intelligent archiving** - Move old/unused files to cheaper storage automatically
+6. **Compress embeddings** - Use quantization or other compression for vector storage
+7. **Limit versioning** - Keep last N versions, not infinite history
+8. **Monitor storage growth** - Alert on unexpected growth patterns
 
 **Detection:**
-- Unexpected API calls or file access in logs
-- Tools executing with broader permissions than intended
-- Claude unable to connect errors (often indicate protocol/security mismatch)
-- Resource exhaustion from unthrottled tool calls
+- Storage costs growing faster than user count
+- Database queries slowing down over time
+- Vector index build times increasing exponentially
+- Users complaining about slow search
+- Disk space alerts, out-of-storage errors
 
 **Phase mapping:**
-- **Phase 1:** Security-first MCP server architecture, credential management
-- **Phase 2:** Tool permission boundaries, rate limiting
-- **Phase 3+:** Audit logging, anomaly detection
+- **Architecture Phase:** Design storage tier strategy (hot/cold, file vs. graph separation)
+- **Implementation Phase:** Enforce quotas, implement deduplication, set up archiving
+- **Monitoring Phase:** Track storage growth, cost per user, query performance
 
-**Confidence:** HIGH - Recent security research, Red Hat blog, Nearform implementation guide
+**Confidence:** MEDIUM - Based on document management trends and database performance research; specific to file ingestion at scale
+
+**Sources:**
+- [Document Archiving in 2026: Challenges, Best Practices, and Automation](https://www.infrrd.ai/blog/document-archiving-solutions-in-2026)
+- [7 Document Management Best Practices in 2026](https://thedigitalprojectmanager.com/project-management/document-management-best-practices/)
+- [Fixing Storage Bloat and Write Performance Issues in InfluxDB](https://www.mindfulchase.com/explore/troubleshooting-tips/databases/fixing-storage-bloat-and-write-performance-issues-in-influxdb.html)
 
 ---
 
-### Pitfall 3: Neo4j Multi-Tenancy Data Isolation Failures
+### Pitfall 3: Notes Sync Conflicts and Data Loss
 
-**What goes wrong:** Personal context data from different users/sources bleeds across tenant boundaries, either through shared database partitioning or improper privilege configuration.
+**What goes wrong:** User captures quick notes on mobile while offline. Returns online, notes sync, and edits disappear or become corrupted. User loses trust and stops using note capture feature.
 
 **Why it happens:**
-- Pre-Neo4j 4.0 patterns (label/property-based partitioning) still used in 4.0+ codebases
-- Global admin roles can't be restricted per-database - requires separate role per tenant
-- Relationships can't span databases, forcing shared-database designs
-- Migration from label-based to database-per-tenant is complex and risky
+- Last-write-wins (LWW) conflict resolution discards concurrent edits
+- No CRDT implementation for collaborative/offline editing
+- Sync conflicts require manual resolution, creating friction
+- Simple timestamp-based merging fails for complex edits
+- Offline queue doesn't handle network failures gracefully
 
 **Consequences:**
-- User A sees User B's personal knowledge graph data
-- Privacy violations and potential regulatory issues (GDPR, CCPA)
-- Cannot provide isolation guarantees for sensitive personal data
-- Rollback requires full database restore
+- Users lose work, eroding trust in the system
+- "App lost my notes" becomes common complaint
+- Users revert to traditional note-taking apps
+- Feature adoption drops to near-zero after initial trials
+- Support burden increases with data recovery requests
 
 **Prevention:**
-1. **Use Neo4j 4.0+ database-per-tenant** - Each tenant/user gets isolated database, not shared DB with labels
-2. **Create tenant-specific admin roles** - No global admin; separate role per database
-3. **Design for single-database constraints** - Relationships cannot span databases; plan data model accordingly
-4. **Test isolation upfront** - Verify queries cannot access cross-tenant data before populating production
-5. **Plan migration carefully** - If migrating from shared DB, test on staging, have rollback plan
-6. **Consider impact on sync** - Database-per-tenant affects sync strategy and resource requirements
+1. **Implement CRDT for note content** - Use Yjs, Automerge, or similar for conflict-free merging
+2. **Avoid last-write-wins** - It guarantees data loss in offline scenarios
+3. **Use proven sync engines** - PowerSync (already in v1.0), WatermelonDB, Replicache - don't build custom sync
+4. **Design conflict-free operations** - Where possible, structure notes as append-only events
+5. **Provide clear sync status** - Users must know when notes are local-only vs. synced
+6. **Test offline scenarios extensively** - Network loss during write, concurrent edits, partial sync
+7. **Implement optimistic UI with rollback** - Show change immediately, rollback if sync fails
 
 **Detection:**
-- Graph queries returning unexpected cross-user data
-- Privilege errors when users access their own data
-- Performance degradation as tenant count grows
-- Migration failures in test environments
+- User reports of "lost notes" or "notes changed unexpectedly"
+- Sync conflict logs showing frequent resolution failures
+- High rate of manual conflict resolution requests
+- Users abandoning note-taking feature after initial use
+- Support tickets about data inconsistency
 
 **Phase mapping:**
-- **Phase 1:** Define multi-tenancy model (database-per-tenant vs. shared), prototype isolation
-- **Phase 2:** Implement tenant provisioning, test cross-tenant query prevention
-- **Phase 3+:** Monitor resource usage per tenant, optimize
+- **Architecture Phase:** Choose CRDT library or sync strategy compatible with PowerSync
+- **Implementation Phase:** Wire CRDTs into note storage, test conflict scenarios
+- **Validation Phase:** Stress test with offline edits, network failures, concurrent changes
 
-**Confidence:** MEDIUM - Based on Neo4j community discussions and GraphAware blog (2020), verified against 4.0+ docs
+**Confidence:** HIGH - Extensive 2026 research on offline-first sync and CRDT implementations
+
+**Sources:**
+- [Offline vs. Real-Time Sync: Managing Data Conflicts](https://www.adalo.com/posts/offline-vs-real-time-sync-managing-data-conflicts)
+- [Offline-First Apps: Key Use Cases and Benefits in 2026](https://www.octalsoftware.com/blog/offline-first-apps)
+- [How to Build Resilient Offline-First Mobile Apps with Seamless Syncing](https://medium.com/@quokkalabs135/how-to-build-resilient-offline-first-mobile-apps-with-seamless-syncing-adc98fb72909)
 
 ---
 
-### Pitfall 4: Monorepo Consolidation Without Specialized Tooling
+### Pitfall 4: LLM Entity Extraction Hallucination Cascade
 
-**What goes wrong:** Three divergent codebases are merged into a monorepo without proper build orchestration, dependency management, or CI/CD reconfiguration. Builds become slow, tests run unnecessarily, and the team abandons the monorepo.
+**What goes wrong:** Enhanced entity extraction using LLMs creates hallucinated entities and relationships. Graph fills with non-existent people, fictional meetings, and invented connections. AI retrieval returns confident but completely wrong context.
 
 **Why it happens:**
-- Teams underestimate the tooling required for monorepo success
-- Existing scripts/CI configs assume single-app structure
-- Version conflicts between packages go undetected
-- 34% experience short-term complexity spike that feels like regression
+- LLMs generate plausible but false entity names from ambiguous text
+- No validation that extracted entities actually exist
+- Training data extraction risks expose personal information from model training
+- Prompt injection in user content manipulates entity extraction
+- No confidence thresholding - low-certainty extractions treated as facts
 
 **Consequences:**
-- Build times explode (entire monorepo rebuilds on every change)
-- CI pipeline slowdowns (all tests run for single-file change)
-- Dependency drift (subtle package.json differences causing failures)
-- Tight coupling (changes cascade across projects unintentionally)
-- Team productivity drops during transition period
-- Existing CI/CD breaks completely, requiring rebuild
+- Knowledge graph polluted with fictional entities
+- AI makes decisions based on hallucinated relationships
+- Privacy violations if LLM leaks training data as "extracted entities"
+- User trust destroyed when AI cites non-existent information
+- Cannot distinguish real entities from hallucinations
 
 **Prevention:**
-1. **Adopt specialized monorepo tooling BEFORE consolidation** - Nx, Turborepo, or similar
-2. **Implement incremental builds** - Only build affected projects
-3. **Configure smart caching** - Local and CI caching for unchanged modules
-4. **Establish conventions early** - Standardized directory structure, naming patterns, shared configs
-5. **Migrate incrementally** - One project/package at a time, not "big bang"
-6. **Automate dependency management** - Use workspace: protocol, automated updates
-7. **Reconfigure CI/CD for monorepo** - Understand what changed, test only affected
+1. **Use small, specialized models for extraction** - Route 80-95% to mini/fast models, escalate hard cases to larger models
+2. **Implement confidence thresholds** - Reject entities below 80% confidence, flag 80-90% for validation
+3. **Cross-reference with existing entities** - Prefer merging with known entities over creating new ones
+4. **Human-in-the-loop for new high-impact entities** - Validate important people/organizations before committing
+5. **Use entity resolution** - Semantic entity resolution to detect and merge duplicates/hallucinations
+6. **Test with adversarial inputs** - Prompt injection attempts, ambiguous names, fictional content
+7. **Implement privacy-preserving extraction** - Use local SLMs or federated learning to avoid cloud LLM leaks
+8. **Monitor extraction quality** - Track entity creation rate, hallucination reports, user corrections
 
 **Detection:**
-- git status/clone taking >30 seconds
-- Full rebuild after single-file change
-- Tests for project A running when project B changes
-- Developers complaining about "slowness" without specifics
-- CI timeouts that didn't exist before
+- Users reporting "I don't know this person" for suggested entities
+- Duplicate entities with slight name variations (John Smith, J. Smith, John S.)
+- Entity counts growing faster than content ingestion
+- AI responses citing entities that don't exist in source material
+- Privacy complaints about exposed information
 
 **Phase mapping:**
-- **Phase 0 (Pre-consolidation):** Choose and configure monorepo tooling
-- **Phase 1:** Migrate first codebase, validate tooling
-- **Phase 2:** Migrate second codebase, refine workflows
-- **Phase 3:** Migrate third codebase, establish shared conventions
+- **NLP Phase:** Implement confidence scoring and validation gates
+- **Testing Phase:** Adversarial testing with fictional content, prompt injection
+- **Production Phase:** Monitor hallucination rate, implement entity resolution
 
-**Confidence:** HIGH - Multiple 2025-2026 sources on monorepo mistakes (InfoQ, dev.to, Aviator)
+**Confidence:** HIGH - Extensive 2025-2026 research on LLM privacy, hallucination, and entity extraction challenges
+
+**Sources:**
+- [A survey on privacy risks and protection in large language models](https://link.springer.com/article/10.1007/s44443-025-00177-1)
+- [PBa-LLM: Privacy- and Bias-aware NLP using Named-Entity Recognition](https://arxiv.org/html/2507.02966v2)
+- [AI Privacy Risks & Mitigations - Large Language Models (LLMs)](https://www.edpb.europa.eu/system/files/2025-04/ai-privacy-risks-and-mitigations-in-llms.pdf)
 
 ---
 
-### Pitfall 5: Local-First Sync Conflicts Without CRDT Strategy
+### Pitfall 5: Graph Database Duplicate Entity Explosion
 
-**What goes wrong:** Local-first architecture implemented with naive "last-write-wins" conflict resolution. Users make offline edits, sync, and their changes mysteriously disappear or overwrite others' work.
+**What goes wrong:** Entity extraction creates thousands of duplicate nodes for the same entity. "John Smith" becomes 47 separate nodes (John, J. Smith, John Smith, john smith, etc.). Graph becomes unusable for relationship queries.
 
 **Why it happens:**
-- Writing custom sync algorithms is "a rabbit hole of edge cases"
-- CRDTs seem complex; developers think they can solve it simpler
-- Last-write-wins (Firestore) or deterministic hashing (CouchDB) is simpler but lossy
-- Offline scenarios are hard to test comprehensively
+- LLM-based extraction produces large numbers of duplicate nodes and edges
+- No entity resolution during ingestion
+- Different file sources use different naming conventions
+- No canonical entity linking (merge "John Smith" from email with "John Smith" from calendar)
+- Graph visualization becomes noise-filled and useless
 
 **Consequences:**
-- User edits lost during sync (last-write-wins drops changes)
-- Data inconsistencies across devices (partial sync, stale caches)
-- User trust erosion ("app lost my work")
-- Cannot guarantee eventual consistency
-- Retry loops and race conditions in sync layer
+- Duplicate nodes dilute graph power and limit analytic potential
+- Queries return incomplete results (miss relationships on duplicate nodes)
+- Graph visualizations become "exceptionally noisy, obfuscating important patterns"
+- Cannot track true relationship count (is this 5 connections or 1 connection duplicated 5 times?)
+- Performance degrades as query has to check multiple duplicate nodes
 
 **Prevention:**
-1. **Adopt CRDTs for shared state** - Use Automerge, Yjs, or similar for conflict-free merging
-2. **Don't write custom sync** - Use proven sync engines (Replicache, WatermelonDB, PowerSync)
-3. **Design for conflict-free operations** - Where possible, avoid conflicting edits (append-only, immutable events)
-4. **Implement robust retry with backoff** - Network failures are normal, not exceptional
-5. **Create sync status UI** - Users must understand when data is local vs. synced
-6. **Test offline scenarios rigorously** - Simulate network loss, partial updates, concurrent edits
-7. **Plan for n8n orchestration** - If using n8n, understand that it's another sync surface
+1. **Implement entity resolution pipeline** - Deduplicate entities during ingestion, not after
+2. **Use semantic entity resolution** - Language models for schema alignment, blocking, matching, and merging
+3. **Create canonical entity IDs** - Normalize names, use external IDs (email addresses, phone numbers) when available
+4. **Merge aggressively** - Prefer merging similar entities over creating new nodes
+5. **Implement entity linking** - Connect entities across sources (email John = calendar John)
+6. **Use LLM-based deduplication** - Instruct LLMs to extract AND deduplicate in same step
+7. **Monitor duplicate rate** - Track entity creation vs. unique entities, flag anomalies
 
 **Detection:**
-- User reports of "lost edits" after going offline
-- Data inconsistencies between mobile and backend
-- Sync conflicts requiring manual resolution
-- Unbounded growth of conflict logs
-- Retry storms (DDoS on own servers)
+- Same entity name appearing in search results multiple times
+- Graph queries returning unexpectedly high node counts
+- Visualization tools showing clusters of near-identical nodes
+- Relationship queries missing connections (because they're on duplicate node)
+- User reports of "seeing the same person multiple times"
 
 **Phase mapping:**
-- **Phase 1:** Choose CRDT library or sync engine, prototype conflict scenarios
-- **Phase 2:** Implement sync with offline-first patterns
-- **Phase 3+:** Stress test with concurrent edits, network failures
+- **NLP Phase:** Build entity resolution into extraction pipeline from start
+- **Graph Phase:** Implement merge operations, canonical ID strategy
+- **Monitoring Phase:** Track duplicate rate, merge suggestions
 
-**Confidence:** HIGH - Multiple 2026 sources on local-first pitfalls (Evil Martians, RxDB, Expo docs)
+**Confidence:** HIGH - Recent 2025-2026 research specifically addresses LLM entity extraction duplicate issues
+
+**Sources:**
+- [Bug Report: Entity extraction from graph databases contains duplicate nodes](https://github.com/mem0ai/mem0/issues/3341)
+- [Entity Resolved Knowledge Graphs: A Tutorial](https://neo4j.com/blog/developer/entity-resolved-knowledge-graphs/)
+- [Build knowledge graphs with LLM-driven entity extraction](https://neuml.hashnode.dev/build-knowledge-graphs-with-llm-driven-entity-extraction)
+- [The Rise of Semantic Entity Resolution](https://towardsdatascience.com/the-rise-of-semantic-entity-resolution/)
 
 ---
 
-### Pitfall 6: Git Divergent Branch Reconciliation During Consolidation
+### Pitfall 6: Gamification Reward Fatigue and User Annoyance
 
-**What goes wrong:** Three codebases have diverged significantly. Merge attempts create massive conflicts. Developers choose wrong reconciliation strategy (rebase public branches) or give up and manually copy files, losing history.
+**What goes wrong:** XP and achievement system launches with fanfare. After 3 days, users find it annoying. Notifications become spam. Users complete trivial tasks for points instead of meaningful work. Gamification becomes anti-feature.
 
 **Why it happens:**
-- Git 2.x+ requires explicit pull strategy configuration
-- Developers don't understand merge vs. rebase tradeoffs
-- Panic during conflicts leads to destructive actions (git checkout ., reset --hard)
-- Ignoring "divergent branches" warning causes chaotic history
+- Rewarding wrong behaviors (hours worked, not results; task creation, not completion)
+- Meaningless metrics (XP that doesn't unlock anything valuable)
+- Short-term motivation (gamification rarely increases productivity beyond 3 days)
+- Streak anxiety (users stressed about maintaining daily streaks)
+- Notification overload (achievement popups interrupt focus)
 
 **Consequences:**
-- Lost commit history (manual file copying instead of proper merge)
-- Broken builds after consolidation
-- Team members' local repos become unusable
-- Cannot trace which codebase contributed which features
-- Deployment issues from unexpected merge artifacts
+- User annoyance, not engagement
+- Focus on metrics instead of meaningful work (Goodhart's Law)
+- Burnout from streak anxiety and dependency
+- Users disable notifications, ignore gamification entirely
+- Feature becomes technical debt with no value
 
 **Prevention:**
-1. **Hybrid workflow: rebase local, merge for integration** - Don't rebase public branches
-2. **Configure pull strategy explicitly** - Choose merge or rebase based on workflow
-3. **Use visual diff tools** - VS Code 2026 AI-powered diff, GitKraken, etc.
-4. **Create merge plan before execution** - Identify common ancestor, plan conflict resolution
-5. **Never force-push to main/master** - Protect critical branches
-6. **Test merge on throwaway branch first** - Practice before real consolidation
-7. **Document consolidation strategy** - Which codebase is "source of truth" per domain
+1. **Reward outcomes, not activity** - XP for goals achieved, not hours logged or tasks created
+2. **Make rewards meaningful** - Unlock useful features, insights, not just badges
+3. **Avoid streak mechanics** - Research shows they create anxiety and dependency
+4. **Allow opt-out** - Gamification should be optional, not forced
+5. **Design for long-term engagement** - Don't rely on initial novelty
+6. **Respect user focus** - Minimal notifications, achievements shown in context, not interrupts
+7. **Measure real productivity impact** - Track whether gamification improves actual outcomes
+8. **Start minimal** - Launch with simple progression, add features based on feedback
 
 **Detection:**
-- "You have divergent branches" warning
-- Merge conflicts in majority of files
-- History shows multiple parallel "Merge branch..." commits
-- Developers asking "which version do we keep?"
-- CI failures after merge completion
+- Users disabling gamification features
+- High rate of notification dismissals
+- Trivial tasks increasing, important tasks decreasing
+- User feedback about "annoying badges" or "pointless XP"
+- Engagement drops after initial week
+- Users gaming metrics without improving productivity
 
 **Phase mapping:**
-- **Phase 0 (Pre-consolidation):** Analyze codebases, create merge strategy document
-- **Phase 1:** Test merge on isolated branch, resolve major conflicts
-- **Phase 2:** Execute consolidation with documented strategy
-- **Phase 3:** Validate all features work post-merge
+- **Design Phase:** Research intrinsic motivation, avoid common gamification anti-patterns
+- **MVP Phase:** Launch minimal viable gamification (simple progress tracking)
+- **Validation Phase:** Measure actual productivity impact, not just engagement metrics
+- **Iteration Phase:** Add features only if validated positive impact
 
-**Confidence:** MEDIUM - Based on 2026 Git workflow guides, not specific to this project type
+**Confidence:** MEDIUM-HIGH - Based on 2025-2026 research on gamification effectiveness and common mistakes
+
+**Sources:**
+- [The Trap Of Gamified Productivity](https://medium.com/@alphahangchen1/the-trap-of-gamified-productivity-d3d4b37725a7)
+- [Productivity App Gamification That Doesn't Backfire](https://trophy.so/blog/productivity-app-gamification-doesnt-backfire)
+- [Focus apps claim to improve your productivity. Do they actually work?](https://theconversation.com/focus-apps-claim-to-improve-your-productivity-do-they-actually-work-271388)
+- [Top 10 Gamified Productivity Apps for 2025](https://yukaichou.com/lifestyle-gamification/the-top-ten-gamified-productivity-apps/)
 
 ---
 
@@ -258,212 +315,219 @@ Mistakes that cause rewrites or major issues.
 
 Mistakes that cause delays or technical debt.
 
-### Pitfall 7: n8n Workflow Hardcoded Credentials
+### Pitfall 7: Integration Performance Degradation
 
-**What goes wrong:** API keys and secrets hardcoded into HTTP Request nodes or Code nodes. Workflow exports leak credentials. Rotation requires manually updating dozens of nodes.
+**What goes wrong:** v2.0 features launch successfully. Response times increase from 200ms to 2+ seconds. Users complain about "slowness." Technically correct implementation feels like failure.
 
-**Why it happens:** Fastest way to get workflow working is copy-paste API key directly.
-
-**Prevention:**
-- Always use n8n's credential manager (encrypted, rotation-friendly)
-- Audit workflows before committing/exporting
-- Use environment variables for local development
-
-**Detection:** API keys visible in workflow JSON exports
-
-**Phase mapping:** Phase 2 (n8n integration) - Establish credential management patterns upfront
-
----
-
-### Pitfall 8: Missing Error Handling in n8n Workflows
-
-**What goes wrong:** Workflows run perfectly for two weeks, then silently fail when an API returns unexpected data or a webhook gets overloaded.
-
-**Why it happens:** External APIs/databases fail, but workflows aren't designed to handle it.
+**Why it happens:**
+- Document parsing on main request thread blocks responses
+- Entity extraction LLM calls add 500-2000ms latency
+- Vector embedding generation is synchronous
+- No request prioritization (document parsing competes with user queries)
+- Existing infrastructure not scaled for new workloads
 
 **Prevention:**
-- Add error handling to every external call node
-- Implement "Error Workflow" for centralized error logging
-- Set up alerts for workflow failures
-- Test with malformed/missing data
+1. **Move heavy processing to background jobs** - Parsing, extraction, embedding should be async
+2. **Use job queues** - BullMQ (already in v1.0) for document processing workflows
+3. **Implement request prioritization** - User queries > background extraction
+4. **Use smaller models for real-time extraction** - Reserve large models for batch processing
+5. **Add performance monitoring** - Track p50, p95, p99 latency for all endpoints
+6. **Load test before launch** - Simulate real-world document upload + extraction volume
+7. **Optimize database queries** - Ensure indexes exist for new query patterns
 
 **Detection:**
-- Workflows showing "Success" but not producing expected output
-- Gaps in data that correspond to API downtime
+- User complaints about "app is slower"
+- API latency metrics increasing after v2.0 launch
+- Server CPU/memory utilization spikes
+- Background jobs queuing up, not completing
+- Database query time increasing
 
-**Phase mapping:** Phase 2 (n8n integration) - Build error handling patterns into templates
+**Phase mapping:**
+- **Architecture Phase:** Design async processing from start, not after launch
+- **Load Testing Phase:** Validate performance under realistic load
+- **Monitoring Phase:** Track all latency metrics, alert on regression
 
----
+**Confidence:** MEDIUM - Based on system migration and performance degradation research
 
-### Pitfall 9: n8n Save Execution Progress in Production
-
-**What goes wrong:** Debug feature "Save Execution Progress" left enabled in production. Every node execution writes to database. 30-node workflow × 100 runs/day = 3,000 writes/day. n8n instance slows to a crawl.
-
-**Why it happens:** Enabled during debugging, forgotten when deploying to production.
-
-**Prevention:**
-- Disable "Save Execution Progress" in production workflows
-- Only enable when actively debugging specific issues
-- Monitor database write volume
-
-**Detection:**
-- n8n UI becomes slow/unresponsive
-- Database shows excessive write operations
-- Workflow execution times increase over time
-
-**Phase mapping:** Phase 2 (n8n integration) - Create production workflow checklist
+**Sources:**
+- [Software Migration Guide for 2026](https://hicronsoftware.com/blog/software-migration-guide/)
+- [Data Migration: Challenges & Risks During Legacy System Modernization](https://brainhub.eu/library/data-migration-challenges-risks-legacy-modernization)
 
 ---
 
-### Pitfall 10: n8n Inefficient Batching (Batch Size = 1)
+### Pitfall 8: Notes Capture Friction Kills Adoption
 
-**What goes wrong:** Database query or HTTP request inside SplitInBatches loop with batch size = 1. Processing 1,000 items means 1,000 individual API calls.
+**What goes wrong:** Note capture feature has beautiful UI and powerful features. Users try it once, then return to their existing note apps. Feature adoption flatlines at <5%.
 
-**Why it happens:** Default behavior or misunderstanding of batch processing.
-
-**Prevention:**
-- Configure batch size appropriately (50-100 for APIs, 500-1000 for databases)
-- Use bulk operations where available
-- Consider creating single "sync" endpoint on backend instead of multiple calls
-
-**Detection:**
-- Workflows taking minutes to process small datasets
-- API rate limit errors
-- Server load spikes during workflow execution
-
-**Phase mapping:** Phase 2 (n8n integration) - Performance testing with realistic data volumes
-
----
-
-### Pitfall 11: Monorepo Tight Coupling
-
-**What goes wrong:** Shared code forces all projects to use identical library versions. Change in one project breaks others. "Monorepo" becomes "monolith."
-
-**Why it happens:** Workspace dependencies default to sharing versions; convenience becomes constraint.
-
-**Prevention:**
-- Allow version differences where justified
-- Use workspace: protocol carefully
-- Establish dependency update policies
-- Create clear module boundaries
-
-**Detection:**
-- Changes to shared library requiring updates across all projects
-- Developers avoiding refactoring due to cross-project impact
-- Version lock-in preventing security updates
-
-**Phase mapping:** Phase 1 (Initial consolidation) - Define dependency management rules
-
----
-
-### Pitfall 12: React Native Background Task API Overload
-
-**What goes wrong:** 100,000 devices wake up simultaneously and hit API. Accidental DDoS on own servers. iOS 18/Android 15 flag app as "battery drainer" and permanently restrict it.
-
-**Why it happens:** Background tasks execute synchronously across user base without jitter.
-
-**Prevention:**
-- Implement random delay (0-60 seconds) before background requests
-- Fetch JSON only, not images/videos
-- Create single "sync" endpoint instead of multiple calls
-- Rate limit aggressively on server side
-
-**Detection:**
-- Server load spikes at regular intervals
-- User reports of app being "restricted" by OS
-- Battery usage complaints
-
-**Phase mapping:** Phase 3 (Mobile sync) - Design background sync with jitter from start
-
----
-
-### Pitfall 13: React Native Offline-First Wishful Thinking
-
-**What goes wrong:** App assumes network availability. Users in poor connectivity areas (tunnels, rural, international) experience broken UX.
-
-**Why it happens:** Developers test on office WiFi; offline scenarios feel like edge cases.
-
-**Prevention:**
-- Design data layer in three tiers: local storage (instant), remote APIs (authoritative), real-time sync (optional)
-- Test with network throttling and airplane mode
-- Queue operations when offline, sync when online
-- Show clear offline/online status
-
-**Detection:**
-- User complaints about "app not working" without error messages
-- Support tickets mentioning specific locations (subway, airports)
-- Data loss reports from users who were offline
-
-**Phase mapping:** Phase 2-3 (Mobile architecture) - Build offline-first into core data layer
-
----
-
-### Pitfall 14: Personal Knowledge Graph Scope Creep
-
-**What goes wrong:** Attempt to model entire user life (emails, calendar, photos, documents, social media, purchases, health, location history) simultaneously. Project never ships.
-
-**Why it happens:** Knowledge graphs make it easy to add "just one more data source." Vision of "AI with complete context" is seductive.
-
-**Prevention:**
-- Start with ONE high-value data source (e.g., only codebase context OR only calendar)
-- Validate AI improvement before adding next source
-- Measure marginal value of each addition
-- Resist "just add everything" instinct
-
-**Detection:**
-- Data integrations growing faster than usage
-- Engineers building connectors, not improving AI responses
-- Roadmap filled with "Add X integration" vs. "Improve Y retrieval"
-
-**Phase mapping:** Phase 1 (Foundation) - Define MINIMUM viable context sources, defer others
-
----
-
-### Pitfall 15: MCP Server Monolith Anti-Pattern
-
-**What goes wrong:** Single MCP server handles filesystem + database + web search + calendar + email + Slack. Becomes unmaintainable and unreliable.
-
-**Why it happens:** Convenience of single deployment, perception that more tools = more value.
-
-**Prevention:**
-- One MCP server = one clear purpose
-- Separate concerns (filesystem server, database server, API server)
-- Allow MCP hosts to connect to multiple specialized servers
-- Keep servers focused and testable
-
-**Detection:**
-- MCP server codebase growing beyond 1,000 lines
-- Failure in one tool (e.g., email) breaks unrelated tools (filesystem)
-- Difficulty testing due to interdependencies
-
-**Phase mapping:** Phase 1 (MCP architecture) - Design multi-server architecture from start
-
----
-
-### Pitfall 16: Context Data Quality Neglect
-
-**What goes wrong:** Knowledge graph filled with incomplete metadata, unstripped HTML, empty vectors, ambiguous product names. AI retrieval becomes garbage-in-garbage-out.
-
-**Why it happens:** Focus on ingestion speed, not data quality. Assumption that "more data = better context."
+**Why it happens:**
+- Too many steps to create note (login, navigate, select type, fill metadata)
+- Slower than existing tools (Obsidian, Notion, Apple Notes)
+- Missing keyboard shortcuts power users expect
+- No quick capture widget on mobile
+- Requires too much context/categorization upfront
 
 **Consequences:**
-- 60% of AI projects without AI-ready data abandoned through 2026
-- Massive cost overruns processing poor-quality data at scale
-- AI confusion from inconsistent context
+- Feature development effort wasted
+- Users continue using external note apps, reducing knowledge graph value
+- Missed opportunity for deep knowledge integration
+- Technical debt from maintaining unused feature
 
 **Prevention:**
-- Validate and clean data during ingestion
-- Strip HTML, normalize formats
-- Enrich with metadata (timestamps, source, confidence)
-- Implement data quality monitoring
-- Chunk text appropriately for retrieval
+1. **Minimize time to capture** - One tap/click from anywhere to blank note
+2. **Add mobile quick capture widget** - iOS/Android widgets for instant note
+3. **Keyboard shortcuts** - Match conventions from popular tools (Cmd+N, etc.)
+4. **Smart defaults** - No required fields, auto-categorize later
+5. **Measure time-to-first-note** - Track friction in onboarding flow
+6. **Compete with existing tools on speed** - Must be faster than opening other app
+7. **Progressive enhancement** - Capture first, organize later
 
 **Detection:**
-- AI responses citing malformed or irrelevant content
-- High retrieval volume but low accuracy
-- Users manually correcting AI output frequently
+- Feature adoption <10% after 30 days
+- Users creating 1-2 notes then stopping
+- High time between note creation attempts (weeks)
+- Low average note count per user
+- User feedback mentioning "too slow" or "too complicated"
 
-**Phase mapping:** Phase 1-2 (Data ingestion) - Build quality gates into ingestion pipeline
+**Phase mapping:**
+- **Design Phase:** User testing for quick capture flow, competitive analysis
+- **MVP Phase:** Launch with minimal friction capture only
+- **Validation Phase:** Measure adoption rate, time-to-first-note
+- **Enhancement Phase:** Add organization features only after capture validated
+
+**Confidence:** MEDIUM - Based on general feature adoption and user friction research
+
+**Sources:**
+- [How to Identify and Reduce User Drop-Offs in 7 Steps](https://userpilot.com/blog/drop-off-analysis/)
+- [How to Identify & Fix User Friction (+Causes, Types)](https://whatfix.com/blog/user-friction/)
+- [Feature Adoption Guide for Product Managers](https://productfruits.com/blog/feature-adoption-guide)
+
+---
+
+### Pitfall 9: LLM Entity Extraction Cost Explosion
+
+**What goes wrong:** Entity extraction works beautifully in testing with 100 documents. Launches to production with 100,000 documents. Monthly LLM API costs hit $10,000+. Feature becomes economically unviable.
+
+**Why it happens:**
+- Using expensive frontier models (GPT-4, Claude Opus) for all extraction
+- Synchronous extraction on every document upload
+- No caching of extracted entities
+- Re-extracting unchanged documents
+- No cost monitoring or budgeting
+
+**Prevention:**
+1. **Implement model routing** - Use smaller models (mini/fast tier) for 80-95% of extractions
+2. **Batch process during off-peak** - Don't extract immediately, batch daily
+3. **Cache aggressively** - Store extracted entities, don't re-extract on re-index
+4. **Incremental processing** - Only extract from new/changed content
+5. **Monitor costs in real-time** - Alert when approaching budget limits
+6. **Provide extraction tiers** - Free tier with basic extraction, paid tier with advanced
+7. **Use local SLMs where possible** - On-device extraction for privacy and cost savings
+
+**Detection:**
+- LLM API costs growing faster than user base
+- Budget alerts triggering
+- Extraction jobs queuing up (too expensive to run)
+- Feature margin becoming negative
+- Users requesting more extractions than budget allows
+
+**Phase mapping:**
+- **Architecture Phase:** Design tiered extraction system with cost controls
+- **Implementation Phase:** Implement routing, caching, batching
+- **Monitoring Phase:** Real-time cost tracking, budget alerts
+
+**Confidence:** HIGH - Based on 2026 LLM cost optimization research and production deployment patterns
+
+**Sources:**
+- [LLM Pricing: Top 15+ Providers Compared in 2026](https://research.aimultiple.com/llm-pricing/)
+- [Choosing an LLM in 2026: The Practical Comparison Table](https://hackernoon.com/choosing-an-llm-in-2026-the-practical-comparison-table-specs-cost-latency-compatibility)
+- [Reducing Latency and Cost at Scale: How Leading Enterprises Optimize LLM Performance](https://www.tribe.ai/applied-ai/reducing-latency-and-cost-at-scale-llm-performance)
+
+---
+
+### Pitfall 10: Backward Compatibility Break in Graph Schema
+
+**What goes wrong:** v2.0 adds new node types (Document, Note) and relationship types. Migration script updates schema. v1.0 queries break because they expect old schema. Production MCP tools start failing.
+
+**Why it happens:**
+- Schema migration doesn't maintain backward compatibility
+- New node types conflict with existing label conventions
+- Relationship changes break existing Cypher queries
+- No versioning strategy for graph schema
+- v1.0 code still running against v2.0 schema
+
+**Consequences:**
+- Production outages for v1.0 features
+- MCP tools return errors or incomplete results
+- Users can't access their existing data
+- Emergency rollback required
+- Lost user trust
+
+**Prevention:**
+1. **Design additive schema changes** - Add new types, don't modify existing
+2. **Maintain query compatibility** - Ensure old Cypher queries still work
+3. **Use feature flags** - Enable v2.0 schema features gradually
+4. **Test with v1.0 queries** - Regression testing against old query patterns
+5. **Implement schema versioning** - Track schema version, support multiple versions
+6. **Plan migration path** - Old data migrates gracefully to new schema
+7. **Use Neo4j migrations tool** - Structured schema evolution with rollback support
+
+**Detection:**
+- v1.0 MCP tools returning errors after v2.0 deploy
+- Graph queries failing with "label not found" or similar
+- Integration tests passing, but production failing
+- Support tickets from users unable to access old data
+- Rollback requests from operations team
+
+**Phase mapping:**
+- **Schema Design Phase:** Plan backward-compatible additions
+- **Migration Phase:** Test old queries against new schema
+- **Deployment Phase:** Gradual rollout with monitoring
+
+**Confidence:** MEDIUM - Based on Neo4j migration best practices and backward compatibility research
+
+**Sources:**
+- [Neo4j-Migrations: Manage schema changes with ease](https://neo4j.com/labs/neo4j-migrations/)
+- [Prepare for your migration - Upgrade and Migration Guide](https://neo4j.com/docs/upgrade-migration-guide/current/version-5/migration/planning/)
+- [Understanding upgrades and migration in Neo4j 4](https://neo4j.com/docs/upgrade-migration-guide/current/version-4/understanding-upgrades-migration/)
+
+---
+
+### Pitfall 11: Feature Flag Sprawl and Complexity
+
+**What goes wrong:** Progressive rollout strategy creates dozens of feature flags. Code becomes unreadable with nested conditionals. Flags never cleaned up. Technical debt explodes.
+
+**Why it happens:**
+- Each v2.0 feature gets its own flag for gradual rollout
+- Flags for A/B testing never removed after decision
+- No flag lifecycle management
+- Flags used for configuration, not just rollout
+- Fear of breaking something by removing flags
+
+**Prevention:**
+1. **Flag lifecycle policy** - Temporary (rollout) vs. permanent (config) flags
+2. **Regular flag cleanup** - Remove flags after full rollout (30-60 days)
+3. **Flag expiration dates** - Automatic warnings for old flags
+4. **Limit flag nesting** - No more than 2 levels deep
+5. **Use feature flag management tools** - LaunchDarkly, Unleash, not manual code
+6. **Document flag purpose** - Why created, when to remove
+
+**Detection:**
+- >20 active feature flags
+- Code complexity increasing
+- Developers unsure which flags can be removed
+- Conditional logic 3+ levels deep
+- Production issues from flag misconfiguration
+
+**Phase mapping:**
+- **Rollout Phase:** Create flags with expiration dates
+- **Cleanup Phase:** Remove flags after full deployment
+- **Monitoring Phase:** Track flag count, enforce limits
+
+**Confidence:** MEDIUM - Based on progressive delivery and feature flag best practices
+
+**Sources:**
+- [AI-Powered Progressive Delivery: How Intelligent Feature Flags Are Redefining Software Releases in 2026](https://azati.ai/blog/ai-powered-progressive-delivery-feature-flags-2026/)
+- [Progressive rollouts: Gradual feature releases](https://www.statsig.com/perspectives/progressive-rollouts-gradual-releases)
 
 ---
 
@@ -471,98 +535,88 @@ Mistakes that cause delays or technical debt.
 
 Mistakes that cause annoyance but are fixable.
 
-### Pitfall 17: n8n Merge Node Waiting Forever
+### Pitfall 12: Document Upload Size Limits Too Restrictive
 
-**What goes wrong:** Merge node configured to wait for both inputs, but upstream branch conditionally never fires. Workflow hangs indefinitely.
+**What goes wrong:** Users try to upload 20MB PDF, system rejects it. Limit is 5MB. User frustrated, abandons feature.
 
 **Prevention:**
-- Use "Wait for First Input" mode when branches are conditional
-- Add timeouts to merge operations
-- Test all branch paths
+- Set reasonable limits (100MB for documents, warn at 50MB)
+- Provide clear error messages with size limit
+- Allow chunked uploads for large files
+- Consider compression for oversized files
 
-**Detection:** Workflows showing "Executing" status for hours/days
+**Detection:** User complaints about rejected uploads, support tickets
 
 ---
 
-### Pitfall 18: n8n Webhook Endpoints Unsecured
+### Pitfall 13: Entity Extraction Blocking UI
 
-**What goes wrong:** Webhook accepts requests from anyone. Bots/scrapers trigger workflows, consuming resources or exposing data.
+**What goes wrong:** User uploads document, waits 30 seconds staring at spinner while extraction runs. Poor UX.
 
 **Prevention:**
-- Use webhook authentication (header tokens, HMAC signatures)
-- Validate webhook payloads
-- Rate limit webhook endpoints
-- Use n8n's webhook authentication features
+- Move extraction to background job
+- Show document immediately, extract asynchronously
+- Provide "extracting entities..." status with progress
+- Allow users to continue while extraction runs
 
-**Detection:** Unexpected workflow executions, unusual traffic patterns
+**Detection:** User complaints about "slow uploads," high bounce rate after upload
 
 ---
 
-### Pitfall 19: Neo4j Transaction Limitations
+### Pitfall 14: Note Templates Ignored by Users
 
-**What goes wrong:** Attempt to modify schema and data in same transaction. Neo4j rejects transaction. Migration fails.
+**What goes wrong:** Team builds elaborate note template system. Users never use it, create blank notes instead.
 
 **Prevention:**
-- Separate schema changes from data changes
-- Run schema migrations first, then data migrations
-- Test migration scripts in staging
+- Start with zero templates, add based on user requests
+- Make templates optional, not required
+- Analyze usage before building more templates
+- Simple templates only (daily note, meeting note)
 
-**Detection:** Transaction errors during migration, rollback required
+**Detection:** Template usage <10%, most notes created blank
 
 ---
 
-### Pitfall 20: MCP Protocol Version Confusion
+### Pitfall 15: Gamification Notifications Interrupting Focus
 
-**What goes wrong:** Client and server use different MCP protocol versions. "Claude was unable to connect" errors with unclear messages.
+**What goes wrong:** User is deep in focused work. "Achievement unlocked!" popup interrupts flow. User gets annoyed.
 
 **Prevention:**
-- Pin MCP SDK versions explicitly
-- Test against target MCP hosts (Claude Desktop, etc.)
-- Monitor MCP spec changes
-- Version your server's protocol compatibility
+- Batch notifications, show during natural breaks
+- No interrupts during focus sessions
+- Allow notification preferences (immediate/batched/off)
+- Show achievements in-app only, not push notifications
 
-**Detection:** Connection failures with cryptic errors, protocol negotiation failures
+**Detection:** Users disabling all notifications, complaints about interruptions
 
 ---
 
-### Pitfall 21: Graph Database Encoding Entities as Relationships
+### Pitfall 16: File Format Support Assumptions
 
-**What goes wrong:** Model (Alice)-[:EMAILED]->(Bob) instead of (Alice)-[:SENT]->(Email)-[:TO]->(Bob). Queries for actual email content fail because email doesn't exist as node.
+**What goes wrong:** Launch with PDF and Word support. Users expect markdown, code files, Excel, PowerPoint. Each request requires new parser implementation.
 
 **Prevention:**
-- Entities are nodes, actions are relationships
-- If you need to query properties of the "thing," make it a node
-- Review schema with "can I query for X?" test
+- Research user file types BEFORE launch
+- Support common formats first (PDF, DOCX, TXT, MD)
+- Provide roadmap for additional formats
+- Allow users to vote on format priority
+- Fall back to plain text extraction for unsupported formats
 
-**Detection:**
-- Queries returning relationships but missing entity details
-- Cannot filter/sort by relationship properties effectively
+**Detection:** High volume of "support format X" requests
 
 ---
 
-### Pitfall 22: CRDT Interleaving Anomaly
+### Pitfall 17: Missing Undo for AI Extractions
 
-**What goes wrong:** Two users insert text at same position concurrently. Text syncs but appears interleaved unexpectedly (e.g., "Hello" + "World" becomes "HWeolrllod").
-
-**Prevention:**
-- Use battle-tested CRDT libraries (Yjs, Automerge) that handle this
-- Don't implement CRDTs from scratch
-- Test concurrent edits extensively
-
-**Detection:** User reports of "garbled text" after sync
-
----
-
-### Pitfall 23: Mobile Monorepo Build Plugin Complexity
-
-**What goes wrong:** Custom Capacitor plugins for one app require complex build configuration. All apps inherit plugin build steps, slowing builds unnecessarily.
+**What goes wrong:** AI extracts wrong entities, user can't undo. Must manually delete each incorrect entity.
 
 **Prevention:**
-- Isolate platform-specific plugins per app
-- Use monorepo tools' "affected" logic to skip unnecessary builds
-- Consider extracting complex plugins to separate packages
+- Implement extraction history with one-click undo
+- Allow bulk deletion of extraction batch
+- Provide entity review UI before committing
+- Track extraction provenance (which document/LLM)
 
-**Detection:** Build times increasing as apps added, all apps rebuilding on plugin change
+**Detection:** Support tickets about incorrect extractions, manual cleanup requests
 
 ---
 
@@ -570,118 +624,54 @@ Mistakes that cause annoyance but are fixable.
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| **Foundation (Phase 1)** | Building graph schema before retrieval patterns | Design queries first, schema second |
-| **Foundation (Phase 1)** | No multi-tenancy plan | Decide database-per-tenant vs. shared upfront |
-| **Foundation (Phase 1)** | Monorepo without tooling | Adopt Nx/Turborepo before consolidation |
-| **Consolidation (Phase 2)** | Git divergent branch chaos | Create merge strategy document, test first |
-| **Consolidation (Phase 2)** | Tight coupling in shared code | Define module boundaries, version policies |
-| **MCP Integration (Phase 2)** | Security vulnerabilities | Implement auth, tool permissions, rate limiting from start |
-| **MCP Integration (Phase 2)** | Monolith MCP server | Design multi-server architecture |
-| **n8n Workflows (Phase 2)** | Hardcoded credentials | Use credential manager exclusively |
-| **n8n Workflows (Phase 2)** | Missing error handling | Build error workflows as templates |
-| **Mobile Sync (Phase 3)** | Last-write-wins conflicts | Adopt CRDT or proven sync engine |
-| **Mobile Sync (Phase 3)** | Background task API overload | Implement jitter, JSON-only fetching |
-| **Mobile Sync (Phase 3)** | Ignoring offline scenarios | Design offline-first data layer |
-| **Knowledge Graph (All Phases)** | Scope creep (too many sources) | Start with ONE source, validate before adding |
-| **Knowledge Graph (All Phases)** | Poor data quality | Build quality gates into ingestion |
-| **AI Context (All Phases)** | Over-personalization | Measure context relevance, not just volume |
+| **File Ingestion Phase** | Silent parsing failures | Implement quality scoring, preview before commit |
+| **File Ingestion Phase** | Storage bloat | Enforce quotas, use cold storage, deduplicate |
+| **Notes Capture Phase** | Sync conflicts, data loss | Use CRDTs, test offline scenarios extensively |
+| **Notes Capture Phase** | Too much friction | Minimize time-to-capture, one-tap creation |
+| **Entity Extraction Phase** | LLM hallucinations | Confidence thresholds, validation, entity resolution |
+| **Entity Extraction Phase** | Duplicate entity explosion | Semantic entity resolution, canonical IDs |
+| **Entity Extraction Phase** | Cost explosion | Model routing, caching, batching |
+| **Gamification Phase** | Reward fatigue, user annoyance | Reward outcomes not activity, allow opt-out |
+| **Gamification Phase** | Notification spam | Batch notifications, respect focus time |
+| **Integration Phase** | Performance degradation | Async processing, load testing, monitoring |
+| **Schema Migration Phase** | Backward compatibility breaks | Additive changes only, test v1.0 queries |
+| **Rollout Phase** | Feature flag sprawl | Flag lifecycle policy, cleanup after rollout |
 
 ---
 
-## Consolidation-Specific Pitfalls
+## Integration-Specific Warnings
 
-### Pitfall 24: Assuming "Similar Tech" Means "Easy Merge"
+### Warning 1: Competing Resource Demands
 
-**What goes wrong:** Three codebases use React Native, Neo4j, n8n. Team assumes they can merge easily. Discover incompatible:
-- React Native versions (different architecture - old vs. new)
-- Neo4j schema designs (different node/relationship conventions)
-- n8n workflow assumptions (different credential storage, different API endpoints)
-- Environment configurations
-- Build toolchains
+v1.0 ingestion (Calendar, Tasks, Gmail, Contacts) already runs background jobs. Adding document parsing and entity extraction creates resource competition. BullMQ queues may prioritize new features over existing sync, causing v1.0 degradation.
 
-**Why it happens:** Surface-level technology similarity masks deep divergence in implementation patterns, architectural decisions, and operational assumptions.
-
-**Consequences:**
-- Merge creates Frankenstein system that doesn't fully work
-- Features from one codebase don't transfer to others
-- Regressions discovered weeks after consolidation
-- Team morale drops as "simple merge" becomes nightmare
-
-**Prevention:**
-1. **Deep divergence analysis BEFORE consolidation** - Don't just compare package.json, analyze:
-   - Architectural patterns (data flow, state management, API design)
-   - React Native architecture version (old bridge vs. new Fabric)
-   - Neo4j schema conventions (relationship naming, multi-tenancy approach)
-   - n8n workflow integration points (how workflows interact with backend)
-   - Environment variable usage and configuration management
-2. **Create reconciliation plan per subsystem** - Document "source of truth" for each area
-3. **Identify breaking changes** - What works in Codebase A but won't work in consolidated version?
-4. **Build migration test suite** - Validate features survive consolidation
-5. **Plan for regression testing** - Consolidated system must pass all three original test suites
-
-**Detection:**
-- Feature matrix shows capabilities lost after merge
-- "It worked in the old app" becomes common refrain
-- Bug reports mentioning specific previous codebase
-- Team members advocating to "just use Codebase A's approach" without consensus
-
-**Phase mapping:**
-- **Phase 0 (Pre-consolidation):** Conduct deep divergence analysis
-- **Phase 1:** Build reconciliation plan, identify non-negotiable patterns
-- **Phase 2-3:** Execute consolidation with continuous regression testing
-
-**Confidence:** HIGH - Based on monorepo consolidation research and codebase merge best practices
+**Mitigation:**
+- Separate job queues for v1.0 sync vs. v2.0 processing
+- Priority queue configuration (v1.0 sync > user queries > v2.0 extraction)
+- Resource monitoring to detect queue starvation
 
 ---
 
-### Pitfall 25: Loss of Working Features During Consolidation
+### Warning 2: Graph Query Pattern Changes
 
-**What goes wrong:** Codebase A has feature X working. Codebase B has feature Y working. After consolidation, both features broken or partially functional.
+v2.0 adds Document and Note nodes with text content. Existing graph queries optimized for structured data (events, contacts) may not perform well with large text properties.
 
-**Why it happens:**
-- Features depend on subtle environmental setup not documented
-- Implicit dependencies on codebase structure
-- Build configurations tuned to specific version combinations
-- Different runtime assumptions (mobile vs. backend)
-
-**Prevention:**
-1. **Feature inventory before consolidation** - Document what works in each codebase
-2. **Dependency tree analysis** - Map explicit AND implicit dependencies
-3. **Environment parity testing** - Ensure consolidated setup supports all features
-4. **Incremental validation** - After each merge step, validate features still work
-5. **Feature flags for testing** - Ability to toggle features during consolidation
-
-**Detection:**
-- Features marked "working" in old codebase fail in new
-- Integration tests passing, but end-to-end tests failing
-- "It works on my machine" (from developer with old codebase checked out)
-
-**Phase mapping:** All phases - Continuous feature validation
+**Mitigation:**
+- Review and optimize Cypher queries for new node types
+- Consider separate storage for large text (S3) with references in graph
+- Index new node types appropriately
 
 ---
 
-### Pitfall 26: Three-Way Environment Variable Conflict
+### Warning 3: User Expectations from v1.0
 
-**What goes wrong:** Each codebase has .env file with same variable names but different values/meanings:
-- omnii: `API_URL=http://localhost:3000/api`
-- omnii-mobile: `API_URL=https://prod-api.omnii.com`
-- omnii-mcp: `API_URL` unused, uses `MCP_ENDPOINT` instead
+v1.0 users expect high reliability and data integrity from Google services integration. v2.0 features (file parsing, entity extraction) are inherently less reliable. Users may lose trust in entire system if v2.0 quality is poor.
 
-After merge, unclear which value to use, apps connect to wrong endpoints.
-
-**Prevention:**
-1. **Environment variable audit** - Map all env vars across codebases BEFORE merge
-2. **Namespace by app** - Use prefixes (MOBILE_API_URL, BACKEND_API_URL, MCP_API_URL)
-3. **Shared .env.example** - Document all variables with comments on usage
-4. **Validation scripts** - Check required env vars present and valid
-5. **Environment-specific configs** - dev/staging/prod configs explicit
-
-**Detection:**
-- Apps connecting to wrong environments after consolidation
-- "Unexpected response" errors due to API mismatch
-- Developers manually changing .env frequently
-
-**Phase mapping:** Phase 1 (Pre-consolidation) - Environment variable reconciliation
+**Mitigation:**
+- Set clear expectations about beta features vs. production features
+- Separate v2.0 features visually/functionally from v1.0
+- Provide quality indicators (extraction confidence scores)
+- Allow users to disable v2.0 features without impacting v1.0
 
 ---
 
@@ -689,72 +679,90 @@ After merge, unclear which value to use, apps connect to wrong endpoints.
 
 | Pitfall Category | Confidence | Source Quality |
 |------------------|------------|----------------|
-| Knowledge Graphs | HIGH | Multiple 2026 sources, academic research, industry adoption data |
-| MCP Security | HIGH | Official docs, security research, implementation guides |
-| Neo4j Multi-Tenancy | MEDIUM | Community discussions, 2020 blog posts verified against 4.0+ docs |
-| Monorepo Consolidation | HIGH | Recent 2025-2026 case studies, tool documentation |
-| Local-First Sync | HIGH | 2026 architecture guides, CRDT research, sync engine docs |
-| n8n Workflows | HIGH | Recent 2026 blog posts on specific mistakes |
-| Git Workflows | MEDIUM | General Git best practices applied to consolidation |
-| React Native Sync | MEDIUM | 2026 guides on background tasks and offline-first |
-| Consolidation-Specific | MEDIUM | Inferred from monorepo + divergent codebase research |
+| File Parsing & Storage | MEDIUM-HIGH | 2026 document management research, PDF parsing studies |
+| Notes Sync & CRDTs | HIGH | Extensive 2026 offline-first architecture research |
+| LLM Entity Extraction | HIGH | Recent 2025-2026 research on hallucination, privacy, production deployment |
+| Graph Entity Resolution | HIGH | Neo4j-specific 2026 research on duplicate nodes and entity resolution |
+| Gamification | MEDIUM-HIGH | 2025-2026 productivity app research, gamification effectiveness studies |
+| Integration Performance | MEDIUM | General migration and performance research, not v2.0-specific |
+| Schema Migration | MEDIUM | Neo4j migration docs, backward compatibility best practices |
+| Feature Flags | MEDIUM | Progressive delivery research 2026 |
 
 ---
 
 ## Sources
 
-### Knowledge Graphs
-- [Knowledge Graph Implementation: Costs & Obstacles | Cutter Consortium](https://www.cutter.com/article/knowledge-graph-implementation-costs-obstacles)
-- [Cognee - Knowledge Graphs: Understand Misconceptions for Smarter Insights](https://www.cognee.ai/blog/fundamentals/knowledge-graph-myths)
-- [2026 data predictions: Scaling AI agents via contextual intelligence - SiliconANGLE](https://siliconangle.com/2026/01/18/2026-data-predictions-scaling-ai-agents-via-contextual-intelligence/)
-- [Why Context Will Be a Key 2026 AI Enabler – IT Business Net](https://itbusinessnet.com/2026/01/why-context-will-be-a-key-2026-ai-enabler/)
+### File Ingestion & Parsing
+- [Data Extraction API For Documents - The Complete Guide (2026) | Parseur](https://parseur.com/blog/data-extraction-api)
+- [How to Parse PDFs Effectively: Tools, Methods & Use Cases (2026)](https://parabola.io/blog/best-methods-pdf-parsing)
+- [A Comparative Study of PDF Parsing Tools Across Diverse Document Categories](https://arxiv.org/html/2410.09871v1)
+- [6 Best Document Parsing Software I Use Daily in 2026 | Lindy](https://www.lindy.ai/blog/document-parser)
 
-### MCP Server Security & Architecture
-- [Model Context Protocol (MCP): Understanding security risks and controls - Red Hat](https://www.redhat.com/en/blog/model-context-protocol-mcp-understanding-security-risks-and-controls)
-- [Implementing model context protocol (MCP): Tips, tricks and pitfalls | Nearform](https://nearform.com/digital-community/implementing-model-context-protocol-mcp-tips-tricks-and-pitfalls/)
-- [What are common mistakes developers make when first using Model Context Protocol (MCP)? - Milvus](https://milvus.io/ai-quick-reference/what-are-common-mistakes-developers-make-when-first-using-model-context-protocol-mcp)
-- [MCP Best Practices: Architecture & Implementation Guide](https://modelcontextprotocol.info/docs/best-practices/)
-- [Architecture overview - Model Context Protocol](https://modelcontextprotocol.io/docs/learn/architecture)
+### Storage & Performance
+- [Document Archiving in 2026: Challenges, Best Practices, and Automation](https://www.infrrd.ai/blog/document-archiving-solutions-in-2026)
+- [7 Document Management Best Practices in 2026](https://thedigitalprojectmanager.com/project-management/document-management-best-practices/)
+- [Fixing Storage Bloat and Write Performance Issues in InfluxDB](https://www.mindfulchase.com/explore/troubleshooting-tips/databases/fixing-storage-bloat-and-write-performance-issues-in-influxdb.html)
 
-### Neo4j Multi-Tenancy
-- [Neo4j 4: Multi tenancy - GraphAware](https://graphaware.com/blog/multi-tenancy-neo4j/)
-- [Multi-Tenancy in Neo4j 4.0 - Adam Cowley](https://adamcowley.co.uk/posts/multi-tenancy-neo4j-40/)
-- [Multi Tenancy in Neo4j: A Worked Example - Neo4j](https://neo4j.com/developer/multi-tenancy-worked-example/)
+### Offline-First & Sync
+- [Offline vs. Real-Time Sync: Managing Data Conflicts](https://www.adalo.com/posts/offline-vs-real-time-sync-managing-data-conflicts)
+- [Offline-First Apps: Key Use Cases and Benefits in 2026](https://www.octalsoftware.com/blog/offline-first-apps)
+- [How to Build Resilient Offline-First Mobile Apps with Seamless Syncing](https://medium.com/@quokkalabs135/how-to-build-resilient-offline-first-mobile-apps-with-seamless-syncing-adc98fb72909)
+- [Offline-First Architecture: Designing for Reality, Not Just the Cloud](https://medium.com/@jusuftopic/offline-first-architecture-designing-for-reality-not-just-the-cloud-e5fd18e50a79)
 
-### Monorepo Consolidation
-- [From Monorepo Mess to Monorepo Bliss: Avoiding Common Mistakes - InfoQ](https://www.infoq.com/presentations/monorepo-mistakes/)
-- [5 Mistakes That You Should Definitely Avoid With A Monorepo - Bits and Pieces](https://blog.bitsrc.io/5-mistakes-that-you-should-avoid-with-a-monorepo-956e8fe3633e)
-- [Monorepo Dependency Chaos: Proven Hacks to Keep Your Codebase Sane - DEV Community](https://dev.to/alex_aslam/monorepo-dependency-chaos-proven-hacks-to-keep-your-codebase-sane-and-your-team-happy-1957)
-- [Managing Multiple Mobile Apps in a Monorepo - Bluesunrise](https://bluesunrise.com/blog/monorepo/)
+### LLM Entity Extraction & Privacy
+- [A survey on privacy risks and protection in large language models](https://link.springer.com/article/10.1007/s44443-025-00177-1)
+- [PBa-LLM: Privacy- and Bias-aware NLP using Named-Entity Recognition](https://arxiv.org/html/2507.02966v2)
+- [AI Privacy Risks & Mitigations - Large Language Models (LLMs)](https://www.edpb.europa.eu/system/files/2025-04/ai-privacy-risks-and-mitigations-in-llms.pdf)
+- [Privacy-Preserving Techniques in Generative AI and Large Language Models](https://www.mdpi.com/2078-2489/15/11/697)
 
-### Local-First & Sync Architecture
-- [The Architecture Shift: Why I'm Betting on Local-First in 2026 - DEV Community](https://dev.to/the_nortern_dev/the-architecture-shift-why-im-betting-on-local-first-in-2026-1nh6)
-- [Cool frontend arts of local-first: storage, sync, conflicts - Evil Martians](https://evilmartians.com/chronicles/cool-front-end-arts-of-local-first-storage-sync-and-conflicts)
-- [Why Local-First Software Is the Future and its Limitations - RxDB](https://rxdb.info/articles/local-first-future.html)
+### Graph Database Entity Resolution
+- [Bug Report: Entity extraction from graph databases contains duplicate nodes](https://github.com/mem0ai/mem0/issues/3341)
+- [Entity Resolved Knowledge Graphs: A Tutorial](https://neo4j.com/blog/developer/entity-resolved-knowledge-graphs/)
+- [Build knowledge graphs with LLM-driven entity extraction](https://neuml.hashnode.dev/build-knowledge-graphs-with-llm-driven-entity-extraction)
+- [Creating Knowledge Graphs from Unstructured Data](https://neo4j.com/developer/genai-ecosystem/importing-graph-from-unstructured-data/)
+- [The Rise of Semantic Entity Resolution](https://towardsdatascience.com/the-rise-of-semantic-entity-resolution/)
 
-### CRDTs & Operational Transforms
-- [Building Collaborative Interfaces: Operational Transforms vs. CRDTs - DEV Community](https://dev.to/puritanic/building-collaborative-interfaces-operational-transforms-vs-crdts-2obo)
-- [Deciding between CRDTs and OT for data synchronization - Tom's Site](https://thom.ee/blog/crdt-vs-operational-transformation/)
-- [Building real-time collaboration applications: OT vs CRDT - Tiny](https://www.tiny.cloud/blog/real-time-collaboration-ot-vs-crdt/)
+### Gamification
+- [The Trap Of Gamified Productivity](https://medium.com/@alphahangchen1/the-trap-of-gamified-productivity-d3d4b37725a7)
+- [Productivity App Gamification That Doesn't Backfire](https://trophy.so/blog/productivity-app-gamification-doesnt-backfire)
+- [Focus apps claim to improve your productivity. Do they actually work?](https://theconversation.com/focus-apps-claim-to-improve-your-productivity-do-they-actually-work-271388)
+- [Top 10 Gamified Productivity Apps for 2025](https://yukaichou.com/lifestyle-gamification/the-top-ten-gamified-productivity-apps/)
+- [20 Productivity App Gamification Examples (2025)](https://trophy.so/blog/productivity-gamification-examples)
 
-### n8n Workflow Mistakes
-- [5 n8n Workflow Mistakes That Quietly Break Automation - Medium](https://medium.com/@connect.hashblock/5-n8n-workflow-mistakes-that-quietly-break-automation-f1a4cfdac8bc)
-- [7 common n8n workflow mistakes that can break your automations - Medium](https://medium.com/@juanm.acebal/7-common-n8n-workflow-mistakes-that-can-break-your-automations-9638903fb076)
-- [AI Workflow Builder Best Practices – n8n Blog](https://blog.n8n.io/ai-workflow-builder-best-practices/)
+### LLM Cost & Performance
+- [LLM Pricing: Top 15+ Providers Compared in 2026](https://research.aimultiple.com/llm-pricing/)
+- [Choosing an LLM in 2026: The Practical Comparison Table](https://hackernoon.com/choosing-an-llm-in-2026-the-practical-comparison-table-specs-cost-latency-compatibility)
+- [Reducing Latency and Cost at Scale: How Leading Enterprises Optimize LLM Performance](https://www.tribe.ai/applied-ai/reducing-latency-and-cost-at-scale-llm-performance)
+- [The State Of LLMs 2025: Progress, Progress, and Predictions](https://magazine.sebastianraschka.com/p/state-of-llms-2025)
 
-### React Native & Mobile Sync
-- [Run React Native Background Tasks 2026 For Optimal Performance - DEV Community](https://dev.to/eira-wexford/run-react-native-background-tasks-2026-for-optimal-performance-d26)
-- [Offline first: how to apply this approach in React Native? - Medium](https://medium.com/@vitorbritto/offline-first-how-to-apply-this-approach-in-react-native-e2ed7af29cde)
+### Feature Adoption & User Friction
+- [How to Identify and Reduce User Drop-Offs in 7 Steps](https://userpilot.com/blog/drop-off-analysis/)
+- [How to Identify & Fix User Friction (+Causes, Types)](https://whatfix.com/blog/user-friction/)
+- [Feature Adoption Guide for Product Managers](https://productfruits.com/blog/feature-adoption-guide)
+- [20 Must-Track Product & User Adoption Metrics (2026)](https://whatfix.com/blog/product-adoption-metrics/)
 
-### Git Divergent Branches
-- [Mastering Git Merge and Rebase to Avoid Code Conflicts in 2026 - Medium](https://medium.com/@annxsa/mastering-git-merge-and-rebase-to-avoid-code-conflicts-in-2026-3baa7e86010c)
-- [Dealing with diverged git branches - Julia Evans](https://jvns.ca/blog/2024/02/01/dealing-with-diverged-git-branches/)
+### Migration & Performance
+- [Software Migration Guide for 2026](https://hicronsoftware.com/blog/software-migration-guide/)
+- [Data Migration: Challenges & Risks During Legacy System Modernization](https://brainhub.eu/library/data-migration-challenges-risks-legacy-modernization)
+- [9 Data Migration Challenges (+ How to Mitigate Them)](https://www.tredence.com/blog/data-migration-challenges)
 
-### Graph Database Anti-Patterns
-- [10 Performance, Pitfalls, and Anti-Patterns - Graph Databases in Action](https://livebook.manning.com/book/graph-databases-in-action/chapter-10/v-9/)
-- [Data Modeling in Graph Databases - InfoQ](https://www.infoq.com/articles/data-modeling-graph-databases/)
+### Neo4j Schema Migration
+- [Neo4j-Migrations: Manage schema changes with ease](https://neo4j.com/labs/neo4j-migrations/)
+- [Prepare for your migration - Upgrade and Migration Guide](https://neo4j.com/docs/upgrade-migration-guide/current/version-5/migration/planning/)
+- [Understanding upgrades and migration in Neo4j 4](https://neo4j.com/docs/upgrade-migration-guide/current/version-4/understanding-upgrades-migration/)
 
-### Context & AI Data Quality
-- [Context Rot: How Increasing Input Tokens Impacts LLM Performance - Chroma Research](https://research.trychroma.com/context-rot)
-- [AI Data Quality Mistakes That Sabotage Your AI Strategy - QAT](https://qat.com/ai-data-quality-mistakes/)
-- [Personal Intelligence: Connecting Gemini to Google apps - Google Blog](https://blog.google/innovation-and-ai/products/gemini-app/personal-intelligence/)
+### Progressive Delivery & Feature Flags
+- [AI-Powered Progressive Delivery: How Intelligent Feature Flags Are Redefining Software Releases in 2026](https://azati.ai/blog/ai-powered-progressive-delivery-feature-flags-2026/)
+- [Progressive rollouts: Gradual feature releases](https://www.statsig.com/perspectives/progressive-rollouts-gradual-releases)
+- [What is Progressive Delivery aka Phased Rollout?](https://www.abtasty.com/glossary/progressive-delivery/)
+
+### Personal Knowledge Management
+- [Personal Knowledge Management: A Guide to Tools and Systems](https://medium.com/@theo-james/personal-knowledge-management-a-guide-to-tools-and-systems-ebc6b56f63ca)
+- [10 Best Personal Knowledge Management Software (2026 Guide)](https://www.golinks.com/blog/10-best-personal-knowledge-management-software-2026/)
+- [Build a Personal Knowledge Management System with AI in 2025](https://buildin.ai/blog/personal-knowledge-management-system-with-ai)
+
+---
+
+*Research completed: 2026-01-26*
+*Focus: v2.0 feature integration pitfalls (file ingestion, notes, NLP, gamification)*
+*Methodology: WebSearch for 2026 sources, cross-referenced with existing v1.0 pitfalls, prioritized integration-specific risks*
