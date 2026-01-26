@@ -251,6 +251,11 @@ Recent decisions affecting current work:
 - OAuth flow via expo-web-browser: openAuthSessionAsync handles redirect properly for mobile
 - Service-specific sync triggers: Each Google service can be manually synced via /api/ingestion/sync/:service
 
+**From Phase 6 Plan 01 (06-01):**
+- Pino over Winston for audit logging: Faster, native JSON, better built-in redaction support
+- 20+ PII redaction paths: Comprehensive coverage of email, phone, SSN, tokens, nested metadata, and request headers
+- Severity-based log levels: info for normal events, warn for validation failures, error for execution failures
+
 **From Phase 6 Plan 02 (06-02):**
 - TEXT primary key for idempotency key: Allows caller-controlled uniqueness (e.g., `send-email-${requestId}`)
 - Failed execution retry strategy: Delete failed record and create fresh rather than update - cleaner state machine
@@ -473,6 +478,14 @@ Background workers: Ingestion workers started with 15-min cron schedule.
 ---
 
 ## Phase 6 Status: IN PROGRESS
+
+**Delivered (06-01):**
+- Pino audit logging library with pino-pretty for development
+- AuditEventType enum with 9 event categories (workflow, webhook, MCP, graph)
+- AuditEvent interface with structured fields (actor, resource, action, severity)
+- PII redaction with 20+ paths (email, phone, SSN, tokens, headers)
+- Helper functions: logWorkflowEvent, logWebhookEvent, logMcpToolEvent, logGraphDataAccess
+- Correlation ID support via createCorrelatedLogger
 
 **Delivered (06-02):**
 - workflow_executions Supabase table for execution tracking
