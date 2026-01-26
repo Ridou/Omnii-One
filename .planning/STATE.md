@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 5 of 7 (Mobile Client & Offline Sync) - IN PROGRESS
-Plan: 1 of 3 complete
-Status: Plan 05-01 complete - PowerSync backend ready
-Last activity: 2026-01-26 - Completed 05-01-PLAN.md
+Plan: 2 of 3 complete
+Status: Plan 05-02 complete - PowerSync mobile SDK ready
+Last activity: 2026-01-26 - Completed 05-02-PLAN.md
 
-Progress: [████████░░] 73% Overall (29/40 plans complete)
+Progress: [████████░░] 75% Overall (30/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29
+- Total plans completed: 30
 - Average duration: 4min
-- Total execution time: 123min
+- Total execution time: 130min
 
 **By Phase:**
 
@@ -32,12 +32,12 @@ Progress: [████████░░] 73% Overall (29/40 plans complete)
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
 | Phase 4 | 8/8 | 33min | 4min |
-| Phase 5 | 1/3 | 3min | 3min |
+| Phase 5 | 2/3 | 10min | 5min |
 
 **Recent Trend:**
-- Last plan: 05-01 (3min, complete)
-- Previous: 04-08 (6min)
-- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5->6->3min)
+- Last plan: 05-02 (7min, complete)
+- Previous: 05-01 (3min)
+- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5->6->3->7min)
 
 *Updated after each plan completion*
 
@@ -221,6 +221,12 @@ Recent decisions affecting current work:
 - Deduplication constraints: Unique on (user_id, google_event_id) for events, (from, to, type) for relationships
 - Service role grants: Backend population bypasses RLS via service role key
 
+**From Phase 5 Plan 02 (05-02):**
+- @op-engineering/op-sqlite ^14 for peer compatibility: @powersync/op-sqlite requires ^13 or ^14, pinned to satisfy peer
+- Schema uses column helper pattern: Used column.text from @powersync/react-native for cleaner API
+- Native directories gitignored: ios/ and android/ regenerated via expo prebuild on demand
+- Singleton database factory: getPowerSync() returns same instance, resetPowerSync() cleans up for logout
+
 ### Pending Todos
 
 None yet.
@@ -260,8 +266,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-26T00:01:47Z
-Stopped at: Completed 05-01-PLAN.md (PowerSync backend tables and endpoints)
+Last session: 2026-01-26T00:05:12Z
+Stopped at: Completed 05-02-PLAN.md (PowerSync mobile SDK installation and schema)
 Resume file: None
 
 **Phase 4 Status:** COMPLETE. All 8 plans executed, entity extraction wired, hybrid search implemented.
@@ -384,4 +390,14 @@ Background workers: Ingestion workers started with 15-min cron schedule.
 - POST /api/powersync/populate - Syncs Neo4j data to Supabase
 - GET /api/powersync/health - Authenticated health check
 
-**Next:** Plan 05-02 - Mobile PowerSync client implementation
+**Delivered (05-02):**
+- PowerSync packages: @powersync/react-native, @powersync/op-sqlite, @powersync/react, @op-engineering/op-sqlite
+- Schema matching backend: sync_entities, sync_events, sync_relationships tables
+- Type helpers: SyncEntity, SyncEvent, SyncRelationship interfaces
+- Database factory: getPowerSync(), resetPowerSync(), isPowerSyncReady()
+- Metro config: unstable_enablePackageExports for ESM module resolution
+- Native modules verified: CocoaPods and Android autolinking configured
+
+**Known Issue:** Project path "/Users/santino/Projects/Omnii One" contains space which breaks React Native build scripts. Native modules correctly configured but builds blocked until path renamed.
+
+**Next:** Plan 05-03 - Wire PowerSync connector to Supabase backend
