@@ -15,6 +15,7 @@ import { openaiRoutes } from './openai';
 import { localLLMRoutes } from './local-llm';
 import { ingestionRoutes } from './ingestion';
 import { testDataRoutes } from './test-data';
+import { powerSyncRoutes } from './powersync';
 import { createMCPRoutes } from '../mcp/transport';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
@@ -88,6 +89,7 @@ export default (app: Elysia) => {
   api.use(chatDirectN8nRoutes);
   api.use(ingestionRoutes);
   api.use(testDataRoutes);
+  api.use(powerSyncRoutes);
 
   // Mount the API routes under /api
   app.use(api);
