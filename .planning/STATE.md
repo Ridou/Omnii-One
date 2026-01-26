@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 7 of 7 (Production Hardening) - IN PROGRESS
-Plan: 4 of 6 complete (07-01, 07-02, 07-03, 07-04)
-Status: Mobile adaptive sync with network-aware frequency adjustments
-Last activity: 2026-01-25 - Completed 07-03-PLAN.md (Adaptive sync)
+Plan: 5 of 6 complete (07-01, 07-02, 07-03, 07-04, 07-05)
+Status: GDPR-compliant data export in JSON/CSV/Markdown formats
+Last activity: 2026-01-26 - Completed 07-05-PLAN.md (Data export)
 
-Progress: [██████████░] 94% Overall (49/52 plans complete)
+Progress: [██████████░] 96% Overall (50/52 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 49
+- Total plans completed: 50
 - Average duration: 4min
-- Total execution time: 192min
+- Total execution time: 199min
 
 **By Phase:**
 
@@ -34,12 +34,12 @@ Progress: [██████████░] 94% Overall (49/52 plans complete)
 | Phase 4 | 8/8 | 33min | 4min |
 | Phase 5 | 8/8 | 30min | 4min |
 | Phase 6 | 7/7 | 18min | 3min |
-| Phase 7 | 4/6 | 15min | 3min |
+| Phase 7 | 5/6 | 22min | 4min |
 
 **Recent Trend:**
-- Last plan: 07-03 (3min)
-- Previous: 07-04 (3min)
-- Trend: Phase 7 consistent 3min/plan average
+- Last plan: 07-05 (7min)
+- Previous: 07-03 (3min)
+- Trend: Phase 7 averaging 4min/plan
 
 *Updated after each plan completion*
 
@@ -274,6 +274,12 @@ Recent decisions affecting current work:
 - Rollback creates new version: Preserves complete audit trail rather than deleting history
 - Change attribution tracking: ChangeAuthor type (user, ai_assistant, system, ingestion) enables filtering AI changes for review
 
+**From Phase 7 Plan 05 (07-05):**
+- Export formatters as separate modules: Clean separation of concerns for JSON/CSV/Markdown, easy to add new formats
+- Exclude embedding field from exports: 1536-dimension vectors are large and not human-readable, reduces export file size
+- Optional version history inclusion: Version history can be large, should be opt-in rather than always included
+- Transform Neo4j HTTP API results to objects: HTTP API returns {fields, values} arrays, transform to objects for maintainability
+
 ### Pending Todos
 
 None yet.
@@ -313,8 +319,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25T22:45:00Z
-Stopped at: Completed 06-07-PLAN.md (MCP Tool Audit Logging)
+Last session: 2026-01-26T03:23:00Z
+Stopped at: Completed 07-05-PLAN.md (Data Export Service)
 Resume file: None
 
 **Phase 4 Status:** COMPLETE. All 8 plans executed, entity extraction wired, hybrid search implemented.
@@ -594,4 +600,13 @@ Background workers: Ingestion workers started with 15-min cron schedule.
 - Automatic version retention enforcement (max 50 versions per entity)
 - HAS_STATE and PREVIOUS relationship chains for temporal queries
 
-**Next:** Continue Phase 7 production hardening plans (07-05, 07-06)
+**Delivered (07-05):**
+- GDPR-compliant data export service with JSON/CSV/Markdown formatters
+- DataExporter service fetches user nodes with optional relationships and version history
+- GET /api/export endpoint with format selection and query parameters
+- Audit logging for all export operations (GRAPH_DATA_ACCESSED events)
+- Download headers with proper Content-Type and Content-Disposition
+- Neo4j HTTP API result transformation (fields/values arrays to objects)
+- Embedding field exclusion from exports (1536-dimension vectors removed)
+
+**Next:** Continue Phase 7 production hardening plans (07-06)
