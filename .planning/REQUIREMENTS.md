@@ -61,19 +61,19 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Orchestration & Automation
 
-- [ ] **ORCH-01**: n8n workflow integration via webhooks
-- [ ] **ORCH-02**: Webhook endpoints for external triggers
-- [ ] **ORCH-03**: AI-triggered workflow execution
-- [ ] **ORCH-04**: User-defined automation support
-- [ ] **ORCH-05**: n8n MCP tools for workflow operations
-- [ ] **ORCH-06**: Error handling and retry logic for workflows
+- [x] **ORCH-01**: n8n workflow integration via webhooks
+- [x] **ORCH-02**: Webhook endpoints for external triggers
+- [x] **ORCH-03**: AI-triggered workflow execution
+- [x] **ORCH-04**: User-defined automation support
+- [x] **ORCH-05**: n8n MCP tools for workflow operations
+- [x] **ORCH-06**: Error handling and retry logic for workflows
 
 ### Security & Privacy
 
 - [ ] **SEC-01**: User data isolation enforced at database level
 - [ ] **SEC-02**: Secure token storage and refresh
 - [ ] **SEC-03**: MCP request authentication
-- [ ] **SEC-04**: Audit logging for data access
+- [x] **SEC-04**: Audit logging for data access
 - [ ] **SEC-05**: Local-first architecture (no mandatory cloud dependency)
 
 ## v2 Requirements
@@ -162,16 +162,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOBILE-06 | Phase 5 | Pending |
 | MOBILE-07 | Phase 5 | Pending |
 | MOBILE-08 | Phase 5 | Pending |
-| ORCH-01 | Phase 6 | Pending |
-| ORCH-02 | Phase 6 | Pending |
-| ORCH-03 | Phase 6 | Pending |
-| ORCH-04 | Phase 6 | Pending |
-| ORCH-05 | Phase 6 | Pending |
-| ORCH-06 | Phase 6 | Pending |
+| ORCH-01 | Phase 6 | Complete |
+| ORCH-02 | Phase 6 | Complete |
+| ORCH-03 | Phase 6 | Complete |
+| ORCH-04 | Phase 6 | Complete |
+| ORCH-05 | Phase 6 | Complete |
+| ORCH-06 | Phase 6 | Complete |
 | SEC-01 | Phase 1 | Pending |
 | SEC-02 | Phase 1 | Pending |
 | SEC-03 | Phase 2 | Pending |
-| SEC-04 | Phase 6 | Pending |
+| SEC-04 | Phase 6 | Complete |
 | SEC-05 | Phase 1 | Pending |
 
 **Coverage:**

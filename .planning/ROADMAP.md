@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: GraphRAG & Advanced MCP** - Dual-channel retrieval, domain-aware tools, multi-AI support
 - [x] **Phase 4: Data Ingestion Pipeline** - Google services integration with quality gates
 - [x] **Phase 5: Mobile Client & Offline Sync** - React Native app with local-first architecture
-- [ ] **Phase 6: Orchestration & Automation** - n8n workflows, AI-triggered execution
+- [x] **Phase 6: Orchestration & Automation** - n8n workflows, AI-triggered execution
 - [ ] **Phase 7: Production Hardening** - Monitoring, audit logging, advanced mobile features
 
 ## Phase Details
@@ -206,15 +206,16 @@ Plans:
 6. Workflow error handling includes retry logic with exponential backoff
 7. Audit logging captures data access events for compliance
 
-**Plans:** 6 plans in 4 waves
+**Plans:** 7 plans in 4 waves
 
 Plans:
-- [ ] 06-01-PLAN.md — Pino audit logging service with PII redaction
-- [ ] 06-02-PLAN.md — Workflow execution tracking with Supabase idempotency
-- [ ] 06-03-PLAN.md — n8n REST API client for workflow operations
-- [ ] 06-04-PLAN.md — HMAC webhook signature validation
-- [ ] 06-05-PLAN.md — MCP tools for n8n workflow operations
-- [ ] 06-06-PLAN.md — End-to-end verification checkpoint
+- [x] 06-01-PLAN.md — Pino audit logging service with PII redaction
+- [x] 06-02-PLAN.md — Workflow execution tracking with Supabase idempotency
+- [x] 06-03-PLAN.md — n8n REST API client for workflow operations
+- [x] 06-04-PLAN.md — HMAC webhook signature validation
+- [x] 06-05-PLAN.md — MCP tools for n8n workflow operations
+- [x] 06-06-PLAN.md — End-to-end verification checkpoint
+- [x] 06-07-PLAN.md — Audit logging retrofit to existing MCP tools
 
 ---
 
@@ -253,9 +254,9 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. GraphRAG & Advanced MCP | 6/6 | Complete | 2026-01-25 |
 | 4. Data Ingestion Pipeline | 8/8 | Complete | 2026-01-25 |
 | 5. Mobile Client & Offline Sync | 8/8 | Complete | 2026-01-26 |
-| 6. Orchestration & Automation | 0/6 | Planned | - |
+| 6. Orchestration & Automation | 7/7 | Complete | 2026-01-26 |
 | 7. Production Hardening | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-26 — Phase 6 planned (6 plans in 4 waves)*
+*Last updated: 2026-01-26 — Phase 6 complete (7 plans in 4 waves)*
