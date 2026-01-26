@@ -20,6 +20,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
 import { PowerSyncContext } from '@powersync/react';
@@ -27,6 +28,7 @@ import { PowerSyncDatabase } from '@powersync/react-native';
 import { getPowerSync, resetPowerSync } from '~/lib/powersync';
 import { getConnector, resetConnector } from '~/lib/powersync/connector';
 import { useAuth } from './AuthContext';
+import { AdaptiveSyncController, useNetworkState, type SyncFrequency, type NetworkState } from '~/services/sync';
 
 // Sync state types
 export type SyncStatus = 'offline' | 'connecting' | 'syncing' | 'synced' | 'error';
@@ -39,6 +41,8 @@ export interface SyncState {
   pendingChanges: number;
   lastSyncedAt: Date | null;
   error: string | null;
+  networkState: NetworkState | null;
+  syncFrequency: SyncFrequency;
 }
 
 interface SyncContextValue extends SyncState {
@@ -56,6 +60,8 @@ const defaultSyncState: SyncState = {
   pendingChanges: 0,
   lastSyncedAt: null,
   error: null,
+  networkState: null,
+  syncFrequency: 'paused',
 };
 
 const SyncStateContext = createContext<SyncContextValue | null>(null);
@@ -68,6 +74,8 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
   const { user, isInitialized: authInitialized } = useAuth();
   const [db, setDb] = useState<PowerSyncDatabase | null>(null);
   const [syncState, setSyncState] = useState<SyncState>(defaultSyncState);
+  const adaptiveSyncRef = useRef<AdaptiveSyncController | null>(null);
+  const networkState = useNetworkState();
 
   // Initialize PowerSync when user is authenticated
   useEffect(() => {
@@ -80,6 +88,10 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
         // User logged out - cleanup
         if (db) {
           try {
+            // Stop adaptive sync controller
+            adaptiveSyncRef.current?.stop();
+            adaptiveSyncRef.current = null;
+
             await resetPowerSync();
             resetConnector();
           } catch (error) {
@@ -138,6 +150,17 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
           isConnected: true,
           status: 'synced',
         }));
+
+        // Initialize adaptive sync controller
+        if (!adaptiveSyncRef.current) {
+          adaptiveSyncRef.current = new AdaptiveSyncController(async () => {
+            // Trigger PowerSync sync
+            const conn = getConnector();
+            await database.connect(conn);
+          });
+          adaptiveSyncRef.current.start();
+          console.log('[SyncProvider] AdaptiveSyncController started');
+        }
 
         console.log('[SyncProvider] PowerSync initialized and connected');
       } catch (error: any) {
@@ -225,6 +248,8 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
 
   const contextValue: SyncContextValue = {
     ...syncState,
+    networkState,
+    syncFrequency: adaptiveSyncRef.current?.getFrequency() ?? 'paused',
     triggerSync,
     disconnect,
     clearAndReconnect,
