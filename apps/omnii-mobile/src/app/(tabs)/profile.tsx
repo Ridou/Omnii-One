@@ -37,6 +37,7 @@ import { ResponsiveTabLayout } from '~/components/common/ResponsiveTabLayout';
 import { DesktopProfileContent, TabletProfileContent } from '~/components/common/DesktopProfileComponents';
 import { useResponsiveDesign } from '~/utils/responsive';
 import { GoogleIntegrationCard } from '~/components/integrations/GoogleIntegrationCard';
+import { GoogleConnectionManager } from '~/components/integrations/GoogleConnectionManager';
 import { AuthGuard } from '~/components/common/AuthGuard';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -251,12 +252,21 @@ export default function ProfileScreen() {
       case 'connect':
         return (
           <ScrollView className={cn("flex-1 px-5", isDark ? "bg-slate-900" : "bg-white")} showsVerticalScrollIndicator={false}>
-            {/* Google Integration Card */}
-            <GoogleIntegrationCard 
+            {/* Google Integration Card (Legacy - Local Supabase tokens) */}
+            <GoogleIntegrationCard
               onStatusChange={(connected) => {
                 // Optional: Track connection status changes
               }}
             />
+
+            {/* Connected Services Section (MCP Backend OAuth) */}
+            <View className="mb-4 mt-4">
+              <Text className={cn("text-lg font-bold mb-3",
+                isDark ? "text-white" : "text-gray-900")}>
+                Connected Services
+              </Text>
+              <GoogleConnectionManager />
+            </View>
 
             {/* Discord Feedback CTA Card */}
               <View className={cn("rounded-2xl p-6 mb-4 border shadow-sm border-l-4 border-l-purple-500", 
