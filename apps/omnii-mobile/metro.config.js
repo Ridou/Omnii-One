@@ -5,8 +5,13 @@ const { withNativeWind } = require("nativewind/metro");
 
 const path = require("node:path");
 
+const baseConfig = getDefaultConfig(__dirname);
+
+// PowerSync requires package exports support for ESM resolution
+baseConfig.resolver.unstable_enablePackageExports = true;
+
 const config = withTurborepoManagedCache(
-  withNativeWind(getDefaultConfig(__dirname), {
+  withNativeWind(baseConfig, {
     input: "./src/styles/global.css",
     configPath: "./tailwind.config.ts",
   }),
