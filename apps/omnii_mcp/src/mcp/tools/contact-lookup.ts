@@ -9,6 +9,7 @@ import { z } from 'zod';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 import { localSearch } from '../../services/graphrag/local-search';
 import type { MCPToolResponse } from './search-nodes';
+import { logAuditEvent, AuditEventType } from '../../services/audit';
 
 /**
  * Zod schema for contact_lookup input validation.
@@ -90,6 +91,21 @@ export async function handleContactLookup(
   try {
     // Validate input with Zod schema
     const parsed = ContactLookupInputSchema.parse(input);
+
+    // Log audit event for SEC-04 compliance
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'contacts', name: 'omnii_contact_lookup' },
+      severity: 'info',
+      metadata: {
+        query: parsed.query,
+        includeInteractions: parsed.includeInteractions,
+        limit: parsed.limit,
+      },
+    });
 
     // Use local search with Contact filter
     const searchResult = await localSearch(client, parsed.query, userId, {
@@ -176,6 +192,19 @@ export async function handleContactLookup(
     }
 
     // Handle other errors
+    // Log error audit event
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'contacts', name: 'omnii_contact_lookup' },
+      severity: 'error',
+      metadata: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
     return {
       content: [
         {

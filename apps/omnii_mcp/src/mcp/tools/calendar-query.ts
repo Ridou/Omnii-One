@@ -13,6 +13,7 @@ import {
 } from '../../services/graphrag/temporal-context';
 import { searchByText } from '../../graph/operations/search';
 import type { MCPToolResponse } from './search-nodes';
+import { logAuditEvent, AuditEventType } from '../../services/audit';
 
 /**
  * Zod schema for calendar_query input validation.
@@ -116,6 +117,22 @@ export async function handleCalendarQuery(
     // Validate input with Zod schema
     const parsed = CalendarQueryInputSchema.parse(input);
 
+    // Log audit event for SEC-04 compliance
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'calendar_events', name: 'omnii_calendar_query' },
+      severity: 'info',
+      metadata: {
+        timeRange: parsed.timeRange,
+        eventType: parsed.eventType,
+        query: parsed.query,
+        includeAttendees: parsed.includeAttendees,
+      },
+    });
+
     // Query temporal events from temporal context service
     let events = await queryTemporalEvents(client, userId, parsed.timeRange, {
       eventType: parsed.eventType,
@@ -215,6 +232,19 @@ export async function handleCalendarQuery(
         isError: true,
       };
     }
+
+    // Log error audit event
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'calendar_events', name: 'omnii_calendar_query' },
+      severity: 'error',
+      metadata: {
+        error: message,
+      },
+    });
 
     return {
       content: [

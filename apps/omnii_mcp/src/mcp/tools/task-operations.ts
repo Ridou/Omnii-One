@@ -10,6 +10,7 @@ import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 import { localSearch } from '../../services/graphrag/local-search';
 import { parseTemporalQuery } from '../../services/graphrag/temporal-context';
 import type { MCPToolResponse } from './search-nodes';
+import { logAuditEvent, AuditEventType } from '../../services/audit';
 
 /**
  * Zod schema for task_operations input validation.
@@ -124,6 +125,26 @@ export async function handleTaskOperations(
   try {
     // Validate input with Zod schema
     const parsed = TaskOperationsInputSchema.parse(input);
+
+    // Determine audit action type based on operation
+    const auditAction = parsed.operation === 'list' ? 'list' : 'read';
+
+    // Log audit event for SEC-04 compliance
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: auditAction,
+      resource: { type: 'tasks', name: 'omnii_task_operations' },
+      severity: 'info',
+      metadata: {
+        operation: parsed.operation,
+        query: parsed.query,
+        status: parsed.status,
+        timeRange: parsed.timeRange,
+        limit: parsed.limit,
+      },
+    });
 
     // Validate that query is provided for search operation
     if (parsed.operation === 'search' && !parsed.query) {
@@ -307,6 +328,19 @@ export async function handleTaskOperations(
     }
 
     // Handle other errors
+    // Log error audit event
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'read',
+      resource: { type: 'tasks', name: 'omnii_task_operations' },
+      severity: 'error',
+      metadata: {
+        error: message,
+      },
+    });
+
     return {
       content: [
         {

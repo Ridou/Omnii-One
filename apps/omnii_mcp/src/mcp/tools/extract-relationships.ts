@@ -9,6 +9,7 @@
 import { z } from 'zod';
 import { discoverRelationships } from '../../services/graphrag/relationship-discovery';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
+import { logAuditEvent, AuditEventType } from '../../services/audit';
 
 /**
  * Zod schema for extract_relationships input validation.
@@ -108,6 +109,22 @@ export async function handleExtractRelationships(
     // Validate input with Zod schema
     const parsed = ExtractRelationshipsInputSchema.parse(input);
 
+    // Log audit event for SEC-04 compliance
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'create',
+      resource: { type: 'graph_relationships', name: 'omnii_extract_relationships' },
+      severity: 'info',
+      metadata: {
+        textLength: parsed.text.length,
+        createMissingNodes: parsed.create_missing_nodes,
+        minConfidence: parsed.min_confidence,
+        sourceContext: parsed.source_context,
+      },
+    });
+
     // Discover relationships from text
     const result = await discoverRelationships(client, userId, parsed.text, {
       createMissingNodes: parsed.create_missing_nodes,
@@ -174,6 +191,19 @@ export async function handleExtractRelationships(
     }
 
     // Handle other errors
+    // Log error audit event
+    logAuditEvent({
+      event: AuditEventType.GRAPH_DATA_ACCESSED,
+      userId: userId || 'unknown',
+      actor: 'ai_assistant',
+      action: 'create',
+      resource: { type: 'graph_relationships', name: 'omnii_extract_relationships' },
+      severity: 'error',
+      metadata: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
     return {
       content: [
         {
