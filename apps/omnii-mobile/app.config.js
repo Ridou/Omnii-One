@@ -47,6 +47,9 @@ export default {
         foregroundImage: './assets/images/icons/android/adaptive-icons/adaptive-foreground-108x108.png',
         backgroundColor: '#007AFF',
       },
+      permissions: [
+        'android.permission.POST_NOTIFICATIONS',
+      ],
     },
     experiments: {
       tsconfigPaths: true,
@@ -116,6 +119,14 @@ export default {
       'expo-secure-store',
       'expo-apple-authentication',
       ['expo-router', { origin: 'https://omnii.net' }],
+      'expo-notifications',
+      [
+        '@sentry/react-native/expo',
+        {
+          organization: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+        }
+      ],
     ],
     extra: {
       eas: {
