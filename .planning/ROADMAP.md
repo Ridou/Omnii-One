@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Graph Core & MCP Server** - Graph schema, basic CRUD, MCP protocol implementation
 - [x] **Phase 3: GraphRAG & Advanced MCP** - Dual-channel retrieval, domain-aware tools, multi-AI support
 - [x] **Phase 4: Data Ingestion Pipeline** - Google services integration with quality gates
-- [ ] **Phase 5: Mobile Client & Offline Sync** - React Native app with local-first architecture
+- [x] **Phase 5: Mobile Client & Offline Sync** - React Native app with local-first architecture
 - [ ] **Phase 6: Orchestration & Automation** - n8n workflows, AI-triggered execution
 - [ ] **Phase 7: Production Hardening** - Monitoring, audit logging, advanced mobile features
 
@@ -179,14 +179,14 @@ Plans:
 **Plans:** 8 plans in 5 waves
 
 Plans:
-- [ ] 05-01-PLAN.md — Supabase sync tables and PowerSync HTTP endpoint
-- [ ] 05-02-PLAN.md — PowerSync installation and schema definition
-- [ ] 05-03-PLAN.md — PowerSync provider and backend connector
-- [ ] 05-04-PLAN.md — Connection status UI components
-- [ ] 05-05-PLAN.md — Graph data views (EntityList, EventTimeline)
-- [ ] 05-06-PLAN.md — MCP backend integration from mobile
-- [ ] 05-07-PLAN.md — Google OAuth connection management from mobile
-- [ ] 05-08-PLAN.md — End-to-end verification checkpoint
+- [x] 05-01-PLAN.md — Supabase sync tables and PowerSync HTTP endpoint
+- [x] 05-02-PLAN.md — PowerSync installation and schema definition
+- [x] 05-03-PLAN.md — PowerSync provider and backend connector
+- [x] 05-04-PLAN.md — Connection status UI components
+- [x] 05-05-PLAN.md — Graph data views (EntityList, EventTimeline)
+- [x] 05-06-PLAN.md — MCP backend integration from mobile
+- [x] 05-07-PLAN.md — Google OAuth connection management from mobile
+- [x] 05-08-PLAN.md — End-to-end verification checkpoint
 
 ---
 
