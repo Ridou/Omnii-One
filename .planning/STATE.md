@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 
 ## Current Position
 
-Phase: 5 of 7 (Mobile Client & Offline Sync) - IN PROGRESS
-Plan: 2 of 3 complete
-Status: Plan 05-02 complete - PowerSync mobile SDK ready
-Last activity: 2026-01-26 - Completed 05-02-PLAN.md
+Phase: 5 of 7 (Mobile Client & Offline Sync) - COMPLETE
+Plan: 3 of 3 complete
+Status: Phase 5 complete - PowerSync connector and context wired
+Last activity: 2026-01-26 - Completed 05-03-PLAN.md
 
-Progress: [████████░░] 75% Overall (30/40 plans complete)
+Progress: [████████░░] 78% Overall (31/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30
+- Total plans completed: 31
 - Average duration: 4min
-- Total execution time: 130min
+- Total execution time: 133min
 
 **By Phase:**
 
@@ -32,12 +32,12 @@ Progress: [████████░░] 75% Overall (30/40 plans complete)
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
 | Phase 4 | 8/8 | 33min | 4min |
-| Phase 5 | 2/3 | 10min | 5min |
+| Phase 5 | 3/3 | 13min | 4min |
 
 **Recent Trend:**
-- Last plan: 05-02 (7min, complete)
-- Previous: 05-01 (3min)
-- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5->6->3->7min)
+- Last plan: 05-03 (3min, complete)
+- Previous: 05-02 (7min)
+- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5->6->3->7->3min)
 
 *Updated after each plan completion*
 
@@ -227,6 +227,12 @@ Recent decisions affecting current work:
 - Native directories gitignored: ios/ and android/ regenerated via expo prebuild on demand
 - Singleton database factory: getPowerSync() returns same instance, resetPowerSync() cleans up for logout
 
+**From Phase 5 Plan 03 (05-03):**
+- Connector singleton pattern: OmniiConnector shared instance via getConnector(), resetConnector() on logout
+- PowerSyncContext.Provider value type: Pass database directly (not {db} object) per @powersync/react type definition
+- HTTP polling sync: Custom fetchChanges() implementation instead of PowerSync Cloud WebSocket streaming
+- Auth-aware sync lifecycle: SyncProvider initializes on login, cleans up (resetPowerSync + resetConnector) on logout
+
 ### Pending Todos
 
 None yet.
@@ -260,14 +266,14 @@ None yet.
 **Phase 4 scope discipline:**
 - Must resist adding multiple data sources simultaneously - start with Google Calendar only, validate improvement before expanding
 
-**Phase 5 - IN PROGRESS:**
+**Phase 5 - COMPLETE:**
 - ~~CRDT library selection~~ - RESOLVED: Using PowerSync (proven sync engine with Supabase integration)
-- Mobile background sync optimization for battery impact - PENDING
+- ~~Mobile background sync optimization for battery impact~~ - DEFERRED: Future optimization (Phase 5 focused on core functionality)
 
 ## Session Continuity
 
-Last session: 2026-01-26T00:05:12Z
-Stopped at: Completed 05-02-PLAN.md (PowerSync mobile SDK installation and schema)
+Last session: 2026-01-26T00:10:31Z
+Stopped at: Completed 05-03-PLAN.md (PowerSync connector and context)
 Resume file: None
 
 **Phase 4 Status:** COMPLETE. All 8 plans executed, entity extraction wired, hybrid search implemented.
@@ -400,4 +406,15 @@ Background workers: Ingestion workers started with 15-min cron schedule.
 
 **Known Issue:** Project path "/Users/santino/Projects/Omnii One" contains space which breaks React Native build scripts. Native modules correctly configured but builds blocked until path renamed.
 
-**Next:** Plan 05-03 - Wire PowerSync connector to Supabase backend
+**Delivered (05-03):**
+- OmniiConnector implements PowerSyncBackendConnector interface
+- fetchCredentials() gets Supabase JWT from session
+- uploadData() batches changes and POSTs to /api/powersync/upload
+- fetchChanges() custom HTTP polling for /api/powersync/sync
+- SyncProvider manages PowerSync lifecycle (init on login, cleanup on logout)
+- useSyncState() hook provides status, isConnected, isSyncing, actions
+- SyncProvider added to _layout.tsx provider hierarchy
+
+**Phase 5 Status:** COMPLETE. All 3 plans executed.
+
+**Next:** Phase 6 - Automation & Workflows
