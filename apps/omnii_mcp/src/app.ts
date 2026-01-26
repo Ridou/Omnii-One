@@ -56,6 +56,10 @@ console.log("🚀 Initializing Direct Neo4j Service...");
 import { neo4jDirectService } from './services/neo4j';
 console.log("✅ Direct Neo4j Service loaded");
 
+// ✅ CRITICAL: Initialize Sentry before anything else
+import { initSentry, createTelemetryPlugin, logMetric } from './services/observability';
+initSentry();
+
 const DEFAULT_PORT = 8000;
 
 // Server readiness flag
@@ -103,18 +107,37 @@ const app = new Elysia()
   )
   // Add security headers
   .use(helmet())
+  // Add OpenTelemetry for distributed tracing
+  .use(createTelemetryPlugin())
+  // Add request timing for API latency tracking
+  .onRequest(({ store }) => {
+    (store as any).requestStart = performance.now();
+  })
   // Add request logging
   .onRequest(({ request }) => {
-    const clientIP = request.headers.get('x-forwarded-for') || 
-                    request.headers.get('x-real-ip') || 
+    const clientIP = request.headers.get('x-forwarded-for') ||
+                    request.headers.get('x-real-ip') ||
                     'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
     const url = new URL(request.url);
-    
+
     console.log(`📥 ${request.method} ${url.pathname} from ${clientIP}`);
     if (url.pathname === '/health') {
       console.log(`🩺 RAILWAY HEALTH CHECK? UA: ${userAgent.substring(0, 50)}`);
     }
+  })
+  // Add response timing for metrics
+  .onAfterResponse(({ request, store, set }) => {
+    const duration = performance.now() - ((store as any).requestStart || 0);
+    const url = new URL(request.url);
+
+    logMetric({
+      metric: 'api_latency',
+      route: url.pathname,
+      method: request.method,
+      duration,
+      status: typeof set.status === 'number' ? set.status : 200,
+    });
   })
   // Add Swagger documentation
   .use(
