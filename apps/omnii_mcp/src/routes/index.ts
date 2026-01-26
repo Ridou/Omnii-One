@@ -17,6 +17,7 @@ import { ingestionRoutes } from './ingestion';
 import { testDataRoutes } from './test-data';
 import { powerSyncRoutes } from './powersync';
 import { versionHistoryRoutes } from './version-history';
+import { exportRoutes } from './export';
 import { createMCPRoutes } from '../mcp/transport';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
@@ -92,6 +93,7 @@ export default (app: Elysia) => {
   api.use(testDataRoutes);
   api.use(powerSyncRoutes);
   api.use(versionHistoryRoutes);
+  api.use(exportRoutes);
 
   // Mount the API routes under /api
   app.use(api);

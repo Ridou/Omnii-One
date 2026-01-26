@@ -1,5 +1,5 @@
-import { createHttpNeo4jClient, type Neo4jHttpClient } from '../neo4j/http-client';
-import { createVersionedOperations } from '../../graph/versioning';
+import { createHttpNeo4jClient, createVersionedOperations } from '../../graph/versioning';
+import type { Neo4jHTTPClient } from '../neo4j/http-client';
 import { formatAsJson, type ExportNode, type ExportData } from './formatters/json';
 import { formatAsCsv } from './formatters/csv';
 import { formatAsMarkdown } from './formatters/markdown';
@@ -15,9 +15,9 @@ export interface ExportOptions {
 }
 
 export class DataExporter {
-  private client: Neo4jHttpClient;
+  private client: Neo4jHTTPClient;
 
-  constructor(client?: Neo4jHttpClient) {
+  constructor(client?: Neo4jHTTPClient) {
     this.client = client || createHttpNeo4jClient();
   }
 
@@ -94,7 +94,17 @@ export class DataExporter {
 
     const result = await this.client.query(query, { userId });
 
-    return result.map((row) => {
+    // Transform Neo4j HTTP API result format {fields, values} to objects
+    const { fields, values } = result.data;
+    const rows = values.map((valueRow: any[]) => {
+      const obj: Record<string, any> = {};
+      fields.forEach((field, idx) => {
+        obj[field] = valueRow[idx];
+      });
+      return obj;
+    });
+
+    return rows.map((row) => {
       // Remove embedding from properties
       const props = row.props as Record<string, unknown>;
       const { embedding, userId: _, ...cleanProps } = props;
