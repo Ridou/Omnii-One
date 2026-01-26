@@ -234,10 +234,15 @@ Plans:
 5. Data export functionality allows user to download all data in JSON, Markdown, or CSV formats
 6. User can view version history and rollback AI-generated changes if needed
 
-**Plans**: TBD
+**Plans:** 6 plans in 3 waves
 
 Plans:
-- [ ] 07-01: TBD (to be planned)
+- [ ] 07-01-PLAN.md — Backend Sentry and OpenTelemetry observability
+- [ ] 07-02-PLAN.md — Mobile Sentry and push notifications
+- [ ] 07-03-PLAN.md — Adaptive sync controller with network detection
+- [ ] 07-04-PLAN.md — Neo4j version history with rollback
+- [ ] 07-05-PLAN.md — GDPR data export (JSON, CSV, Markdown)
+- [ ] 07-06-PLAN.md — End-to-end verification checkpoint
 
 ---
 
@@ -255,8 +260,8 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Data Ingestion Pipeline | 8/8 | Complete | 2026-01-25 |
 | 5. Mobile Client & Offline Sync | 8/8 | Complete | 2026-01-26 |
 | 6. Orchestration & Automation | 7/7 | Complete | 2026-01-26 |
-| 7. Production Hardening | 0/0 | Not started | - |
+| 7. Production Hardening | 0/6 | Planned | - |
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-26 — Phase 6 complete (7 plans in 4 waves)*
+*Last updated: 2026-01-25 — Phase 7 planned (6 plans in 3 waves)*
