@@ -25,6 +25,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform, View, Text } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '~/context/AuthContext';
+import { SyncProvider } from '~/context/SyncContext';
 import { XPProvider } from '~/context/XPContext';
 import { ProfileProvider } from '~/context/ProfileContext';
 import { GlobalErrorHandler } from '~/components/common/GlobalErrorHandler';
@@ -71,13 +72,15 @@ export default function RootLayout() {
       <SafeGestureProvider>
         <GlobalErrorHandler>
           <AuthProvider>
-            <XPProvider>
-              <ProfileProvider>
-                <ThemeProvider>
-                  <ThemedStack />
-                </ThemeProvider>
-              </ProfileProvider>
-            </XPProvider>
+            <SyncProvider>
+              <XPProvider>
+                <ProfileProvider>
+                  <ThemeProvider>
+                    <ThemedStack />
+                  </ThemeProvider>
+                </ProfileProvider>
+              </XPProvider>
+            </SyncProvider>
           </AuthProvider>
         </GlobalErrorHandler>
       </SafeGestureProvider>

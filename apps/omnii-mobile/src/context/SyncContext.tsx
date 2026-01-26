@@ -1,13 +1,17 @@
 /**
- * SyncContext - React Context for PowerSync Sync State
+ * SyncContext - React context for PowerSync sync state
  *
- * Manages PowerSync lifecycle and exposes sync state to all components.
+ * Manages:
+ * - PowerSync database lifecycle (init, connect, disconnect)
+ * - Sync state (status, connected, syncing, error)
+ * - User authentication integration
  *
- * Features:
- * - Initializes PowerSync when user is authenticated
- * - Cleans up when user logs out
- * - Provides sync status, connection state, and actions
- * - Wraps children with PowerSyncContext when database is ready
+ * Usage:
+ * ```tsx
+ * import { useSyncState } from '~/context/SyncContext';
+ *
+ * const { status, isSyncing, triggerSync } = useSyncState();
+ * ```
  */
 
 import {
@@ -20,55 +24,27 @@ import {
 } from 'react';
 import { PowerSyncContext } from '@powersync/react';
 import { PowerSyncDatabase } from '@powersync/react-native';
-import {
-  getPowerSync,
-  resetPowerSync,
-} from '~/lib/powersync';
-import {
-  getConnector,
-  resetConnector,
-} from '~/lib/powersync/connector';
+import { getPowerSync, resetPowerSync } from '~/lib/powersync';
+import { getConnector, resetConnector } from '~/lib/powersync/connector';
 import { useAuth } from './AuthContext';
 
-/**
- * Sync status values
- */
-export type SyncStatus =
-  | 'offline'
-  | 'connecting'
-  | 'syncing'
-  | 'synced'
-  | 'error';
+// Sync state types
+export type SyncStatus = 'offline' | 'connecting' | 'syncing' | 'synced' | 'error';
 
-/**
- * Sync state interface
- */
 export interface SyncState {
-  /** Whether PowerSync database is initialized */
   isInitialized: boolean;
-  /** Whether connected to sync backend */
   isConnected: boolean;
-  /** Whether actively syncing data */
   isSyncing: boolean;
-  /** Current sync status */
   status: SyncStatus;
-  /** Number of pending local changes */
   pendingChanges: number;
-  /** Last successful sync timestamp */
   lastSyncedAt: Date | null;
-  /** Error message if status is 'error' */
   error: string | null;
 }
 
-/**
- * Sync context value with state and actions
- */
 interface SyncContextValue extends SyncState {
-  /** Trigger a manual sync with the backend */
+  // Actions
   triggerSync: () => Promise<void>;
-  /** Disconnect from sync backend */
   disconnect: () => Promise<void>;
-  /** Clear local data and reconnect (for troubleshooting) */
   clearAndReconnect: () => Promise<void>;
 }
 
@@ -88,11 +64,6 @@ interface SyncProviderProps {
   children: ReactNode;
 }
 
-/**
- * SyncProvider - Manages PowerSync lifecycle based on auth state
- *
- * Must be used inside AuthProvider (depends on useAuth hook).
- */
 export const SyncProvider = ({ children }: SyncProviderProps) => {
   const { user, isInitialized: authInitialized } = useAuth();
   const [db, setDb] = useState<PowerSyncDatabase | null>(null);
@@ -108,9 +79,12 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
       if (!user) {
         // User logged out - cleanup
         if (db) {
-          console.log('[SyncProvider] User logged out, cleaning up PowerSync');
-          await resetPowerSync();
-          resetConnector();
+          try {
+            await resetPowerSync();
+            resetConnector();
+          } catch (error) {
+            console.warn('[SyncProvider] Cleanup error:', error);
+          }
           setDb(null);
           setSyncState(defaultSyncState);
         }
@@ -118,11 +92,7 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
       }
 
       try {
-        setSyncState((prev) => ({
-          ...prev,
-          status: 'connecting',
-          error: null,
-        }));
+        setSyncState((prev) => ({ ...prev, status: 'connecting', error: null }));
 
         const database = getPowerSync();
         await database.init();
@@ -150,9 +120,7 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
               isConnected,
               isSyncing: isUploading || isDownloading,
               status: newStatus,
-              lastSyncedAt: status.lastSyncedAt
-                ? new Date(status.lastSyncedAt)
-                : null,
+              lastSyncedAt: status.lastSyncedAt ? new Date(status.lastSyncedAt) : prev.lastSyncedAt,
             }));
           },
         });
@@ -197,26 +165,23 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
     if (!db) return;
 
     try {
-      setSyncState((prev) => ({
-        ...prev,
-        isSyncing: true,
-        status: 'syncing',
-      }));
+      setSyncState((prev) => ({ ...prev, isSyncing: true, status: 'syncing' }));
 
-      // Use connector to fetch changes from backend
+      // Fetch changes from backend via connector
       const connector = getConnector();
       const lastSync = syncState.lastSyncedAt?.toISOString() || null;
       const result = await connector.fetchChanges(lastSync);
 
       // Apply changes to local database
       for (const [table, records] of Object.entries(result.changes)) {
-        for (const record of records as Record<string, unknown>[]) {
+        for (const record of records as any[]) {
           const keys = Object.keys(record).filter((k) => k !== 'id');
+          const columns = keys.join(', ');
+          const placeholders = keys.map(() => '?').join(', ');
           const values = keys.map((k) => record[k]);
 
           await db.execute(
-            `INSERT OR REPLACE INTO ${table} (id, ${keys.join(', ')})
-             VALUES (?, ${keys.map(() => '?').join(', ')})`,
+            `INSERT OR REPLACE INTO ${table} (id, ${columns}) VALUES (?, ${placeholders})`,
             [record.id, ...values]
           );
         }
@@ -241,22 +206,16 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
     }
   }, [db, syncState.lastSyncedAt]);
 
-  // Disconnect from sync backend
+  // Disconnect
   const disconnect = useCallback(async () => {
     if (db) {
       await db.disconnect();
-      setSyncState((prev) => ({
-        ...prev,
-        isConnected: false,
-        status: 'offline',
-      }));
-      console.log('[SyncProvider] Disconnected');
+      setSyncState((prev) => ({ ...prev, isConnected: false, status: 'offline' }));
     }
   }, [db]);
 
   // Clear data and reconnect (for troubleshooting)
   const clearAndReconnect = useCallback(async () => {
-    console.log('[SyncProvider] Clearing data and reconnecting');
     await resetPowerSync();
     resetConnector();
     setDb(null);
@@ -281,7 +240,7 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
   }
 
   // Wrap with PowerSync context when database is ready
-  // PowerSyncContext expects the database directly, not { db }
+  // Note: PowerSyncContext expects AbstractPowerSyncDatabase directly
   return (
     <PowerSyncContext.Provider value={db}>
       <SyncStateContext.Provider value={contextValue}>
@@ -292,8 +251,9 @@ export const SyncProvider = ({ children }: SyncProviderProps) => {
 };
 
 /**
- * Hook to access sync state and actions
+ * Hook to use sync state
  *
+ * @returns SyncContextValue with status, actions, and state
  * @throws Error if used outside SyncProvider
  */
 export const useSyncState = (): SyncContextValue => {
@@ -304,5 +264,5 @@ export const useSyncState = (): SyncContextValue => {
   return context;
 };
 
-// Default export for convenience
+// Convenience exports
 export default SyncProvider;
