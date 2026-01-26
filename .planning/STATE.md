@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** AI always has the right context when querying user's personal data
-**Current focus:** Phase 5 - Mobile Client & Offline Sync
+**Current focus:** Phase 6 - Orchestration & Automation
 
 ## Current Position
 
-Phase: 5 of 7 (Mobile Client & Offline Sync) - COMPLETE
-Plan: 8 of 8 complete
-Status: Phase 5 verified - All MOBILE requirements met
-Last activity: 2026-01-26 - Completed 05-08-PLAN.md (E2E verification)
+Phase: 6 of 7 (Orchestration & Automation) - IN PROGRESS
+Plan: 2 of 7 complete
+Status: Phase 6 in progress
+Last activity: 2026-01-26 - Completed 06-02-PLAN.md (Execution Tracker)
 
-Progress: [████████░░] 86% Overall (36/42 plans complete)
+Progress: [████████░░] 88% Overall (38/42 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36
+- Total plans completed: 38
 - Average duration: 4min
-- Total execution time: 150min
+- Total execution time: 154min
 
 **By Phase:**
 
@@ -33,11 +33,12 @@ Progress: [████████░░] 86% Overall (36/42 plans complete)
 | Phase 3 | 6/6 | 33min | 6min |
 | Phase 4 | 8/8 | 33min | 4min |
 | Phase 5 | 8/8 | 30min | 4min |
+| Phase 6 | 2/7 | 4min | 2min |
 
 **Recent Trend:**
-- Last plan: 05-08 (human verification, complete)
-- Previous: 05-07 (3min)
-- Trend: Stabilizing around 3-8min
+- Last plan: 06-02 (2min)
+- Previous: 06-01 (planned)
+- Trend: Stabilizing around 2-8min
 
 *Updated after each plan completion*
 
@@ -250,6 +251,12 @@ Recent decisions affecting current work:
 - OAuth flow via expo-web-browser: openAuthSessionAsync handles redirect properly for mobile
 - Service-specific sync triggers: Each Google service can be manually synced via /api/ingestion/sync/:service
 
+**From Phase 6 Plan 02 (06-02):**
+- TEXT primary key for idempotency key: Allows caller-controlled uniqueness (e.g., `send-email-${requestId}`)
+- Failed execution retry strategy: Delete failed record and create fresh rather than update - cleaner state machine
+- Running execution rejection: Duplicate requests during execution throw error rather than queue - prevents resource exhaustion
+- Orphaned pending recovery: If record stuck in pending (e.g., server crash), next request marks it running and continues
+
 ### Pending Todos
 
 None yet.
@@ -289,8 +296,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-26T00:25:52Z
-Stopped at: Completed 05-07-PLAN.md (Google OAuth connection management)
+Last session: 2026-01-26T01:02:24Z
+Stopped at: Completed 06-02-PLAN.md (Execution Tracker)
 Resume file: None
 
 **Phase 4 Status:** COMPLETE. All 8 plans executed, entity extraction wired, hybrid search implemented.
@@ -461,6 +468,21 @@ Background workers: Ingestion workers started with 15-min cron schedule.
 - expo-web-browser OAuth flow with expo-linking deep links
 - Per-service manual sync triggers
 
-**Phase 5 Status:** IN PROGRESS. 7/8 plans complete.
+**Phase 5 Status:** COMPLETE. All 8 plans executed.
 
-**Next:** Plan 05-08 (continue Phase 5)
+---
+
+## Phase 6 Status: IN PROGRESS
+
+**Delivered (06-02):**
+- workflow_executions Supabase table for execution tracking
+- ExecutionTracker service with Supabase persistence
+- executeIdempotent method for exactly-once semantics
+- Status state machine: pending -> running -> completed/failed
+- Query methods: getRecentExecutions, getExecutionsByWorkflow, getExecutionsByStatus
+- Failed execution retry via record deletion
+- Type exports: ExecutionStatus, ExecutionActor, WorkflowExecution, ExecuteOptions
+
+**Phase 6 Status:** IN PROGRESS. 2/7 plans complete.
+
+**Next:** Plan 06-03 (n8n webhook integration)
