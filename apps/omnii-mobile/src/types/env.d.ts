@@ -32,10 +32,18 @@ declare global {
       /** Stripe publishable key (starts with pk_) */
       EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: string;
       
-      // Google OAuth Configuration  
+      // Google OAuth Configuration
       /** Google OAuth web client ID */
       EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: string;
-      
+
+      // MCP Backend Configuration
+      /** MCP backend server URL */
+      EXPO_PUBLIC_MCP_BASE_URL?: string;
+
+      // PowerSync Configuration
+      /** PowerSync cloud URL (optional, for PowerSync Cloud) */
+      EXPO_PUBLIC_POWERSYNC_URL?: string;
+
       // === SERVER-SIDE ONLY ===
       // OAuth Configuration
       /** Google OAuth client secret (server-side only) */
@@ -82,6 +90,16 @@ export interface EnvironmentConfig {
   // CORS Configuration
   cors: {
     origins: string[];
+  };
+
+  // MCP Backend Configuration
+  mcp: {
+    baseUrl: string;
+  };
+
+  // PowerSync Configuration
+  powerSync: {
+    url: string;
   };
 }
 

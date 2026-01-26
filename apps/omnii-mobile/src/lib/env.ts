@@ -35,6 +35,8 @@ export const ENV_GROUPS = {
   STRIPE: ['EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY'],
   OAUTH: ['EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
   CORS: ['CORS_ORIGINS'],
+  MCP: ['EXPO_PUBLIC_MCP_BASE_URL'],
+  POWERSYNC: ['EXPO_PUBLIC_POWERSYNC_URL'],
 } as const;
 
 /**
@@ -114,6 +116,14 @@ export const getEnvironmentConfig = (): EnvironmentConfig => {
     
     cors: {
       origins: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [],
+    },
+
+    mcp: {
+      baseUrl: process.env.EXPO_PUBLIC_MCP_BASE_URL || extra.mcpBaseUrl || 'http://localhost:3001',
+    },
+
+    powerSync: {
+      url: process.env.EXPO_PUBLIC_POWERSYNC_URL || extra.powerSyncUrl || '',
     },
   };
 };
@@ -260,4 +270,50 @@ export const logEnvironmentInfo = () => {
   if (isDevelopment()) {
     // Environment info logging disabled
   }
+};
+
+/**
+ * Utility to get MCP backend configuration
+ */
+export const getMcpConfig = () => {
+  const envConfig = getEnv();
+  return {
+    baseUrl: envConfig.mcp.baseUrl,
+  };
+};
+
+/**
+ * Utility to get MCP base URL (convenience function)
+ */
+export const getMcpBaseUrl = () => {
+  return getEnv().mcp.baseUrl;
+};
+
+/**
+ * Utility to get PowerSync configuration
+ */
+export const getPowerSyncConfig = () => {
+  const envConfig = getEnv();
+  return {
+    url: envConfig.powerSync.url,
+  };
+};
+
+/**
+ * Validate that required environment variables are present
+ * Returns true if all required vars exist, false otherwise
+ */
+export const validateEnv = (): boolean => {
+  const required = ['EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_ANON_KEY'] as const;
+  const missing = required.filter((key) => {
+    const value = process.env[key];
+    return !value || value === '';
+  });
+
+  if (missing.length > 0) {
+    console.warn('[Env] Missing environment variables:', missing.join(', '));
+    return false;
+  }
+
+  return true;
 }; 

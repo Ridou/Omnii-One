@@ -130,6 +130,8 @@ export default {
       environment: process.env.EXPO_PUBLIC_ENVIRONMENT || 'production',
       appVersion: process.env.EXPO_PUBLIC_APP_VERSION || '1.0.0',
       stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+      mcpBaseUrl: process.env.EXPO_PUBLIC_MCP_BASE_URL || 'http://localhost:3001',
+      powerSyncUrl: process.env.EXPO_PUBLIC_POWERSYNC_URL || '',
     },
   },
 };
