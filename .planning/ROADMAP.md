@@ -206,10 +206,15 @@ Plans:
 6. Workflow error handling includes retry logic with exponential backoff
 7. Audit logging captures data access events for compliance
 
-**Plans**: TBD
+**Plans:** 6 plans in 4 waves
 
 Plans:
-- [ ] 06-01: TBD (to be planned)
+- [ ] 06-01-PLAN.md — Pino audit logging service with PII redaction
+- [ ] 06-02-PLAN.md — Workflow execution tracking with Supabase idempotency
+- [ ] 06-03-PLAN.md — n8n REST API client for workflow operations
+- [ ] 06-04-PLAN.md — HMAC webhook signature validation
+- [ ] 06-05-PLAN.md — MCP tools for n8n workflow operations
+- [ ] 06-06-PLAN.md — End-to-end verification checkpoint
 
 ---
 
@@ -247,10 +252,10 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Graph Core & MCP Server | 7/7 | Complete | 2026-01-25 |
 | 3. GraphRAG & Advanced MCP | 6/6 | Complete | 2026-01-25 |
 | 4. Data Ingestion Pipeline | 8/8 | Complete | 2026-01-25 |
-| 5. Mobile Client & Offline Sync | 0/8 | Planned | - |
-| 6. Orchestration & Automation | 0/0 | Not started | - |
+| 5. Mobile Client & Offline Sync | 8/8 | Complete | 2026-01-26 |
+| 6. Orchestration & Automation | 0/6 | Planned | - |
 | 7. Production Hardening | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-25 — Phase 5 planned (8 plans in 5 waves)*
+*Last updated: 2026-01-26 — Phase 6 planned (6 plans in 4 waves)*
