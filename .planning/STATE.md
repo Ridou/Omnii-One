@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-24)
 
 **Core value:** AI always has the right context when querying user's personal data
-**Current focus:** Phase 4 - Data Ingestion Pipeline
+**Current focus:** Phase 5 - Mobile Client & Offline Sync
 
 ## Current Position
 
-Phase: 4 of 7 (Data Ingestion Pipeline)
-Plan: 7 of 8 (Tasks, Gmail, Contacts ingestion complete)
-Status: In progress - All 4 Google services have ingestion services
-Last activity: 2026-01-25 - Completed 04-07-PLAN.md
+Phase: 5 of 7 (Mobile Client & Offline Sync) - IN PROGRESS
+Plan: 1 of 3 complete
+Status: Plan 05-01 complete - PowerSync backend ready
+Last activity: 2026-01-26 - Completed 05-01-PLAN.md
 
-Progress: [████████░░] 68% Overall (27/40 plans complete)
+Progress: [████████░░] 73% Overall (29/40 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
+- Total plans completed: 29
 - Average duration: 4min
-- Total execution time: 120min
+- Total execution time: 123min
 
 **By Phase:**
 
@@ -31,12 +31,13 @@ Progress: [████████░░] 68% Overall (27/40 plans complete)
 | Phase 1 | 4/5 | 14min | 4min |
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
-| Phase 4 | 7/8 | 27min | 4min |
+| Phase 4 | 8/8 | 33min | 4min |
+| Phase 5 | 1/3 | 3min | 3min |
 
 **Recent Trend:**
-- Last plan: 04-07 (5min, complete)
-- Previous: 04-06 (4min)
-- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5min)
+- Last plan: 05-01 (3min, complete)
+- Previous: 04-08 (6min)
+- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5->6->3min)
 
 *Updated after each plan completion*
 
@@ -213,6 +214,13 @@ Recent decisions affecting current work:
 - 8-phase structure derived from requirement boundaries, research flags Phase 0 as critical for avoiding monorepo complexity spike
 - Neo4j-Bun compatibility needs resolution in Phase 1, GraphRAG dual-channel is key capability, use proven sync engines for mobile
 
+**From Phase 5 Plan 01 (05-01):**
+- PowerSync table pattern: UUID id, user_id, updated_at columns required for change tracking
+- JSONB properties for flexibility: Used JSONB column for entity-specific attributes rather than separate columns per type
+- Composite indexes for sync queries: (user_id, updated_at) on all sync tables for efficient change detection
+- Deduplication constraints: Unique on (user_id, google_event_id) for events, (from, to, type) for relationships
+- Service role grants: Backend population bypasses RLS via service role key
+
 ### Pending Todos
 
 None yet.
@@ -246,17 +254,17 @@ None yet.
 **Phase 4 scope discipline:**
 - Must resist adding multiple data sources simultaneously - start with Google Calendar only, validate improvement before expanding
 
-**Phase 5 research needed:**
-- CRDT library selection (Automerge vs. Yjs vs. Replicache) for conflict-free sync
-- Mobile background sync optimization for battery impact
+**Phase 5 - IN PROGRESS:**
+- ~~CRDT library selection~~ - RESOLVED: Using PowerSync (proven sync engine with Supabase integration)
+- Mobile background sync optimization for battery impact - PENDING
 
 ## Session Continuity
 
-Last session: 2026-01-25T21:42:00Z
-Stopped at: Phase 4 Verification Complete (Puppeteer)
+Last session: 2026-01-26T00:01:47Z
+Stopped at: Completed 05-01-PLAN.md (PowerSync backend tables and endpoints)
 Resume file: None
 
-**Phase 4 Status:** VERIFIED. Plans 01-07 complete + runtime verification passed.
+**Phase 4 Status:** COMPLETE. All 8 plans executed, entity extraction wired, hybrid search implemented.
 
 **Verification Results (2026-01-25):**
 Puppeteer-based endpoint verification confirmed all services operational:
@@ -353,4 +361,27 @@ Background workers: Ingestion workers started with 15-min cron schedule.
 
 **Known Issue:** Entity nodes with `type` property fail due to Cypher reserved word. Use different property name or avoid Entity nodes in tests.
 
-**Next:** Phase 5 - Mobile Sync Integration (or configure Neo4j vector indexes for semantic search)
+**Delivered (04-08):**
+- Entity extraction wired into Calendar, Gmail, and Tasks ingestion
+- `discoverRelationships` called after node insertion with source context
+- `extractEntities` parameter (default: true) forwarded through all layers
+- Sync result types include entitiesExtracted and relationshipsCreated counts
+- Contacts excluded from entity extraction (they ARE entities, not content)
+
+**Next:** Continue Phase 5 - Plan 05-02 (Mobile PowerSync client)
+
+---
+
+## Phase 5 Status: IN PROGRESS
+
+**Delivered (05-01):**
+- sync_entities, sync_events, sync_relationships PostgreSQL tables
+- RLS policies restricting access to user's own data
+- Composite indexes on (user_id, updated_at) for PowerSync change queries
+- Auto-update triggers for updated_at timestamps
+- GET /api/powersync/sync - Returns changes since timestamp
+- POST /api/powersync/upload - Receives changes from mobile
+- POST /api/powersync/populate - Syncs Neo4j data to Supabase
+- GET /api/powersync/health - Authenticated health check
+
+**Next:** Plan 05-02 - Mobile PowerSync client implementation
