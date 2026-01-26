@@ -2,7 +2,7 @@ import { Elysia, t } from 'elysia';
 import { DataExporter, type ExportFormat } from '../services/export';
 import { logAuditEvent, AuditEventType } from '../services/audit';
 
-export const exportRoutes = new Elysia({ prefix: '/api/export' })
+export const exportRoutes = new Elysia({ prefix: '/export' })
   // Export user data
   .get(
     '/',
