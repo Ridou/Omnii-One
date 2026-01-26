@@ -41,6 +41,21 @@ import {
   handleExtractRelationships,
   ExtractRelationshipsInputSchema,
 } from './extract-relationships';
+import {
+  listWorkflowsToolDefinition,
+  handleListWorkflows,
+  ListWorkflowsInputSchema,
+} from './list-workflows';
+import {
+  executeWorkflowToolDefinition,
+  handleExecuteWorkflow,
+  ExecuteWorkflowInputSchema,
+} from './execute-workflow';
+import {
+  workflowStatusToolDefinition,
+  handleWorkflowStatus,
+  WorkflowStatusInputSchema,
+} from './workflow-status';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 
 /**
@@ -54,6 +69,9 @@ export const TOOL_DEFINITIONS = [
   contactLookupToolDefinition,
   taskOperationsToolDefinition,
   ExtractRelationshipsToolDefinition,
+  listWorkflowsToolDefinition,
+  executeWorkflowToolDefinition,
+  workflowStatusToolDefinition,
 ] as const;
 
 /**
@@ -76,6 +94,9 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   [contactLookupToolDefinition.name]: handleContactLookup,
   [taskOperationsToolDefinition.name]: handleTaskOperations,
   [ExtractRelationshipsToolDefinition.name]: handleExtractRelationships,
+  [listWorkflowsToolDefinition.name]: handleListWorkflows,
+  [executeWorkflowToolDefinition.name]: handleExecuteWorkflow,
+  [workflowStatusToolDefinition.name]: handleWorkflowStatus,
 };
 
 /**
@@ -137,6 +158,18 @@ export {
   ExtractRelationshipsToolDefinition,
   handleExtractRelationships,
   ExtractRelationshipsInputSchema,
+  // List workflows
+  listWorkflowsToolDefinition,
+  handleListWorkflows,
+  ListWorkflowsInputSchema,
+  // Execute workflow
+  executeWorkflowToolDefinition,
+  handleExecuteWorkflow,
+  ExecuteWorkflowInputSchema,
+  // Workflow status
+  workflowStatusToolDefinition,
+  handleWorkflowStatus,
+  WorkflowStatusInputSchema,
 };
 
 // Re-export types
