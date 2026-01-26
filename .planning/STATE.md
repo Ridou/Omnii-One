@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-24)
 ## Current Position
 
 Phase: 5 of 7 (Mobile Client & Offline Sync) - IN PROGRESS
-Plan: 4 of 8 complete
-Status: Plan 05-04 complete - Sync status UI components
-Last activity: 2026-01-26 - Completed 05-04-PLAN.md
+Plan: 5 of 8 complete
+Status: Plan 05-06 complete - MCP API integration
+Last activity: 2026-01-26 - Completed 05-06-PLAN.md
 
-Progress: [████████░░] 76% Overall (32/42 plans complete)
+Progress: [████████░░] 78% Overall (33/42 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32
+- Total plans completed: 33
 - Average duration: 4min
-- Total execution time: 137min
+- Total execution time: 140min
 
 **By Phase:**
 
@@ -32,12 +32,12 @@ Progress: [████████░░] 76% Overall (32/42 plans complete)
 | Phase 2 | 7/7 | 22min | 3min |
 | Phase 3 | 6/6 | 33min | 6min |
 | Phase 4 | 8/8 | 33min | 4min |
-| Phase 5 | 4/8 | 17min | 4min |
+| Phase 5 | 5/8 | 20min | 4min |
 
 **Recent Trend:**
-- Last plan: 05-04 (4min, complete)
-- Previous: 05-03 (3min)
-- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5->6->3->7->3->4min)
+- Last plan: 05-06 (3min, complete)
+- Previous: 05-04 (4min)
+- Trend: Stabilizing around 3-8min (6->4->5->3->7->3->4->4->3->3->6->4->2->4->4->7->8->4->6->3->3->3->5->4->4->5->6->3->7->3->4->3min)
 
 *Updated after each plan completion*
 
@@ -233,6 +233,12 @@ Recent decisions affecting current work:
 - HTTP polling sync: Custom fetchChanges() implementation instead of PowerSync Cloud WebSocket streaming
 - Auth-aware sync lifecycle: SyncProvider initializes on login, cleans up (resetPowerSync + resetConnector) on logout
 
+**From Phase 5 Plan 06 (05-06):**
+- JSON-RPC 2.0 protocol: MCP tool calls use `{ jsonrpc: '2.0', id, method: 'tools/call', params }` format
+- Typed tool wrappers: mcpTools object provides typed functions for all 7 MCP tools with IDE autocomplete
+- Generic useMcpTool hook: Allows extending to new tools without creating new hooks
+- Reset pattern: All hooks include reset() function for clearing state on logout/navigation
+
 ### Pending Todos
 
 None yet.
@@ -272,8 +278,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-26T00:12:00Z
-Stopped at: Completed 05-04-PLAN.md (Sync status UI components)
+Last session: 2026-01-26T00:19:08Z
+Stopped at: Completed 05-06-PLAN.md (MCP API integration)
 Resume file: None
 
 **Phase 4 Status:** COMPLETE. All 8 plans executed, entity extraction wired, hybrid search implemented.
@@ -423,6 +429,13 @@ Background workers: Ingestion workers started with 15-min cron schedule.
 - Pending changes badge and relative time formatting
 - Barrel export at ~/components/sync
 
-**Phase 5 Status:** IN PROGRESS. 4/8 plans complete.
+**Delivered (05-06):**
+- MCP API client with JSON-RPC 2.0 protocol for tool invocation
+- Typed wrappers for all 7 MCP tools (calendarQuery, contactLookup, taskOperations, searchNodes, listEntities, getContext, extractRelationships)
+- 9 React hooks for MCP tools with loading/error state management
+- Environment config extended with MCP_BASE_URL and POWERSYNC_URL
+- Utility functions getMcpConfig, getMcpBaseUrl, validateEnv
 
-**Next:** Plan 05-05 (continue Phase 5)
+**Phase 5 Status:** IN PROGRESS. 5/8 plans complete.
+
+**Next:** Plan 05-07 (continue Phase 5)
