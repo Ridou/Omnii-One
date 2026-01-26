@@ -14,4 +14,16 @@ export {
   type WorkflowExecution,
   type ExecuteOptions,
   type ExecutionResult,
-} from './execution-tracker'; 
+} from './execution-tracker';
+
+// Webhook Security
+export {
+  validateWebhookSignature,
+  validateN8nWebhook,
+  createWebhookSignature,
+  generateWebhookHeaders,
+  timingSafeCompare,
+  type WebhookValidatorConfig,
+  type WebhookValidationResult,
+  type ValidateSignatureOptions,
+} from './webhook-validator'; 

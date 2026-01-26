@@ -2,6 +2,9 @@ import { Elysia, t } from 'elysia';
 import { sendProgressUpdate, sendN8nResponse } from './chat-http';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import { validateN8nWebhook } from '../services/workflows/webhook-validator';
+import { logWebhookEvent } from '../services/audit/audit-logger';
+import { AuditEventType } from '../services/audit/audit-events';
 
 // Initialize Supabase client using existing environment variables
 const supabase = createClient(
@@ -43,10 +46,24 @@ export default (app: Elysia) =>
       // Progress update webhook - n8n can send progress updates during long tasks
       .post(
         '/progress/:sessionId',
-        async ({ params, body, set }) => {
+        async ({ params, body, set, request }) => {
           try {
             const { sessionId } = params;
             const { progress, message, userId } = body;
+
+            // Validate webhook signature
+            const rawBody = JSON.stringify(body);
+            const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
+            const validation = await validateN8nWebhook(request, rawBody, ipAddress);
+
+            if (!validation.valid) {
+              console.error(`[n8n Webhook] Signature validation failed: ${validation.error}`);
+              set.status = 401;
+              return {
+                error: 'Unauthorized',
+                details: validation.error,
+              };
+            }
 
             console.log(`[n8n Webhook] Progress update for session ${sessionId}: ${progress}% - ${message}`);
 
@@ -65,6 +82,14 @@ export default (app: Elysia) =>
                 });
             }
             console.log(`[n8n Webhook] Progress stored: ${progress}% for user ${userId}`);
+
+            // Log successful webhook receipt
+            logWebhookEvent(AuditEventType.WEBHOOK_RECEIVED, 'n8n-progress', true, {
+              sessionId,
+              progress,
+              userId,
+              ipAddress,
+            });
 
             return { success: true, message: 'Progress update sent' };
 
@@ -85,6 +110,7 @@ export default (app: Elysia) =>
               success: t.Boolean(),
               message: t.String()
             }),
+            401: ErrorResponse,
             500: ErrorResponse
           },
           detail: {
@@ -98,10 +124,24 @@ export default (app: Elysia) =>
       // Final response webhook - n8n sends the completed result
       .post(
         '/response/:sessionId',
-        async ({ params, body, set }) => {
+        async ({ params, body, set, request }) => {
           try {
             const { sessionId } = params;
             const { userId, response, status, metadata, agentType } = body;
+
+            // Validate webhook signature
+            const rawBody = JSON.stringify(body);
+            const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
+            const validation = await validateN8nWebhook(request, rawBody, ipAddress);
+
+            if (!validation.valid) {
+              console.error(`[n8n Webhook] Signature validation failed: ${validation.error}`);
+              set.status = 401;
+              return {
+                error: 'Unauthorized',
+                details: validation.error,
+              };
+            }
 
             console.log(`[n8n Webhook] Final response for session ${sessionId} from ${agentType || 'unknown'} agent: ${status}`);
 
@@ -126,6 +166,15 @@ export default (app: Elysia) =>
               category: mapAgentTypeToCategory(agentType)
             });
 
+            // Log successful webhook receipt
+            logWebhookEvent(AuditEventType.WEBHOOK_RECEIVED, 'n8n-response', true, {
+              sessionId,
+              userId,
+              agentType,
+              status,
+              ipAddress,
+            });
+
             return { success: true, message: 'Response processed and sent' };
 
           } catch (error) {
@@ -145,6 +194,7 @@ export default (app: Elysia) =>
               success: t.Boolean(),
               message: t.String()
             }),
+            401: ErrorResponse,
             500: ErrorResponse
           },
           detail: {
