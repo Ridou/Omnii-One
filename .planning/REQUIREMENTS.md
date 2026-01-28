@@ -76,34 +76,51 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SEC-04**: Audit logging for data access
 - [ ] **SEC-05**: Local-first architecture (no mandatory cloud dependency)
 
-## v2 Requirements
+## v2.0 Requirements
 
-Deferred to future release. Tracked but not in current roadmap.
+Active requirements for v2.0 Feature Expansion milestone.
 
-### Enhanced Intelligence
+### File Ingestion (FILE)
 
-- **AI-01**: Advanced entity recognition with custom NLP models
-- **AI-02**: Proactive context suggestions
-- **AI-03**: Cross-source relationship inference
+- [ ] **FILE-01**: User can upload PDF documents and have text content extracted into the graph
+- [ ] **FILE-02**: User can upload Word documents (.docx) and have content extracted into the graph
+- [ ] **FILE-03**: User can upload text files (.txt), markdown files (.md), and code files with content indexed
+- [ ] **FILE-04**: System scores extraction quality and flags low-confidence extractions for review
+- [ ] **FILE-05**: User can search across all uploaded file contents via existing search tools
 
-### Additional Integrations
+### Notes Capture (NOTE)
 
-- **INT-01**: Local file/document ingestion
-- **INT-02**: Notes/knowledge capture system
-- **INT-03**: SMS/messaging via Twilio
-- **INT-04**: Integration marketplace for user-selectable sources
+- [ ] **NOTE-01**: User can create notes with wiki-style `[[links]]` that create bidirectional connections
+- [ ] **NOTE-02**: User can view a backlinks panel showing all notes/entities that link to the current item
+- [ ] **NOTE-03**: User can create notes from templates (meeting notes, daily journal, contact notes)
+- [ ] **NOTE-04**: User can capture notes via voice-to-text on mobile devices
 
-### Gamification
+### Enhanced AI Intelligence (AI2)
 
-- **GAME-01**: XP and level progression system
-- **GAME-02**: Achievement system
-- **GAME-03**: Mascot companion
+- [ ] **AI2-01**: System extracts entities (people, dates, places, organizations) with enhanced accuracy
+- [ ] **AI2-02**: System infers cross-source relationships ("John from this email attended this meeting")
+- [ ] **AI2-03**: System surfaces proactive "Heads Up" context before calendar events (15-30 min prior)
+- [ ] **AI2-04**: System provides actionable analytics patterns (not vanity metrics)
 
-### Advanced Features
+### Gamification (GAME)
 
-- **ADV-01**: Voice capture for mobile
-- **ADV-02**: Browser extension for web capture
-- **ADV-03**: Advanced analytics dashboard
+- [ ] **GAME-01**: User earns achievements for milestones (first note, 100 files, 30-day activity)
+- [ ] **GAME-02**: Achievements include incremental tiers (bronze/silver/gold for long-term goals)
+- [ ] **GAME-03**: Mascot companion appears with mood states reflecting user activity
+- [ ] **GAME-04**: User can view productivity analytics dashboard with engagement insights
+
+## Future Requirements (v2.1+)
+
+Deferred to later milestones:
+
+- **XP and level progression system** — May add if achievement-only feels incomplete
+- **Quick capture widgets** — Mobile home screen widgets for instant capture
+- **Code repository ingestion** — Parse entire project structures
+- **Custom entity types** — User-defined entities beyond standard NER
+- **Multi-modal extraction** — Extract from images/charts in PDFs
+- **On-device Whisper** — Offline voice transcription
+- **SMS/messaging via Twilio** — Messaging integration
+- **Browser extension** — Web capture extension
 
 ## Out of Scope
 
