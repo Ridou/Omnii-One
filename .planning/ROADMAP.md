@@ -4,6 +4,8 @@
 
 This roadmap consolidates three divergent codebases (omnii monorepo, omnii-mobile, omnii-mcp) into a unified personal context server that exposes a knowledge graph to AI assistants via MCP. The journey moves from monorepo foundation through core infrastructure, MCP exposure, data ingestion, mobile client, orchestration, and production hardening. Success depends on avoiding the "build everything at once" trap: we start with retrieval patterns before schema complexity, consolidate incrementally across phases, and validate with ONE data source before expanding.
 
+**v2.0 extends the platform** with local file ingestion, wiki-style notes capture, enhanced AI intelligence (cross-source relationships, proactive context), and gamification. These features build on proven v1.0 patterns (BullMQ workers, PowerSync sync, Neo4j graph) rather than replacing them.
+
 ## Phases
 
 **Phase Numbering:**
@@ -11,6 +13,8 @@ This roadmap consolidates three divergent codebases (omnii monorepo, omnii-mobil
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 Decimal phases appear between their surrounding integers in numeric order.
+
+### v1.0 Milestone (Complete)
 
 - [x] **Phase 0: Monorepo Consolidation Preparation** - Establish tooling and merge strategy before consolidation
 - [x] **Phase 1: Foundation Infrastructure** - Authentication, Neo4j multi-tenancy, compatibility resolution
@@ -20,6 +24,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Mobile Client & Offline Sync** - React Native app with local-first architecture
 - [x] **Phase 6: Orchestration & Automation** - n8n workflows, AI-triggered execution
 - [x] **Phase 7: Production Hardening** - Monitoring, audit logging, advanced mobile features
+
+### v2.0 Milestone (Active)
+
+- [ ] **Phase 8: File Ingestion Pipeline** - Multi-format file parsing with quality scoring
+- [ ] **Phase 9: Notes Capture System** - Wiki-style linking with offline-first sync
+- [ ] **Phase 10: Enhanced AI Intelligence** - Cross-source relationships and proactive context
+- [ ] **Phase 11: Gamification System** - Achievements, mascot companion, analytics dashboard
 
 ## Phase Details
 
@@ -246,10 +257,81 @@ Plans:
 
 ---
 
+### Phase 8: File Ingestion Pipeline
+**Goal**: Users can upload and search documents with content automatically extracted and indexed in the graph
+
+**Depends on**: Phase 7 (builds on BullMQ workers, Neo4j graph, existing search tools)
+
+**Requirements**: FILE-01, FILE-02, FILE-03, FILE-04, FILE-05
+
+**Success Criteria** (what must be TRUE):
+1. User can upload a PDF and see extracted text content in the graph within 30 seconds
+2. User can upload Word documents (.docx) and markdown/text/code files with content indexed
+3. System displays extraction quality score (high/medium/low confidence) for each uploaded file
+4. Low-confidence extractions are flagged for user review with option to re-extract or manually correct
+5. User can search file contents via existing search_nodes MCP tool and find relevant passages
+
+**Plans:** Not yet planned
+
+---
+
+### Phase 9: Notes Capture System
+**Goal**: Users can capture and connect notes with wiki-style linking and voice input
+
+**Depends on**: Phase 8 (needs chunking strategies from file ingestion)
+
+**Requirements**: NOTE-01, NOTE-02, NOTE-03, NOTE-04
+
+**Success Criteria** (what must be TRUE):
+1. User can create a note with `[[wiki links]]` and see bidirectional connections created automatically
+2. User can view a backlinks panel showing all notes and entities that reference the current item
+3. User can create notes from templates (meeting notes, daily journal, contact notes) with pre-filled structure
+4. User can capture notes via voice-to-text on mobile device with transcription appearing in under 3 seconds
+
+**Plans:** Not yet planned
+
+---
+
+### Phase 10: Enhanced AI Intelligence
+**Goal**: AI extracts entities with high accuracy, infers cross-source relationships, and surfaces proactive context before events
+
+**Depends on**: Phase 9 (needs document corpus from files and notes for validation)
+
+**Requirements**: AI2-01, AI2-02, AI2-03, AI2-04
+
+**Success Criteria** (what must be TRUE):
+1. System extracts people, dates, places, and organizations from content with confidence scores displayed
+2. System infers and suggests cross-source relationships ("John from this email attended this meeting") with user approval
+3. User receives "Heads Up" context surfaced 15-30 minutes before calendar events with relevant background
+4. User can view actionable analytics patterns (e.g., "3pm meetings generate 40% more follow-up tasks") not vanity metrics
+
+**Plans:** Not yet planned
+
+---
+
+### Phase 11: Gamification System
+**Goal**: Users earn achievements, interact with mascot companion, and view productivity analytics
+
+**Depends on**: Phase 10 (engagement layer works better after core feature adoption, can run parallel with Phase 10)
+
+**Requirements**: GAME-01, GAME-02, GAME-03, GAME-04
+
+**Success Criteria** (what must be TRUE):
+1. User earns visible achievements for milestones (first note created, 100 files uploaded, 30-day activity streak)
+2. Achievements display incremental tiers (bronze/silver/gold) for long-term goals with progress indicators
+3. Mascot companion appears with mood states that reflect user activity (happy when productive, sleepy when idle)
+4. User can view productivity analytics dashboard showing engagement insights and actionable patterns
+
+**Plans:** Not yet planned
+
+---
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11
+
+### v1.0 Milestone
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -262,6 +344,15 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 6. Orchestration & Automation | 7/7 | Complete | 2026-01-26 |
 | 7. Production Hardening | 6/6 | Complete | 2026-01-26 |
 
+### v2.0 Milestone
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 8. File Ingestion Pipeline | 0/? | Not Started | - |
+| 9. Notes Capture System | 0/? | Not Started | - |
+| 10. Enhanced AI Intelligence | 0/? | Not Started | - |
+| 11. Gamification System | 0/? | Not Started | - |
+
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-26 — Phase 7 complete, v1 milestone complete*
+*Last updated: 2026-01-28 — v2.0 phases 8-11 added*

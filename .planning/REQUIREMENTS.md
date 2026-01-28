@@ -9,55 +9,55 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Foundation & Infrastructure
 
-- [ ] **FOUND-01**: Monorepo structure established with Turborepo for consolidated codebase
-- [ ] **FOUND-02**: Bun/Elysia backend server running with proper configuration
-- [ ] **FOUND-03**: Supabase authentication with OAuth flow (Google)
-- [ ] **FOUND-04**: Neo4j-Bun compatibility resolved (HTTP proxy layer or alternative)
-- [ ] **FOUND-05**: Environment configuration system for local/dev/prod environments
+- [x] **FOUND-01**: Monorepo structure established with Turborepo for consolidated codebase
+- [x] **FOUND-02**: Bun/Elysia backend server running with proper configuration
+- [x] **FOUND-03**: Supabase authentication with OAuth flow (Google)
+- [x] **FOUND-04**: Neo4j-Bun compatibility resolved (HTTP proxy layer or alternative)
+- [x] **FOUND-05**: Environment configuration system for local/dev/prod environments
 
 ### Graph Database
 
-- [ ] **GRAPH-01**: Neo4j multi-tenant isolation using database-per-user pattern
-- [ ] **GRAPH-02**: Graph schema supporting concepts, entities, events, contacts
-- [ ] **GRAPH-03**: Basic CRUD operations for graph nodes and relationships
-- [ ] **GRAPH-04**: Vector index configuration for semantic search
-- [ ] **GRAPH-05**: GraphRAG dual-channel retrieval (vector + graph traversal)
-- [ ] **GRAPH-06**: Automatic relationship discovery between entities
-- [ ] **GRAPH-07**: Temporal context awareness for time-based queries
+- [x] **GRAPH-01**: Neo4j multi-tenant isolation using database-per-user pattern
+- [x] **GRAPH-02**: Graph schema supporting concepts, entities, events, contacts
+- [x] **GRAPH-03**: Basic CRUD operations for graph nodes and relationships
+- [x] **GRAPH-04**: Vector index configuration for semantic search
+- [x] **GRAPH-05**: GraphRAG dual-channel retrieval (vector + graph traversal)
+- [x] **GRAPH-06**: Automatic relationship discovery between entities
+- [x] **GRAPH-07**: Temporal context awareness for time-based queries
 
 ### MCP Server
 
-- [ ] **MCP-01**: MCP protocol compliance (JSON-RPC 2.0, capability negotiation)
-- [ ] **MCP-02**: MCP server exposing tools for graph queries
-- [ ] **MCP-03**: Basic query tools (search nodes, get context, list entities)
-- [ ] **MCP-04**: Domain-aware tools (calendar queries, contact lookups, task operations)
-- [ ] **MCP-05**: Authentication and authorization for MCP requests
-- [ ] **MCP-06**: Support for Claude Code/Desktop integration
-- [ ] **MCP-07**: Support for OpenAI function calling
-- [ ] **MCP-08**: Support for local LLMs (Ollama, LM Studio)
-- [ ] **MCP-09**: Rate limiting and request validation
+- [x] **MCP-01**: MCP protocol compliance (JSON-RPC 2.0, capability negotiation)
+- [x] **MCP-02**: MCP server exposing tools for graph queries
+- [x] **MCP-03**: Basic query tools (search nodes, get context, list entities)
+- [x] **MCP-04**: Domain-aware tools (calendar queries, contact lookups, task operations)
+- [x] **MCP-05**: Authentication and authorization for MCP requests
+- [x] **MCP-06**: Support for Claude Code/Desktop integration
+- [x] **MCP-07**: Support for OpenAI function calling
+- [x] **MCP-08**: Support for local LLMs (Ollama, LM Studio)
+- [x] **MCP-09**: Rate limiting and request validation
 
 ### Data Ingestion & Integrations
 
-- [ ] **INGEST-01**: Google OAuth connection flow with proper scopes
-- [ ] **INGEST-02**: Google Calendar integration with sync to graph
-- [ ] **INGEST-03**: Google Tasks integration with sync to graph
-- [ ] **INGEST-04**: Gmail integration with email ingestion to graph
-- [ ] **INGEST-05**: Google Contacts integration with sync to graph
-- [ ] **INGEST-06**: Entity extraction from ingested content
-- [ ] **INGEST-07**: Incremental sync (delta updates, not full refresh)
-- [ ] **INGEST-08**: Background sync with rate limiting
+- [x] **INGEST-01**: Google OAuth connection flow with proper scopes
+- [x] **INGEST-02**: Google Calendar integration with sync to graph
+- [x] **INGEST-03**: Google Tasks integration with sync to graph
+- [x] **INGEST-04**: Gmail integration with email ingestion to graph
+- [x] **INGEST-05**: Google Contacts integration with sync to graph
+- [x] **INGEST-06**: Entity extraction from ingested content
+- [x] **INGEST-07**: Incremental sync (delta updates, not full refresh)
+- [x] **INGEST-08**: Background sync with rate limiting
 
 ### Mobile Application
 
-- [ ] **MOBILE-01**: Cross-platform React Native/Expo application
-- [ ] **MOBILE-02**: Authentication flow with Supabase
-- [ ] **MOBILE-03**: OAuth connection management for Google services
-- [ ] **MOBILE-04**: Local-first data layer with offline support
-- [ ] **MOBILE-05**: Real-time sync when online (using proven sync engine)
-- [ ] **MOBILE-06**: Unified data view showing graph content
-- [ ] **MOBILE-07**: Fun, engaging UI styling (maintain existing vibe)
-- [ ] **MOBILE-08**: Connection status indicators
+- [x] **MOBILE-01**: Cross-platform React Native/Expo application
+- [x] **MOBILE-02**: Authentication flow with Supabase
+- [x] **MOBILE-03**: OAuth connection management for Google services
+- [x] **MOBILE-04**: Local-first data layer with offline support
+- [x] **MOBILE-05**: Real-time sync when online (using proven sync engine)
+- [x] **MOBILE-06**: Unified data view showing graph content
+- [x] **MOBILE-07**: Fun, engaging UI styling (maintain existing vibe)
+- [x] **MOBILE-08**: Connection status indicators
 
 ### Orchestration & Automation
 
@@ -70,11 +70,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Security & Privacy
 
-- [ ] **SEC-01**: User data isolation enforced at database level
-- [ ] **SEC-02**: Secure token storage and refresh
-- [ ] **SEC-03**: MCP request authentication
+- [x] **SEC-01**: User data isolation enforced at database level
+- [x] **SEC-02**: Secure token storage and refresh
+- [x] **SEC-03**: MCP request authentication
 - [x] **SEC-04**: Audit logging for data access
-- [ ] **SEC-05**: Local-first architecture (no mandatory cloud dependency)
+- [x] **SEC-05**: Local-first architecture (no mandatory cloud dependency)
 
 ## v2.0 Requirements
 
@@ -113,14 +113,14 @@ Active requirements for v2.0 Feature Expansion milestone.
 
 Deferred to later milestones:
 
-- **XP and level progression system** — May add if achievement-only feels incomplete
-- **Quick capture widgets** — Mobile home screen widgets for instant capture
-- **Code repository ingestion** — Parse entire project structures
-- **Custom entity types** — User-defined entities beyond standard NER
-- **Multi-modal extraction** — Extract from images/charts in PDFs
-- **On-device Whisper** — Offline voice transcription
-- **SMS/messaging via Twilio** — Messaging integration
-- **Browser extension** — Web capture extension
+- **XP and level progression system** - May add if achievement-only feels incomplete
+- **Quick capture widgets** - Mobile home screen widgets for instant capture
+- **Code repository ingestion** - Parse entire project structures
+- **Custom entity types** - User-defined entities beyond standard NER
+- **Multi-modal extraction** - Extract from images/charts in PDFs
+- **On-device Whisper** - Offline voice transcription
+- **SMS/messaging via Twilio** - Messaging integration
+- **Browser extension** - Web capture extension
 
 ## Out of Scope
 
@@ -140,62 +140,86 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements. Updated during roadmap creation.
 
+### v1.0 Requirements (Complete)
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 0 | Pending |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
-| FOUND-05 | Phase 1 | Pending |
-| GRAPH-01 | Phase 1 | Pending |
-| GRAPH-02 | Phase 2 | Pending |
-| GRAPH-03 | Phase 2 | Pending |
-| GRAPH-04 | Phase 2 | Pending |
+| FOUND-01 | Phase 0 | Complete |
+| FOUND-02 | Phase 1 | Complete |
+| FOUND-03 | Phase 1 | Complete |
+| FOUND-04 | Phase 1 | Complete |
+| FOUND-05 | Phase 1 | Complete |
+| GRAPH-01 | Phase 1 | Complete |
+| GRAPH-02 | Phase 2 | Complete |
+| GRAPH-03 | Phase 2 | Complete |
+| GRAPH-04 | Phase 2 | Complete |
 | GRAPH-05 | Phase 3 | Complete |
 | GRAPH-06 | Phase 3 | Complete |
 | GRAPH-07 | Phase 3 | Complete |
-| MCP-01 | Phase 2 | Pending |
-| MCP-02 | Phase 2 | Pending |
-| MCP-03 | Phase 2 | Pending |
+| MCP-01 | Phase 2 | Complete |
+| MCP-02 | Phase 2 | Complete |
+| MCP-03 | Phase 2 | Complete |
 | MCP-04 | Phase 3 | Complete |
-| MCP-05 | Phase 2 | Pending |
-| MCP-06 | Phase 2 | Pending |
+| MCP-05 | Phase 2 | Complete |
+| MCP-06 | Phase 2 | Complete |
 | MCP-07 | Phase 3 | Complete |
 | MCP-08 | Phase 3 | Complete |
-| MCP-09 | Phase 2 | Pending |
-| INGEST-01 | Phase 4 | Pending |
-| INGEST-02 | Phase 4 | Pending |
-| INGEST-03 | Phase 4 | Pending |
-| INGEST-04 | Phase 4 | Pending |
-| INGEST-05 | Phase 4 | Pending |
-| INGEST-06 | Phase 4 | Pending |
-| INGEST-07 | Phase 4 | Pending |
-| INGEST-08 | Phase 4 | Pending |
-| MOBILE-01 | Phase 5 | Pending |
-| MOBILE-02 | Phase 5 | Pending |
-| MOBILE-03 | Phase 5 | Pending |
-| MOBILE-04 | Phase 5 | Pending |
-| MOBILE-05 | Phase 5 | Pending |
-| MOBILE-06 | Phase 5 | Pending |
-| MOBILE-07 | Phase 5 | Pending |
-| MOBILE-08 | Phase 5 | Pending |
+| MCP-09 | Phase 2 | Complete |
+| INGEST-01 | Phase 4 | Complete |
+| INGEST-02 | Phase 4 | Complete |
+| INGEST-03 | Phase 4 | Complete |
+| INGEST-04 | Phase 4 | Complete |
+| INGEST-05 | Phase 4 | Complete |
+| INGEST-06 | Phase 4 | Complete |
+| INGEST-07 | Phase 4 | Complete |
+| INGEST-08 | Phase 4 | Complete |
+| MOBILE-01 | Phase 5 | Complete |
+| MOBILE-02 | Phase 5 | Complete |
+| MOBILE-03 | Phase 5 | Complete |
+| MOBILE-04 | Phase 5 | Complete |
+| MOBILE-05 | Phase 5 | Complete |
+| MOBILE-06 | Phase 5 | Complete |
+| MOBILE-07 | Phase 5 | Complete |
+| MOBILE-08 | Phase 5 | Complete |
 | ORCH-01 | Phase 6 | Complete |
 | ORCH-02 | Phase 6 | Complete |
 | ORCH-03 | Phase 6 | Complete |
 | ORCH-04 | Phase 6 | Complete |
 | ORCH-05 | Phase 6 | Complete |
 | ORCH-06 | Phase 6 | Complete |
-| SEC-01 | Phase 1 | Pending |
-| SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 2 | Pending |
+| SEC-01 | Phase 1 | Complete |
+| SEC-02 | Phase 1 | Complete |
+| SEC-03 | Phase 2 | Complete |
 | SEC-04 | Phase 6 | Complete |
-| SEC-05 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Complete |
+
+### v2.0 Requirements (Active)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| FILE-01 | Phase 8 | Pending |
+| FILE-02 | Phase 8 | Pending |
+| FILE-03 | Phase 8 | Pending |
+| FILE-04 | Phase 8 | Pending |
+| FILE-05 | Phase 8 | Pending |
+| NOTE-01 | Phase 9 | Pending |
+| NOTE-02 | Phase 9 | Pending |
+| NOTE-03 | Phase 9 | Pending |
+| NOTE-04 | Phase 9 | Pending |
+| AI2-01 | Phase 10 | Pending |
+| AI2-02 | Phase 10 | Pending |
+| AI2-03 | Phase 10 | Pending |
+| AI2-04 | Phase 10 | Pending |
+| GAME-01 | Phase 11 | Pending |
+| GAME-02 | Phase 11 | Pending |
+| GAME-03 | Phase 11 | Pending |
+| GAME-04 | Phase 11 | Pending |
 
 **Coverage:**
-- v1 requirements: 48 total
-- Mapped to phases: 48
+- v1.0 requirements: 48 total, 48 complete
+- v2.0 requirements: 17 total, 17 mapped
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-01-24*
-*Last updated: 2026-01-25 — Phase 3 requirements complete (GRAPH-05/06/07, MCP-04/07/08)*
+*Last updated: 2026-01-28 — v2.0 traceability added (17 requirements mapped to phases 8-11)*
