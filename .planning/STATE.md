@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 ## Current Position
 
 Phase: 8 - File Ingestion Pipeline
-Plan: 1 of 4 complete
+Plan: 2 of 4 complete
 Status: In progress
-Last activity: 2026-01-29 — Completed 08-01-PLAN.md (File Ingestion Foundation)
+Last activity: 2026-01-29 — Completed 08-02-PLAN.md (File Parsers)
 
-Progress: [██░░░░░░░░] 25% (1/4 plans in Phase 8)
+Progress: [████░░░░░░] 50% (2/4 plans in Phase 8)
 
 ## v1.0 Milestone Summary
 
@@ -87,6 +87,9 @@ Decisions from v1.0 that affect v2.0:
 - @langchain/textsplitters for semantic chunking over naive string splitting
 - Quality scoring with extractionConfidence + needsReview flags for human review
 - File-type-specific chunk configs (code: 800 chars, prose: 400-512 chars)
+- PDF confidence uses chars/page ratio to detect scanned/image PDFs
+- DOCX confidence reduced by mammoth extraction warnings
+- Text files validated with null byte and control character checks before accepting
 
 ### Pending Todos
 
@@ -108,8 +111,8 @@ None yet for v2.0.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 08-01-PLAN.md, ready for 08-02 (File Parsers)
+Stopped at: Completed 08-02-PLAN.md, ready for 08-03 (Chunking Strategy)
 Resume file: None
 
 ---
-*Updated: 2026-01-29 — Phase 8 Plan 01 complete, file ingestion foundation ready*
+*Updated: 2026-01-29 — Phase 8 Plan 02 complete, file validation and parsers ready*
