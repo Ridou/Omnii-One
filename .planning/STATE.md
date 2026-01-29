@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 ## Current Position
 
 Phase: 8 - File Ingestion Pipeline
-Plan: 5 of 5 complete
+Plan: 6 of 6 complete
 Status: Phase complete
-Last activity: 2026-01-29 — Completed 08-05-PLAN.md (File Upload Routes)
+Last activity: 2026-01-29 — Completed 08-06-PLAN.md (BullMQ File Processing Worker)
 
-Progress: [██████████] 100% (5/5 plans in Phase 8)
+Progress: [██████████] 100% (6/6 plans in Phase 8)
 
 ## v1.0 Milestone Summary
 
@@ -53,7 +53,9 @@ Delivered:
 - Total execution time: 209min
 
 **v2.0 Velocity:**
-(Not started yet)
+- Phase 8 completed: 6 plans
+- Average duration: ~2min per plan
+- Phase 8 total: ~10 minutes
 
 ## Accumulated Context
 
@@ -100,6 +102,9 @@ Decisions from v1.0 that affect v2.0:
 - Supabase Storage for file persistence with user-scoped paths
 - File hash used as both deduplication key and BullMQ job ID
 - Review workflow supports human-in-the-loop quality control via PATCH endpoint
+- File worker concurrency: 2 (vs 3 for sync workers) due to heavier processing
+- File worker rate limit: 5 jobs/min (vs 10/min for sync) to prevent resource exhaustion
+- Progress tracking at 7 stages for client status polling
 
 ### Pending Todos
 
@@ -118,16 +123,16 @@ None yet for v2.0.
 - Entity extraction can hallucinate - use confidence thresholds, semantic entity resolution
 - Animation assets can bloat bundle - use Rive for performance-critical, Lottie for character
 
-**Phase 8 (file upload routes):**
-- Supabase Storage bucket 'documents' must be provisioned before file uploads work
-- RLS policies needed for user-scoped file access
-- File processing worker (08-06) needed to process queued jobs
+**Phase 8 (resolved):**
+- ~~File processing worker needed~~ - RESOLVED: 08-06 complete with full pipeline
+- Supabase Storage bucket 'documents' must be provisioned before file uploads work (user setup)
+- RLS policies needed for user-scoped file access (user setup)
 
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 08-05-PLAN.md — File upload routes with Supabase Storage and BullMQ queuing
+Stopped at: Completed 08-06-PLAN.md — BullMQ file processing worker orchestrating full ingestion pipeline
 Resume file: None
 
 ---
-*Updated: 2026-01-29 — Phase 8 complete: file upload API, parsing, chunking, quality scoring, graph operations, and review workflow ready*
+*Updated: 2026-01-29 — Phase 8 COMPLETE: Full file ingestion pipeline (parsers → chunking → scoring → graph) with upload API, background workers, and quality control*
