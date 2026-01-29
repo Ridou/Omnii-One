@@ -18,6 +18,10 @@ export enum NodeLabel {
   Event = 'Event',
   /** People the user knows with contact information */
   Contact = 'Contact',
+  /** Uploaded files with extracted content */
+  Document = 'Document',
+  /** Text segments of documents for RAG retrieval */
+  Chunk = 'Chunk',
 }
 
 /**
@@ -95,9 +99,49 @@ export interface ContactNode extends BaseNodeProperties {
 }
 
 /**
+ * Document node - uploaded files with extracted content.
+ * Examples: "quarterly_report.pdf", "meeting_notes.docx"
+ */
+export interface DocumentNode extends BaseNodeProperties {
+  /** Original filename as uploaded */
+  originalName: string;
+  /** File type: pdf, docx, txt, md, code */
+  fileType: 'pdf' | 'docx' | 'txt' | 'md' | 'code';
+  /** MIME type detected from file content */
+  mimeType: string;
+  /** SHA-256 hash of file content for deduplication */
+  fileHash: string;
+  /** Path in Supabase Storage */
+  storagePath: string;
+  /** File size in bytes */
+  size: number;
+  /** Extraction confidence score (0-1) */
+  extractionConfidence: number;
+  /** Whether extraction needs human review */
+  needsReview: boolean;
+  /** ISO 8601 datetime when file was uploaded */
+  uploadedAt: string;
+  /** Number of chunks created from this document */
+  chunkCount?: number;
+}
+
+/**
+ * Chunk node - text segment from a document for RAG retrieval.
+ * Related to parent Document via HAS_CHUNK relationship.
+ */
+export interface ChunkNode extends BaseNodeProperties {
+  /** Text content of this chunk */
+  text: string;
+  /** Position in document (0-indexed) */
+  position: number;
+  /** Parent document ID */
+  documentId: string;
+}
+
+/**
  * Union type for any node type
  */
-export type AnyNode = ConceptNode | EntityNode | EventNode | ContactNode;
+export type AnyNode = ConceptNode | EntityNode | EventNode | ContactNode | DocumentNode | ChunkNode;
 
 /**
  * Type guard to check if a node is a ConceptNode
@@ -125,4 +169,18 @@ export function isEventNode(node: AnyNode): node is EventNode {
  */
 export function isContactNode(node: AnyNode): node is ContactNode {
   return 'email' in node || 'phone' in node || 'organization' in node;
+}
+
+/**
+ * Type guard to check if a node is a DocumentNode
+ */
+export function isDocumentNode(node: AnyNode): node is DocumentNode {
+  return 'fileHash' in node && 'storagePath' in node;
+}
+
+/**
+ * Type guard to check if a node is a ChunkNode
+ */
+export function isChunkNode(node: AnyNode): node is ChunkNode {
+  return 'position' in node && 'documentId' in node && 'text' in node;
 }
