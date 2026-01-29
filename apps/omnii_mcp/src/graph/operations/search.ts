@@ -204,15 +204,16 @@ export async function textBasedSearch(
   // Text matching with score based on number of matching terms
   const cypher = `
     MATCH (node)
-    WHERE (node:Contact OR node:Event OR node:Entity OR node:Concept)
+    WHERE (node:Contact OR node:Event OR node:Entity OR node:Concept OR node:Document OR node:Chunk)
     ${labelFilter}
     WITH node,
          [term IN $searchTerms WHERE toLower(node.name) CONTAINS term | term] AS nameMatches,
-         [term IN $searchTerms WHERE node.description IS NOT NULL AND toLower(node.description) CONTAINS term | term] AS descMatches
-    WHERE size(nameMatches) > 0 OR size(descMatches) > 0
+         [term IN $searchTerms WHERE node.description IS NOT NULL AND toLower(node.description) CONTAINS term | term] AS descMatches,
+         [term IN $searchTerms WHERE node.text IS NOT NULL AND toLower(node.text) CONTAINS term | term] AS textMatches
+    WHERE size(nameMatches) > 0 OR size(descMatches) > 0 OR size(textMatches) > 0
     WITH node,
-         // Score: name matches worth more than description matches, normalized 0-1
-         (size(nameMatches) * 2.0 + size(descMatches) * 1.0) / (size($searchTerms) * 3.0) AS score
+         // Score: name matches worth more than description/text matches, normalized 0-1
+         (size(nameMatches) * 2.0 + size(descMatches) * 1.0 + size(textMatches) * 1.0) / (size($searchTerms) * 4.0) AS score
     RETURN
       node.id AS id,
       node.name AS name,

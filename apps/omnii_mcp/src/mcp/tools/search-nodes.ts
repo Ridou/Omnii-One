@@ -18,7 +18,7 @@ export const SearchNodesInputSchema = z.object({
   query: z.string().min(1).max(500).describe('Natural language search query'),
   limit: z.number().int().min(1).max(50).default(10).describe('Max results'),
   nodeTypes: z
-    .array(z.enum(['Concept', 'Entity', 'Event', 'Contact']))
+    .array(z.enum(['Concept', 'Entity', 'Event', 'Contact', 'Document', 'Chunk']))
     .optional()
     .describe('Filter results to specific node types'),
   minScore: z
@@ -67,7 +67,7 @@ export const searchNodesToolDefinition = {
         type: 'array',
         items: {
           type: 'string',
-          enum: ['Concept', 'Entity', 'Event', 'Contact'],
+          enum: ['Concept', 'Entity', 'Event', 'Contact', 'Document', 'Chunk'],
         },
         description: 'Filter results to specific node types',
       },
