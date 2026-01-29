@@ -271,7 +271,16 @@ Plans:
 4. Low-confidence extractions are flagged for user review with option to re-extract or manually correct
 5. User can search file contents via existing search_nodes MCP tool and find relevant passages
 
-**Plans:** Not yet planned
+**Plans:** 7 plans in 6 waves
+
+Plans:
+- [ ] 08-01-PLAN.md — Dependencies and graph schema (Document, Chunk nodes)
+- [ ] 08-02-PLAN.md — File validation and parsers (PDF, Word, text, markdown)
+- [ ] 08-03-PLAN.md — Semantic chunking and quality scoring
+- [ ] 08-04-PLAN.md — Neo4j graph operations for documents and chunks
+- [ ] 08-05-PLAN.md — File upload routes with Supabase Storage
+- [ ] 08-06-PLAN.md — BullMQ file processing worker
+- [ ] 08-07-PLAN.md — Search integration and end-to-end verification
 
 ---
 
@@ -348,11 +357,11 @@ Phases execute in numeric order: 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. File Ingestion Pipeline | 0/? | Not Started | - |
+| 8. File Ingestion Pipeline | 0/7 | Planned | - |
 | 9. Notes Capture System | 0/? | Not Started | - |
 | 10. Enhanced AI Intelligence | 0/? | Not Started | - |
 | 11. Gamification System | 0/? | Not Started | - |
 
 ---
 *Roadmap created: 2026-01-24*
-*Last updated: 2026-01-28 — v2.0 phases 8-11 added*
+*Last updated: 2026-01-29 — Phase 8 planned with 7 plans in 6 waves*
