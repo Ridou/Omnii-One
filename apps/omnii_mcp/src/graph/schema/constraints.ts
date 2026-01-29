@@ -38,6 +38,9 @@ const UNIQUENESS_CONSTRAINTS = [
   { label: NodeLabel.Entity, property: 'id', name: 'entity_id' },
   { label: NodeLabel.Event, property: 'id', name: 'event_id' },
   { label: NodeLabel.Contact, property: 'id', name: 'contact_id' },
+  { label: NodeLabel.Document, property: 'id', name: 'document_id' },
+  { label: NodeLabel.Document, property: 'fileHash', name: 'document_hash' },
+  { label: NodeLabel.Chunk, property: 'id', name: 'chunk_id' },
 ];
 
 const EXISTENCE_CONSTRAINTS = [
@@ -45,6 +48,8 @@ const EXISTENCE_CONSTRAINTS = [
   { label: NodeLabel.Entity, property: 'name', name: 'entity_name' },
   { label: NodeLabel.Event, property: 'name', name: 'event_name' },
   { label: NodeLabel.Contact, property: 'name', name: 'contact_name' },
+  { label: NodeLabel.Document, property: 'name', name: 'document_name' },
+  { label: NodeLabel.Chunk, property: 'name', name: 'chunk_name' },
 ];
 
 /**
