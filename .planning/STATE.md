@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** AI always has the right context when querying user's personal data
-**Current focus:** v2.0 Feature Expansion - Phase 8: File Ingestion Pipeline
+**Current focus:** v2.0 Feature Expansion - Phase 9: Notes Capture System
 
 ## Current Position
 
-Phase: 8 - File Ingestion Pipeline
-Plan: 6 of 6 complete
-Status: Phase complete
-Last activity: 2026-01-29 — Completed 08-06-PLAN.md (BullMQ File Processing Worker)
+Phase: 9 - Notes Capture System
+Plan: 0 of ? (planning)
+Status: Planning phase
+Last activity: 2026-01-29 — Phase 8 complete, starting Phase 9
 
-Progress: [██████████] 100% (6/6 plans in Phase 8)
+Progress: [░░░░░░░░░░] 0% (Phase 9 not yet planned)
 
 ## v1.0 Milestone Summary
 
@@ -131,8 +131,8 @@ None yet for v2.0.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 08-06-PLAN.md — BullMQ file processing worker orchestrating full ingestion pipeline
+Stopped at: Phase 8 complete (verification skipped), starting Phase 9 planning
 Resume file: None
 
 ---
-*Updated: 2026-01-29 — Phase 8 COMPLETE: Full file ingestion pipeline (parsers → chunking → scoring → graph) with upload API, background workers, and quality control*
+*Updated: 2026-01-29 — Phase 8 COMPLETE (7 plans, verification skipped). Starting Phase 9: Notes Capture System*
