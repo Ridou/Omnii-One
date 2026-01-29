@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 ## Current Position
 
 Phase: 8 - File Ingestion Pipeline
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-01-28 — v2.0 roadmap created
+Plan: 1 of 4 complete
+Status: In progress
+Last activity: 2026-01-29 — Completed 08-01-PLAN.md (File Ingestion Foundation)
 
-Progress: [░░░░░░░░░░] 0% (0/4 phases)
+Progress: [██░░░░░░░░] 25% (1/4 plans in Phase 8)
 
 ## v1.0 Milestone Summary
 
@@ -82,6 +82,12 @@ Decisions from v1.0 that affect v2.0:
 - @jamsch/expo-speech-recognition for voice
 - Backend-side entity extraction (consistency, GPU, centralized tuning)
 
+**Phase 8 decisions:**
+- MIME detection via magic numbers (file-type) not extensions for security
+- @langchain/textsplitters for semantic chunking over naive string splitting
+- Quality scoring with extractionConfidence + needsReview flags for human review
+- File-type-specific chunk configs (code: 800 chars, prose: 400-512 chars)
+
 ### Pending Todos
 
 None yet for v2.0.
@@ -101,9 +107,9 @@ None yet for v2.0.
 
 ## Session Continuity
 
-Last session: 2026-01-28
-Stopped at: v2.0 roadmap created, ready to plan Phase 8
+Last session: 2026-01-29
+Stopped at: Completed 08-01-PLAN.md, ready for 08-02 (File Parsers)
 Resume file: None
 
 ---
-*Updated: 2026-01-28 — v2.0 roadmap created, ready for Phase 8 planning*
+*Updated: 2026-01-29 — Phase 8 Plan 01 complete, file ingestion foundation ready*
