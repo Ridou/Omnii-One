@@ -10,9 +10,11 @@ import { getRedisConnection } from "./queue";
 import { enqueueAllUserSyncs, type SyncJobData } from "./sync-scheduler";
 import { ingestCalendarEvents } from "../sources/google-calendar";
 import { getSyncStateService } from "../sync-state";
+import type { FileProcessingJobData, FileProcessingResult } from '../sources/files/types';
 
 // Worker instances for cleanup
 let syncWorker: Worker<SyncJobData> | null = null;
+let fileWorker: Worker<FileProcessingJobData, FileProcessingResult> | null = null;
 
 /** Unified sync result interface for all sources */
 interface SyncResult {
@@ -165,6 +167,68 @@ async function processSyncJob(job: Job<SyncJobData>): Promise<{
 }
 
 /**
+ * Start the file processing worker
+ *
+ * @param concurrency - Number of concurrent file processing jobs (default: 2)
+ */
+export async function startFileWorker(concurrency: number = 2): Promise<void> {
+  if (fileWorker) {
+    console.warn('File worker already running');
+    return;
+  }
+
+  const { processFileJob } = await import('../sources/files/file-worker');
+  const connection = getRedisConnection();
+
+  fileWorker = new Worker<FileProcessingJobData, FileProcessingResult>(
+    'file-processing',
+    processFileJob,
+    {
+      connection,
+      concurrency,
+      limiter: {
+        max: 5, // Max 5 jobs per minute (prevent resource exhaustion)
+        duration: 60000,
+      },
+    }
+  );
+
+  // Event handlers
+  fileWorker.on('completed', (job, result) => {
+    console.log(`[FileWorker] Job ${job.id} completed:`,
+      result.success
+        ? `Document ${result.documentId}, ${result.chunksCreated} chunks`
+        : `Failed: ${result.error}`
+    );
+  });
+
+  fileWorker.on('failed', (job, error) => {
+    console.error(`[FileWorker] Job ${job?.id} failed:`, error.message);
+  });
+
+  fileWorker.on('error', (error) => {
+    console.error('[FileWorker] Worker error:', error);
+  });
+
+  fileWorker.on('progress', (job, progress) => {
+    console.log(`[FileWorker] Job ${job.id} progress: ${progress}%`);
+  });
+
+  console.log(`File processing worker started with concurrency ${concurrency}`);
+}
+
+/**
+ * Stop the file processing worker gracefully
+ */
+export async function stopFileWorker(): Promise<void> {
+  if (fileWorker) {
+    await fileWorker.close();
+    fileWorker = null;
+    console.log('File processing worker stopped');
+  }
+}
+
+/**
  * Start the ingestion workers
  *
  * @param concurrency - Number of concurrent jobs (default: 3)
@@ -208,6 +272,9 @@ export async function startIngestionWorkers(concurrency: number = 3): Promise<vo
   });
 
   console.log(`Ingestion worker started with concurrency ${concurrency}`);
+
+  // Start file worker with lower concurrency (file processing is heavier)
+  await startFileWorker(2);
 }
 
 /**
@@ -219,21 +286,23 @@ export async function stopIngestionWorkers(): Promise<void> {
     syncWorker = null;
     console.log("Ingestion worker stopped");
   }
+
+  await stopFileWorker();
 }
 
 /**
  * Get worker status
  */
 export function getWorkerStatus(): {
-  running: boolean;
-  concurrency?: number;
+  syncWorker: { running: boolean; concurrency?: number };
+  fileWorker: { running: boolean; concurrency?: number };
 } {
-  if (!syncWorker) {
-    return { running: false };
-  }
-
   return {
-    running: true,
-    concurrency: syncWorker.opts.concurrency,
+    syncWorker: syncWorker
+      ? { running: true, concurrency: syncWorker.opts.concurrency }
+      : { running: false },
+    fileWorker: fileWorker
+      ? { running: true, concurrency: fileWorker.opts.concurrency }
+      : { running: false },
   };
 }
