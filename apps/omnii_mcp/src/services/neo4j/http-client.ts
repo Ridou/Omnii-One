@@ -1,4 +1,57 @@
-import type { Neo4jQueryResult, Neo4jHTTPConfig, Neo4jHTTPError } from '../../types/neo4j.types';
+import type { Neo4jHTTPConfig, Neo4jHTTPError } from '../../types/neo4j.types';
+
+/**
+ * Record-like wrapper for query results
+ */
+export interface Neo4jRecord {
+  get(key: string): unknown;
+  keys(): string[];
+  toObject(): Record<string, unknown>;
+}
+
+/**
+ * Query result with helper methods
+ */
+export interface Neo4jQueryResultWithRecords {
+  data: {
+    fields: string[];
+    values: unknown[][];
+  };
+  records: Neo4jRecord[];
+  counters?: {
+    nodesCreated?: number;
+    nodesDeleted?: number;
+    relationshipsCreated?: number;
+    relationshipsDeleted?: number;
+    propertiesSet?: number;
+    labelsAdded?: number;
+    labelsRemoved?: number;
+  };
+  bookmarks?: string[];
+}
+
+/**
+ * Transform raw HTTP result to record-based result
+ */
+function toRecords(data: { fields: string[]; values: unknown[][] }): Neo4jRecord[] {
+  return data.values.map((row) => {
+    const obj: Record<string, unknown> = {};
+    data.fields.forEach((field, idx) => {
+      obj[field] = row[idx];
+    });
+    return {
+      get(key: string): unknown {
+        return obj[key];
+      },
+      keys(): string[] {
+        return data.fields;
+      },
+      toObject(): Record<string, unknown> {
+        return obj;
+      },
+    };
+  });
+}
 import { createSupabaseAdmin } from '@omnii/auth';
 
 /**
@@ -29,7 +82,7 @@ export class Neo4jHTTPClient {
   /**
    * Execute a Cypher query via HTTP Query API
    */
-  async query(cypher: string, params?: Record<string, any>): Promise<Neo4jQueryResult> {
+  async query(cypher: string, params?: Record<string, unknown>): Promise<Neo4jQueryResultWithRecords> {
     try {
       const response = await fetch(this.baseUrl, {
         method: 'POST',
@@ -82,8 +135,19 @@ export class Neo4jHTTPClient {
         }
       }
 
-      const result = await response.json();
-      return result;
+      const result = (await response.json()) as {
+        data: { fields: string[]; values: unknown[][] };
+        counters?: Record<string, number>;
+        bookmarks?: string[];
+      };
+
+      // Transform to record-based result for compatibility
+      return {
+        data: result.data,
+        records: toRecords(result.data),
+        counters: result.counters,
+        bookmarks: result.bookmarks,
+      };
     } catch (error) {
       // Handle network errors
       if (error instanceof TypeError && error.message.includes('fetch')) {

@@ -56,6 +56,27 @@ import {
   handleWorkflowStatus,
   WorkflowStatusInputSchema,
 } from './workflow-status';
+import {
+  meetingBriefingToolDefinition,
+  handleMeetingBriefing,
+  MeetingBriefingInputSchema,
+} from './meeting-briefing';
+import {
+  getRelationshipSuggestionsToolDefinition,
+  handleGetRelationshipSuggestions,
+  GetRelationshipSuggestionsInputSchema,
+  approveRelationshipToolDefinition,
+  handleApproveRelationship,
+  ApproveRelationshipInputSchema,
+} from './relationship-suggestions';
+import {
+  getInsightsToolDefinition,
+  handleGetInsights,
+  GetInsightsInputSchema,
+  getAnalyticsSummaryToolDefinition,
+  handleGetAnalyticsSummary,
+  GetAnalyticsSummaryInputSchema,
+} from './analytics-insights';
 import type { Neo4jHTTPClient } from '../../services/neo4j/http-client';
 
 /**
@@ -72,6 +93,12 @@ export const TOOL_DEFINITIONS = [
   listWorkflowsToolDefinition,
   executeWorkflowToolDefinition,
   workflowStatusToolDefinition,
+  // AI Intelligence tools
+  meetingBriefingToolDefinition,
+  getRelationshipSuggestionsToolDefinition,
+  approveRelationshipToolDefinition,
+  getInsightsToolDefinition,
+  getAnalyticsSummaryToolDefinition,
 ] as const;
 
 /**
@@ -97,6 +124,12 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   [listWorkflowsToolDefinition.name]: handleListWorkflows,
   [executeWorkflowToolDefinition.name]: handleExecuteWorkflow,
   [workflowStatusToolDefinition.name]: handleWorkflowStatus,
+  // AI Intelligence handlers
+  [meetingBriefingToolDefinition.name]: handleMeetingBriefing,
+  [getRelationshipSuggestionsToolDefinition.name]: handleGetRelationshipSuggestions,
+  [approveRelationshipToolDefinition.name]: handleApproveRelationship,
+  [getInsightsToolDefinition.name]: handleGetInsights,
+  [getAnalyticsSummaryToolDefinition.name]: handleGetAnalyticsSummary,
 };
 
 /**
@@ -170,6 +203,24 @@ export {
   workflowStatusToolDefinition,
   handleWorkflowStatus,
   WorkflowStatusInputSchema,
+  // Meeting briefing
+  meetingBriefingToolDefinition,
+  handleMeetingBriefing,
+  MeetingBriefingInputSchema,
+  // Relationship suggestions
+  getRelationshipSuggestionsToolDefinition,
+  handleGetRelationshipSuggestions,
+  GetRelationshipSuggestionsInputSchema,
+  approveRelationshipToolDefinition,
+  handleApproveRelationship,
+  ApproveRelationshipInputSchema,
+  // Analytics insights
+  getInsightsToolDefinition,
+  handleGetInsights,
+  GetInsightsInputSchema,
+  getAnalyticsSummaryToolDefinition,
+  handleGetAnalyticsSummary,
+  GetAnalyticsSummaryInputSchema,
 };
 
 // Re-export types

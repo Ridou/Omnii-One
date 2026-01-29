@@ -20,6 +20,7 @@ import { versionHistoryRoutes } from './version-history';
 import { exportRoutes } from './export';
 import { fileRoutes } from './files';
 import { noteRoutes } from './notes';
+import { aiIntelligenceRoutes } from './ai-intelligence';
 import { createMCPRoutes } from '../mcp/transport';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
@@ -98,6 +99,7 @@ export default (app: Elysia) => {
   api.use(exportRoutes);
   api.use(fileRoutes);
   api.use(noteRoutes);
+  api.use(aiIntelligenceRoutes);
 
   // Mount the API routes under /api
   app.use(api);
