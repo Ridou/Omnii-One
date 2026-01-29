@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 ## Current Position
 
 Phase: 8 - File Ingestion Pipeline
-Plan: 4 of 4 complete
+Plan: 5 of 5 complete
 Status: Phase complete
-Last activity: 2026-01-29 — Completed 08-04-PLAN.md (Graph Operations for Documents)
+Last activity: 2026-01-29 — Completed 08-05-PLAN.md (File Upload Routes)
 
-Progress: [████████░░] 100% (4/4 plans in Phase 8)
+Progress: [██████████] 100% (5/5 plans in Phase 8)
 
 ## v1.0 Milestone Summary
 
@@ -96,6 +96,10 @@ Decisions from v1.0 that affect v2.0:
 - Hash-based document deduplication via fileHash uniqueness constraint
 - Batch embedding generation for chunks (single API call for efficiency)
 - Sequential chunk linking via NEXT_CHUNK relationships for traversal
+- Upload-then-queue async pattern for fast responses with background processing
+- Supabase Storage for file persistence with user-scoped paths
+- File hash used as both deduplication key and BullMQ job ID
+- Review workflow supports human-in-the-loop quality control via PATCH endpoint
 
 ### Pending Todos
 
@@ -114,11 +118,16 @@ None yet for v2.0.
 - Entity extraction can hallucinate - use confidence thresholds, semantic entity resolution
 - Animation assets can bloat bundle - use Rive for performance-critical, Lottie for character
 
+**Phase 8 (file upload routes):**
+- Supabase Storage bucket 'documents' must be provisioned before file uploads work
+- RLS policies needed for user-scoped file access
+- File processing worker (08-06) needed to process queued jobs
+
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 08-04-PLAN.md — Phase 8 complete (File Ingestion Pipeline)
+Stopped at: Completed 08-05-PLAN.md — File upload routes with Supabase Storage and BullMQ queuing
 Resume file: None
 
 ---
-*Updated: 2026-01-29 — Phase 8 complete: file parsing, chunking, quality scoring, and graph operations ready*
+*Updated: 2026-01-29 — Phase 8 complete: file upload API, parsing, chunking, quality scoring, graph operations, and review workflow ready*
