@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** AI always has the right context when querying user's personal data
-**Current focus:** v2.0 Feature Expansion - Phase 9: Notes Capture System
+**Current focus:** v2.0 Feature Expansion - Phase 10: Enhanced AI Intelligence
 
 ## Current Position
 
-Phase: 9 - Notes Capture System
-Plan: 7 of 7 (complete)
+Phase: 10 - Enhanced AI Intelligence
+Plan: 6 of 7 (backend complete, mobile UI skipped)
 Status: COMPLETE
-Last activity: 2026-01-29 — Phase 9 execution complete
+Last activity: 2026-01-29 — Phase 10 backend execution complete
 
-Progress: [██████████] 100% (All 7 plans complete)
+Progress: [████████░░] 86% (6/7 plans complete, mobile UI pending)
 
 ## v1.0 Milestone Summary
 
@@ -55,8 +55,9 @@ Delivered:
 **v2.0 Velocity:**
 - Phase 8 completed: 6 plans
 - Phase 9 completed: 7 plans
+- Phase 10 completed: 6 plans (backend)
 - Average duration: ~2min per plan
-- Total v2.0 plans: 13
+- Total v2.0 plans: 19
 
 ## Accumulated Context
 
@@ -140,11 +141,23 @@ None yet for v2.0.
 - Card-based backlinks panel with collapsible expansion
 - Template selector modal with staggered spring animations
 
+**Phase 10 decisions:**
+- Calibrated confidence scoring with multi-factor weighting (source 50%, temporal 20%, relationship 30%)
+- Source weights: calendar (0.95), contact (0.9), email (0.85), note (0.8), file (0.75), manual (1.0)
+- 7 inference patterns for cross-source relationships (email→meeting, task→meeting, etc.)
+- OpenAI GPT-4o-mini for AI-powered meeting briefing summaries
+- BullMQ for heads-up notification scheduling with configurable lead times
+- 7 analytics pattern types: meeting_followup_rate, productivity_windows, collaboration_clusters, etc.
+- Neo4j HTTP client extended with record-like interface for driver compatibility
+- MCP tools: omnii_get_meeting_briefing, omnii_get_relationship_suggestions, omnii_approve_relationship, omnii_get_insights, omnii_get_analytics_summary
+- REST routes mounted at /api/ai with Elysia TypeBox validation
+- Entity quality gate with auto-accept (0.85), review (0.6), reject (<0.3) thresholds
+
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Phase 9 complete, ready for Phase 10
+Stopped at: Phase 10 backend complete, mobile UI (10-07) pending
 Resume file: None
 
 ---
-*Updated: 2026-01-29 — Phase 9 COMPLETE (7 plans). Notes Capture System with wiki-style linking, templates, backlinks, voice capture, and modern mobile UI.*
+*Updated: 2026-01-29 — Phase 10 BACKEND COMPLETE (6/7 plans). Enhanced AI Intelligence with entity extraction, cross-source inference, meeting briefings, analytics patterns, and MCP tools. Mobile UI pending.*
