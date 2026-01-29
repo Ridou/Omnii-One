@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 ## Current Position
 
 Phase: 8 - File Ingestion Pipeline
-Plan: 2 of 4 complete
+Plan: 3 of 4 complete
 Status: In progress
-Last activity: 2026-01-29 — Completed 08-02-PLAN.md (File Parsers)
+Last activity: 2026-01-29 — Completed 08-03-PLAN.md (Semantic Chunking and Quality Scoring)
 
-Progress: [████░░░░░░] 50% (2/4 plans in Phase 8)
+Progress: [██████░░░░] 75% (3/4 plans in Phase 8)
 
 ## v1.0 Milestone Summary
 
@@ -90,6 +90,9 @@ Decisions from v1.0 that affect v2.0:
 - PDF confidence uses chars/page ratio to detect scanned/image PDFs
 - DOCX confidence reduced by mammoth extraction warnings
 - Text files validated with null byte and control character checks before accepting
+- RecursiveCharacterTextSplitter splits on paragraph->sentence->word boundaries for semantic coherence
+- Review threshold at 0.8 (80% confidence) balances quality control vs. overhead
+- Multi-heuristic quality scoring combines text density, encoding, warnings, length, whitespace
 
 ### Pending Todos
 
@@ -111,8 +114,8 @@ None yet for v2.0.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 08-02-PLAN.md, ready for 08-03 (Chunking Strategy)
+Stopped at: Completed 08-03-PLAN.md, ready for 08-04 (Upload Endpoint)
 Resume file: None
 
 ---
-*Updated: 2026-01-29 — Phase 8 Plan 02 complete, file validation and parsers ready*
+*Updated: 2026-01-29 — Phase 8 Plan 03 complete, chunking and quality scoring ready*
