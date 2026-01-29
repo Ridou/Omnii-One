@@ -22,6 +22,8 @@ export enum NodeLabel {
   Document = 'Document',
   /** Text segments of documents for RAG retrieval */
   Chunk = 'Chunk',
+  /** User-created notes with wiki-style linking */
+  Note = 'Note',
 }
 
 /**
@@ -139,9 +141,34 @@ export interface ChunkNode extends BaseNodeProperties {
 }
 
 /**
+ * Note node - user-created notes with wiki-style linking.
+ * Examples: "Meeting with John", "Daily Journal - 2026-01-29"
+ */
+export interface NoteNode extends BaseNodeProperties {
+  /** Note title as entered by user */
+  title: string;
+  /** Normalized title for wikilink matching (lowercase, hyphens for spaces) */
+  normalizedTitle: string;
+  /** Markdown content of the note */
+  content: string;
+  /** YAML frontmatter as JSON string (from templates) */
+  frontmatter?: string;
+  /** Template type used to create this note (if from template) */
+  templateType?: 'meeting-notes' | 'daily-journal' | 'contact-notes' | null;
+  /** Whether this is a stub created from a forward wikilink reference */
+  isStub: boolean;
+  /** How the note was created */
+  createdVia: 'manual' | 'voice' | 'template' | 'wikilink-stub';
+  /** Number of outgoing wikilinks in this note */
+  linkCount?: number;
+  /** Number of incoming backlinks to this note */
+  backlinkCount?: number;
+}
+
+/**
  * Union type for any node type
  */
-export type AnyNode = ConceptNode | EntityNode | EventNode | ContactNode | DocumentNode | ChunkNode;
+export type AnyNode = ConceptNode | EntityNode | EventNode | ContactNode | DocumentNode | ChunkNode | NoteNode;
 
 /**
  * Type guard to check if a node is a ConceptNode
@@ -183,4 +210,11 @@ export function isDocumentNode(node: AnyNode): node is DocumentNode {
  */
 export function isChunkNode(node: AnyNode): node is ChunkNode {
   return 'position' in node && 'documentId' in node && 'text' in node;
+}
+
+/**
+ * Type guard to check if a node is a NoteNode
+ */
+export function isNoteNode(node: AnyNode): node is NoteNode {
+  return 'normalizedTitle' in node && 'content' in node && 'isStub' in node;
 }

@@ -19,6 +19,7 @@ import { powerSyncRoutes } from './powersync';
 import { versionHistoryRoutes } from './version-history';
 import { exportRoutes } from './export';
 import { fileRoutes } from './files';
+import { noteRoutes } from './notes';
 import { createMCPRoutes } from '../mcp/transport';
 import { appRouter, createTRPCContext } from '@omnii/api';
 
@@ -96,6 +97,7 @@ export default (app: Elysia) => {
   api.use(versionHistoryRoutes);
   api.use(exportRoutes);
   api.use(fileRoutes);
+  api.use(noteRoutes);
 
   // Mount the API routes under /api
   app.use(api);

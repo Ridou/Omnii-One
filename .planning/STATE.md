@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 ## Current Position
 
 Phase: 9 - Notes Capture System
-Plan: 0 of ? (planning)
-Status: Planning phase
-Last activity: 2026-01-29 — Phase 8 complete, starting Phase 9
+Plan: 7 of 7 (complete)
+Status: COMPLETE
+Last activity: 2026-01-29 — Phase 9 execution complete
 
-Progress: [░░░░░░░░░░] 0% (Phase 9 not yet planned)
+Progress: [██████████] 100% (All 7 plans complete)
 
 ## v1.0 Milestone Summary
 
@@ -54,8 +54,9 @@ Delivered:
 
 **v2.0 Velocity:**
 - Phase 8 completed: 6 plans
+- Phase 9 completed: 7 plans
 - Average duration: ~2min per plan
-- Phase 8 total: ~10 minutes
+- Total v2.0 plans: 13
 
 ## Accumulated Context
 
@@ -128,11 +129,22 @@ None yet for v2.0.
 - Supabase Storage bucket 'documents' must be provisioned before file uploads work (user setup)
 - RLS policies needed for user-scoped file access (user setup)
 
+**Phase 9 decisions:**
+- expo-speech-recognition ~2.1.5 for SDK 53 compatibility
+- markdown-it-wikilinks for wiki-link parsing in markdown
+- gray-matter for YAML frontmatter parsing
+- API path alias changed to ~/config for mobile (not @/config)
+- Voice capture hook returns flat object (not { state, actions })
+- "Soft Luminescence" design aesthetic with indigo/violet accent colors
+- Breathing pulse animation for voice recording button
+- Card-based backlinks panel with collapsible expansion
+- Template selector modal with staggered spring animations
+
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Phase 8 complete (verification skipped), starting Phase 9 planning
+Stopped at: Phase 9 complete, ready for Phase 10
 Resume file: None
 
 ---
-*Updated: 2026-01-29 — Phase 8 COMPLETE (7 plans, verification skipped). Starting Phase 9: Notes Capture System*
+*Updated: 2026-01-29 — Phase 9 COMPLETE (7 plans). Notes Capture System with wiki-style linking, templates, backlinks, voice capture, and modern mobile UI.*
